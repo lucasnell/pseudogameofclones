@@ -56,7 +56,7 @@ w_ham <- c("R10", "WI-L4", "UT3", "Clover-2017-2")
 
 
 growth <- read_excel(paste0('~/Dropbox/Aphid Project 2017/Lucas_traits/',
-                            'traits_data_entry.xlsx')) %>%
+                                      'traits_data_entry.xlsx')) %>%
     mutate(line = ifelse(line == 'WI-L4 (H+3)', 'WI-L4', line),
            line = ifelse(line == 'WI-L4ØA', 'WI-L4Ø', line),
            date = as.Date(paste(year, month, day, sep = "-"))) %>%
@@ -72,23 +72,22 @@ growth <- read_excel(paste0('~/Dropbox/Aphid Project 2017/Lucas_traits/',
            # makes no sense for it to be 0, then >0 the next day:
            N = ifelse(N == 0, 1, N)) %>%
     select(line, rep, date, N, disp) %>%
-    mutate(rep = as.integer(rep), N = as.integer(N), disp = as.integer(disp),
-           line = factor(line)) %>%
+    mutate_at(vars(rep, N, disp), funs(as.integer)) %>%
+    mutate(line = factor(line),
+           X = log(N),
+           ham = ifelse(line %in% w_ham, 1, 0)) %>%
     group_by(line, rep) %>%
     mutate(date = as.integer(date - min(date)),
            r = log(N / lag(N)) / (date - lag(date))) %>%
     arrange(date) %>%
-    mutate(N_t = lag(N)) %>%
     ungroup %>%
-    mutate(X = log(N), X_t = log(N_t),
-           ham = ifelse(line %in% w_ham, 1, 0)) %>%
     arrange(line, rep, date) %>%
-    filter(!is.na(N_t)) %>%
     identity()
 
 
 
-z_trans <- function(x) (x - mean(x)) / sd(x)
+
+z_trans <- function(x, ...) (x - mean(x, ...)) / sd(x, ...)
 
 source(".Rprofile")
 
@@ -116,8 +115,8 @@ back_filter <- growth %>%
 
 growth %>%
     group_by(line, rep) %>%
-    # filter(threshold_filter(X, 0.50)) %>%
-    filter(date >= 5) %>%
+    filter(threshold_filter(X, 0.50)) %>%
+    # filter(date >= 5) %>%
     filter(dec_filter(X, 0.0)) %>%
     ungroup %>%
     ggplot(aes(date, X, color = factor(rep))) +
@@ -131,7 +130,7 @@ no_filter
 
 growth %>%
     group_by(line, rep) %>%
-    mutate(r = z_trans(r)) %>%
+    # mutate(r = z_trans(r, na.rm = TRUE)) %>%
     # Back filter:
     filter(dec_filter(X, 0.0)) %>%
     # # Front filter:
