@@ -1,3 +1,16 @@
+
+# ========================================================================
+# ========================================================================
+# ========================================================================
+
+# How I decided on the beginning and ending filtering.
+# This file isn't necessary to run every time.
+
+# ========================================================================
+# ========================================================================
+# ========================================================================
+
+
 suppressPackageStartupMessages({
     library(tidyverse)
     library(readxl)
@@ -71,17 +84,69 @@ growth <- read_excel(paste0('~/Dropbox/Aphid Project 2017/Lucas_traits/',
            ham = ifelse(line %in% w_ham, 1, 0)) %>%
     arrange(line, rep, date) %>%
     filter(!is.na(N_t)) %>%
-    # Filter the beginning and end of the time series:
-    group_by(line, rep) %>%
-    # Beginning filter:
-    filter(threshold_filter(X, 0.50)) %>%
-    # End filter:
-    filter(dec_filter(N, 0.0)) %>%
-    ungroup %>%
     identity()
 
 
 
-rm(lines_to_keep, dec_filter, parse_comments, threshold_filter, w_ham)
+z_trans <- function(x) (x - mean(x)) / sd(x)
 
+source(".Rprofile")
+
+no_filter <- growth %>%
+    ggplot(aes(date, X, color = factor(rep))) +
+    geom_line(size = 0.75) +
+    facet_wrap(~ line, nrow = 2) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    ggtitle("no filter")
+
+no_filter +
+    geom_hline(yintercept = log(40), linetype = 3) +
+    geom_vline(xintercept = 5, linetype = 3) +
+    NULL
+
+back_filter <- growth %>%
+    group_by(line, rep) %>%
+    filter(dec_filter(N, 0.0)) %>%
+    ungroup %>%
+    ggplot(aes(date, X, color = factor(rep))) +
+    geom_line(size = 0.75) +
+    facet_wrap(~ line, nrow = 2) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    ggtitle("back filtered")
+
+growth %>%
+    group_by(line, rep) %>%
+    # filter(threshold_filter(X, 0.50)) %>%
+    filter(date >= 5) %>%
+    filter(dec_filter(X, 0.0)) %>%
+    ungroup %>%
+    ggplot(aes(date, X, color = factor(rep))) +
+    geom_line(size = 0.75) +
+    facet_wrap(~ line, nrow = 2) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    ggtitle("filtered")
+
+no_filter
+
+
+growth %>%
+    group_by(line, rep) %>%
+    mutate(r = z_trans(r)) %>%
+    # Back filter:
+    filter(dec_filter(X, 0.0)) %>%
+    # # Front filter:
+    # filter(date >= 5) %>%
+    filter(threshold_filter(X, 0.50)) %>%
+    ungroup %>%
+    ggplot(aes(date, r, color = factor(rep))) +
+    geom_vline(xintercept = 5, linetype = 2) +
+    # geom_hline(yintercept = 0, linetype = 2) +
+    geom_hline(yintercept = c(-1, 1), linetype = 2) +
+    geom_line(size = 0.75) +
+    facet_wrap(~ line, nrow = 2) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    ggtitle("r")
+
+back_filter +
+    geom_vline(xintercept = 5, linetype = 2)
 
