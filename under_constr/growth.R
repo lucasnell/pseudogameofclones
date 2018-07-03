@@ -1,4 +1,7 @@
 
+# This document uses simulations to test the models.
+# (I haven't done very much testing yet.)
+
 
 suppressPackageStartupMessages({
     library(aphidreps)
@@ -44,7 +47,11 @@ print(fit, digits = 6, pars = "alpha"); cat(crayon::bgRed(alpha))
 print(fit, digits = 6, pars = "process")
 
 rank(apply(rstan::extract(fit, "R0", permuted = FALSE), 3, mean)); rank(R0)
-apply(rstan::extract(fit, "R0", permuted = FALSE), 3, mean); R0
+hist({apply(rstan::extract(fit, "R0", permuted = FALSE), 3, mean) - R0} / R0)
+
+{apply(rstan::extract(fit, "alpha", permuted = FALSE), 3, mean) - alpha} / alpha
+
+
 
 
 
@@ -76,7 +83,7 @@ running_means_alpha %>%
 
 
 # plot(x = fit, pars = c("R0", "alpha", "sigma_process"))
-mcmc_trace(posterior, pars = c("alpha")) +
+mcmc_trace(posterior, pars = sprintf("alpha[%i]", 1:8)) +
     scale_y_continuous(trans = "log")
 
 
