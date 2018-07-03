@@ -20,7 +20,7 @@
 
 #include <stan/model/model_header.hpp>
 
-namespace model_aphid_growth_namespace {
+namespace model_one_ts_namespace {
 
 using std::istream;
 using std::string;
@@ -39,24 +39,24 @@ static int current_statement_begin__;
 
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
-    reader.add_event(0, 0, "start", "model_aphid_growth");
-    reader.add_event(144, 144, "end", "model_aphid_growth");
+    reader.add_event(0, 0, "start", "model_one_ts");
+    reader.add_event(109, 109, "end", "model_one_ts");
     return reader;
 }
 
 #include <meta_header.hpp>
- class model_aphid_growth : public prob_grad {
+ class model_one_ts : public prob_grad {
 private:
     int N;
     vector_d X;
 public:
-    model_aphid_growth(stan::io::var_context& context__,
+    model_one_ts(stan::io::var_context& context__,
         std::ostream* pstream__ = 0)
         : prob_grad(0) {
         ctor_body(context__, 0, pstream__);
     }
 
-    model_aphid_growth(stan::io::var_context& context__,
+    model_one_ts(stan::io::var_context& context__,
         unsigned int random_seed__,
         std::ostream* pstream__ = 0)
         : prob_grad(0) {
@@ -72,7 +72,7 @@ public:
 
         current_statement_begin__ = -1;
 
-        static const char* function__ = "model_aphid_growth_namespace::model_aphid_growth";
+        static const char* function__ = "model_one_ts_namespace::model_one_ts";
         (void) function__;  // dummy to suppress unused var warning
         size_t pos__;
         (void) pos__;  // dummy to suppress unused var warning
@@ -83,13 +83,13 @@ public:
 
         // initialize member variables
         try {
-            current_statement_begin__ = 44;
+            current_statement_begin__ = 3;
             context__.validate_dims("data initialization", "N", "int", context__.to_vec());
             N = int(0);
             vals_i__ = context__.vals_i("N");
             pos__ = 0;
             N = vals_i__[pos__++];
-            current_statement_begin__ = 45;
+            current_statement_begin__ = 4;
             validate_non_negative_index("X", "N", N);
             context__.validate_dims("data initialization", "X", "vector_d", context__.to_vec(N));
             validate_non_negative_index("X", "N", N);
@@ -102,9 +102,9 @@ public:
             }
 
             // validate, data variables
-            current_statement_begin__ = 44;
+            current_statement_begin__ = 3;
             check_greater_or_equal(function__,"N",N,1);
-            current_statement_begin__ = 45;
+            current_statement_begin__ = 4;
             // initialize data variables
 
 
@@ -113,19 +113,19 @@ public:
             // validate, set parameter ranges
             num_params_r__ = 0U;
             param_ranges_i__.clear();
-            current_statement_begin__ = 48;
+            current_statement_begin__ = 7;
             ++num_params_r__;
-            current_statement_begin__ = 50;
+            current_statement_begin__ = 9;
             ++num_params_r__;
-            current_statement_begin__ = 51;
+            current_statement_begin__ = 10;
             ++num_params_r__;
-            current_statement_begin__ = 54;
+            current_statement_begin__ = 13;
             ++num_params_r__;
-            current_statement_begin__ = 55;
+            current_statement_begin__ = 14;
             ++num_params_r__;
-            current_statement_begin__ = 58;
+            current_statement_begin__ = 17;
             ++num_params_r__;
-            current_statement_begin__ = 59;
+            current_statement_begin__ = 18;
             ++num_params_r__;
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
@@ -134,7 +134,7 @@ public:
         }
     }
 
-    ~model_aphid_growth() { }
+    ~model_one_ts() { }
 
 
     void transform_inits(const stan::io::var_context& context__,
@@ -320,19 +320,19 @@ public:
 
 
             // transformed parameters
-            current_statement_begin__ = 64;
+            current_statement_begin__ = 23;
             T__ R0;
             (void) R0;  // dummy to suppress unused var warning
 
             stan::math::initialize(R0, DUMMY_VAR__);
             stan::math::fill(R0,DUMMY_VAR__);
-            current_statement_begin__ = 65;
+            current_statement_begin__ = 24;
             T__ alpha;
             (void) alpha;  // dummy to suppress unused var warning
 
             stan::math::initialize(alpha, DUMMY_VAR__);
             stan::math::fill(alpha,DUMMY_VAR__);
-            current_statement_begin__ = 67;
+            current_statement_begin__ = 26;
             validate_non_negative_index("X_pred", "N", N);
             Eigen::Matrix<T__,Eigen::Dynamic,1>  X_pred(static_cast<Eigen::VectorXd::Index>(N));
             (void) X_pred;  // dummy to suppress unused var warning
@@ -341,13 +341,13 @@ public:
             stan::math::fill(X_pred,DUMMY_VAR__);
 
 
-            current_statement_begin__ = 69;
+            current_statement_begin__ = 28;
             stan::math::assign(R0, (mean_R0 + (sigma_R0 * Z_R0)));
-            current_statement_begin__ = 70;
+            current_statement_begin__ = 29;
             stan::math::assign(alpha, (mean_alpha + (sigma_alpha * Z_alpha)));
-            current_statement_begin__ = 73;
+            current_statement_begin__ = 32;
             stan::math::assign(get_base1_lhs(X_pred,1,"X_pred",1), get_base1(X,1,"X",1));
-            current_statement_begin__ = 74;
+            current_statement_begin__ = 33;
             stan::model::assign(X_pred, 
                         stan::model::cons_list(stan::model::index_min_max(2, N), stan::model::nil_index_list()), 
                         add(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (N - 1)), stan::model::nil_index_list()), "X"),multiply(R0,subtract(1,multiply(alpha,exp(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (N - 1)), stan::model::nil_index_list()), "X")))))), 
@@ -374,29 +374,29 @@ public:
 
             const char* function__ = "validate transformed params";
             (void) function__;  // dummy to suppress unused var warning
-            current_statement_begin__ = 64;
+            current_statement_begin__ = 23;
             check_greater_or_equal(function__,"R0",R0,0);
-            current_statement_begin__ = 65;
+            current_statement_begin__ = 24;
             check_greater_or_equal(function__,"alpha",alpha,0);
-            current_statement_begin__ = 67;
+            current_statement_begin__ = 26;
 
             // model body
 
-            current_statement_begin__ = 81;
+            current_statement_begin__ = 40;
             lp_accum__.add(normal_log<propto__>(mean_R0, 0.28999999999999998, (0.022599999999999999 * 10)));
-            current_statement_begin__ = 82;
+            current_statement_begin__ = 41;
             lp_accum__.add(normal_log<propto__>(mean_alpha, 0.0028999999999999998, (0.00036400000000000001 * 10)));
-            current_statement_begin__ = 84;
+            current_statement_begin__ = 43;
             lp_accum__.add(normal_log<propto__>(sigma_R0, 0, 1));
-            current_statement_begin__ = 85;
+            current_statement_begin__ = 44;
             lp_accum__.add(normal_log<propto__>(sigma_alpha, 0, (0.00036400000000000001 * 10)));
-            current_statement_begin__ = 87;
+            current_statement_begin__ = 46;
             lp_accum__.add(normal_log<propto__>(Z_R0, 0, 1));
-            current_statement_begin__ = 88;
+            current_statement_begin__ = 47;
             lp_accum__.add(normal_log<propto__>(Z_alpha, 0, 1));
-            current_statement_begin__ = 92;
+            current_statement_begin__ = 51;
             lp_accum__.add(normal_log<propto__>(process, 1, 5));
-            current_statement_begin__ = 94;
+            current_statement_begin__ = 53;
             lp_accum__.add(normal_log<propto__>(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(2, N), stan::model::nil_index_list()), "X"), stan::model::rvalue(X_pred, stan::model::cons_list(stan::model::index_min_max(2, N), stan::model::nil_index_list()), "X_pred"), process));
 
         } catch (const std::exception& e) {
@@ -473,7 +473,7 @@ public:
                      std::ostream* pstream__ = 0) const {
         vars__.resize(0);
         stan::io::reader<double> in__(params_r__,params_i__);
-        static const char* function__ = "model_aphid_growth_namespace::write_array";
+        static const char* function__ = "model_one_ts_namespace::write_array";
         (void) function__;  // dummy to suppress unused var warning
         // read-transform, write parameters
         double process = in__.scalar_lb_constrain(0);
@@ -501,19 +501,19 @@ public:
         (void) DUMMY_VAR__;  // suppress unused var warning
 
         try {
-            current_statement_begin__ = 64;
+            current_statement_begin__ = 23;
             double R0(0.0);
             (void) R0;  // dummy to suppress unused var warning
 
             stan::math::initialize(R0, std::numeric_limits<double>::quiet_NaN());
             stan::math::fill(R0,DUMMY_VAR__);
-            current_statement_begin__ = 65;
+            current_statement_begin__ = 24;
             double alpha(0.0);
             (void) alpha;  // dummy to suppress unused var warning
 
             stan::math::initialize(alpha, std::numeric_limits<double>::quiet_NaN());
             stan::math::fill(alpha,DUMMY_VAR__);
-            current_statement_begin__ = 67;
+            current_statement_begin__ = 26;
             validate_non_negative_index("X_pred", "N", N);
             vector_d X_pred(static_cast<Eigen::VectorXd::Index>(N));
             (void) X_pred;  // dummy to suppress unused var warning
@@ -522,24 +522,24 @@ public:
             stan::math::fill(X_pred,DUMMY_VAR__);
 
 
-            current_statement_begin__ = 69;
+            current_statement_begin__ = 28;
             stan::math::assign(R0, (mean_R0 + (sigma_R0 * Z_R0)));
-            current_statement_begin__ = 70;
+            current_statement_begin__ = 29;
             stan::math::assign(alpha, (mean_alpha + (sigma_alpha * Z_alpha)));
-            current_statement_begin__ = 73;
+            current_statement_begin__ = 32;
             stan::math::assign(get_base1_lhs(X_pred,1,"X_pred",1), get_base1(X,1,"X",1));
-            current_statement_begin__ = 74;
+            current_statement_begin__ = 33;
             stan::model::assign(X_pred, 
                         stan::model::cons_list(stan::model::index_min_max(2, N), stan::model::nil_index_list()), 
                         add(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (N - 1)), stan::model::nil_index_list()), "X"),multiply(R0,subtract(1,multiply(alpha,exp(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (N - 1)), stan::model::nil_index_list()), "X")))))), 
                         "assigning variable X_pred");
 
             // validate transformed parameters
-            current_statement_begin__ = 64;
+            current_statement_begin__ = 23;
             check_greater_or_equal(function__,"R0",R0,0);
-            current_statement_begin__ = 65;
+            current_statement_begin__ = 24;
             check_greater_or_equal(function__,"alpha",alpha,0);
-            current_statement_begin__ = 67;
+            current_statement_begin__ = 26;
 
             // write transformed parameters
         vars__.push_back(R0);
@@ -582,7 +582,7 @@ public:
     }
 
     static std::string model_name() {
-        return "model_aphid_growth";
+        return "model_one_ts";
     }
 
 
@@ -675,7 +675,7 @@ public:
 
 }
 
-typedef model_aphid_growth_namespace::model_aphid_growth stan_model;
+typedef model_one_ts_namespace::model_one_ts stan_model;
 
 
 #endif

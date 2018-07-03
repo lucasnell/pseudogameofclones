@@ -10,10 +10,12 @@ ByteCompile: true
 Depends: 
     R (>= 3.4.0),
     Rcpp (>= 0.12.17),
-    methods
-Imports:
+    methods,
     rstan (>= 2.17.3),
-    rstantools (>= 1.5.0)
+    bayesplot
+Imports:
+    rstantools (>= 1.5.0),
+    ggplot2
 LinkingTo:
     StanHeaders (>= 2.17.2),
     rstan (>= 2.17.3),

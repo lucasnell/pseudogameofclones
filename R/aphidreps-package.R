@@ -1,7 +1,7 @@
 #' The 'aphidreps' package.
-#' 
-#' @description A DESCRIPTION OF THE PACKAGE
-#' 
+#'
+#' @description Analyses and simulations related to aphid repetition experiments.
+#'
 #' @docType package
 #' @name aphidreps-package
 #' @aliases aphidreps
@@ -10,8 +10,8 @@
 #' @import Rcpp
 #' @import rstantools
 #' @importFrom rstan sampling
-#' 
-#' @references 
+#'
+#' @references
 #' Stan Development Team (2018). RStan: the R interface to Stan. R package version 2.17.3. http://mc-stan.org
-#' 
+#'
 NULL
