@@ -80,3 +80,52 @@ fit_one_line <- function(X, data = sys.frame(sys.parent()), ...) {
     return(growth_fit)
 }
 
+
+
+
+#' Fit multiple time series for multiple aphid lines.
+#'
+#' @param X Name of the matrix in `data` that contains the log-transformed counts
+#'     through time (1 time series per column).
+#'     Each column should contain `NA`s at the end (ONLY the end) if
+#'     it wasn't observed as many times as was the time series in the matrix with
+#'     the most observations.
+#'     \emph{Other than at the end, missing values are not yet supported}.
+#' @param line_ts Vector (of the same length as number of columns in `X`) containing
+#'     the line number for each time-series column in `X`.
+#' @param data An optional data frame, list, or environment that contains `X`.
+#'     By default, variables are taken from the environment from which
+#'     the function was called.
+#' @param ... Arguments passed to `rstan::sampling` (e.g., iter, chains).
+#'
+#' @return A `stanfit` object containing the model fit.
+#' @export
+#'
+#'
+#'
+fit_lines <- function(X, line_ts, data = sys.frame(sys.parent()), ...) {
+
+    X_ <- eval(X, envir = data)
+    line_ts_ <- eval(line_ts, envir = data)
+    n_lines_ <- length(unique(line_ts_))
+    if (length(line_ts_) != ncol(X)) {
+        stop("\nIn `fit_lines`, `line_ts` must have the same length as number of ",
+             "columns in `X`", call. = FALSE)
+    }
+
+
+    nobs_ts_ <- apply(X_, 2, function(x) sum(!is.na(x)))
+    X_[is.na(X_)] <- 0
+
+    model_data <- list(N_ts = ncol(X_),
+                       max_reps = max(nobs_ts_),
+                       n_lines = n_lines_,
+                       nobs_ts = nobs_ts_,
+                       line_ts = line_ts_,
+                       X = X_)
+
+    growth_fit <- rstan::sampling(stanmodels$all_lines, data = model_data, ...)
+
+    return(growth_fit)
+}
+
