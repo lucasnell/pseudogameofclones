@@ -3,3 +3,4 @@
 ^\.travis\.yml$
 ^under\_constr$
 ^reports$
+^data-raw$
