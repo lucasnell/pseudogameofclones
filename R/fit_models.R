@@ -83,16 +83,22 @@ fit_one_line <- function(X, data = sys.frame(sys.parent()), ...) {
 
 
 
+
+
 #' Fit multiple time series for multiple aphid lines.
 #'
 #' @param X Name of the matrix in `data` that contains the log-transformed counts
 #'     through time (1 time series per column).
+#'     This option is not required if the proper object inside `data` is literally
+#'     named `X` (as would be the case if you used `line_data()`).
 #'     Each column should contain `NA`s at the end (ONLY the end) if
 #'     it wasn't observed as many times as was the time series in the matrix with
 #'     the most observations.
 #'     \emph{Other than at the end, missing values are not yet supported}.
 #' @param line_ts Vector (of the same length as number of columns in `X`) containing
 #'     the line number for each time-series column in `X`.
+#'     This option is not required if the proper object inside `data` is literally
+#'     named `line_ts` (as would be the case if you used `line_data()`).
 #' @param data An optional data frame, list, or environment that contains `X`.
 #'     By default, variables are taken from the environment from which
 #'     the function was called.
@@ -103,12 +109,19 @@ fit_one_line <- function(X, data = sys.frame(sys.parent()), ...) {
 #'
 #'
 #'
-fit_lines <- function(X, line_ts, data = sys.frame(sys.parent()), ...) {
+fit_lines <- function(data, X, line_ts, plants = FALSE, ...) {
+
+    if (missing(data)) data <- sys.frame(sys.parent())
+
+    if (missing(X)) X <- quote(X)
+    if (missing(line_ts)) line_ts <- quote(line_ts)
+    X <- substitute(X)
+    line_ts <- substitute(line_ts)
 
     X_ <- eval(X, envir = data)
     line_ts_ <- eval(line_ts, envir = data)
     n_lines_ <- length(unique(line_ts_))
-    if (length(line_ts_) != ncol(X)) {
+    if (length(line_ts_) != ncol(X_)) {
         stop("\nIn `fit_lines`, `line_ts` must have the same length as number of ",
              "columns in `X`", call. = FALSE)
     }
@@ -124,7 +137,11 @@ fit_lines <- function(X, line_ts, data = sys.frame(sys.parent()), ...) {
                        line_ts = line_ts_,
                        X = X_)
 
-    growth_fit <- rstan::sampling(stanmodels$all_lines, data = model_data, ...)
+    if (plants) {
+        growth_fit <- rstan::sampling(stanmodels$all_lines_plants, data = model_data, ...)
+    } else {
+        growth_fit <- rstan::sampling(stanmodels$all_lines, data = model_data, ...)
+    }
 
     return(growth_fit)
 }

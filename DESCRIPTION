@@ -12,10 +12,11 @@ Depends:
     Rcpp (>= 0.12.17),
     methods,
     rstan (>= 2.17.3),
-    bayesplot
+    bayesplot,
+    tidyverse
 Imports:
     rstantools (>= 1.5.0),
-    ggplot2
+    readxl
 LinkingTo:
     StanHeaders (>= 2.17.2),
     rstan (>= 2.17.3),

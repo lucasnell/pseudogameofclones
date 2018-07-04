@@ -8,10 +8,9 @@
 #' @param nobs_ts Number of observations per time series.
 #' @param sigma_process Process error. Defaults to `0.1`.
 #'
-#' @return
+#' @return A matrix with simulated log(N) through time.
 #' @export
 #'
-#' @examples
 sim_lines <- function(R0, alpha, n_reps, nobs_ts, sigma_process = 0.1) {
 
     # Number of aphid lines:

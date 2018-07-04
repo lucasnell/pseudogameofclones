@@ -26,12 +26,9 @@ Fit one aphid-growth time series.
 
 R0 <- 0.25
 alpha <- 0.002
-sigma_process <- 2
-X <- numeric(20)
-X[1] <- log(20)
-for (t in 1:(length(X)-1)) {
-    X[(t+1)] <- X[t] + R0 * (1 - alpha * exp(X[t])) + rnorm(1, sigma_process)
-}
+sigma_process <- 0.1
+
+X <- as.numeric(sim_lines(R0, alpha, n_reps = 1, nobs_ts = 20, process = 0.1))
 
 # (You would normally not change iter to 100)
 fit <- fit_one_ts(X, iter = 100)

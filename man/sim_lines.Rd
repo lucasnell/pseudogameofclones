@@ -17,6 +17,9 @@ sim_lines(R0, alpha, n_reps, nobs_ts, sigma_process = 0.1)
 
 \item{sigma_process}{Process error. Defaults to `0.1`.}
 }
+\value{
+A matrix with simulated log(N) through time.
+}
 \description{
 Simulate log-transformed counts of aphid populations for one or more lines.
 }

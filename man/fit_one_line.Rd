@@ -31,16 +31,10 @@ Fit multiple time series for a single aphid line.
 R0 <- 0.29
 alpha <- 0.002
 process <- 0.1
-X <- matrix(0, 15, 5)
-X[1,] <- log(runif(ncol(X), 15, 25))
-for (t in 1:(nrow(X)-1)) {
-    X[(t+1),] <- X[t,] + R0 * (1 - alpha * exp(X[t,])) + rnorm(ncol(X), 0, process)
-}; rm(t)
+n_reps <- 5
+nobs_ts <- 11:15
 
-X[12:15, 2] <- NA
-X[13:15, 3] <- NA
-X[14:15, 4] <- NA
-X[15:15, 5] <- NA
+X <- sim_lines(R0, alpha, n_reps, nobs_ts, process)
 
 # (You would normally not change iter to 100)
 fit <- fit_one_line(X, iter = 100)
