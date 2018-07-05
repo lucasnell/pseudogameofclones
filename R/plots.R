@@ -34,6 +34,7 @@ compare_priors <- function(location = 0, scale = 1, df_t = 2, xlim = c(-10, 10))
                   args = list(location = location, scale = scale)) +
         # stat_dist("product_normal", size = 0.75, linetype = 2, fun = dproduct_normal,
         #           args = list(scale = 1))
+        ggplot2::scale_color_brewer("distribution:", palette = "Dark2") +
         NULL
 }
 
