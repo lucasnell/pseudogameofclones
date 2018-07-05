@@ -2,13 +2,17 @@
 title: "Choose priors"
 author: "Lucas A. Nell"
 date: "7/4/2018"
-output: html_document
+output:
+  github_document:
+    toc: true
+    toc_depth: 2
 editor_options: 
   chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = normalizePath(".."), dev = 'quartz_pdf')
 # source(".Rprofile")
 ```
 ```{r library_pkgs, warning=FALSE}
@@ -16,6 +20,22 @@ suppressPackageStartupMessages({
     library(aphidreps)
 })
 ```
+
+
+## Model
+
+Below is the model I'm fitting:
+
+$$
+X_{t+1} = X_t + R_0 \left( 1 - \alpha ~ \text{e}^{X_t} \right)
+$$
+
+where $X_t$ is log aphid counts for a particular plant at time $t$,
+$R_0$ is the aphid line's growth rate, and $\alpha$ is the line's density dependence.
+Growth rates get one parameter for each aphid line.
+Density dependence, however, gets both mean and standard deviation estimates per aphid
+line, plus an overall $\alpha$ estimate per time-series, as a sort of random effect.
+
 
 
 ## Growth rates
@@ -74,36 +94,74 @@ compare_priors(sd(c(fast, slow)) / sqrt(2), 0.005, xlim = c(0, 0.05)) +
 
 ## Density dependence
 
-In my experience, we usually get a max of ~500 aphids on a plant that's been cut down to
-3 sets of leaves.
-So I used $1 / 500 = 0.002$ for alpha mean.
-I used a normal distribution with SD (of the mean) of 0.0005 because this plot
-looks about right.
-We sometimes see >1000 or <100 aphids as max values for a replicate, but these
-are rare and not likely to be mean values.
+### Among-line distribution
+
+Because Meisner et al. (2014) used cages of 8 plants, I'm setting my mean for $\alpha$
+by multiplying their density-dependence estimate ($0.000467$) by 8:
+$\bar\alpha = 0.000467 \times 8 = 0.003736$.
+
+They parameterized their density dependence slightly differently from the model I'm
+using, so I'm setting the standard deviation for $\alpha$ to be fairly wide.
+So for the distribution of mean alpha among all lines, the normal curve below looks
+good to me.
 
 
-```{r density_plot}
-compare_priors(0.002, 0.0005, xlim = c(0, 0.01)) +
-    geom_vline(xintercept = 0.002)
+```{r alpha_overall_mean_plot}
+compare_priors(0.003736, 0.0015, xlim = c(0, 0.01)) +
+    geom_vline(xintercept = 0.003736)
 ```
 
 
-For the among-line variability, I think SD = 0.001 fits best
-because it generates values of 0.01 and very close to zero more commonly.
+For sampling mean alphas for each line, I think a scale of 0.0015 is still fine, but
+I'll use the cauchy distribution because of its heavier tails.
 
-```{r density_plot_sd}
-compare_priors(0.002, 0.001, xlim = c(0, 0.01)) +
-    geom_vline(xintercept = 0.002)
+```{r alpha_line_means_plot}
+compare_priors(0.003736, 0.0015, xlim = c(0, 0.01)) +
+    geom_vline(xintercept = 0.003736)
 ```
 
 
-So for the among-line SD distribution, I used a cauchy distribution with mean = 0.001
-and SD = 0.0005 because it looks most reasonable to me.
+For the among-line SD distribution, I used a cauchy distribution with location = 0.0015
+and scale = 0.0005 because it looks most reasonable to me.
 
-```{r density_plot_sd2}
-compare_priors(0.001, 0.0005, xlim = c(0, 0.005)) +
-    geom_vline(xintercept = 0.001)
+```{r alpha_among_line_sd_plot}
+compare_priors(0.0015, 0.0005, xlim = c(0, 0.005)) +
+    geom_vline(xintercept = 0.0015)
+```
+
+
+### Within-line distribution
+
+I'm really not sure about the degree to which different plants will affect the
+density dependence within an aphid line.
+I'll use some raw data from Meisner et al. (2014) to get some idea.
+Below is from their cage experiments when they added parasitoid wasps after aphid
+densities were allowed to peak (35 days).
+I didn't use these estimates for mean alpha because of the potential effect of wasps,
+but this is probably as good an estimate of variance among plants that I'll get.
+Notice that I'm dividing the max number of aphids by 8 because there were 8 plants
+in this experiment.
+
+
+```{r Meisner_cage_data}
+read_csv("data-raw/MeisnerLongtermCageData.csv",
+         col_types = "iiiiii") %>% 
+    filter(treatment == 0, year == 2009) %>% 
+    group_by(replicate) %>% 
+    summarize(alpha = 1 / max(aphids / 8)) %>% 
+    select(alpha) %>% 
+    summarize(sd = sd(alpha)) %>% 
+    unlist() %>% 
+    signif(3)
+```
+
+
+I'm choosing a cauchy distribution with location of 0.00142 and scale of 0.02 
+because I'm pretty uncertain of this parameter.
+
+```{r alpha_within_line_sd_plot}
+compare_priors(0.00142, 0.02, xlim = c(0, 0.1)) +
+    geom_vline(xintercept = 0.00142)
 ```
 
 
@@ -112,31 +170,11 @@ compare_priors(0.001, 0.0005, xlim = c(0, 0.005)) +
 
 I'm not really sure what this should be, but based on simulations, a value of 1 would
 be very high.
-Thus I chose a cauchy distribution with 0.1 as the mean and SD because
+Thus I chose a cauchy distribution with 0.1 as the location and scale because
 this appears about right.
 
 ```{r process_error_plot}
-compare_priors(0.1, 0.1, xlim = c(0, 2)) +
+compare_priors(0.1, 0.1, xlim = c(0, 1)) +
     geom_vline(xintercept = 0.1)
-```
-
-
-## Plant effects
-
-```{r beta_plot}
-compare_priors(0.1, 0.1, xlim = c(0, 2)) +
-    geom_vline(xintercept = 0.1)
-```
-
-
-```{r}
-growth %>% 
-    group_by(line, rep) %>% 
-    summarize(Nm = max(N)) %>% 
-    group_by(line) %>% 
-    summarize(mu = mean(1 / Nm),
-              sigma = sd(1 / Nm),
-              n = n()) %>% 
-    identity()
 ```
 

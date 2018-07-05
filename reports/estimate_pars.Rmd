@@ -32,12 +32,6 @@ model_data <- growth %>%
 
 ```{r run_model}
 stan_fit <- model_data %>% 
-    fit_lines()
-```
-
-
-```{r run_model2}
-stan_fit2 <- model_data %>% 
     fit_lines(plants = TRUE)
 ```
 
@@ -45,29 +39,14 @@ stan_fit2 <- model_data %>%
 # Examine model output
 
 ```{r examine_model}
-dim(rstan::extract(stan_fit, "R0", permuted = FALSE))
 apply(rstan::extract(stan_fit, "R0", permuted = FALSE), 3, mean)
 apply(rstan::extract(stan_fit, "alpha", permuted = FALSE), 3, mean)
 apply(rstan::extract(stan_fit, "process", permuted = FALSE), 3, mean)
 
-print(stan_fit, digits = 6, pars = c("R0", "alpha", "process"), probs = c())
-print(stan_fit2, digits = 6, pars = c("R0", "alpha", "beta", "process"), probs = c())
+print(stan_fit, digits = 6, pars = c("R0", "alpha", "beta", "process"), probs = c())
 
 
 pred_df <- make_pred_df(stan_fit, growth)
-pred_df2 <- make_pred_df(stan_fit2, growth)
-
-
-
-pred_df2 %>% 
-    ggplot(aes(date, X)) +
-    geom_ribbon(aes(ymin = X_lower, ymax = X_upper),
-                fill = "gray70", alpha = 0.5) +
-    geom_line(color = "gray60") +
-    geom_point(shape = 1, color = "gray60") +
-    geom_line(aes(y = X_pred), color = "dodgerblue3", size = 0.5) +
-    facet_wrap(~ rep + line, nrow = 5) +
-    NULL
 
 pred_df %>% 
     ggplot(aes(date, X)) +
