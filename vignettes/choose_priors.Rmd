@@ -2,19 +2,26 @@
 title: "Choose priors"
 author: "Lucas A. Nell"
 date: "7/4/2018"
-output:
-  github_document:
-    toc: true
-    toc_depth: 2
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Choose priors}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 editor_options: 
   chunk_output_type: console
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
 knitr::opts_knit$set(root.dir = normalizePath(".."), dev = 'quartz_pdf')
 # source(".Rprofile")
+bayesplot::color_scheme_set("viridis")
 ```
+
+
 ```{r library_pkgs, warning=FALSE}
 suppressPackageStartupMessages({
     library(aphidreps)

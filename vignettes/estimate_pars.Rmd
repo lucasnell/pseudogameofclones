@@ -2,13 +2,20 @@
 title: "Estimating aphid population parameters"
 author: "Lucas A. Nell"
 date: "7/3/2018"
-output: html_document
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Estimating aphid population parameters}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 editor_options: 
   chunk_output_type: console
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
 # source(".Rprofile")
 bayesplot::color_scheme_set("viridis")
 ```

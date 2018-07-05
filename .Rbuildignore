@@ -4,3 +4,5 @@
 ^under\_constr$
 ^reports$
 ^data-raw$
+^_pkgdown\.yml$
+^docs$
