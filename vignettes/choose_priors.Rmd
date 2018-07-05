@@ -1,7 +1,7 @@
 ---
 title: "Choose priors"
 author: "Lucas A. Nell"
-date: "7/4/2018"
+date: "2018-07-04"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Choose priors}
@@ -14,9 +14,12 @@ editor_options:
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  dev = "svglite", 
+  fig.width = 6,
+  fig.height = 4
 )
-knitr::opts_knit$set(root.dir = normalizePath(".."), dev = 'quartz_pdf')
+knitr::opts_knit$set(root.dir = normalizePath(".."))
 # source(".Rprofile")
 bayesplot::color_scheme_set("viridis")
 ```
@@ -91,7 +94,8 @@ sd(c(fast, slow)) / sqrt(2)
 ```
 
 
-The cauchy distribution with SD = 0.005 seems about right for sampling the among-line SD.
+The cauchy distribution with scale = 0.005 seems about right for sampling the
+among-line SD.
 
 ```{r R0_sd_plot}
 compare_priors(sd(c(fast, slow)) / sqrt(2), 0.005, xlim = c(0, 0.05)) +

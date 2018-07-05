@@ -1,7 +1,7 @@
 ---
 title: "Estimating aphid population parameters"
 author: "Lucas A. Nell"
-date: "7/3/2018"
+date: "2018-07-03"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Estimating aphid population parameters}
@@ -14,38 +14,46 @@ editor_options:
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  dev = "svglite"
 )
+knitr::opts_knit$set(root.dir = normalizePath(".."))
 # source(".Rprofile")
 bayesplot::color_scheme_set("viridis")
 ```
 
-```{r library_pkgs}
+```{r library_pkgs, warning=FALSE}
 suppressPackageStartupMessages({
     library(aphidreps)
 })
 ```
 
-# Load data
+## Load data
 
 ```{r load_data}
 growth <- load_data()
+growth
+```
+
+## Convert data
+
+```{r convert_data}
 model_data <- growth %>% 
     line_data()
 ```
 
 
-# Run model
+## Run model
 
-```{r run_model}
+```{r run_model, eval = FALSE}
 stan_fit <- model_data %>% 
     fit_lines(plants = TRUE)
 ```
 
 
-# Examine model output
+## Examine model output
 
-```{r examine_model}
+```{r examine_model, eval = FALSE}
 apply(rstan::extract(stan_fit, "R0", permuted = FALSE), 3, mean)
 apply(rstan::extract(stan_fit, "alpha", permuted = FALSE), 3, mean)
 apply(rstan::extract(stan_fit, "process", permuted = FALSE), 3, mean)
