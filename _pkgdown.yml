@@ -1,3 +1,19 @@
 template:
   params:
     bootswatch: cerulean
+articles:
+- title: All vignettes
+  desc: ~
+  contents:
+  - '`choose_priors`'
+  - '`estimate_pars`'
+
+figures:
+  dev: svglite::svglite
+  dpi: 96
+  dev.args: []
+  fig.ext: svg
+  fig.width: 7.2916667
+  fig.height: ~
+  fig.retina: 2
+  fig.asp: 1.618

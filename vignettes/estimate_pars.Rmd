@@ -22,7 +22,7 @@ knitr::opts_knit$set(root.dir = normalizePath(".."))
 bayesplot::color_scheme_set("viridis")
 ```
 
-```{r library_pkgs, warning=FALSE}
+```{r library_pkgs, warning=FALSE, echo=FALSE}
 suppressPackageStartupMessages({
     library(aphidreps)
 })
