@@ -40,7 +40,7 @@ static int current_statement_begin__;
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
     reader.add_event(0, 0, "start", "model_all_lines_plants");
-    reader.add_event(105, 105, "end", "model_all_lines_plants");
+    reader.add_event(73, 73, "end", "model_all_lines_plants");
     return reader;
 }
 
@@ -233,7 +233,7 @@ public:
         double mean_alpha(0);
         mean_alpha = vals_r__[pos__++];
         try {
-            writer__.scalar_lub_unconstrain(0,1,mean_alpha);
+            writer__.scalar_lb_unconstrain(0,mean_alpha);
         } catch (const std::exception& e) { 
             throw std::runtime_error(std::string("Error transforming variable mean_alpha: ") + e.what());
         }
@@ -378,9 +378,9 @@ public:
             T__ mean_alpha;
             (void) mean_alpha;  // dummy to suppress unused var warning
             if (jacobian__)
-                mean_alpha = in__.scalar_lub_constrain(0,1,lp__);
+                mean_alpha = in__.scalar_lb_constrain(0,lp__);
             else
-                mean_alpha = in__.scalar_lub_constrain(0,1);
+                mean_alpha = in__.scalar_lb_constrain(0);
 
             T__ sigma_R0;
             (void) sigma_R0;  // dummy to suppress unused var warning
@@ -457,71 +457,29 @@ public:
             stan::math::fill(X_pred,DUMMY_VAR__);
 
 
-            {
+            current_statement_begin__ = 36;
+            stan::math::assign(R0, add(mean_R0,multiply(sigma_R0,Z_R0)));
             current_statement_begin__ = 37;
-            validate_non_negative_index("hat_alpha", "N_ts", N_ts);
-            Eigen::Matrix<T__,Eigen::Dynamic,1>  hat_alpha(static_cast<Eigen::VectorXd::Index>(N_ts));
-            (void) hat_alpha;  // dummy to suppress unused var warning
-
-            stan::math::initialize(hat_alpha, DUMMY_VAR__);
-            stan::math::fill(hat_alpha,DUMMY_VAR__);
-
-
+            stan::math::assign(alpha, add(mean_alpha,multiply(sigma_alpha,Z_alpha)));
             current_statement_begin__ = 39;
-            for (int i = 1; i <= n_lines; ++i) {
-
-                current_statement_begin__ = 40;
-                if (as_bool(logical_lt((mean_R0 + (sigma_R0 * get_base1(Z_R0,i,"Z_R0",1))),0))) {
-
-                    current_statement_begin__ = 41;
-                    stan::math::assign(get_base1_lhs(R0,i,"R0",1), 0);
-                } else {
-                    current_statement_begin__ = 42;
-                    stan::math::assign(get_base1_lhs(R0,i,"R0",1), (mean_R0 + (sigma_R0 * get_base1(Z_R0,i,"Z_R0",1))));
-                }
-                current_statement_begin__ = 43;
-                if (as_bool(logical_lt((mean_alpha + (sigma_alpha * get_base1(Z_alpha,i,"Z_alpha",1))),0))) {
-
-                    current_statement_begin__ = 44;
-                    stan::math::assign(get_base1_lhs(alpha,i,"alpha",1), 0);
-                } else {
-                    current_statement_begin__ = 45;
-                    stan::math::assign(get_base1_lhs(alpha,i,"alpha",1), (mean_alpha + (sigma_alpha * get_base1(Z_alpha,i,"Z_alpha",1))));
-                }
-            }
-            current_statement_begin__ = 49;
             for (int i = 1; i <= N_ts; ++i) {
 
-                current_statement_begin__ = 50;
-                stan::math::assign(get_base1_lhs(hat_alpha,i,"hat_alpha",1), ((mean_alpha + (sigma_alpha * get_base1(Z_alpha,get_base1(line_ts,i,"line_ts",1),"Z_alpha",1))) + (get_base1(Z_hat_alpha,i,"Z_hat_alpha",1) * get_base1(sigma_hat_alpha,get_base1(line_ts,i,"line_ts",1),"sigma_hat_alpha",1))));
-                current_statement_begin__ = 52;
-                if (as_bool(logical_lte(get_base1(hat_alpha,i,"hat_alpha",1),1))) {
+                current_statement_begin__ = 40;
+                stan::math::assign(get_base1_lhs(X_pred,1,i,"X_pred",1), get_base1(X,1,i,"X",1));
+                current_statement_begin__ = 41;
+                stan::model::assign(X_pred, 
+                            stan::model::cons_list(stan::model::index_min_max(2, get_base1(nobs_ts,i,"nobs_ts",1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), 
+                            add(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (get_base1(nobs_ts,i,"nobs_ts",1) - 1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X"),multiply(get_base1(R0,get_base1(line_ts,i,"line_ts",1),"R0",1),subtract(1,multiply(((get_base1(Z_hat_alpha,i,"Z_hat_alpha",1) * get_base1(sigma_hat_alpha,get_base1(line_ts,i,"line_ts",1),"sigma_hat_alpha",1)) + get_base1(alpha,get_base1(line_ts,i,"line_ts",1),"alpha",1)),exp(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (get_base1(nobs_ts,i,"nobs_ts",1) - 1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X")))))), 
+                            "assigning variable X_pred");
+                current_statement_begin__ = 44;
+                if (as_bool(logical_lt(get_base1(nobs_ts,i,"nobs_ts",1),max_reps))) {
 
-                    current_statement_begin__ = 53;
-                    for (int j = 1; j <= max_reps; ++j) {
-                        current_statement_begin__ = 53;
+                    current_statement_begin__ = 45;
+                    for (int j = (get_base1(nobs_ts,i,"nobs_ts",1) + 1); j <= max_reps; ++j) {
+                        current_statement_begin__ = 45;
                         stan::math::assign(get_base1_lhs(X_pred,j,i,"X_pred",1), 0);
                     }
-                } else {
-
-                    current_statement_begin__ = 55;
-                    stan::math::assign(get_base1_lhs(X_pred,1,i,"X_pred",1), get_base1(X,1,i,"X",1));
-                    current_statement_begin__ = 56;
-                    stan::model::assign(X_pred, 
-                                stan::model::cons_list(stan::model::index_min_max(2, get_base1(nobs_ts,i,"nobs_ts",1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), 
-                                add(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (get_base1(nobs_ts,i,"nobs_ts",1) - 1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X"),multiply(get_base1(R0,get_base1(line_ts,i,"line_ts",1),"R0",1),subtract(1,multiply(get_base1(hat_alpha,i,"hat_alpha",1),exp(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (get_base1(nobs_ts,i,"nobs_ts",1) - 1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X")))))), 
-                                "assigning variable X_pred");
-                    current_statement_begin__ = 58;
-                    if (as_bool(logical_lt(get_base1(nobs_ts,i,"nobs_ts",1),max_reps))) {
-
-                        current_statement_begin__ = 59;
-                        for (int j = (get_base1(nobs_ts,i,"nobs_ts",1) + 1); j <= max_reps; ++j) {
-                            current_statement_begin__ = 59;
-                            stan::math::assign(get_base1_lhs(X_pred,j,i,"X_pred",1), 0);
-                        }
-                    }
                 }
-            }
             }
 
             // validate transformed parameters
@@ -555,79 +513,50 @@ public:
             check_greater_or_equal(function__,"R0",R0,0);
             current_statement_begin__ = 33;
             check_greater_or_equal(function__,"alpha",alpha,0);
-            check_less_or_equal(function__,"alpha",alpha,1);
             current_statement_begin__ = 34;
             check_greater_or_equal(function__,"X_pred",X_pred,0);
 
             // model body
 
-            current_statement_begin__ = 73;
+            current_statement_begin__ = 54;
             lp_accum__.add(normal_log<propto__>(mean_R0, 0.2711385, 0.01517227));
             if (mean_R0 < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
             else lp_accum__.add(-normal_ccdf_log(0, 0.2711385, 0.01517227));
-            current_statement_begin__ = 74;
+            current_statement_begin__ = 55;
             lp_accum__.add(normal_log<propto__>(mean_alpha, 0.0037360000000000002, 0.0015));
             if (mean_alpha < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
-            else if (mean_alpha > 1) lp_accum__.add(-std::numeric_limits<double>::infinity());
-            else lp_accum__.add(-log_diff_exp(normal_cdf_log(1, 0.0037360000000000002, 0.0015), normal_cdf_log(0, 0.0037360000000000002, 0.0015)));
-            current_statement_begin__ = 76;
+            else lp_accum__.add(-normal_ccdf_log(0, 0.0037360000000000002, 0.0015));
+            current_statement_begin__ = 57;
             lp_accum__.add(cauchy_log<propto__>(sigma_R0, 0.02145683, 0.0050000000000000001));
             if (sigma_R0 < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
             else lp_accum__.add(-cauchy_ccdf_log(0, 0.02145683, 0.0050000000000000001));
-            current_statement_begin__ = 77;
+            current_statement_begin__ = 58;
             lp_accum__.add(cauchy_log<propto__>(sigma_alpha, 0.0015, 0.00050000000000000001));
             if (sigma_alpha < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
             else lp_accum__.add(-cauchy_ccdf_log(0, 0.0015, 0.00050000000000000001));
-            current_statement_begin__ = 78;
+            current_statement_begin__ = 59;
             for (int i = 1; i <= n_lines; ++i) {
 
-                current_statement_begin__ = 79;
+                current_statement_begin__ = 60;
                 lp_accum__.add(cauchy_log<propto__>(get_base1(sigma_hat_alpha,i,"sigma_hat_alpha",1), 0.00142, 0.02));
                 if (get_base1(sigma_hat_alpha,i,"sigma_hat_alpha",1) < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
                 else lp_accum__.add(-cauchy_ccdf_log(0, 0.00142, 0.02));
             }
-            current_statement_begin__ = 82;
+            current_statement_begin__ = 63;
             lp_accum__.add(normal_log<propto__>(Z_R0, 0, 1));
-            current_statement_begin__ = 83;
+            current_statement_begin__ = 64;
             lp_accum__.add(normal_log<propto__>(Z_alpha, 0, 1));
-            current_statement_begin__ = 84;
+            current_statement_begin__ = 65;
             lp_accum__.add(normal_log<propto__>(Z_hat_alpha, 0, 1));
-            current_statement_begin__ = 87;
-            for (int i = 1; i <= n_lines; ++i) {
-
-                current_statement_begin__ = 88;
-                if (as_bool(logical_lt((mean_R0 + (sigma_R0 * get_base1(Z_R0,i,"Z_R0",1))),0))) {
-
-                    current_statement_begin__ = 89;
-                    lp_accum__.add(stan::math::negative_infinity());
-                }
-                current_statement_begin__ = 91;
-                if (as_bool(logical_lt((mean_alpha + (sigma_alpha * get_base1(Z_alpha,i,"Z_alpha",1))),0))) {
-
-                    current_statement_begin__ = 92;
-                    lp_accum__.add(stan::math::negative_infinity());
-                }
-            }
-            current_statement_begin__ = 96;
+            current_statement_begin__ = 67;
             lp_accum__.add(cauchy_log<propto__>(process, 0.10000000000000001, 0.10000000000000001));
             if (process < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
             else lp_accum__.add(-cauchy_ccdf_log(0, 0.10000000000000001, 0.10000000000000001));
-            current_statement_begin__ = 98;
+            current_statement_begin__ = 69;
             for (int i = 1; i <= N_ts; ++i) {
 
-                current_statement_begin__ = 99;
-                for (int t = 2; t <= get_base1(nobs_ts,i,"nobs_ts",1); ++t) {
-
-                    current_statement_begin__ = 100;
-                    lp_accum__.add(normal_log<propto__>(get_base1(X,t,i,"X",1), get_base1(X_pred,t,i,"X_pred",1), process));
-                    if (get_base1(X,t,i,"X",1) < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
-                    else lp_accum__.add(-normal_ccdf_log(0, get_base1(X_pred,t,i,"X_pred",1), process));
-                }
-                current_statement_begin__ = 102;
-                if (as_bool(logical_eq(sum(stan::model::rvalue(X_pred, stan::model::cons_list(stan::model::index_omni(), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X_pred")),0))) {
-                    current_statement_begin__ = 102;
-                    lp_accum__.add(stan::math::negative_infinity());
-                }
+                current_statement_begin__ = 70;
+                lp_accum__.add(normal_log<propto__>(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(2, get_base1(nobs_ts,i,"nobs_ts",1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X"), stan::model::rvalue(X_pred, stan::model::cons_list(stan::model::index_min_max(2, get_base1(nobs_ts,i,"nobs_ts",1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X_pred"), process));
             }
 
         } catch (const std::exception& e) {
@@ -721,7 +650,7 @@ public:
         (void) function__;  // dummy to suppress unused var warning
         // read-transform, write parameters
         double mean_R0 = in__.scalar_lb_constrain(0);
-        double mean_alpha = in__.scalar_lub_constrain(0,1);
+        double mean_alpha = in__.scalar_lb_constrain(0);
         double sigma_R0 = in__.scalar_lb_constrain(0);
         double sigma_alpha = in__.scalar_lb_constrain(0);
         vector_d sigma_hat_alpha = in__.vector_lb_constrain(0,n_lines);
@@ -781,71 +710,29 @@ public:
             stan::math::fill(X_pred,DUMMY_VAR__);
 
 
-            {
+            current_statement_begin__ = 36;
+            stan::math::assign(R0, add(mean_R0,multiply(sigma_R0,Z_R0)));
             current_statement_begin__ = 37;
-            validate_non_negative_index("hat_alpha", "N_ts", N_ts);
-            vector_d hat_alpha(static_cast<Eigen::VectorXd::Index>(N_ts));
-            (void) hat_alpha;  // dummy to suppress unused var warning
-
-            stan::math::initialize(hat_alpha, std::numeric_limits<double>::quiet_NaN());
-            stan::math::fill(hat_alpha,DUMMY_VAR__);
-
-
+            stan::math::assign(alpha, add(mean_alpha,multiply(sigma_alpha,Z_alpha)));
             current_statement_begin__ = 39;
-            for (int i = 1; i <= n_lines; ++i) {
-
-                current_statement_begin__ = 40;
-                if (as_bool(logical_lt((mean_R0 + (sigma_R0 * get_base1(Z_R0,i,"Z_R0",1))),0))) {
-
-                    current_statement_begin__ = 41;
-                    stan::math::assign(get_base1_lhs(R0,i,"R0",1), 0);
-                } else {
-                    current_statement_begin__ = 42;
-                    stan::math::assign(get_base1_lhs(R0,i,"R0",1), (mean_R0 + (sigma_R0 * get_base1(Z_R0,i,"Z_R0",1))));
-                }
-                current_statement_begin__ = 43;
-                if (as_bool(logical_lt((mean_alpha + (sigma_alpha * get_base1(Z_alpha,i,"Z_alpha",1))),0))) {
-
-                    current_statement_begin__ = 44;
-                    stan::math::assign(get_base1_lhs(alpha,i,"alpha",1), 0);
-                } else {
-                    current_statement_begin__ = 45;
-                    stan::math::assign(get_base1_lhs(alpha,i,"alpha",1), (mean_alpha + (sigma_alpha * get_base1(Z_alpha,i,"Z_alpha",1))));
-                }
-            }
-            current_statement_begin__ = 49;
             for (int i = 1; i <= N_ts; ++i) {
 
-                current_statement_begin__ = 50;
-                stan::math::assign(get_base1_lhs(hat_alpha,i,"hat_alpha",1), ((mean_alpha + (sigma_alpha * get_base1(Z_alpha,get_base1(line_ts,i,"line_ts",1),"Z_alpha",1))) + (get_base1(Z_hat_alpha,i,"Z_hat_alpha",1) * get_base1(sigma_hat_alpha,get_base1(line_ts,i,"line_ts",1),"sigma_hat_alpha",1))));
-                current_statement_begin__ = 52;
-                if (as_bool(logical_lte(get_base1(hat_alpha,i,"hat_alpha",1),1))) {
+                current_statement_begin__ = 40;
+                stan::math::assign(get_base1_lhs(X_pred,1,i,"X_pred",1), get_base1(X,1,i,"X",1));
+                current_statement_begin__ = 41;
+                stan::model::assign(X_pred, 
+                            stan::model::cons_list(stan::model::index_min_max(2, get_base1(nobs_ts,i,"nobs_ts",1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), 
+                            add(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (get_base1(nobs_ts,i,"nobs_ts",1) - 1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X"),multiply(get_base1(R0,get_base1(line_ts,i,"line_ts",1),"R0",1),subtract(1,multiply(((get_base1(Z_hat_alpha,i,"Z_hat_alpha",1) * get_base1(sigma_hat_alpha,get_base1(line_ts,i,"line_ts",1),"sigma_hat_alpha",1)) + get_base1(alpha,get_base1(line_ts,i,"line_ts",1),"alpha",1)),exp(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (get_base1(nobs_ts,i,"nobs_ts",1) - 1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X")))))), 
+                            "assigning variable X_pred");
+                current_statement_begin__ = 44;
+                if (as_bool(logical_lt(get_base1(nobs_ts,i,"nobs_ts",1),max_reps))) {
 
-                    current_statement_begin__ = 53;
-                    for (int j = 1; j <= max_reps; ++j) {
-                        current_statement_begin__ = 53;
+                    current_statement_begin__ = 45;
+                    for (int j = (get_base1(nobs_ts,i,"nobs_ts",1) + 1); j <= max_reps; ++j) {
+                        current_statement_begin__ = 45;
                         stan::math::assign(get_base1_lhs(X_pred,j,i,"X_pred",1), 0);
                     }
-                } else {
-
-                    current_statement_begin__ = 55;
-                    stan::math::assign(get_base1_lhs(X_pred,1,i,"X_pred",1), get_base1(X,1,i,"X",1));
-                    current_statement_begin__ = 56;
-                    stan::model::assign(X_pred, 
-                                stan::model::cons_list(stan::model::index_min_max(2, get_base1(nobs_ts,i,"nobs_ts",1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), 
-                                add(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (get_base1(nobs_ts,i,"nobs_ts",1) - 1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X"),multiply(get_base1(R0,get_base1(line_ts,i,"line_ts",1),"R0",1),subtract(1,multiply(get_base1(hat_alpha,i,"hat_alpha",1),exp(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (get_base1(nobs_ts,i,"nobs_ts",1) - 1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X")))))), 
-                                "assigning variable X_pred");
-                    current_statement_begin__ = 58;
-                    if (as_bool(logical_lt(get_base1(nobs_ts,i,"nobs_ts",1),max_reps))) {
-
-                        current_statement_begin__ = 59;
-                        for (int j = (get_base1(nobs_ts,i,"nobs_ts",1) + 1); j <= max_reps; ++j) {
-                            current_statement_begin__ = 59;
-                            stan::math::assign(get_base1_lhs(X_pred,j,i,"X_pred",1), 0);
-                        }
-                    }
                 }
-            }
             }
 
             // validate transformed parameters
@@ -853,7 +740,6 @@ public:
             check_greater_or_equal(function__,"R0",R0,0);
             current_statement_begin__ = 33;
             check_greater_or_equal(function__,"alpha",alpha,0);
-            check_less_or_equal(function__,"alpha",alpha,1);
             current_statement_begin__ = 34;
             check_greater_or_equal(function__,"X_pred",X_pred,0);
 
