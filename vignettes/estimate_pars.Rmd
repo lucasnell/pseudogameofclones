@@ -40,6 +40,7 @@ growth
 ```{r convert_data}
 model_data <- growth %>% 
     line_data()
+str(model_data, give.attr = FALSE)
 ```
 
 
@@ -47,7 +48,7 @@ model_data <- growth %>%
 
 ```{r run_model, eval = FALSE}
 stan_fit <- model_data %>% 
-    fit_lines(plants = TRUE)
+    fit_lines(plants = TRUE, chains = 1)
 ```
 
 

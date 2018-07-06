@@ -123,27 +123,29 @@ compare_priors(sd(c(fast, slow)) / sqrt(2), 0.005, xlim = c(0, 0.05)) +
 
 ### Among-line distribution
 
-Because Meisner et al. (2014) used cages of 8 plants, I'm setting my mean for $\alpha$
-by multiplying their density-dependence estimate ($0.000467$) by 8:
+Because Meisner et al. (2014) used cages of 8 plants, I'm setting my desired mean
+for $\alpha$ by multiplying their density-dependence estimate ($0.000467$) by 8:
 $\bar\alpha = 0.000467 \times 8 = 0.003736$.
 
 They parameterized their density dependence slightly differently from the model I'm
 using, so I'm setting the standard deviation for $\alpha$ to be fairly wide.
-So for the distribution of mean alpha among all lines, the normal curve below looks
+So for the distribution of mean alpha among all lines, the beta curve below looks
 good to me.
+The beta distribution is particularly nice because it's bound between 0 and 1, just
+like any reasonable $\alpha$ estimate should be.
 
 
 ```{r alpha_overall_mean_plot}
-compare_priors(0.003736, 0.0015, xlim = c(0, 0.01)) +
+compare_priors(0.003736, 0.0015, xlim = c(0, 0.01), beta = TRUE) +
     geom_vline(xintercept = 0.003736)
 ```
 
 
-For sampling mean alphas for each line, I think a scale of 0.0015 is still fine, but
-I'll use the cauchy distribution because of its heavier tails.
+For sampling mean alphas for each line, I'm going to increase the SD to 
+0.002 to allow for a greater possibility of more extreme values for each line.
 
 ```{r alpha_line_means_plot}
-compare_priors(0.003736, 0.0015, xlim = c(0, 0.01)) +
+compare_priors(0.003736, 0.002, xlim = c(0, 0.01), beta = TRUE) +
     geom_vline(xintercept = 0.003736)
 ```
 

@@ -10,7 +10,8 @@
 #'
 #' @export
 #'
-compare_priors <- function(location = 0, scale = 1, df_t = 2, xlim = c(-10, 10)) {
+compare_priors <- function(location = 0, scale = 1, df_t = 2, xlim = c(-10, 10),
+                           beta = FALSE) {
     dt_loc_scale <- function(x, df, location, scale) {
         1/scale * dt((x - location)/scale, df)
     }
@@ -23,7 +24,7 @@ compare_priors <- function(location = 0, scale = 1, df_t = 2, xlim = c(-10, 10))
     stat_dist <- function(dist, ...) {
         ggplot2::stat_function(ggplot2::aes_(color = dist), ...)
     }
-    ggplot2::ggplot(data.frame(x = xlim), ggplot2::aes(x)) +
+    outp <- ggplot2::ggplot(data.frame(x = xlim), ggplot2::aes(x)) +
         stat_dist("normal", size = 0.75, fun = dnorm,
                   args = list(mean = location, sd = scale)) +
         stat_dist("student_t", size = 0.75, fun = dt_loc_scale,
@@ -36,6 +37,16 @@ compare_priors <- function(location = 0, scale = 1, df_t = 2, xlim = c(-10, 10))
         #           args = list(scale = 1))
         ggplot2::scale_color_brewer("distribution:", palette = "Dark2") +
         NULL
+    if (beta) {
+        mu_ <- location
+        var_ <- scale^2
+        alpha_ <- ((1 - mu_) / var_ - 1 / mu_) * mu_ ^ 2
+        beta_ <- alpha_ * (1 / mu_ - 1)
+        outp <- outp +
+            stat_dist("beta", size = 0.75, linetype = 2, fun = dbeta,
+                      args = list(shape1 = alpha_, shape2 = beta_))
+    }
+    return(outp)
 }
 
 
