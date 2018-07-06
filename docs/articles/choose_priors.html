@@ -99,8 +99,14 @@
 X_{t+1} = X_t + R_0 \left( 1 - \alpha ~ \text{e}^{X_t} \right)
 \]</span></p>
 <p>where <span class="math inline">\(X_t\)</span> is log aphid counts for a particular plant at time <span class="math inline">\(t\)</span>, <span class="math inline">\(R_0\)</span> is the aphid line’s growth rate, and <span class="math inline">\(\alpha\)</span> is the line’s density dependence. Growth rates get one parameter for each aphid line. Density dependence, however, gets both mean and standard deviation estimates per aphid line, plus an overall <span class="math inline">\(\alpha\)</span> estimate per time-series, as a sort of random effect.</p>
+<p>For clonal line <span class="math inline">\(i\)</span> on plant <span class="math inline">\(j\)</span>, <span class="math inline">\(\alpha\)</span> is calculated as follows:</p>
+<p><span class="math display">\[
+\alpha_{i,j} = \bar{\alpha} + Z_{\alpha,i} ~ \sigma_{\alpha} + 
+    {\hat{Z}}_{\alpha,j} ~ {\hat{\sigma}}_{\alpha,i}
+\]</span></p>
+<p>Here, <span class="math inline">\(\bar\alpha\)</span> is the mean <span class="math inline">\(\alpha\)</span> among all lines, <span class="math inline">\(Z_{\alpha,i}\)</span> is a randomly generated z-score for clonal line <span class="math inline">\(i\)</span>, <span class="math inline">\(\sigma_\alpha\)</span> is for among-line variability in <span class="math inline">\(\alpha\)</span>, <span class="math inline">\({\hat{Z}}_{\alpha,j}\)</span> is a randomly generated z-score for plant <span class="math inline">\(j\)</span>, <span class="math inline">\({\hat\sigma}_{\alpha,i}\)</span> is for within-line variability in <span class="math inline">\(\alpha\)</span> for line <span class="math inline">\(i\)</span>.</p>
 <blockquote>
-<p>Note that all parameters below are truncated to be &gt; 0.</p>
+<p>Note that all parameters below are truncated to be <span class="math inline">\(\ge 0\)</span>.</p>
 </blockquote>
 </div>
 <div id="growth-rates" class="section level2">

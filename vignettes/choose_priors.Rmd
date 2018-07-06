@@ -46,8 +46,22 @@ Growth rates get one parameter for each aphid line.
 Density dependence, however, gets both mean and standard deviation estimates per aphid
 line, plus an overall $\alpha$ estimate per time-series, as a sort of random effect.
 
+For clonal line $i$ on plant $j$, $\alpha$ is calculated as follows:
 
-> Note that all parameters below are truncated to be > 0.
+$$
+\alpha_{i,j} = \bar{\alpha} + Z_{\alpha,i} ~ \sigma_{\alpha} + 
+    {\hat{Z}}_{\alpha,j} ~ {\hat{\sigma}}_{\alpha,i}
+$$
+
+Here,
+$\bar\alpha$ is the mean $\alpha$ among all lines,
+$Z_{\alpha,i}$ is a randomly generated z-score for clonal line $i$,
+$\sigma_\alpha$ is for among-line variability in $\alpha$,
+${\hat{Z}}_{\alpha,j}$ is a randomly generated z-score for plant $j$,
+${\hat\sigma}_{\alpha,i}$ is for within-line variability in $\alpha$ for line $i$.
+
+
+> Note that all parameters below are truncated to be $\ge 0$.
 
 
 ## Growth rates

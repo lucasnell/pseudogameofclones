@@ -1,7 +1,7 @@
 
 /*
-    This version differs from `all_lines.stan` because it also models how plants affect
-    each line's alpha parameter.
+    This version differs from `all_lines.stan` because it also models variability
+    in alpha within clonal lines.
 */
 
 data {
