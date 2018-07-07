@@ -43,6 +43,27 @@ dec_filter <- function(X_vec, p) {
     return(1:length(X_vec) %in% inds)
 }
 
+
+#' Title
+#'
+#' @param in_df A data frame to be filtered, with the columns `line` and `rep`.
+#' @param comp_df A data frame to use for filtering, with the columns `line` and `rep`.
+#' @param exclude A logical for whether to exclude rows from `in_df` based on `comp_df`.
+#'
+#' @return A filtered version of `in_df`.
+#'
+#' @noRd
+#'
+filter_line_rep <- function(in_df, comp_df, exclude) {
+    in_comp <- map2_lgl(in_df$line, in_df$rep,
+                        ~ any(map_lgl(1:nrow(comp_df),
+                                      function(i) {
+                                          .x == comp_df$line[i] & .y == comp_df$rep[i]
+                                      })))
+    if (exclude) return(in_df %>% filter(!in_comp))
+    return(in_df %>% filter(in_comp))
+}
+
 #' Function for filtering out X above a threshold.
 #'
 #' Note that this function is designed to be run within a single time series, meaning
@@ -111,7 +132,7 @@ load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 1
         mutate_at(vars(matches("_juv$|_adults$")),
                          function(x) ifelse(is.na(x), 0, x)) %>%
         filter(line %in% lines_to_keep) %>%
-        mutate(comments = parse_comments(comments),
+        mutate(comments = clonewars:::parse_comments(comments),
                N = stem1_juv + stem1_adults + leaf1_juv + leaf1_adults +
                    stem2_juv + stem2_adults + leaf2_juv + leaf2_adults +
                    stem3_juv + stem3_adults + leaf3_juv + leaf3_adults +
@@ -131,26 +152,122 @@ load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 1
         ungroup() %>%
         arrange(line, rep, date)
 
+    # Removing lines that aren't yet done:
+    not_done <- growth %>%
+        group_by(line, rep) %>%
+        arrange(date) %>%
+        summarize(p = tail(N, 1) / max(N),
+                  three_down = all((tail(N, 4) %>% diff() %>% sign()) == -1)) %>%
+        ungroup() %>%
+        filter(p > 0.8 & !three_down) %>%
+        arrange(line, rep) %>%
+        select(line, rep)
+    if (nrow(not_done) > 0) {
+        growth <- clonewars:::filter_line_rep(growth, not_done, exclude = TRUE)
+    }
+
     if (!is.null(filter_pars)) {
         growth <- growth %>%
             # Filter the beginning and end of the time series:
             group_by(line, rep) %>%
             # Beginning filter:
-            filter(threshold_filter(X, filter_pars$begin)) %>%
+            filter(clonewars:::threshold_filter(X, filter_pars$begin)) %>%
             # End filter:
-            filter(dec_filter(X, filter_pars$end)) %>%
+            filter(clonewars:::dec_filter(X, filter_pars$end)) %>%
             ungroup()
     }
 
 
     if (noNA) {
-        growth <- growth %>%
-            filter(!(rep == 2 & line %in% c("R10", "UT3", "WI-L4")))
+
+        missing <- growth %>%
+            group_by(line, rep) %>%
+            arrange(date) %>%
+            summarize(m = date %>% diff() %>% max()) %>%
+            ungroup() %>%
+            filter(m > 1) %>%
+            select(-m)
+
+        growth <- clonewars:::filter_line_rep(growth, missing, exclude = TRUE)
     }
 
     return(growth)
 }
 
+
+#' Load data that won't be used for the actual analysis, to develop priors.
+#'
+#' @inheritParams load_data
+#'
+#' @export
+#'
+#'
+load_prior_data <- function(file, filter_pars = list(begin = 0.5, end = 1.0)) {
+
+    # Lines that we still have and should keep for actual analyses
+    # I will be excluding them here
+    analysis_lines <- c("R10", "WIA-5D", "WI-L4", "WI-L4Ø", "UT3", "WI-2016-593",
+                        "Clover-2017-2", "Clover-2017-6")
+
+    if (missing(file)) {
+        file <- paste0('~/Dropbox/Aphid Project 2017/Lucas_traits/',
+                       'traits_data_entry.xlsx')
+    }
+
+    growth <- readxl::read_excel(file) %>%
+        mutate(line = ifelse(line == 'WI-L4 (H+3)', 'WI-L4', line),
+               line = ifelse(line == 'WI-L4ØA', 'WI-L4Ø', line),
+               date = as.Date(paste(year, month, day, sep = "-"))) %>%
+        # Change any NAs to zeros:
+        mutate_at(vars(matches("_juv$|_adults$")),
+                  function(x) ifelse(is.na(x), 0, x)) %>%
+        filter(!line %in% analysis_lines) %>%
+        mutate(comments = clonewars:::parse_comments(comments),
+               N = stem1_juv + stem1_adults + leaf1_juv + leaf1_adults +
+                   stem2_juv + stem2_adults + leaf2_juv + leaf2_adults +
+                   stem3_juv + stem3_adults + leaf3_juv + leaf3_adults +
+                   comments,
+               disp = comments,  # <-- "disp" is for dispersed aphids, ones not on the plant
+               # makes no sense for it to be 0, then >0 the next day:
+               N = ifelse(N == 0, 1, N)) %>%
+        select(line, rep, date, N, disp) %>%
+        mutate_at(vars(rep, N, disp), funs(as.integer)) %>%
+        mutate(line = factor(line),
+               X = log(N)) %>%
+        group_by(line, rep) %>%
+        mutate(date = as.integer(date - min(date)),
+               r = log(N / lag(N)) / (date - lag(date))) %>%
+        arrange(date) %>%
+        ungroup() %>%
+        arrange(line, rep, date)
+
+    # Removing lines that aren't yet done:
+    not_done <- growth %>%
+        group_by(line, rep) %>%
+        arrange(date) %>%
+        summarize(p = tail(N, 1) / max(N),
+                  three_down = all((tail(N, 4) %>% diff() %>% sign()) == -1)) %>%
+        ungroup() %>%
+        filter(p > 0.8 & !three_down) %>%
+        arrange(line, rep) %>%
+        select(line, rep)
+    if (nrow(not_done) > 0) {
+        growth <- clonewars:::filter_line_rep(growth, not_done, exclude = TRUE)
+    }
+
+    if (!is.null(filter_pars)) {
+        growth <- growth %>%
+            # Filter the beginning and end of the time series:
+            group_by(line, rep) %>%
+            # Beginning filter:
+            filter(clonewars:::threshold_filter(X, filter_pars$begin)) %>%
+            # End filter:
+            filter(clonewars:::dec_filter(X, filter_pars$end)) %>%
+            ungroup()
+    }
+
+    return(growth)
+}
 
 
 
@@ -275,3 +392,4 @@ make_pred_df <- function(stan_fit, orig_data, line, rep) {
         select(line, rep, date, X, X_pred, X_lower, X_upper, everything()) %>%
         identity()
 }
+
