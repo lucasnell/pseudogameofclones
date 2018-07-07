@@ -27,7 +27,7 @@ bayesplot::color_scheme_set("viridis")
 
 ```{r library_pkgs, warning=FALSE, echo=FALSE}
 suppressPackageStartupMessages({
-    library(aphidreps)
+    library(clonewars)
 })
 ```
 

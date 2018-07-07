@@ -4,7 +4,8 @@
 \alias{compare_priors}
 \title{Visually compare normal, student_t, cauchy, laplace, and product_normal.}
 \usage{
-compare_priors(location = 0, scale = 1, df_t = 2, xlim = c(-10, 10))
+compare_priors(location = 0, scale = 1, df_t = 2, xlim = c(-10, 10),
+  beta = FALSE)
 }
 \arguments{
 \item{scale}{Scale for all}

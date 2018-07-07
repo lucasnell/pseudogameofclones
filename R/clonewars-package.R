@@ -1,11 +1,12 @@
-#' The 'aphidreps' package.
+#' The 'clonewars' package.
 #'
-#' @description Analyses and simulations related to aphid repetition experiments.
+#' @description Analyses and simulations related to repeated aphid clonal
+#'     evolution experiments.
 #'
 #' @docType package
-#' @name aphidreps-package
-#' @aliases aphidreps
-#' @useDynLib aphidreps, .registration = TRUE
+#' @name clonewars-package
+#' @aliases clonewars
+#' @useDynLib clonewars, .registration = TRUE
 #' @import methods
 #' @import Rcpp
 #' @import rstantools
