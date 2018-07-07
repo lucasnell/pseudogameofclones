@@ -37,31 +37,149 @@ suppressPackageStartupMessages({
 Below is the model I'm fitting:
 
 $$
-X_{t+1} = X_t + R_0 \left( 1 - \alpha ~ \text{e}^{X_t} \right)
+X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 $$
 
 where $X_t$ is log aphid counts for a particular plant at time $t$,
-$R_0$ is the aphid line's growth rate, and $\alpha$ is the line's density dependence.
-Growth rates get one parameter for each aphid line.
-Density dependence, however, gets both mean and standard deviation estimates per aphid
-line, plus an overall $\alpha$ estimate per time-series, as a sort of random effect.
+$r$ is the aphid line's growth rate,
+$\alpha$ is the line's density dependence,
+and
+$\varepsilon$ is process error.
 
-For clonal line $i$ on plant $j$, $\alpha$ is calculated as follows:
+
+
+### Estimating process error
+
+$\sigma_\varepsilon$ is bound $\ge 0$ and sampled as $\sim \text{Half-Cauchy}(w_0, \eta)$.
+
+
+### Estimating growth rates 
+
+Growth rates are bound $\ge 0$ and have one estimate per aphid line,
+resulting in a vector of growth rates, $\mathbf{R}$.
+The growth rate estimate for clonal line $i$ ($r = \mathbf{R}_i$) is generated
+as follows:
 
 $$
-\alpha_{i,j} = \bar{\alpha} + Z_{\alpha,i} ~ \sigma_{\alpha} + 
-    {\hat{Z}}_{\alpha,j} ~ {\hat{\sigma}}_{\alpha,i}
+\begin{align}
+    
+    \mathbf{R}_i &= \exp \left( \theta + s_\theta ~ \mathbf{Z_{(\theta)}}_{i} \right) \\
+    
+    \theta &\sim \text{N}(\mu_{\theta}, \sigma^{2}_{\theta}) \\
+    s_\theta &\sim \text{Half-Cauchy}(x_0, \gamma) \\
+    \mathbf{Z_{(\theta)}} &\sim \text{N}(0,1) \\
+    
+\end{align}
 $$
 
-Here,
-$\bar\alpha$ is the mean $\alpha$ among all lines,
-$Z_{\alpha,i}$ is a randomly generated z-score for clonal line $i$,
-$\sigma_\alpha$ is for among-line variability in $\alpha$,
-${\hat{Z}}_{\alpha,j}$ is a randomly generated z-score for plant $j$,
-${\hat\sigma}_{\alpha,i}$ is for within-line variability in $\alpha$ for line $i$.
+
+#### Estimated from model:
+
+- $\mathbf{R}$: vector of growth rates for each aphid line
+- $\theta$: among-line mean of the log-transformed growth rates
+- $s_\theta$: among-line standard deviation of the log-transformed growth rates
 
 
-> Note that all parameters below are truncated to be $\ge 0$.
+#### Priors to define:
+
+- $\mu_\theta$: mean of the normal distribution that generates $\theta$ values
+- $\sigma^{2}_\theta$: variance of the normal distribution that generates $\theta$ values
+- $x_0$: location parameter for the half-Cauchy distribution that generates
+  $s_\theta$ values
+- $\gamma$: scale parameter for the half-Cauchy distribution that generates
+  $s_\theta$ values
+
+
+#### Temporary objects:
+
+- $\mathbf{Z_{(\theta)}}$: a vector of the same length as the number of aphid lines,
+  containing z-scores to generate variability in growth rates among aphid clones.
+
+
+### Estimating density dependence
+
+Density dependences are bound between 0 and 1 and also have estimates for each line.
+They differ from $r$ in that they also have variance within aphid lines, to account
+for effects of variability in plant resources affecting aphid density dependence.
+I used the inverse logit function to bound final $\alpha$ estimates between 0 and 1.
+For clonal line $i$ and plant $j$, estimates are generated as follows:
+
+$$
+\begin{align}
+
+    \mathbf{A}_i &= \text{logit}^{-1} \hspace{-0.25em}
+        \left(
+            \phi + s_\phi ~ \mathbf{Z_{(\phi)}}_i
+        \right) \\
+    
+    \mathbf{P}_{j} &= \text{logit}^{-1} \hspace{-0.25em}
+        \left(
+            \phi + s_\phi ~ \mathbf{Z_{(\phi)}}_{\mathbf{L}_j} + 
+            \mathbf{S}_{\mathbf{L}_j} ~ \mathbf{Z_{(A)}}_{j}
+        \right) \\
+    
+    \phi &\sim N(\mu_{\phi}, \sigma^{2}_{\phi}) \\
+    s_{\phi} &\sim \text{Half-Cauchy}(y_0, \delta) \\
+    \mathbf{S} &\sim \text{Half-Cauchy}(z_0, \zeta) \\
+    
+    \mathbf{Z_{(\phi)}} &\sim N(0,1) \\
+    \mathbf{Z_{(A)}} &\sim N(0,1) \\
+\end{align}
+$$
+
+
+
+#### Estimated from model:
+
+- $\mathbf{A}$: vector of density dependences for each aphid line
+- $\mathbf{P}$: vector of density dependences for each plant (i.e., time series)
+- $\phi$: among-line mean of the logit-transformed density dependences
+- $s_\phi$: among-line standard deviation of the logit-transformed density dependences
+- $\mathbf{S}$: vector of the within-line standard deviations in the
+    logit-transformed density dependences for each aphid line
+
+
+#### Priors to define:
+
+- $\mu_\phi$: mean of the normal distribution that generates $\phi$ values
+- $\sigma^{2}_\phi$: variance of the normal distribution that generates $\phi$ values
+- $y_0$: location parameter for the half-Cauchy distribution that generates
+  $s_\phi$ values
+- $\delta$: scale parameter for the half-Cauchy distribution that generates
+  $s_\phi$ values
+- $z_0$: location parameter for the half-Cauchy distribution that generates
+  values in $\mathbf{S}$
+- $\zeta$: scale parameter for the half-Cauchy distribution that generates
+  values in $\mathbf{S}$
+
+
+#### Other:
+
+- $\mathbf{L}_j$ is an identifier vector that returns the index to the aphid line
+  for time series $j$.
+- $\mathbf{Z_{(\phi)}}$: a vector of the same length as the number of aphid lines,
+  containing z-scores to generate variability in density dependences among aphid clones.
+- $\mathbf{Z_{(A)}}$: a vector of the same length as the number of time series,
+  containing z-scores to generate variability in density dependences within aphid clones.
+
+
+
+
+<!---
+********************************************************************************
+********************************************************************************
+********************************************************************************
+********************************************************************************
+
+BELOW HERE HAS NOT BEEN UPDATED FOR NEW STRUCTURING OF ALPHA AND R
+
+********************************************************************************
+********************************************************************************
+********************************************************************************
+********************************************************************************
+-->
+
+
 
 
 ## Growth rates
