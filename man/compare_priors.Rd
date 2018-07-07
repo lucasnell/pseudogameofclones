@@ -4,13 +4,18 @@
 \alias{compare_priors}
 \title{Visually compare normal, student_t, cauchy, laplace, and product_normal.}
 \usage{
-compare_priors(location = 0, scale = 1, df_t = 2, xlim = c(-10, 10),
-  beta = FALSE)
+compare_priors(distributions, location = 0, scale = 1, df_t = 2,
+  xlim = c(-10, 10), guide = FALSE)
 }
 \arguments{
+\item{distributions}{Vector of which distribution(s) to plot.
+Can also be a single function that takes the `location` and `scale` arguments.}
+
+\item{location}{Location for all distributions}
+
 \item{scale}{Scale for all}
 
-\item{df_t}{Degrees of freedom for `student_t`.}
+\item{df_t}{Degrees of freedom for `"student_t"` distribution. Defaults to 2.}
 
 \item{xlim}{X limit for the plot.}
 }
