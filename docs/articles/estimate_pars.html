@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Estimating aphid population parameters • aphidreps</title>
+<title>Estimating aphid population parameters • clonewars</title>
 <!-- jquery --><script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha384-nrOSfDHtoPMzJHjVTdCopGqIqeYETSXhZDFyniQ8ZHcVy08QesyHcnOUpMpqnmWq" crossorigin="anonymous"></script><!-- Bootstrap --><link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/cerulean/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script><!-- Font Awesome icons --><link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-T8Gy5hrqNKT+hzMclPo118YTQO6cYprQmhrYwIiQ/3axmI1hQomh7Ud2hPOy8SP1" crossorigin="anonymous">
 <!-- clipboard.js --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.7.1/clipboard.min.js" integrity="sha384-cV+rhyOuRHc9Ub/91rihWcGmMmCXDeksTtCihMupQHSsi8GIIRDG0ThDc3HGQFJ3" crossorigin="anonymous"></script><!-- sticky kit --><script src="https://cdnjs.cloudflare.com/ajax/libs/sticky-kit/1.1.3/sticky-kit.min.js" integrity="sha256-c4Rlo1ZozqTPE2RLuvbusY3+SU1pQaJC0TjuhygMipw=" crossorigin="anonymous"></script><!-- pkgdown --><link href="../pkgdown.css" rel="stylesheet">
@@ -28,7 +28,7 @@
         <span class="icon-bar"></span>
       </button>
       <span class="navbar-brand">
-        <a class="navbar-link" href="../index.html">aphidreps</a>
+        <a class="navbar-link" href="../index.html">clonewars</a>
         <span class="label label-default" data-toggle="tooltip" data-placement="bottom" title="Released package">0.0.0.9000</span>
       </span>
     </div>
@@ -96,7 +96,7 @@
 <a href="#load-data" class="anchor"></a>Load data</h2>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1">growth &lt;-<span class="st"> </span><span class="kw"><a href="../reference/load_data.html">load_data</a></span>()</a>
 <a class="sourceLine" id="cb1-2" data-line-number="2">growth</a>
-<a class="sourceLine" id="cb1-3" data-line-number="3"><span class="co">#&gt; # A tibble: 350 x 8</span></a>
+<a class="sourceLine" id="cb1-3" data-line-number="3"><span class="co">#&gt; # A tibble: 485 x 8</span></a>
 <a class="sourceLine" id="cb1-4" data-line-number="4"><span class="co">#&gt;    line            rep  date     N  disp     X   ham       r</span></a>
 <a class="sourceLine" id="cb1-5" data-line-number="5"><span class="co">#&gt;    &lt;fct&gt;         &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;</span></a>
 <a class="sourceLine" id="cb1-6" data-line-number="6"><span class="co">#&gt;  1 Clover-2017-2     1     4    25     0  3.22     1  0.446 </span></a>
@@ -109,19 +109,23 @@
 <a class="sourceLine" id="cb1-13" data-line-number="13"><span class="co">#&gt;  8 Clover-2017-2     1    11    86     0  4.45     1  0.327 </span></a>
 <a class="sourceLine" id="cb1-14" data-line-number="14"><span class="co">#&gt;  9 Clover-2017-2     1    12   207     0  5.33     1  0.878 </span></a>
 <a class="sourceLine" id="cb1-15" data-line-number="15"><span class="co">#&gt; 10 Clover-2017-2     1    13   320     0  5.77     1  0.436 </span></a>
-<a class="sourceLine" id="cb1-16" data-line-number="16"><span class="co">#&gt; # ... with 340 more rows</span></a></code></pre></div>
+<a class="sourceLine" id="cb1-16" data-line-number="16"><span class="co">#&gt; # ... with 475 more rows</span></a></code></pre></div>
 </div>
 <div id="convert-data" class="section level2">
 <h2 class="hasAnchor">
 <a href="#convert-data" class="anchor"></a>Convert data</h2>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">model_data &lt;-<span class="st"> </span>growth <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="st">    </span><span class="kw"><a href="../reference/line_data.html">line_data</a></span>()</a></code></pre></div>
+<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="st">    </span><span class="kw"><a href="../reference/line_data.html">line_data</a></span>()</a>
+<a class="sourceLine" id="cb2-3" data-line-number="3"><span class="kw">str</span>(model_data, <span class="dt">give.attr =</span> <span class="ot">FALSE</span>)</a>
+<a class="sourceLine" id="cb2-4" data-line-number="4"><span class="co">#&gt; List of 2</span></a>
+<a class="sourceLine" id="cb2-5" data-line-number="5"><span class="co">#&gt;  $ X      : num [1:22, 1:39] 3.22 3.3 3.47 3.53 3.64 ...</span></a>
+<a class="sourceLine" id="cb2-6" data-line-number="6"><span class="co">#&gt;  $ line_ts: int [1:39] 1 1 1 1 2 2 2 2 2 2 ...</span></a></code></pre></div>
 </div>
 <div id="run-model" class="section level2">
 <h2 class="hasAnchor">
 <a href="#run-model" class="anchor"></a>Run model</h2>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1">stan_fit &lt;-<span class="st"> </span>model_data <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb3-2" data-line-number="2"><span class="st">    </span><span class="kw"><a href="../reference/fit_lines.html">fit_lines</a></span>(<span class="dt">plants =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
+<a class="sourceLine" id="cb3-2" data-line-number="2"><span class="st">    </span><span class="kw"><a href="../reference/fit_lines.html">fit_lines</a></span>(<span class="dt">plants =</span> <span class="ot">TRUE</span>, <span class="dt">chains =</span> <span class="dv">1</span>)</a></code></pre></div>
 </div>
 <div id="examine-model-output" class="section level2">
 <h2 class="hasAnchor">
