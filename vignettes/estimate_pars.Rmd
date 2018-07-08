@@ -15,18 +15,31 @@ editor_options:
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  dev = "svglite"
+  dev = "svglite", 
+  fig.width = 6,
+  fig.height = 4
 )
 knitr::opts_knit$set(root.dir = normalizePath(".."))
-# source(".Rprofile")
-bayesplot::color_scheme_set("viridis")
+options(tibble.print_min = 4L, tibble.print_max = 4L)
+```
+```{r source_Rprofile, eval = FALSE, echo = FALSE}
+source(".Rprofile")
 ```
 
 ```{r library_pkgs, warning=FALSE, echo=FALSE}
 suppressPackageStartupMessages({
     library(clonewars)
 })
+bayesplot::color_scheme_set("viridis")
 ```
+
+
+This file will eventually contain the analyses to estimate aphid population-growth
+parameters.
+It is not yet finished, and much of the code below is not run during the making of
+this document.
+
+
 
 ## Load data
 
@@ -47,31 +60,81 @@ str(model_data, give.attr = FALSE)
 ## Run model
 
 ```{r run_model, eval = FALSE}
-stan_fit <- model_data %>% 
-    fit_lines(plants = TRUE, chains = 1)
+# # Takes ~ 20 min
+# stan_fit <- model_data %>% 
+#     fit_lines(control = list(adapt_delta = 0.9))
+stan_fit <- read_rds("~/Desktop/stan_fit.rds")
 ```
 
 
 ## Examine model output
 
 ```{r examine_model, eval = FALSE}
-apply(rstan::extract(stan_fit, "R0", permuted = FALSE), 3, mean)
-apply(rstan::extract(stan_fit, "alpha", permuted = FALSE), 3, mean)
+
+# http://mc-stan.org/bayesplot/articles/visual-mcmc-diagnostics.html
+
+posterior <- as.array(stan_fit)
+mcmc_intervals(posterior, pars = sprintf("r[%i]", 1:7))
+mcmc_intervals(posterior, pars = sprintf("a[%i]", 1:7))
+
+
+apply(rstan::extract(stan_fit, "a", permuted = FALSE), 3, mean)
 apply(rstan::extract(stan_fit, "process", permuted = FALSE), 3, mean)
 
-print(stan_fit, digits = 6, pars = c("R0", "alpha", "beta", "process"), probs = c())
+print(stan_fit, digits = 6, pars = c("r", "a", "process"), probs = c())
+
+
+# Rhats
+rhats <- rhat(stan_fit)
+mcmc_rhat(rhats)  # + yaxis_text(hjust = 1)
+
+# Neff / N
+neff_ratios <- neff_ratio(stan_fit, pars = )
+mcmc_neff(neff_ratios, size = 2) + yaxis_text(hjust = 1)
+
+
+# Autocorrelation
+mcmc_acf(posterior, pars = sprintf("r[%i]", 1:7), lags = 10)
+
+
+lp <- log_posterior(stan_fit)
+np <- nuts_params(stan_fit)
+
+mcmc_trace(posterior, pars = sprintf("r[%i]", 1:7), np = np)
+
+mcmc_trace(posterior, pars = "process", np = np)
+
+mcmc_nuts_divergence(np, lp)
+
+mcmc_parcoord(posterior, np = np)
+
+mcmc_scatter(
+  posterior,
+  pars = c("process", "r[6]"),
+  transform = list(`r[6]` = "log"),
+  np = np
+)
+
+
+growth %>% 
+    group_by(line) %>% 
+    summarize(n = length(unique(rep))) %>% 
+    mutate(line = as.integer(line)) %>% 
+    as.data.frame()
 
 
 pred_df <- make_pred_df(stan_fit, growth)
 
-pred_df %>% 
+pred_df %>%
+    filter(rep == 1) %>% 
     ggplot(aes(date, X)) +
     geom_ribbon(aes(ymin = X_lower, ymax = X_upper),
                 fill = "gray70", alpha = 0.5) +
-    geom_line(color = "gray60") +
-    geom_point(shape = 1, color = "gray60") +
+    geom_line(color = "firebrick", alpha = 0.5) +
+    geom_point(shape = 1, color = "firebrick", alpha = 0.5) +
     geom_line(aes(y = X_pred), color = "dodgerblue3", size = 0.5) +
-    facet_wrap(~ rep + line, nrow = 5) +
+    facet_wrap(~ rep + line, nrow = 2) +
+    # facet_wrap(~ rep + line, nrow = 5) +
     NULL
 
 
