@@ -123,7 +123,7 @@
     
     </div>
 
-    <pre class="usage"><span class='fu'>fit_lines</span>(<span class='no'>data</span>, <span class='no'>X</span>, <span class='no'>line_ts</span>, <span class='no'>...</span>)</pre>
+    <pre class="usage"><span class='fu'>fit_lines</span>(<span class='no'>data</span>, <span class='no'>X</span>, <span class='no'>L</span>, <span class='no'>...</span>)</pre>
     
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -146,11 +146,11 @@ the most observations.
 <em>Other than at the end, missing values are not yet supported</em>.</p></td>
     </tr>
     <tr>
-      <th>line_ts</th>
+      <th>L</th>
       <td><p>Vector (of the same length as number of columns in `X`) containing
 the line number for each time-series column in `X`.
 This option is not required if the proper object inside `data` is literally
-named `line_ts` (as would be the case if you used `line_data()`).</p></td>
+named `L` (as would be the case if you used `line_data()`).</p></td>
     </tr>
     <tr>
       <th>...</th>

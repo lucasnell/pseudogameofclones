@@ -104,19 +104,24 @@
 X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 \]</span></p>
 <p>where <span class="math inline">\(X_t\)</span> is log aphid counts for a particular plant at time <span class="math inline">\(t\)</span>, <span class="math inline">\(r\)</span> is the aphid line’s growth rate, <span class="math inline">\(\alpha\)</span> is the line’s density dependence, and <span class="math inline">\(\varepsilon\)</span> is process error.</p>
+<div id="note-on-z-and-non-centered-distributions" class="section level3">
+<h3 class="hasAnchor">
+<a href="#note-on-z-and-non-centered-distributions" class="anchor"></a>Note on <span class="math inline">\(Z\)</span> and non-centered distributions</h3>
+<p>Below, all mentions of <span class="math inline">\(Z\)</span> refer to Z-scores (i.e., <span class="math inline">\(Z \sim \text{N}(0,1)\)</span>). These are used to generate non-centered parameterizations of all distributions (see section 28.6 in the Stan Modeling Language User’s Guide and Reference Manual, version 2.17.0). Each <span class="math inline">\(Z\)</span> in an equation is not referring to the same object, but to a separate Z-score used to generate deviates from the focal distribution.</p>
+</div>
 <div id="estimating-process-error" class="section level3">
 <h3 class="hasAnchor">
 <a href="#estimating-process-error" class="anchor"></a>Estimating process error</h3>
 <span class="math display">\[\begin{align}
-    \varepsilon &amp;\sim N(0, \sigma^2_\varepsilon) \\
-    \sigma_\varepsilon &amp;\sim \text{Half-Cauchy}(w_0, \eta) \\
+    \varepsilon &amp;= s_\varepsilon Z \\
+    s_\varepsilon &amp;\sim \exp ( \tau + \sigma_\tau Z ) \\
 \end{align}\]</span>
 <div id="estimated-from-model" class="section level4">
 <h4 class="hasAnchor">
 <a href="#estimated-from-model" class="anchor"></a>Estimated from model:</h4>
 <ul>
 <li>
-<span class="math inline">\(\sigma_\varepsilon\)</span>: standard deviation of the process error</li>
+<span class="math inline">\(s_\varepsilon\)</span>: standard deviation of the process error</li>
 </ul>
 </div>
 <div id="priors-to-define" class="section level4">
@@ -124,9 +129,9 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <a href="#priors-to-define" class="anchor"></a>Priors to define:</h4>
 <ul>
 <li>
-<span class="math inline">\(w_0\)</span>: location parameter for the half-Cauchy distribution that generates <span class="math inline">\(\sigma_\varepsilon\)</span> values</li>
+<span class="math inline">\(\tau\)</span>: mean for the normal distribution that generates <span class="math inline">\(\log(s_\varepsilon)\)</span> values</li>
 <li>
-<span class="math inline">\(\eta\)</span>: scale parameter for the half-Cauchy distribution that generates <span class="math inline">\(\sigma_\varepsilon\)</span> values</li>
+<span class="math inline">\(\sigma_\tau\)</span>: sd for the normal distribution that generates <span class="math inline">\(\log(s_\varepsilon)\)</span> values</li>
 </ul>
 </div>
 </div>
@@ -136,11 +141,10 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <p>Growth rates are bound <span class="math inline">\(\ge 0\)</span> and have one estimate per aphid line, resulting in a vector of growth rates, <span class="math inline">\(\mathbf{R}\)</span>. The growth rate estimate for clonal line <span class="math inline">\(i\)</span> is generated as follows:</p>
 <span class="math display">\[\begin{align}
     
-    \mathbf{R}_i &amp;= \exp \left( \theta + s_\theta ~ \mathbf{Z_{(\theta)}}_{i} \right) \\
+    \mathbf{R}_i &amp;= \exp \left( \theta + s_\theta ~ Z \right) \\
     
-    \theta &amp;\sim \text{N}(\mu_{\theta}, \sigma^{2}_{\theta}) \\
-    s_\theta &amp;\sim \text{Half-Cauchy}(x_0, \gamma) \\
-    \mathbf{Z_{(\theta)}} &amp;\sim \text{N}(0,1) \\
+    \theta &amp;= \mu_{\theta} + \sigma_{\theta} ~ Z \\
+    s_\theta &amp;= \exp(\gamma + \sigma_\gamma ~ Z) \\
     
 \end{align}\]</span>
 <div id="estimated-from-model-1" class="section level4">
@@ -164,17 +168,9 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <li>
 <span class="math inline">\(\sigma_\theta\)</span>: standard deviation of the normal distribution that generates <span class="math inline">\(\theta\)</span> values</li>
 <li>
-<span class="math inline">\(x_0\)</span>: location parameter for the half-Cauchy distribution that generates <span class="math inline">\(s_\theta\)</span> values</li>
+<span class="math inline">\(\gamma\)</span>: mean for the normal distribution that generates <span class="math inline">\(\log(s_\theta)\)</span> values</li>
 <li>
-<span class="math inline">\(\gamma\)</span>: scale parameter for the half-Cauchy distribution that generates <span class="math inline">\(s_\theta\)</span> values</li>
-</ul>
-</div>
-<div id="temporary-objects" class="section level4">
-<h4 class="hasAnchor">
-<a href="#temporary-objects" class="anchor"></a>Temporary objects:</h4>
-<ul>
-<li>
-<span class="math inline">\(\mathbf{Z_{(\theta)}}\)</span>: a vector of the same length as the number of aphid lines, containing z-scores to generate variability in growth rates among aphid clones.</li>
+<span class="math inline">\(\sigma_\gamma\)</span>: sd for the normal distribution that generates <span class="math inline">\(\log(s_\theta)\)</span> values</li>
 </ul>
 </div>
 </div>
@@ -186,21 +182,18 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 
     \mathbf{A}_i &amp;= \text{logit}^{-1} \hspace{-0.25em}
         \left(
-            \phi + s_\phi ~ \mathbf{Z_{(\phi)}}_i
+            \phi + s_\phi ~ Z
         \right) \\
     
     \mathbf{P}_{j} &amp;= \text{logit}^{-1} \hspace{-0.25em}
         \left(
-            \phi + s_\phi ~ \mathbf{Z_{(\phi)}}_{\mathbf{L}_j} + 
-            \mathbf{S}_{\mathbf{L}_j} ~ \mathbf{Z_{(A)}}_{j}
+            \phi + s_\phi ~ Z + 
+            \mathbf{S}_{\mathbf{L}_j} ~ Z
         \right) \\
     
-    \phi &amp;\sim N(\mu_{\phi}, \sigma^{2}_{\phi}) \\
-    s_{\phi} &amp;\sim \text{Half-Cauchy}(y_0, \delta) \\
-    \mathbf{S} &amp;\sim \text{Half-Cauchy}(z_0, \zeta) \\
-    
-    \mathbf{Z_{(\phi)}} &amp;\sim N(0,1) \\
-    \mathbf{Z_{(A)}} &amp;\sim N(0,1) \\
+    \phi &amp;= \mu_{\phi} + \sigma_{\phi} ~ Z \\
+    s_{\phi} &amp;= \exp(\delta + \sigma_\delta ~ Z) \\
+    \mathbf{S} &amp;= \exp(\zeta + \sigma_\zeta ~ Z) \\
 \end{align}\]</span>
 <div id="estimated-from-model-2" class="section level4">
 <h4 class="hasAnchor">
@@ -209,7 +202,7 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <li>
 <span class="math inline">\(\mathbf{A}\)</span>: vector of density dependences for each aphid line</li>
 <li>
-<span class="math inline">\(\mathbf{P}\)</span>: vector of density dependences for each plant (i.e., time series)</li>
+<span class="math inline">\(\mathbf{P}\)</span>: vector of density dependences for each plant (i.e., each time series)</li>
 <li>
 <span class="math inline">\(\phi\)</span>: among-line mean of the logit-transformed density dependences</li>
 <li>
@@ -227,14 +220,14 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <li>
 <span class="math inline">\(\sigma_\phi\)</span>: standard deviation of the normal distribution that generates <span class="math inline">\(\phi\)</span> values</li>
 <li>
-<span class="math inline">\(y_0\)</span>: location parameter for the half-Cauchy distribution that generates <span class="math inline">\(s_\phi\)</span> values</li>
+<span class="math inline">\(\delta\)</span>: mean for the normal distribution that generates <span class="math inline">\(\log(s_\phi)\)</span> values</li>
 <li>
-<span class="math inline">\(\delta\)</span>: scale parameter for the half-Cauchy distribution that generates <span class="math inline">\(s_\phi\)</span> values</li>
+<span class="math inline">\(\sigma_\delta\)</span>: sd for the normal distribution that generates <span class="math inline">\(\log(s_\phi)\)</span> values</li>
 <li>
-<span class="math inline">\(z_0\)</span>: location parameter for the half-Cauchy distribution that generates values in <span class="math inline">\(\mathbf{S}\)</span>
+<span class="math inline">\(\zeta\)</span>: mean for the normal distribution that generates values in <span class="math inline">\(\log(\mathbf{S})\)</span>
 </li>
 <li>
-<span class="math inline">\(\zeta\)</span>: scale parameter for the half-Cauchy distribution that generates values in <span class="math inline">\(\mathbf{S}\)</span>
+<span class="math inline">\(\sigma_\zeta\)</span>: sd for the normal distribution that generates values in <span class="math inline">\(\log(\mathbf{S})\)</span>
 </li>
 </ul>
 </div>
@@ -244,10 +237,6 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <ul>
 <li>
 <span class="math inline">\(\mathbf{L}_j\)</span> is an identifier vector that returns the index to the aphid line for time series <span class="math inline">\(j\)</span>.</li>
-<li>
-<span class="math inline">\(\mathbf{Z_{(\phi)}}\)</span>: a vector of the same length as the number of aphid lines, containing z-scores to generate variability in density dependences among aphid clones.</li>
-<li>
-<span class="math inline">\(\mathbf{Z_{(A)}}\)</span>: a vector of the same length as the number of time series, containing z-scores to generate variability in density dependences within aphid clones.</li>
 </ul>
 </div>
 </div>
@@ -258,9 +247,9 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <div id="process-error-priors" class="section level2">
 <h2 class="hasAnchor">
 <a href="#process-error-priors" class="anchor"></a>Process error priors</h2>
-<p><span class="math inline">\(\sigma_\varepsilon\)</span> is bound <span class="math inline">\(\ge 0\)</span> and sampled as <span class="math inline">\(\sim \text{Half-Cauchy}(w_0, \eta)\)</span> Based on simulations, a value of 1 would be very high—so high as to be not realistically possible. Values of ~ 0.15 seemed to result in simulations matching some preliminary experimental results we’ve seen in the lab. Below, “sigma0.15” is simulated data with process error set to 0.15, “sigma1” has process error set to 1.0. The others are the preliminary data.</p>
+<p><span class="math inline">\(s_\varepsilon\)</span> is bound <span class="math inline">\(\ge 0\)</span> and sampled as <span class="math inline">\(\sim \text{Lognormal}(\tau, \sigma_\tau)\)</span> Based on simulations, an <span class="math inline">\(s_\varepsilon\)</span> of 1 would be very high—so high as to be not realistically possible. Values of ~ 0.15 seemed to result in simulations matching some preliminary experimental results we’ve seen in the lab. Below, “sigma-1.90” is simulated data with process error set to -1.897, “sigma1” has process error set to 1.0. The others are the preliminary data.</p>
 <p><img src="choose_priors_files/figure-html/load_prior-1.svg" width="576"></p>
-<p>I chose a half-Cauchy distribution (truncated to be <span class="math inline">\(\ge 0\)</span>) with 0.15 as the location and 0.5 for scale because this results in somewhat-low densities at values close to 1.</p>
+<p>To sample <span class="math inline">\(s_\varepsilon\)</span>, I chose a log-normal distribution with <code>log(0.15)</code> (-1.897) as the <span class="math inline">\(tau\)</span> and 1 for <span class="math inline">\(\sigma_\tau\)</span> because this results in low densities at values close to 1. Note that below, the x-axis is log-transformed, but axis labels indicate non-transformed values.</p>
 <p><img src="choose_priors_files/figure-html/process_error_plot-1.svg" width="576"></p>
 </div>
 <div id="growth-rate-priors" class="section level2">
@@ -271,11 +260,19 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <p>For fecundity, juvenile survival, and adult survival, the dataset had low and high estimates. I created two Leslie matrices, one with all of the high estimates and another with all the lower estimates. For each of these Leslie matrices, I estimated the intrinsic daily rate of increase (<span class="math inline">\(r\)</span>) in aphid populations in the lab as <span class="math inline">\(r = \log(\lambda)\)</span>, where <span class="math inline">\(\lambda\)</span> is the dominant eigenvector of the matrix. Thus I have fast and slow estimates of population growth to use as prior information about our population-growth assays.</p>
 <pre><code>#&gt; fast = 0.2863
 #&gt; slow = 0.256</code></pre>
+<span class="math display">\[\begin{align}
+    
+    \mathbf{R}_i &amp;= \exp \left( \theta + s_\theta ~ Z \right) \\
+    
+    \theta &amp;= \mu_{\theta} + \sigma_{\theta} ~ Z \\
+    s_\theta &amp;= \exp(\gamma + \sigma_\gamma ~ Z) \\
+    
+\end{align}\]</span>
 <p>I also simulated some data with <span class="math inline">\(r = \{ 0.25, 0.5, 0.75, 1.25 \}\)</span> to compare the simulations to the preliminary data. Below, “rX” indicates a panel of simulated data with <span class="math inline">\(r\)</span> set to the number X. The others are the preliminary data. From these simulations, values of <span class="math inline">\(r &gt; 0.5\)</span> seem pretty unlikely.</p>
 <p><img src="choose_priors_files/figure-html/load_prior2-1.svg" width="576"></p>
 <p>For the among-line mean of the log-transformed growth rates (<span class="math inline">\(\mu_\theta\)</span>), I used <code>mean(log(c(fast, slow)))</code>, -1.307. For the standard deviation of <span class="math inline">\(\mu_\theta\)</span> (<span class="math inline">\(\sigma_\theta\)</span>), I used <code>sd(log(c(fast, slow))) * 10</code>, 0.7922. I multiplied by 10 to add extra uncertainty because of the limited number of lines from which I derived my priors. In the plot below, I’ve exponentiated the x-axis so that it displays the values of <span class="math inline">\(r\)</span> that would result.</p>
 <p><img src="choose_priors_files/figure-html/mean_theta_distr-1.svg" width="576"></p>
-<p>For sampling <span class="math inline">\(s_\theta\)</span>, I use <code>sd(log(c(fast, slow)))</code> (0.07922) for the location parameter and 1 for the scale parameter. The latter was chosen to indicate even more uncertainty in <span class="math inline">\(s_\theta\)</span> than in <span class="math inline">\(\mu_\theta\)</span>.</p>
+<p>For sampling <span class="math inline">\(s_\theta\)</span>, I use <code>sd(log(c(fast, slow)))</code> (-2.536) for the location parameter and 1 for the scale parameter. The latter was chosen to indicate even more uncertainty in <span class="math inline">\(s_\theta\)</span> than in <span class="math inline">\(\mu_\theta\)</span>. Note that below, the x-axis is log-transformed, but axis labels indicate non-transformed values.</p>
 <p><img src="choose_priors_files/figure-html/s_theta_distr-1.svg" width="576"></p>
 </div>
 <div id="density-dependence" class="section level2">
@@ -305,13 +302,13 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right)
 <a href="#among-line-distribution" class="anchor"></a>Among-line distribution</h3>
 <p>For estimates relating to the among-line distribution of <span class="math inline">\(\text{logit}(\alpha)\)</span>, I first calculated <span class="math inline">\(\text{logit}(\alpha)\)</span> for each line-rep combo, then calculated the mean for each line. After that, I used the mean across lines, -6.130, as my prior for <span class="math inline">\(\mu_\phi\)</span>. I multiplied the standard deviation across lines by 10 (resulting in 3.162) for my prior on <span class="math inline">\(\sigma_\phi\)</span> to decrease my certainty in estimates. For the plot below, I inverse-logit transformed the x-axis to show the resulting <span class="math inline">\(\alpha\)</span> values from these priors. It still has pretty low densities above 0.5, which is reasonable because that would indicate a “carrying capacity” of &lt; 2.</p>
 <p><img src="choose_priors_files/figure-html/alpha_overall_mean_plot-1.svg" width="576"></p>
-<p>For the distribution of <span class="math inline">\(s_\phi\)</span> values, I used the SD for among-line mean <span class="math inline">\(\text{logit}(\alpha)\)</span> for the location (0.3162), and 5 for the scale parameter. The latter was chosen simply because I’m not very sure of what it should be, and this value results in a pretty flat prior distribution.</p>
+<p>For the distribution of <span class="math inline">\(s_\phi\)</span> values, I used the log-transformed SD for among-line mean <span class="math inline">\(\text{logit}(\alpha)\)</span> (-1.151) for the meanlog parameter (<span class="math inline">\(\delta\)</span>), and 2 for the sdlog parameter (<span class="math inline">\(\sigma_\delta\)</span>). The latter was chosen simply because I’m not very sure of what it should be, and this value results in a pretty flat prior distribution. Note that below, the x-axis is log-transformed, but axis labels indicate non-transformed values.</p>
 <p><img src="choose_priors_files/figure-html/alpha_line_means_plot-1.svg" width="576"></p>
 </div>
 <div id="within-line-distribution" class="section level3">
 <h3 class="hasAnchor">
 <a href="#within-line-distribution" class="anchor"></a>Within-line distribution</h3>
-<p>For estimates relating to the <em>within</em>-line distribution of <span class="math inline">\(\text{logit}(\alpha)\)</span>, I first calculated <span class="math inline">\(\text{logit}(\alpha)\)</span> for each line-rep combo, then calculated the standard deviation of these estimates for each line. After that, I used the mean of SD estimates across lines, 0.6735, as my prior for <span class="math inline">\(z_0\)</span>. I used <span class="math inline">\(10 \times\)</span> the SD of SD estimates across lines, 7.197, as my prior for <span class="math inline">\(\zeta\)</span>. This results in the following weakly informative prior:</p>
+<p>For estimates relating to the <em>within</em>-line distribution of <span class="math inline">\(\text{logit}(\alpha)\)</span>, I first calculated <span class="math inline">\(\text{logit}(\alpha)\)</span> for each line-rep combo, then calculated the standard deviation of these estimates for each line. After that, I used the mean of log-transformed SD estimates across lines, -0.9733, as my prior for <span class="math inline">\(\zeta\)</span>. I used <span class="math inline">\(10 \times\)</span> the SD of log-transformed SD estimates across lines, -0.9733, as my prior for <span class="math inline">\(\zeta\)</span>. This results in the following weakly informative prior:</p>
 <p><img src="choose_priors_files/figure-html/alpha_within_line_sd_plot-1.svg" width="576"></p>
 </div>
 </div>
@@ -331,18 +328,18 @@ value
 <tbody>
 <tr>
 <td style="text-align:left;">
-w_0
+tau
 </td>
 <td style="text-align:right;">
-0.15000
+-1.8970
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-eta
+sigma_tau
 </td>
 <td style="text-align:right;">
-0.50000
+1.0000
 </td>
 </tr>
 <tr>
@@ -350,7 +347,7 @@ eta
 mu_theta
 </td>
 <td style="text-align:right;">
--1.30700
+-1.3070
 </td>
 </tr>
 <tr>
@@ -358,15 +355,7 @@ mu_theta
 sigma_theta
 </td>
 <td style="text-align:right;">
-0.79220
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-x_0
-</td>
-<td style="text-align:right;">
-0.07922
+0.7922
 </td>
 </tr>
 <tr>
@@ -374,7 +363,15 @@ x_0
 gamma
 </td>
 <td style="text-align:right;">
-1.00000
+-2.5360
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+sigma_gamma
+</td>
+<td style="text-align:right;">
+1.0000
 </td>
 </tr>
 <tr>
@@ -382,7 +379,7 @@ gamma
 mu_phi
 </td>
 <td style="text-align:right;">
--6.13000
+-6.1300
 </td>
 </tr>
 <tr>
@@ -390,15 +387,7 @@ mu_phi
 sigma_phi
 </td>
 <td style="text-align:right;">
-3.16200
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-y_0
-</td>
-<td style="text-align:right;">
-0.31620
+3.1620
 </td>
 </tr>
 <tr>
@@ -406,15 +395,15 @@ y_0
 delta
 </td>
 <td style="text-align:right;">
-5.00000
+-1.1510
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-z_0
+sigma_delta
 </td>
 <td style="text-align:right;">
-0.67350
+2.0000
 </td>
 </tr>
 <tr>
@@ -422,7 +411,15 @@ z_0
 zeta
 </td>
 <td style="text-align:right;">
-7.19700
+-0.9733
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+sigma_zeta
+</td>
+<td style="text-align:right;">
+2.8340
 </td>
 </tr>
 </tbody>
