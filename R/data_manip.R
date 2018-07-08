@@ -157,7 +157,7 @@ load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 1
         group_by(line, rep) %>%
         arrange(date) %>%
         summarize(p = tail(N, 1) / max(N),
-                  three_down = all((tail(N, 4) %>% diff() %>% sign()) == -1)) %>%
+                  three_down = all((tail(N, 4) %>% diff() %>% sign(.)) == -1)) %>%
         ungroup() %>%
         filter(p > 0.8 & !three_down) %>%
         arrange(line, rep) %>%
@@ -246,7 +246,7 @@ load_prior_data <- function(file, filter_pars = list(begin = 0.5, end = 1.0)) {
         group_by(line, rep) %>%
         arrange(date) %>%
         summarize(p = tail(N, 1) / max(N),
-                  three_down = all((tail(N, 4) %>% diff() %>% sign()) == -1)) %>%
+                  three_down = all((tail(N, 4) %>% diff() %>% sign(.)) == -1)) %>%
         ungroup() %>%
         filter(p > 0.8 & !three_down) %>%
         arrange(line, rep) %>%

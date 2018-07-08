@@ -47,17 +47,17 @@ compare_priors <- function(distributions, location = 0, scale = 1, df_t = 2,
         }
         if ("cauchy" %in% distributions) {
             outp <- outp +
-                stat_dist("cauchy", size = 0.75, linetype = 2, fun = dcauchy,
+                stat_dist("cauchy", size = 0.75, fun = dcauchy,
                           args = list(location = location, scale = scale))
         }
         if ("laplace" %in% distributions) {
             outp <- outp +
-                stat_dist("laplace", size = 0.75, linetype = 2, fun = dlaplace,
+                stat_dist("laplace", size = 0.75, fun = dlaplace,
                           args = list(location = location, scale = scale))
         }
         if ("product_normal" %in% distributions) {
             outp <- outp +
-                stat_dist("product_normal", size = 0.75, linetype = 2, fun = dproduct_normal,
+                stat_dist("product_normal", size = 0.75, fun = dproduct_normal,
                           args = list(scale = 1))
         }
         if ("beta" %in% distributions) {
@@ -66,12 +66,12 @@ compare_priors <- function(distributions, location = 0, scale = 1, df_t = 2,
             alpha_ <- ((1 - mu_) / var_ - 1 / mu_) * mu_ ^ 2
             beta_ <- alpha_ * (1 / mu_ - 1)
             outp <- outp +
-                stat_dist("beta", size = 0.75, linetype = 2, fun = dbeta,
+                stat_dist("beta", size = 0.75, fun = dbeta,
                           args = list(shape1 = alpha_, shape2 = beta_))
         }
     } else if (inherits(distributions, "function")) {
         outp <- outp +
-            stat_dist("custom", size = 0.75, linetype = 2, fun = distributions,
+            stat_dist("custom", size = 0.75, fun = distributions,
                       args = list(location = location, scale = scale))
     }
 
