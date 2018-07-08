@@ -287,7 +287,7 @@ load_prior_data <- function(file, filter_pars = list(begin = 0.5, end = 0.9)) {
 #'
 #' @return A list containing (1) a matrix of log(N), where each time series has its own
 #'     column (named `X` in the output list) and (2) a vector of integers indicating
-#'     the aphid-line number for each time-series column in (named `line_ts`).
+#'     the aphid-line number for each time-series column in (named `L`).
 #'     Aphid line numbers come from converting the original factor column into
 #'     an integer. You can replicate the same integers by running `as.integer(line)`.
 #'
@@ -328,7 +328,7 @@ line_data <- function(data, line, rep, date, X) {
         # Make absolutely sure it's arranged by date:
         map(~ arrange(.x, date))
 
-    line_ts <- map_int(dat_frames, ~ unique(.x$line))
+    L <- map_int(dat_frames, ~ unique(.x$line))
 
     # Now turn X to matrix
     X <- dat_frames %>%
@@ -343,7 +343,7 @@ line_data <- function(data, line, rep, date, X) {
             as.matrix() %>%
             identity()
 
-    return(list(X = X, line_ts = line_ts))
+    return(list(X = X, L = L))
 
 }
 

@@ -4,7 +4,7 @@
 \alias{fit_lines}
 \title{Fit multiple time series for multiple aphid lines.}
 \usage{
-fit_lines(data, X, line_ts, ...)
+fit_lines(data, X, L, ...)
 }
 \arguments{
 \item{data}{An optional data frame, list, or environment that contains `X`.
@@ -20,10 +20,10 @@ it wasn't observed as many times as was the time series in the matrix with
 the most observations.
 \emph{Other than at the end, missing values are not yet supported}.}
 
-\item{line_ts}{Vector (of the same length as number of columns in `X`) containing
+\item{L}{Vector (of the same length as number of columns in `X`) containing
 the line number for each time-series column in `X`.
 This option is not required if the proper object inside `data` is literally
-named `line_ts` (as would be the case if you used `line_data()`).}
+named `L` (as would be the case if you used `line_data()`).}
 
 \item{...}{Arguments passed to `rstan::sampling` (e.g., iter, chains).}
 }

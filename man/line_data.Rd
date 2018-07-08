@@ -20,7 +20,7 @@ line_data(data, line, rep, date, X)
 \value{
 A list containing (1) a matrix of log(N), where each time series has its own
     column (named `X` in the output list) and (2) a vector of integers indicating
-    the aphid-line number for each time-series column in (named `line_ts`).
+    the aphid-line number for each time-series column in (named `L`).
     Aphid line numbers come from converting the original factor column into
     an integer. You can replicate the same integers by running `as.integer(line)`.
 }

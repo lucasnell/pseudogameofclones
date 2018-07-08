@@ -18,10 +18,10 @@
 #'     it wasn't observed as many times as was the time series in the matrix with
 #'     the most observations.
 #'     \emph{Other than at the end, missing values are not yet supported}.
-#' @param line_ts Vector (of the same length as number of columns in `X`) containing
+#' @param L Vector (of the same length as number of columns in `X`) containing
 #'     the line number for each time-series column in `X`.
 #'     This option is not required if the proper object inside `data` is literally
-#'     named `line_ts` (as would be the case if you used `line_data()`).
+#'     named `L` (as would be the case if you used `line_data()`).
 #' @param ... Arguments passed to `rstan::sampling` (e.g., iter, chains).
 #'
 #' @return A `stanfit` object containing the model fit.
@@ -29,20 +29,20 @@
 #'
 #'
 #'
-fit_lines <- function(data, X, line_ts, ...) {
+fit_lines <- function(data, X, L, ...) {
 
     if (missing(data)) data <- sys.frame(sys.parent())
 
     if (missing(X)) X <- quote(X)
-    if (missing(line_ts)) line_ts <- quote(line_ts)
+    if (missing(L)) L <- quote(L)
     X <- substitute(X)
-    line_ts <- substitute(line_ts)
+    L <- substitute(L)
 
     X_ <- eval(X, envir = data)
-    line_ts_ <- eval(line_ts, envir = data)
-    n_lines_ <- length(unique(line_ts_))
-    if (length(line_ts_) != ncol(X_)) {
-        stop("\nIn `fit_lines`, `line_ts` must have the same length as number of ",
+    L_ <- eval(L, envir = data)
+    n_lines_ <- length(unique(L_))
+    if (length(L_) != ncol(X_)) {
+        stop("\nIn `fit_lines`, `L` must have the same length as number of ",
              "columns in `X`", call. = FALSE)
     }
 
@@ -54,24 +54,24 @@ fit_lines <- function(data, X, line_ts, ...) {
                        max_reps = max(nobs_ts_),
                        n_lines = n_lines_,
                        nobs_ts = nobs_ts_,
-                       line_ts = line_ts_,
+                       L = L_,
                        X = X_,
 
                        # -----------
                        # Priors:
                        # -----------
-                       w_0 = 0.15000,
-                       eta = 0.50000,
-                       mu_theta = -1.30700,
-                       sigma_theta = 0.79220,
-                       x_0 = 0.07922,
-                       gamma = 1.00000,
-                       mu_phi = -6.13000,
-                       sigma_phi = 3.16200,
-                       y_0 = 0.31620,
-                       delta = 5.00000,
-                       z_0 = 0.67350,
-                       zeta = 7.19700)
+                       tau = -1.8970,
+                       sigma_tau = 1.0000,
+                       mu_theta = -1.3070,
+                       sigma_theta = 0.7922,
+                       gamma = -2.5360,
+                       sigma_gamma = 1.0000,
+                       mu_phi = -6.1300,
+                       sigma_phi = 3.1620,
+                       delta = -1.1510,
+                       sigma_delta = 2.0000,
+                       zeta = -0.9733,
+                       sigma_zeta = 2.8340)
 
     growth_fit <- rstan::sampling(stanmodels$all_lines_plants, data = model_data, ...)
 

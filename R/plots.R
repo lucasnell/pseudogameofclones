@@ -72,7 +72,8 @@ compare_priors <- function(distributions, location = 0, scale = 1, df_t = 2,
     } else if (inherits(distributions, "function")) {
         outp <- outp +
             stat_dist("custom", size = 0.75, fun = distributions,
-                      args = list(location = location, scale = scale))
+                      args = list(location = location, scale = scale),
+                      n = 10001)
     }
 
     outp <- outp +

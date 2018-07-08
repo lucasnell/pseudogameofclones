@@ -34,6 +34,9 @@ suppressPackageStartupMessages({
     library(clonewars)
 })
 bayesplot::color_scheme_set("viridis")
+dlnorm_ <- function(x, location, scale) {
+    dlnorm(x, meanlog = location, sdlog = scale)
+}
 ```
 
 
@@ -64,28 +67,39 @@ and
 $\varepsilon$ is process error.
 
 
+### Note on $Z$ and non-centered distributions
+
+Below, all mentions of $Z$ refer to Z-scores (i.e., $Z \sim \text{N}(0,1)$).
+These are used to generate non-centered parameterizations of all distributions
+(see section 28.6 in the Stan Modeling Language User's Guide and Reference Manual,
+version 2.17.0).
+Each $Z$ in an equation is not referring to the same object, but to a separate
+Z-score used to generate deviates from the focal distribution.
+
+
 
 ### Estimating process error
 
 
 \begin{align}
-    \varepsilon &\sim N(0, \sigma^2_\varepsilon) \\
-    \sigma_\varepsilon &\sim \text{Half-Cauchy}(w_0, \eta) \\
+    \varepsilon &= s_\varepsilon Z \\
+    s_\varepsilon &\sim \exp ( \tau + \sigma_\tau Z ) \\
 \end{align}
 
 
 
 #### Estimated from model:
 
-- $\sigma_\varepsilon$: standard deviation of the process error
+- $s_\varepsilon$: standard deviation of the process error
 
 
 #### Priors to define:
 
-- $w_0$: location parameter for the half-Cauchy distribution that generates
-  $\sigma_\varepsilon$ values
-- $\eta$: scale parameter for the half-Cauchy distribution that generates
-  $\sigma_\varepsilon$ values
+- $\tau$: mean for the normal distribution that generates $\log(s_\varepsilon)$ values
+- $\sigma_\tau$: sd for the normal distribution that generates $\log(s_\varepsilon)$
+  values
+
+
 
 
 ### Estimating growth rates 
@@ -94,13 +108,13 @@ Growth rates are bound $\ge 0$ and have one estimate per aphid line,
 resulting in a vector of growth rates, $\mathbf{R}$.
 The growth rate estimate for clonal line $i$ is generated as follows:
 
+
 \begin{align}
     
-    \mathbf{R}_i &= \exp \left( \theta + s_\theta ~ \mathbf{Z_{(\theta)}}_{i} \right) \\
+    \mathbf{R}_i &= \exp \left( \theta + s_\theta ~ Z \right) \\
     
-    \theta &\sim \text{N}(\mu_{\theta}, \sigma^{2}_{\theta}) \\
-    s_\theta &\sim \text{Half-Cauchy}(x_0, \gamma) \\
-    \mathbf{Z_{(\theta)}} &\sim \text{N}(0,1) \\
+    \theta &= \mu_{\theta} + \sigma_{\theta} ~ Z \\
+    s_\theta &= \exp(\gamma + \sigma_\gamma ~ Z) \\
     
 \end{align}
 
@@ -118,16 +132,11 @@ The growth rate estimate for clonal line $i$ is generated as follows:
 - $\mu_\theta$: mean of the normal distribution that generates $\theta$ values
 - $\sigma_\theta$: standard deviation of the normal distribution that generates
   $\theta$ values
-- $x_0$: location parameter for the half-Cauchy distribution that generates
-  $s_\theta$ values
-- $\gamma$: scale parameter for the half-Cauchy distribution that generates
-  $s_\theta$ values
+- $\gamma$: mean for the normal distribution that generates $\log(s_\theta)$ values
+- $\sigma_\gamma$: sd for the normal distribution that generates $\log(s_\theta)$ values
 
 
-#### Temporary objects:
 
-- $\mathbf{Z_{(\theta)}}$: a vector of the same length as the number of aphid lines,
-  containing z-scores to generate variability in growth rates among aphid clones.
 
 
 ### Estimating density dependence
@@ -143,21 +152,18 @@ For clonal line $i$ and plant $j$, estimates are generated as follows:
 
     \mathbf{A}_i &= \text{logit}^{-1} \hspace{-0.25em}
         \left(
-            \phi + s_\phi ~ \mathbf{Z_{(\phi)}}_i
+            \phi + s_\phi ~ Z
         \right) \\
     
     \mathbf{P}_{j} &= \text{logit}^{-1} \hspace{-0.25em}
         \left(
-            \phi + s_\phi ~ \mathbf{Z_{(\phi)}}_{\mathbf{L}_j} + 
-            \mathbf{S}_{\mathbf{L}_j} ~ \mathbf{Z_{(A)}}_{j}
+            \phi + s_\phi ~ Z + 
+            \mathbf{S}_{\mathbf{L}_j} ~ Z
         \right) \\
     
-    \phi &\sim N(\mu_{\phi}, \sigma^{2}_{\phi}) \\
-    s_{\phi} &\sim \text{Half-Cauchy}(y_0, \delta) \\
-    \mathbf{S} &\sim \text{Half-Cauchy}(z_0, \zeta) \\
-    
-    \mathbf{Z_{(\phi)}} &\sim N(0,1) \\
-    \mathbf{Z_{(A)}} &\sim N(0,1) \\
+    \phi &= \mu_{\phi} + \sigma_{\phi} ~ Z \\
+    s_{\phi} &= \exp(\delta + \sigma_\delta ~ Z) \\
+    \mathbf{S} &= \exp(\zeta + \sigma_\zeta ~ Z) \\
 \end{align}
 
 
@@ -166,7 +172,7 @@ For clonal line $i$ and plant $j$, estimates are generated as follows:
 #### Estimated from model:
 
 - $\mathbf{A}$: vector of density dependences for each aphid line
-- $\mathbf{P}$: vector of density dependences for each plant (i.e., time series)
+- $\mathbf{P}$: vector of density dependences for each plant (i.e., each time series)
 - $\phi$: among-line mean of the logit-transformed density dependences
 - $s_\phi$: among-line standard deviation of the logit-transformed density dependences
 - $\mathbf{S}$: vector of the within-line standard deviations in the
@@ -178,24 +184,17 @@ For clonal line $i$ and plant $j$, estimates are generated as follows:
 - $\mu_\phi$: mean of the normal distribution that generates $\phi$ values
 - $\sigma_\phi$: standard deviation of the normal distribution that generates $\phi$
   values
-- $y_0$: location parameter for the half-Cauchy distribution that generates
-  $s_\phi$ values
-- $\delta$: scale parameter for the half-Cauchy distribution that generates
-  $s_\phi$ values
-- $z_0$: location parameter for the half-Cauchy distribution that generates
-  values in $\mathbf{S}$
-- $\zeta$: scale parameter for the half-Cauchy distribution that generates
-  values in $\mathbf{S}$
+- $\delta$: mean for the normal distribution that generates $\log(s_\phi)$ values
+- $\sigma_\delta$: sd for the normal distribution that generates $\log(s_\phi)$ values
+- $\zeta$: mean for the normal distribution that generates values in $\log(\mathbf{S})$
+- $\sigma_\zeta$: sd for the normal distribution that generates values in
+  $\log(\mathbf{S})$
 
 
 #### Other:
 
 - $\mathbf{L}_j$ is an identifier vector that returns the index to the aphid line
   for time series $j$.
-- $\mathbf{Z_{(\phi)}}$: a vector of the same length as the number of aphid lines,
-  containing z-scores to generate variability in density dependences among aphid clones.
-- $\mathbf{Z_{(A)}}$: a vector of the same length as the number of time series,
-  containing z-scores to generate variability in density dependences within aphid clones.
 
 
 
@@ -213,27 +212,28 @@ For clonal line $i$ and plant $j$, estimates are generated as follows:
 ## Process error priors
 
 ```{r define_process_priors}
-# Below are the location and scale parameters for the half-Cauchy distribution
+# Below are meanlog and sdlog parameters for the log-normal distribution
 # that generates values for the process error standard deviation
-w_0 <- 0.15
-eta <- 0.5
+tau <- signif(log(0.15), 4)
+sigma_tau <- 1
 ```
 
 
-$\sigma_\varepsilon$ is bound $\ge 0$ and sampled as $\sim \text{Half-Cauchy}(w_0, \eta)$
-Based on simulations, a value of 1 would be very high---so high as to be not
+$s_\varepsilon$ is bound $\ge 0$ and sampled as $\sim \text{Lognormal}(\tau, \sigma_\tau)$
+Based on simulations, an $s_\varepsilon$ of 1 would be very high---so high as to be not
 realistically possible.
 Values of ~ 0.15 seemed to result in simulations matching some preliminary experimental
 results we've seen in the lab.
-Below, `r sprintf('"sigma%.2f"', w_0)` is simulated data with process error set to
-`r w_0`, "sigma1" has process error set to 1.0.
+Below, `r sprintf('"sigma%.2f"', tau)` is simulated data with process error set to
+`r tau`, "sigma1" has process error set to 1.0.
 The others are the preliminary data.
 
 ```{r load_prior}
 load_prior_data() %>% 
-    add_row(line = paste0("sigma", w_0), rep = rep(1:5, each=16), date = rep(5:20,5),
+    add_row(line = paste0("sigma", signif(exp(tau), 2)), rep = rep(1:5, each=16),
+            date = rep(5:20,5),
             X = sim_lines(R0 = 0.2, alpha = 1/1000, n_reps = 5, nobs_ts = rep(16, 5), 
-                          sigma_process = w_0) %>% 
+                          sigma_process = exp(tau)) %>% 
                 as.numeric()) %>% 
     add_row(line = "sigma1", rep = rep(1:5, each=16), date = rep(5:20,5),
             X = sim_lines(R0 = 0.2, alpha = 1/1000, n_reps = 5, nobs_ts = rep(16, 5), 
@@ -247,15 +247,20 @@ load_prior_data() %>%
 ```
 
 
-I chose a half-Cauchy distribution (truncated to be $\ge 0$) with `r w_0` as the
-location and `r eta` for scale because this results in somewhat-low densities at
-values close to 1.
+To sample $s_\varepsilon$,
+I chose a log-normal distribution with `log(0.15)` (`r tau`) as the
+$tau$ and `r sigma_tau` for $\sigma_\tau$ because this results in low densities at values
+close to 1.
+Note that below, the x-axis is log-transformed, but axis labels indicate 
+non-transformed values.
 
 ```{r process_error_plot}
-compare_priors("cauchy", w_0, eta, xlim = c(0, 1)) +
-    geom_vline(xintercept = w_0) +
-    ggtitle(expression(sigma[epsilon] %~% plain("Half-Cauchy")(w[0] * "," ~ eta))) +
-    coord_cartesian(ylim = c(0, 0.65)) +
+compare_priors("normal", tau, sigma_tau, xlim = tau + c(-1,1) * 3.25) +
+    geom_vline(xintercept = tau) +
+    ggtitle(expression(s[epsilon] %~% plain("Lognormal")(tau * "," ~ sigma[tau]))) +
+    coord_cartesian(ylim = c(0, 0.4 / sigma_tau)) +
+    scale_x_continuous(breaks = log(c(1 * 10^(-2:0), 0.05, 0.5)),
+                       labels = c(1 * 10^(-2:0), 0.05, 0.5)) +
     NULL
 ```
 
@@ -307,17 +312,38 @@ cat(sprintf("slow = %.4g\n", slow))
 
 
 
+\begin{align}
+    
+    \mathbf{R}_i &= \exp \left( \theta + s_\theta ~ Z \right) \\
+    
+    \theta &= \mu_{\theta} + \sigma_{\theta} ~ Z \\
+    s_\theta &= \exp(\gamma + \sigma_\gamma ~ Z) \\
+    
+\end{align}
+
+
 ```{r define_R_priors}
 # mean and SD  of the normal distribution that generates theta values
 #   (theta = among-line mean of the log-transformed growth rates)
-mu_theta <- signif(mean(log(c(fast, slow))), 4)
-sigma_theta <- signif(sd(log(c(fast, slow))) * 10, 4)
+mu_theta <- c(fast, slow) %>% 
+    log() %>% 
+    mean() %>% 
+    signif(4)
+sigma_theta <- c(fast, slow) %>%
+    log() %>% 
+    sd() %>% 
+    `*`(., 10) %>% 
+    signif(4)
 
-# location and scale parameters for the half-Cauchy distribution that generates
+# meanlog and sdlog parameters for the log-normal distribution that generates
 #   s_theta values
 #   (s_theta = among-line standard deviation of the log-transformed growth rates)
-x_0 <- signif(sd(log(c(fast, slow))), 4)
-gamma <- 1.0
+gamma <- c(fast, slow) %>% 
+    log() %>% 
+    sd() %>% 
+    log() %>% 
+    signif(4)
+sigma_gamma <- 1.0
 ```
 
 
@@ -334,7 +360,7 @@ sim_R <- function(df_, R_, alpha_ = 1/2000) {
             line = paste0("r", R_), rep = rep(1:5, each=15), 
             date = rep(1:15, 5) + 3,
             X = sim_lines(R0 = R_, alpha = alpha_, n_reps = 5,
-                          nobs_ts = rep(15, 5), sigma_process = w_0) %>% 
+                          nobs_ts = rep(15, 5), sigma_process = exp(tau)) %>% 
                 as.numeric())
 }
 
@@ -364,26 +390,28 @@ $r$ that would result.
 
 
 ```{r mean_theta_distr}
-dlnorm_ <- function(x, location, scale) {
-    dlnorm(x, meanlog = location, sdlog = scale)
-}
 compare_priors(dlnorm_, mu_theta, sigma_theta, xlim = c(0, 1.25)) +
     geom_vline(xintercept = exp(mu_theta)) +
-    ggtitle(expression(plain(exp)(theta %~% plain(N)(mu[theta] * "," ~ sigma[theta]^2)))) +
+    ggtitle(expression(italic(r) == plain(exp)(theta %~% plain(N)(
+        mu[theta] * "," ~ sigma[theta]^2)))) +
     NULL
 ```
 
 
-For sampling $s_\theta$, I use `sd(log(c(fast, slow)))` (`r x_0`) for the location
-parameter and `r gamma` for the scale parameter.
+For sampling $s_\theta$, I use `sd(log(c(fast, slow)))` (`r gamma`) for the location
+parameter and `r sigma_gamma` for the scale parameter.
 The latter was chosen to indicate even more uncertainty in $s_\theta$ than in
 $\mu_\theta$.
+Note that below, the x-axis is log-transformed, but axis labels indicate 
+non-transformed values.
 
 ```{r s_theta_distr}
-compare_priors("cauchy", x_0, gamma, xlim = c(0, 2)) +
-    geom_vline(xintercept = x_0) +
-    ggtitle(expression(s[theta] %~% plain("Half-Cauchy")(x[0] * "," ~ gamma))) +
-    coord_cartesian(ylim = c(0, 0.32)) +
+compare_priors("normal", gamma, sigma_gamma, xlim = gamma + c(-1,1) * 3.25) +
+    geom_vline(xintercept = gamma) +
+    ggtitle(expression(s[theta] %~% plain("Lognormal")(gamma * "," ~ sigma[gamma]))) +
+    scale_x_continuous(breaks = log(c(2 * 10^(-2:0), 0.01, 0.1, 1)),
+                       labels = c(2 * 10^(-2:0), 0.01, 0.1, 1)) +
+    coord_cartesian(ylim = c(0, 0.4 / sigma_gamma)) +
     NULL
 ```
 
@@ -445,41 +473,47 @@ sigma_phi <- prior_df %>%
     `*`(., 10) %>%
     signif(4)
 
-# location and scale parameters for the half-Cauchy distribution that generates
+# - $\delta$: meanlog parameter for the log-normal distribution that generates
+#   $s_\phi$ values
+# - $\sigma_\delta$: sdlog parameter for the log-normal distribution that generates
+#   $s_\phi$ values
+# - $\zeta$: meanlog parameter for the log-normal distribution that generates
+#   values in $\mathbf{S}$
+# - $\sigma_\zeta$: sdlog parameter for the log-normal distribution that generates
+#   values in $\mathbf{S}$
+
+# meanlog and sdlog parameters for the log-normal distribution that generates
 #   s_phi values
 #   (s_phi = among-line standard deviation of the logit-transformed density dependences)
-y_0 <- prior_df %>% 
+delta <- prior_df %>% 
     group_by(line) %>% 
     summarize(logit_alpha = mean(logit_alpha)) %>% 
     ungroup() %>% 
     summarize(logit_alpha = sd(logit_alpha)) %>% 
     .[["logit_alpha"]] %>% 
+    log() %>% 
     signif(4)
-delta <- 5
+sigma_delta <- 2
 
-# location and scale parameters for the half-Cauchy distribution that generates
+# meanlog and sdlog parameters for the log-normal distribution that generates
 #   values in S
 #   (S = vector of the within-line standard deviations in the logit-transformed
 #    density dependences for each aphid line)
-z_0 <- prior_df %>%
+zeta <- prior_df %>%
     group_by(line) %>% 
-    summarize(logit_alpha = sd(logit_alpha),
-              n = n()) %>% 
+    summarize(logit_alpha = logit_alpha %>% sd() %>% log()) %>% 
     ungroup() %>% 
     summarize(logit_alpha = mean(logit_alpha)) %>%
     .[["logit_alpha"]] %>%
-    signif(4) %>%
-    identity()
-zeta <- prior_df %>%
-    group_by(line) %>% 
-    summarize(logit_alpha = sd(logit_alpha),
-              n = n()) %>% 
-    ungroup() %>% 
+    signif(4)
+sigma_zeta <- prior_df %>%
+    group_by(line) %>%
+    summarize(logit_alpha = logit_alpha %>% sd() %>% log()) %>%
+    ungroup() %>%
     summarize(logit_alpha = sd(logit_alpha)) %>%
     .[["logit_alpha"]] %>%
-    `*`(., 10) %>% 
-    signif(4) %>%
-    identity()
+    `*`(., 2) %>%
+    signif(4)
 ```
 
 
@@ -503,23 +537,28 @@ logit_dlnorm <- function(p, location, scale) {
 }
 compare_priors(logit_dlnorm, mu_phi, sigma_phi, xlim = c(0, 1)) +
     geom_vline(xintercept = inv_logit(mu_phi), linetype = 2) +
-    ggtitle(expression({plain("logit")^{-1}}(
+    ggtitle(expression(alpha == {plain("logit")^{-1}}(
         phi %~% plain(N)(mu[phi] * "," ~ sigma[phi]^2))))
 ```
 
 
-For the distribution of $s_\phi$ values, I used the SD for among-line mean
-$\text{logit}(\alpha)$ for the location (`r y_0`), and
-`r delta` for the scale parameter.
+For the distribution of $s_\phi$ values, I used the log-transformed SD for among-line 
+mean $\text{logit}(\alpha)$ (`r delta`) for the meanlog parameter ($\delta$), and
+`r sigma_delta` for the sdlog parameter ($\sigma_\delta$).
 The latter was chosen simply because I'm not very sure of what it should be, and 
 this value results in a pretty flat prior distribution.
+Note that below, the x-axis is log-transformed, but axis labels indicate 
+non-transformed values.
 
 
 ```{r alpha_line_means_plot}
-compare_priors("cauchy", y_0, delta, xlim = c(0, 10)) +
-    geom_vline(xintercept = y_0) +
-    ggtitle(expression(s[phi] %~% plain("Half-Cauchy")(y[0] * "," ~ delta))) +
-    coord_cartesian(ylim = c(0, 0.07))
+compare_priors("normal", delta, sigma_delta, xlim = delta + c(-1,1) * sigma_delta * 3) +
+    geom_vline(xintercept = delta) +
+    ggtitle(expression(s[phi] %~% plain("Lognormal")(delta * "," ~ sigma[delta]))) +
+    scale_x_continuous(breaks = log(10^(-3:2)),
+                       labels = 10^(-3:2)) +
+    coord_cartesian(ylim = c(0, 0.4 / sigma_delta)) +
+    NULL
 ```
 
 
@@ -529,18 +568,20 @@ compare_priors("cauchy", y_0, delta, xlim = c(0, 10)) +
 For estimates relating to the *within*-line distribution of $\text{logit}(\alpha)$,
 I first calculated $\text{logit}(\alpha)$ for each line-rep combo,
 then calculated the standard deviation of these estimates for each line.
-After that, I used the mean of SD estimates across lines, `r z_0`,
-as my prior for $z_0$.
-I used $10 \times$ the SD of SD estimates across lines, `r zeta`, 
+After that, I used the mean of log-transformed SD estimates across lines, `r zeta`,
+as my prior for $\zeta$.
+I used $10 \times$ the SD of log-transformed SD estimates across lines, `r zeta`, 
 as my prior for $\zeta$.
 This results in the following weakly informative prior:
 
 
 ```{r alpha_within_line_sd_plot}
-compare_priors("cauchy", z_0, zeta, xlim = c(0, 10)) +
-    geom_vline(xintercept = z_0) +
-    ggtitle(expression(bold(S) %~% plain("Half-Cauchy")(z[0] * "," ~ zeta))) +
-    coord_cartesian(ylim = c(0, 0.044)) +
+compare_priors("normal", zeta, sigma_zeta, xlim = zeta + c(-1,1) * sigma_zeta * 3) +
+    geom_vline(xintercept = zeta) +
+    ggtitle(expression(bold(S) %~% plain("Lognormal")(zeta * "," ~ sigma[zeta]))) +
+    scale_x_continuous(breaks = log(10^(-3:2)),
+                       labels = 10^(-3:2)) +
+    coord_cartesian(ylim = c(0, 0.4 / sigma_zeta)) +
     NULL
 ```
 
@@ -552,32 +593,32 @@ compare_priors("cauchy", z_0, zeta, xlim = c(0, 10)) +
 ```{r priors_table}
 data_frame(
     par = c(
-        "w_0",
-        "eta",
+        "tau",
+        "sigma_tau",
         "mu_theta",
         "sigma_theta",
-        "x_0",
         "gamma",
+        "sigma_gamma",
         "mu_phi",
         "sigma_phi",
-        "y_0",
         "delta",
-        "z_0",
-        "zeta"
+        "sigma_delta",
+        "zeta",
+        "sigma_zeta"
     ),
     value = c(
-        w_0,
-        eta,
+        tau,
+        sigma_tau,
         mu_theta,
         sigma_theta,
-        x_0,
         gamma,
+        sigma_gamma,
         mu_phi,
         sigma_phi,
-        y_0,
         delta,
-        z_0,
-        zeta
+        sigma_delta,
+        zeta,
+        sigma_zeta
     )
 ) %>% 
     knitr::kable(format = "html")
