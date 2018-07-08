@@ -123,19 +123,28 @@
     
     </div>
 
-    <pre class="usage"><span class='fu'>compare_priors</span>(<span class='kw'>location</span> <span class='kw'>=</span> <span class='fl'>0</span>, <span class='kw'>scale</span> <span class='kw'>=</span> <span class='fl'>1</span>, <span class='kw'>df_t</span> <span class='kw'>=</span> <span class='fl'>2</span>, <span class='kw'>xlim</span> <span class='kw'>=</span> <span class='fu'>c</span>(-<span class='fl'>10</span>, <span class='fl'>10</span>),
-  <span class='kw'>beta</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>)</pre>
+    <pre class="usage"><span class='fu'>compare_priors</span>(<span class='no'>distributions</span>, <span class='kw'>location</span> <span class='kw'>=</span> <span class='fl'>0</span>, <span class='kw'>scale</span> <span class='kw'>=</span> <span class='fl'>1</span>, <span class='kw'>df_t</span> <span class='kw'>=</span> <span class='fl'>2</span>,
+  <span class='kw'>xlim</span> <span class='kw'>=</span> <span class='fu'>c</span>(-<span class='fl'>10</span>, <span class='fl'>10</span>), <span class='kw'>guide</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>)</pre>
     
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
+    <tr>
+      <th>distributions</th>
+      <td><p>Vector of which distribution(s) to plot.
+Can also be a single function that takes the `location` and `scale` arguments.</p></td>
+    </tr>
+    <tr>
+      <th>location</th>
+      <td><p>Location for all distributions</p></td>
+    </tr>
     <tr>
       <th>scale</th>
       <td><p>Scale for all</p></td>
     </tr>
     <tr>
       <th>df_t</th>
-      <td><p>Degrees of freedom for `student_t`.</p></td>
+      <td><p>Degrees of freedom for `"student_t"` distribution. Defaults to 2.</p></td>
     </tr>
     <tr>
       <th>xlim</th>

@@ -91,9 +91,14 @@
 
     
     
-<div id="model" class="section level2">
-<h2 class="hasAnchor">
-<a href="#model" class="anchor"></a>Model</h2>
+<p>This document outlines the structure of the model and what priors are required. In general, my goal is to create weakly informative prior distributions:</p>
+<blockquote>
+<p>We characterize a prior distribution as <em>weakly informative</em> if it is proper but is set up so that the information it does provide is intentionally weaker than whatever actual prior knowledge is available. (p 55, Gelman et al. 2014)</p>
+</blockquote>
+<p>Gelman, A., J. B. Carlin, H. S. Stern, D. B. Dunson, A. Vehtari, and D. B. Rubin. 2014. <em>Bayesian Data Analysis</em>. Third edition. CRC Press, Boca Raton, FL, USA.</p>
+<div id="model-description" class="section level1">
+<h1 class="hasAnchor">
+<a href="#model-description" class="anchor"></a>Model description</h1>
 <p>Below is the model I’m fitting:</p>
 <p><span class="math display">\[
 X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
@@ -102,13 +107,34 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <div id="estimating-process-error" class="section level3">
 <h3 class="hasAnchor">
 <a href="#estimating-process-error" class="anchor"></a>Estimating process error</h3>
-<p><span class="math inline">\(\sigma_\varepsilon\)</span> is bound <span class="math inline">\(\ge 0\)</span> and sampled as <span class="math inline">\(\sim \text{Half-Cauchy}(w_0, \eta)\)</span>.</p>
+<span class="math display">\[\begin{align}
+    \varepsilon &amp;\sim N(0, \sigma^2_\varepsilon) \\
+    \sigma_\varepsilon &amp;\sim \text{Half-Cauchy}(w_0, \eta) \\
+\end{align}\]</span>
+<div id="estimated-from-model" class="section level4">
+<h4 class="hasAnchor">
+<a href="#estimated-from-model" class="anchor"></a>Estimated from model:</h4>
+<ul>
+<li>
+<span class="math inline">\(\sigma_\varepsilon\)</span>: standard deviation of the process error</li>
+</ul>
+</div>
+<div id="priors-to-define" class="section level4">
+<h4 class="hasAnchor">
+<a href="#priors-to-define" class="anchor"></a>Priors to define:</h4>
+<ul>
+<li>
+<span class="math inline">\(w_0\)</span>: location parameter for the half-Cauchy distribution that generates <span class="math inline">\(\sigma_\varepsilon\)</span> values</li>
+<li>
+<span class="math inline">\(\eta\)</span>: scale parameter for the half-Cauchy distribution that generates <span class="math inline">\(\sigma_\varepsilon\)</span> values</li>
+</ul>
+</div>
 </div>
 <div id="estimating-growth-rates" class="section level3">
 <h3 class="hasAnchor">
 <a href="#estimating-growth-rates" class="anchor"></a>Estimating growth rates</h3>
-<p>Growth rates are bound <span class="math inline">\(\ge 0\)</span> and have one estimate per aphid line, resulting in a vector of growth rates, <span class="math inline">\(\mathbf{R}\)</span>. The growth rate estimate for clonal line <span class="math inline">\(i\)</span> (<span class="math inline">\(r = \mathbf{R}_i\)</span>) is generated as follows:</p>
-<p>$$ <span class="math display">\[\begin{align}
+<p>Growth rates are bound <span class="math inline">\(\ge 0\)</span> and have one estimate per aphid line, resulting in a vector of growth rates, <span class="math inline">\(\mathbf{R}\)</span>. The growth rate estimate for clonal line <span class="math inline">\(i\)</span> is generated as follows:</p>
+<span class="math display">\[\begin{align}
     
     \mathbf{R}_i &amp;= \exp \left( \theta + s_\theta ~ \mathbf{Z_{(\theta)}}_{i} \right) \\
     
@@ -116,10 +142,10 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
     s_\theta &amp;\sim \text{Half-Cauchy}(x_0, \gamma) \\
     \mathbf{Z_{(\theta)}} &amp;\sim \text{N}(0,1) \\
     
-\end{align}\]</span> $$</p>
-<div id="estimated-from-model" class="section level4">
+\end{align}\]</span>
+<div id="estimated-from-model-1" class="section level4">
 <h4 class="hasAnchor">
-<a href="#estimated-from-model" class="anchor"></a>Estimated from model:</h4>
+<a href="#estimated-from-model-1" class="anchor"></a>Estimated from model:</h4>
 <ul>
 <li>
 <span class="math inline">\(\mathbf{R}\)</span>: vector of growth rates for each aphid line</li>
@@ -129,14 +155,14 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <span class="math inline">\(s_\theta\)</span>: among-line standard deviation of the log-transformed growth rates</li>
 </ul>
 </div>
-<div id="priors-to-define" class="section level4">
+<div id="priors-to-define-1" class="section level4">
 <h4 class="hasAnchor">
-<a href="#priors-to-define" class="anchor"></a>Priors to define:</h4>
+<a href="#priors-to-define-1" class="anchor"></a>Priors to define:</h4>
 <ul>
 <li>
 <span class="math inline">\(\mu_\theta\)</span>: mean of the normal distribution that generates <span class="math inline">\(\theta\)</span> values</li>
 <li>
-<span class="math inline">\(\sigma^{2}_\theta\)</span>: variance of the normal distribution that generates <span class="math inline">\(\theta\)</span> values</li>
+<span class="math inline">\(\sigma_\theta\)</span>: standard deviation of the normal distribution that generates <span class="math inline">\(\theta\)</span> values</li>
 <li>
 <span class="math inline">\(x_0\)</span>: location parameter for the half-Cauchy distribution that generates <span class="math inline">\(s_\theta\)</span> values</li>
 <li>
@@ -156,7 +182,7 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <h3 class="hasAnchor">
 <a href="#estimating-density-dependence" class="anchor"></a>Estimating density dependence</h3>
 <p>Density dependences are bound between 0 and 1 and also have estimates for each line. They differ from <span class="math inline">\(r\)</span> in that they also have variance within aphid lines, to account for effects of variability in plant resources affecting aphid density dependence. I used the inverse logit function to bound final <span class="math inline">\(\alpha\)</span> estimates between 0 and 1. For clonal line <span class="math inline">\(i\)</span> and plant <span class="math inline">\(j\)</span>, estimates are generated as follows:</p>
-<p>$$ <span class="math display">\[\begin{align}
+<span class="math display">\[\begin{align}
 
     \mathbf{A}_i &amp;= \text{logit}^{-1} \hspace{-0.25em}
         \left(
@@ -175,10 +201,10 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
     
     \mathbf{Z_{(\phi)}} &amp;\sim N(0,1) \\
     \mathbf{Z_{(A)}} &amp;\sim N(0,1) \\
-\end{align}\]</span> $$</p>
-<div id="estimated-from-model-1" class="section level4">
+\end{align}\]</span>
+<div id="estimated-from-model-2" class="section level4">
 <h4 class="hasAnchor">
-<a href="#estimated-from-model-1" class="anchor"></a>Estimated from model:</h4>
+<a href="#estimated-from-model-2" class="anchor"></a>Estimated from model:</h4>
 <ul>
 <li>
 <span class="math inline">\(\mathbf{A}\)</span>: vector of density dependences for each aphid line</li>
@@ -192,14 +218,14 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <span class="math inline">\(\mathbf{S}\)</span>: vector of the within-line standard deviations in the logit-transformed density dependences for each aphid line</li>
 </ul>
 </div>
-<div id="priors-to-define-1" class="section level4">
+<div id="priors-to-define-2" class="section level4">
 <h4 class="hasAnchor">
-<a href="#priors-to-define-1" class="anchor"></a>Priors to define:</h4>
+<a href="#priors-to-define-2" class="anchor"></a>Priors to define:</h4>
 <ul>
 <li>
 <span class="math inline">\(\mu_\phi\)</span>: mean of the normal distribution that generates <span class="math inline">\(\phi\)</span> values</li>
 <li>
-<span class="math inline">\(\sigma^{2}_\phi\)</span>: variance of the normal distribution that generates <span class="math inline">\(\phi\)</span> values</li>
+<span class="math inline">\(\sigma_\phi\)</span>: standard deviation of the normal distribution that generates <span class="math inline">\(\phi\)</span> values</li>
 <li>
 <span class="math inline">\(y_0\)</span>: location parameter for the half-Cauchy distribution that generates <span class="math inline">\(s_\phi\)</span> values</li>
 <li>
@@ -223,105 +249,184 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <li>
 <span class="math inline">\(\mathbf{Z_{(A)}}\)</span>: a vector of the same length as the number of time series, containing z-scores to generate variability in density dependences within aphid clones.</li>
 </ul>
-<!---
-********************************************************************************
-********************************************************************************
-********************************************************************************
-********************************************************************************
-
-BELOW HERE HAS NOT BEEN UPDATED FOR NEW STRUCTURING OF ALPHA AND R
-
-********************************************************************************
-********************************************************************************
-********************************************************************************
-********************************************************************************
--->
 </div>
 </div>
 </div>
-<div id="growth-rates" class="section level2">
+<div id="creating-priors" class="section level1">
+<h1 class="hasAnchor">
+<a href="#creating-priors" class="anchor"></a>Creating priors</h1>
+<div id="process-error-priors" class="section level2">
 <h2 class="hasAnchor">
-<a href="#growth-rates" class="anchor"></a>Growth rates</h2>
+<a href="#process-error-priors" class="anchor"></a>Process error priors</h2>
+<p><span class="math inline">\(\sigma_\varepsilon\)</span> is bound <span class="math inline">\(\ge 0\)</span> and sampled as <span class="math inline">\(\sim \text{Half-Cauchy}(w_0, \eta)\)</span> Based on simulations, a value of 1 would be very high—so high as to be not realistically possible. Values of ~ 0.15 seemed to result in simulations matching some preliminary experimental results we’ve seen in the lab. Below, “sigma0.15” is simulated data with process error set to 0.15, “sigma1” has process error set to 1.0. The others are the preliminary data.</p>
+<p><img src="choose_priors_files/figure-html/load_prior-1.svg" width="576"></p>
+<p>I chose a half-Cauchy distribution (truncated to be <span class="math inline">\(\ge 0\)</span>) with 0.15 as the location and 0.5 for scale because this results in somewhat-low densities at values close to 1.</p>
+<p><img src="choose_priors_files/figure-html/process_error_plot-1.svg" width="576"></p>
+</div>
+<div id="growth-rate-priors" class="section level2">
+<h2 class="hasAnchor">
+<a href="#growth-rate-priors" class="anchor"></a>Growth rate priors</h2>
 <p>From data sent to me from A.R. Ives related to this paper:</p>
 <p>Meisner, M. H., J. P. Harmon, and A. R. Ives. 2014. Temperature effects on long-term population dynamics in a parasitoid–host system. <em>Ecological Monographs</em> <strong>84</strong>:457–476.</p>
-<p>For fecundity, juvenile survival, and adult survival, the dataset had low and high estimates. I created two Leslie matrices, one with all of the high estimates and another with all the lower estimates. For each of these Leslie matrices, I estimated the intrinsic daily rate of increase (<span class="math inline">\(r\)</span>) in aphid populations in the lab as <span class="math inline">\(r = \log(\lambda)\)</span>, where <span class="math inline">\(\lambda\)</span> is the dominant eigenvector of the matrix. Thus I have fast and slow estimates of population growth, and from these I estimated the mean and standard deviation of the population-growth parameter. If the clonal lines from Meisner et al. (2014) are representative of the lines we currently have, and if these Leslie matrices truly represent the edges of possible <span class="math inline">\(r\)</span> values, then this standard deviation should be an upper estimate. The SE of <span class="math inline">\(r\)</span> is what I’ll use for the standard deviation of the mean.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1">fast &lt;-<span class="st"> </span><span class="kw">read_csv</span>(<span class="st">"data-raw/leslie_fast.csv"</span>, <span class="dt">col_names =</span> <span class="ot">FALSE</span>,</a>
-<a class="sourceLine" id="cb1-2" data-line-number="2">                 <span class="dt">col_types =</span> <span class="kw">cols</span>(<span class="dt">.default =</span> <span class="kw">col_double</span>())) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-3" data-line-number="3"><span class="st">    </span><span class="kw">as.matrix</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-4" data-line-number="4"><span class="st">    </span><span class="kw">eigen</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-5" data-line-number="5"><span class="st">    </span>.[[<span class="st">"values"</span>]] <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-6" data-line-number="6"><span class="st">    </span>.[<span class="dv">1</span>] <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-7" data-line-number="7"><span class="st">    </span><span class="kw">Re</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-8" data-line-number="8"><span class="st">    </span><span class="kw">log</span>()</a>
-<a class="sourceLine" id="cb1-9" data-line-number="9">slow &lt;-<span class="st"> </span><span class="kw">read_csv</span>(<span class="st">"data-raw/leslie_slow.csv"</span>, <span class="dt">col_names =</span> <span class="ot">FALSE</span>,</a>
-<a class="sourceLine" id="cb1-10" data-line-number="10">                 <span class="dt">col_types =</span> <span class="kw">cols</span>(<span class="dt">.default =</span> <span class="kw">col_double</span>())) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-11" data-line-number="11"><span class="st">    </span><span class="kw">as.matrix</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-12" data-line-number="12"><span class="st">    </span><span class="kw">eigen</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-13" data-line-number="13"><span class="st">    </span>.[[<span class="st">"values"</span>]] <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-14" data-line-number="14"><span class="st">    </span>.[<span class="dv">1</span>] <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-15" data-line-number="15"><span class="st">    </span><span class="kw">Re</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-16" data-line-number="16"><span class="st">    </span><span class="kw">log</span>()</a>
-<a class="sourceLine" id="cb1-17" data-line-number="17">fast; slow</a>
-<a class="sourceLine" id="cb1-18" data-line-number="18"><span class="co">#&gt; [1] 0.2863108</span></a>
-<a class="sourceLine" id="cb1-19" data-line-number="19"><span class="co">#&gt; [1] 0.2559663</span></a>
-<a class="sourceLine" id="cb1-20" data-line-number="20"><span class="kw">mean</span>(<span class="kw">c</span>(fast, slow)); <span class="kw">sd</span>(<span class="kw">c</span>(fast, slow))</a>
-<a class="sourceLine" id="cb1-21" data-line-number="21"><span class="co">#&gt; [1] 0.2711385</span></a>
-<a class="sourceLine" id="cb1-22" data-line-number="22"><span class="co">#&gt; [1] 0.02145683</span></a>
-<a class="sourceLine" id="cb1-23" data-line-number="23"><span class="kw">sd</span>(<span class="kw">c</span>(fast, slow)) <span class="op">/</span><span class="st"> </span><span class="kw">sqrt</span>(<span class="dv">2</span>)</a>
-<a class="sourceLine" id="cb1-24" data-line-number="24"><span class="co">#&gt; [1] 0.01517227</span></a></code></pre></div>
-<p>The cauchy distribution with scale = 0.005 seems about right for sampling the among-line SD.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="kw"><a href="../reference/compare_priors.html">compare_priors</a></span>(<span class="kw">sd</span>(<span class="kw">c</span>(fast, slow)) <span class="op">/</span><span class="st"> </span><span class="kw">sqrt</span>(<span class="dv">2</span>), <span class="fl">0.005</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.05</span>)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="st">    </span><span class="kw">geom_vline</span>(<span class="dt">xintercept =</span> <span class="kw">sd</span>(<span class="kw">c</span>(fast, slow)) <span class="op">/</span><span class="st"> </span><span class="kw">sqrt</span>(<span class="dv">2</span>))</a></code></pre></div>
-<p><img src="choose_priors_files/figure-html/R0_sd_plot-1.svg" width="576"></p>
+<p>For fecundity, juvenile survival, and adult survival, the dataset had low and high estimates. I created two Leslie matrices, one with all of the high estimates and another with all the lower estimates. For each of these Leslie matrices, I estimated the intrinsic daily rate of increase (<span class="math inline">\(r\)</span>) in aphid populations in the lab as <span class="math inline">\(r = \log(\lambda)\)</span>, where <span class="math inline">\(\lambda\)</span> is the dominant eigenvector of the matrix. Thus I have fast and slow estimates of population growth to use as prior information about our population-growth assays.</p>
+<pre><code>#&gt; fast = 0.2863
+#&gt; slow = 0.256</code></pre>
+<p>I also simulated some data with <span class="math inline">\(r = \{ 0.25, 0.5, 0.75, 1.25 \}\)</span> to compare the simulations to the preliminary data. Below, “rX” indicates a panel of simulated data with <span class="math inline">\(r\)</span> set to the number X. The others are the preliminary data. From these simulations, values of <span class="math inline">\(r &gt; 0.5\)</span> seem pretty unlikely.</p>
+<p><img src="choose_priors_files/figure-html/load_prior2-1.svg" width="576"></p>
+<p>For the among-line mean of the log-transformed growth rates (<span class="math inline">\(\mu_\theta\)</span>), I used <code>mean(log(c(fast, slow)))</code>, -1.307. For the standard deviation of <span class="math inline">\(\mu_\theta\)</span> (<span class="math inline">\(\sigma_\theta\)</span>), I used <code>sd(log(c(fast, slow))) * 10</code>, 0.7922. I multiplied by 10 to add extra uncertainty because of the limited number of lines from which I derived my priors. In the plot below, I’ve exponentiated the x-axis so that it displays the values of <span class="math inline">\(r\)</span> that would result.</p>
+<p><img src="choose_priors_files/figure-html/mean_theta_distr-1.svg" width="576"></p>
+<p>For sampling <span class="math inline">\(s_\theta\)</span>, I use <code>sd(log(c(fast, slow)))</code> (0.07922) for the location parameter and 1 for the scale parameter. The latter was chosen to indicate even more uncertainty in <span class="math inline">\(s_\theta\)</span> than in <span class="math inline">\(\mu_\theta\)</span>.</p>
+<p><img src="choose_priors_files/figure-html/s_theta_distr-1.svg" width="576"></p>
 </div>
 <div id="density-dependence" class="section level2">
 <h2 class="hasAnchor">
 <a href="#density-dependence" class="anchor"></a>Density dependence</h2>
+<p>For density dependence, I’m going to use data from preliminary population-growth assays that used the same methods that we’re using. We conducted these assays on 4 aphid lines that we no longer maintain in the lab and won’t be using for our analyses or cage experiments.</p>
+<p>If we look at the deterministic portion of our model…</p>
+<p><span class="math display">\[
+X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right)
+\]</span> … <span class="math inline">\(X_{t+1} = X_t\)</span> when <span class="math inline">\(\alpha = 1 / \exp(X_t) = 1 / N_t\)</span>. Because each repetition is run until the plant dies and populations crash, I’ll assume that for each repetition, our estimate of <span class="math inline">\(\alpha\)</span> is <span class="math inline">\(1 / \max(N_t)\)</span>.</p>
+<p>Here is how I coded it:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">prior_df &lt;-<span class="st"> </span><span class="kw"><a href="../reference/load_prior_data.html">load_prior_data</a></span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="st">    </span><span class="kw">group_by</span>(line, rep) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-3" data-line-number="3"><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">alpha =</span> <span class="dv">1</span> <span class="op">/</span><span class="st"> </span><span class="kw">max</span>(N)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-4" data-line-number="4"><span class="st">    </span><span class="kw">ungroup</span>()</a>
+<a class="sourceLine" id="cb2-5" data-line-number="5">prior_df</a>
+<a class="sourceLine" id="cb2-6" data-line-number="6"><span class="co">#&gt; # A tibble: 8 x 3</span></a>
+<a class="sourceLine" id="cb2-7" data-line-number="7"><span class="co">#&gt;   line         rep   alpha</span></a>
+<a class="sourceLine" id="cb2-8" data-line-number="8"><span class="co">#&gt;   &lt;fct&gt;      &lt;int&gt;   &lt;dbl&gt;</span></a>
+<a class="sourceLine" id="cb2-9" data-line-number="9"><span class="co">#&gt; 1 G15            1 0.00205</span></a>
+<a class="sourceLine" id="cb2-10" data-line-number="10"><span class="co">#&gt; 2 G15            2 0.00190</span></a>
+<a class="sourceLine" id="cb2-11" data-line-number="11"><span class="co">#&gt; 3 WI-4122-52     1 0.00260</span></a>
+<a class="sourceLine" id="cb2-12" data-line-number="12"><span class="co">#&gt; 4 WI-4122-52     2 0.00142</span></a>
+<a class="sourceLine" id="cb2-13" data-line-number="13"><span class="co">#&gt; # ... with 4 more rows</span></a></code></pre></div>
 <div id="among-line-distribution" class="section level3">
 <h3 class="hasAnchor">
 <a href="#among-line-distribution" class="anchor"></a>Among-line distribution</h3>
-<p>Because Meisner et al. (2014) used cages of 8 plants, I’m setting my desired mean for <span class="math inline">\(\alpha\)</span> by multiplying their density-dependence estimate (<span class="math inline">\(0.000467\)</span>) by 8: <span class="math inline">\(\bar\alpha = 0.000467 \times 8 = 0.003736\)</span>.</p>
-<p>They parameterized their density dependence slightly differently from the model I’m using, so I’m setting the standard deviation for <span class="math inline">\(\alpha\)</span> to be fairly wide. So for the distribution of mean alpha among all lines, the beta curve below looks good to me. The beta distribution is particularly nice because it’s bound between 0 and 1, just like any reasonable <span class="math inline">\(\alpha\)</span> estimate should be.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="kw"><a href="../reference/compare_priors.html">compare_priors</a></span>(<span class="fl">0.003736</span>, <span class="fl">0.0015</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.01</span>), <span class="dt">beta =</span> <span class="ot">TRUE</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb3-2" data-line-number="2"><span class="st">    </span><span class="kw">geom_vline</span>(<span class="dt">xintercept =</span> <span class="fl">0.003736</span>)</a></code></pre></div>
+<p>For estimates relating to the among-line distribution of <span class="math inline">\(\text{logit}(\alpha)\)</span>, I first calculated <span class="math inline">\(\text{logit}(\alpha)\)</span> for each line-rep combo, then calculated the mean for each line. After that, I used the mean across lines, -6.130, as my prior for <span class="math inline">\(\mu_\phi\)</span>. I multiplied the standard deviation across lines by 10 (resulting in 3.162) for my prior on <span class="math inline">\(\sigma_\phi\)</span> to decrease my certainty in estimates. For the plot below, I inverse-logit transformed the x-axis to show the resulting <span class="math inline">\(\alpha\)</span> values from these priors. It still has pretty low densities above 0.5, which is reasonable because that would indicate a “carrying capacity” of &lt; 2.</p>
 <p><img src="choose_priors_files/figure-html/alpha_overall_mean_plot-1.svg" width="576"></p>
-<p>For sampling mean alphas for each line, I’m going to increase the SD to 0.002 to allow for a greater possibility of more extreme values for each line.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="kw"><a href="../reference/compare_priors.html">compare_priors</a></span>(<span class="fl">0.003736</span>, <span class="fl">0.002</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.01</span>), <span class="dt">beta =</span> <span class="ot">TRUE</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb4-2" data-line-number="2"><span class="st">    </span><span class="kw">geom_vline</span>(<span class="dt">xintercept =</span> <span class="fl">0.003736</span>)</a></code></pre></div>
+<p>For the distribution of <span class="math inline">\(s_\phi\)</span> values, I used the SD for among-line mean <span class="math inline">\(\text{logit}(\alpha)\)</span> for the location (0.3162), and 5 for the scale parameter. The latter was chosen simply because I’m not very sure of what it should be, and this value results in a pretty flat prior distribution.</p>
 <p><img src="choose_priors_files/figure-html/alpha_line_means_plot-1.svg" width="576"></p>
-<p>For the among-line SD distribution, I used a cauchy distribution with location = 0.0015 and scale = 0.0005 because it looks most reasonable to me.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="kw"><a href="../reference/compare_priors.html">compare_priors</a></span>(<span class="fl">0.0015</span>, <span class="fl">0.0005</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.005</span>)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb5-2" data-line-number="2"><span class="st">    </span><span class="kw">geom_vline</span>(<span class="dt">xintercept =</span> <span class="fl">0.0015</span>)</a></code></pre></div>
-<p><img src="choose_priors_files/figure-html/alpha_among_line_sd_plot-1.svg" width="576"></p>
 </div>
 <div id="within-line-distribution" class="section level3">
 <h3 class="hasAnchor">
 <a href="#within-line-distribution" class="anchor"></a>Within-line distribution</h3>
-<p>I’m really not sure about the degree to which different plants will affect the density dependence within an aphid line. I’ll use some raw data from Meisner et al. (2014) to get some idea. Below is from their cage experiments when they added parasitoid wasps after aphid densities were allowed to peak (35 days). I didn’t use these estimates for mean alpha because of the potential effect of wasps, but this is probably as good an estimate of variance among plants that I’ll get. Notice that I’m dividing the max number of aphids by 8 because there were 8 plants in this experiment.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1"><span class="kw">read_csv</span>(<span class="st">"data-raw/MeisnerLongtermCageData.csv"</span>,</a>
-<a class="sourceLine" id="cb6-2" data-line-number="2">         <span class="dt">col_types =</span> <span class="st">"iiiiii"</span>) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb6-3" data-line-number="3"><span class="st">    </span><span class="kw">filter</span>(treatment <span class="op">==</span><span class="st"> </span><span class="dv">0</span>, year <span class="op">==</span><span class="st"> </span><span class="dv">2009</span>) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb6-4" data-line-number="4"><span class="st">    </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb6-5" data-line-number="5"><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">alpha =</span> <span class="dv">1</span> <span class="op">/</span><span class="st"> </span><span class="kw">max</span>(aphids <span class="op">/</span><span class="st"> </span><span class="dv">8</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb6-6" data-line-number="6"><span class="st">    </span><span class="kw">select</span>(alpha) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb6-7" data-line-number="7"><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">sd =</span> <span class="kw">sd</span>(alpha)) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb6-8" data-line-number="8"><span class="st">    </span><span class="kw">unlist</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb6-9" data-line-number="9"><span class="st">    </span><span class="kw">signif</span>(<span class="dv">3</span>)</a>
-<a class="sourceLine" id="cb6-10" data-line-number="10"><span class="co">#&gt;      sd </span></a>
-<a class="sourceLine" id="cb6-11" data-line-number="11"><span class="co">#&gt; 0.00142</span></a></code></pre></div>
-<p>I’m choosing a cauchy distribution with location of 0.00142 and scale of 0.02 because I’m pretty uncertain of this parameter.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" data-line-number="1"><span class="kw"><a href="../reference/compare_priors.html">compare_priors</a></span>(<span class="fl">0.00142</span>, <span class="fl">0.02</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.1</span>)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb7-2" data-line-number="2"><span class="st">    </span><span class="kw">geom_vline</span>(<span class="dt">xintercept =</span> <span class="fl">0.00142</span>)</a></code></pre></div>
+<p>For estimates relating to the <em>within</em>-line distribution of <span class="math inline">\(\text{logit}(\alpha)\)</span>, I first calculated <span class="math inline">\(\text{logit}(\alpha)\)</span> for each line-rep combo, then calculated the standard deviation of these estimates for each line. After that, I used the mean of SD estimates across lines, 0.6735, as my prior for <span class="math inline">\(z_0\)</span>. I used <span class="math inline">\(10 \times\)</span> the SD of SD estimates across lines, 7.197, as my prior for <span class="math inline">\(\zeta\)</span>. This results in the following weakly informative prior:</p>
 <p><img src="choose_priors_files/figure-html/alpha_within_line_sd_plot-1.svg" width="576"></p>
 </div>
 </div>
-<div id="process-error" class="section level2">
-<h2 class="hasAnchor">
-<a href="#process-error" class="anchor"></a>Process error</h2>
-<p>I’m not really sure what this should be, but based on simulations, a value of 1 would be very high. Thus I chose a cauchy distribution with 0.1 as the location and scale because this appears about right.</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="kw"><a href="../reference/compare_priors.html">compare_priors</a></span>(<span class="fl">0.1</span>, <span class="fl">0.1</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb8-2" data-line-number="2"><span class="st">    </span><span class="kw">geom_vline</span>(<span class="dt">xintercept =</span> <span class="fl">0.1</span>)</a></code></pre></div>
-<p><img src="choose_priors_files/figure-html/process_error_plot-1.svg" width="576"></p>
+</div>
+<div id="final-priors" class="section level1">
+<h1 class="hasAnchor">
+<a href="#final-priors" class="anchor"></a>Final priors</h1>
+<table class="table">
+<thead><tr>
+<th style="text-align:left;">
+par
+</th>
+<th style="text-align:right;">
+value
+</th>
+</tr></thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+w_0
+</td>
+<td style="text-align:right;">
+0.15000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+eta
+</td>
+<td style="text-align:right;">
+0.50000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+mu_theta
+</td>
+<td style="text-align:right;">
+-1.30700
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+sigma_theta
+</td>
+<td style="text-align:right;">
+0.79220
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+x_0
+</td>
+<td style="text-align:right;">
+0.07922
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+gamma
+</td>
+<td style="text-align:right;">
+1.00000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+mu_phi
+</td>
+<td style="text-align:right;">
+-6.13000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+sigma_phi
+</td>
+<td style="text-align:right;">
+3.16200
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+y_0
+</td>
+<td style="text-align:right;">
+0.31620
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+delta
+</td>
+<td style="text-align:right;">
+5.00000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+z_0
+</td>
+<td style="text-align:right;">
+0.67350
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+zeta
+</td>
+<td style="text-align:right;">
+7.19700
+</td>
+</tr>
+</tbody>
+</table>
 </div>
   </div>
 
@@ -330,10 +435,15 @@ BELOW HERE HAS NOT BEEN UPDATED FOR NEW STRUCTURING OF ALPHA AND R
       <h2 class="hasAnchor">
 <a href="#tocnav" class="anchor"></a>Contents</h2>
       <ul class="nav nav-pills nav-stacked">
-<li><a href="#model">Model</a></li>
-      <li><a href="#growth-rates">Growth rates</a></li>
+<li><a href="#model-description">Model description</a></li>
+      <li>
+<a href="#creating-priors">Creating priors</a><ul class="nav nav-pills nav-stacked">
+<li><a href="#process-error-priors">Process error priors</a></li>
+      <li><a href="#growth-rate-priors">Growth rate priors</a></li>
       <li><a href="#density-dependence">Density dependence</a></li>
-      <li><a href="#process-error">Process error</a></li>
+      </ul>
+</li>
+      <li><a href="#final-priors">Final priors</a></li>
       </ul>
 </div>
       </div>
