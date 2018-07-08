@@ -7,6 +7,9 @@
 
 #' Fit multiple time series for multiple aphid lines.
 #'
+#' @param data An optional data frame, list, or environment that contains `X`.
+#'     By default, variables are taken from the environment from which
+#'     the function was called.
 #' @param X Name of the matrix in `data` that contains the log-transformed counts
 #'     through time (1 time series per column).
 #'     This option is not required if the proper object inside `data` is literally
@@ -19,9 +22,6 @@
 #'     the line number for each time-series column in `X`.
 #'     This option is not required if the proper object inside `data` is literally
 #'     named `line_ts` (as would be the case if you used `line_data()`).
-#' @param data An optional data frame, list, or environment that contains `X`.
-#'     By default, variables are taken from the environment from which
-#'     the function was called.
 #' @param ... Arguments passed to `rstan::sampling` (e.g., iter, chains).
 #'
 #' @return A `stanfit` object containing the model fit.
@@ -29,7 +29,7 @@
 #'
 #'
 #'
-fit_lines <- function(data, X, line_ts, plants = FALSE, ...) {
+fit_lines <- function(data, X, line_ts, ...) {
 
     if (missing(data)) data <- sys.frame(sys.parent())
 
@@ -73,11 +73,7 @@ fit_lines <- function(data, X, line_ts, plants = FALSE, ...) {
                        z_0 = 0.67350,
                        zeta = 7.19700)
 
-    if (plants) {
-        growth_fit <- rstan::sampling(stanmodels$all_lines_plants, data = model_data, ...)
-    } else {
-        growth_fit <- rstan::sampling(stanmodels$all_lines, data = model_data, ...)
-    }
+    growth_fit <- rstan::sampling(stanmodels$all_lines_plants, data = model_data, ...)
 
     return(growth_fit)
 }

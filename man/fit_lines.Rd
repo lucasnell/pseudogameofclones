@@ -4,7 +4,7 @@
 \alias{fit_lines}
 \title{Fit multiple time series for multiple aphid lines.}
 \usage{
-fit_lines(data, X, line_ts, plants = FALSE, ...)
+fit_lines(data, X, line_ts, ...)
 }
 \arguments{
 \item{data}{An optional data frame, list, or environment that contains `X`.

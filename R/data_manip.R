@@ -142,8 +142,7 @@ load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 0
                N = ifelse(N == 0, 1, N)) %>%
         select(line, rep, date, N, disp) %>%
         mutate_at(vars(rep, N, disp), funs(as.integer)) %>%
-        mutate(line = factor(line),
-               X = log(N),
+        mutate(X = log(N),
                ham = ifelse(line %in% w_ham, 1, 0)) %>%
         group_by(line, rep) %>%
         mutate(date = as.integer(date - min(date)),
@@ -191,6 +190,10 @@ load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 0
         growth <- clonewars:::filter_line_rep(growth, missing, exclude = TRUE)
     }
 
+    # Change to factor now to avoid having to drop levels
+    growth <- growth %>%
+        mutate(line = factor(line))
+
     return(growth)
 }
 
@@ -227,13 +230,12 @@ load_prior_data <- function(file, filter_pars = list(begin = 0.5, end = 0.9)) {
                    stem2_juv + stem2_adults + leaf2_juv + leaf2_adults +
                    stem3_juv + stem3_adults + leaf3_juv + leaf3_adults +
                    comments,
-               disp = comments,  # <-- "disp" is for dispersed aphids, ones not on the plant
+               disp = comments,  # <-- for dispersed aphids, ones not on the plant
                # makes no sense for it to be 0, then >0 the next day:
                N = ifelse(N == 0, 1, N)) %>%
         select(line, rep, date, N, disp) %>%
         mutate_at(vars(rep, N, disp), funs(as.integer)) %>%
-        mutate(line = factor(line),
-               X = log(N)) %>%
+        mutate(X = log(N)) %>%
         group_by(line, rep) %>%
         mutate(date = as.integer(date - min(date)),
                r = log(N / lag(N)) / (date - lag(date))) %>%
@@ -265,6 +267,10 @@ load_prior_data <- function(file, filter_pars = list(begin = 0.5, end = 0.9)) {
             filter(clonewars:::dec_filter(X, filter_pars$end)) %>%
             ungroup()
     }
+
+    # Change to factor now to avoid having to drop levels
+    growth <- growth %>%
+        mutate(line = factor(line))
 
     return(growth)
 }
@@ -353,7 +359,7 @@ line_data <- function(data, line, rep, date, X) {
 #'
 #' @export
 #'
-make_pred_df <- function(stan_fit, orig_data, line, rep) {
+make_pred_df <- function(stan_fit, orig_data, line, rep, alpha = 0.05) {
 
     if (missing(line)) line <- quote(line)
     line <- substitute(line)
@@ -371,7 +377,7 @@ make_pred_df <- function(stan_fit, orig_data, line, rep) {
         setNames(1:n_ts) %>%
         gather("ts", "X_pred", convert = TRUE) %>%
         mutate(X_lower = rstan::extract(stan_fit, "X_pred", permuted = FALSE) %>%
-                   apply(3, quantile, probs = 0.025) %>%
+                   apply(3, quantile, probs = alpha / 2) %>%
                    matrix(ncol = n_ts) %>%
                    tbl_df() %>%
                    setNames(paste0("ts", 1:n_ts)) %>%
@@ -379,7 +385,7 @@ make_pred_df <- function(stan_fit, orig_data, line, rep) {
                    select(X) %>%
                    unlist(),
                X_upper = rstan::extract(stan_fit, "X_pred", permuted = FALSE) %>%
-                   apply(3, quantile, probs = 0.975) %>%
+                   apply(3, quantile, probs = 1 - alpha / 2) %>%
                    matrix(ncol = n_ts) %>%
                    tbl_df() %>%
                    setNames(paste0("ts", 1:n_ts)) %>%

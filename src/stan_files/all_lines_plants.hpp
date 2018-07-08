@@ -633,7 +633,6 @@ public:
             check_greater_or_equal(function__,"a",a,0);
             check_less_or_equal(function__,"a",a,1);
             current_statement_begin__ = 49;
-            check_greater_or_equal(function__,"X_pred",X_pred,0);
 
             // model body
 
@@ -879,7 +878,6 @@ public:
             check_greater_or_equal(function__,"a",a,0);
             check_less_or_equal(function__,"a",a,1);
             current_statement_begin__ = 49;
-            check_greater_or_equal(function__,"X_pred",X_pred,0);
 
             // write transformed parameters
             for (int k_0__ = 0; k_0__ < n_lines; ++k_0__) {

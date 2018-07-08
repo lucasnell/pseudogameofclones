@@ -46,7 +46,7 @@ transformed parameters {
 
     vector<lower=0>[n_lines] r;             // estimated growth rate
     vector<lower=0, upper=1>[n_lines] a;    // estimated density dependence
-    matrix<lower=0>[max_reps, N_ts] X_pred; // predicted X not including process error
+    matrix[max_reps, N_ts] X_pred;          // predicted X not including process error
 
     r = exp(mu_r + sd_r * Z_r);
     a = inv_logit(mu_a + sd_a * Z_a);
