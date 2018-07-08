@@ -110,7 +110,7 @@ threshold_filter <- function(X_vec, p) {
 #'
 #' growth <- load_data()
 #'
-load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 1.0)) {
+load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 0.9)) {
 
     # Lines that we still have and should keep for analyses
     lines_to_keep <- c("R10", "WIA-5D", "WI-L4", "WI-L4Ø", "UT3", "WI-2016-593",
@@ -202,7 +202,7 @@ load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 1
 #' @export
 #'
 #'
-load_prior_data <- function(file, filter_pars = list(begin = 0.5, end = 1.0)) {
+load_prior_data <- function(file, filter_pars = list(begin = 0.5, end = 0.9)) {
 
     # Lines that we still have and should keep for actual analyses
     # I will be excluding them here

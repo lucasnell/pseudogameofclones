@@ -135,7 +135,23 @@ fit_lines <- function(data, X, line_ts, plants = FALSE, ...) {
                        n_lines = n_lines_,
                        nobs_ts = nobs_ts_,
                        line_ts = line_ts_,
-                       X = X_)
+                       X = X_,
+
+                       # -----------
+                       # Priors:
+                       # -----------
+                       w_0 = 0.15000,
+                       eta = 0.50000,
+                       mu_theta = -1.30700,
+                       sigma_theta = 0.79220,
+                       x_0 = 0.07922,
+                       gamma = 1.00000,
+                       mu_phi = -6.13000,
+                       sigma_phi = 3.16200,
+                       y_0 = 0.31620,
+                       delta = 5.00000,
+                       z_0 = 0.67350,
+                       zeta = 7.19700)
 
     if (plants) {
         growth_fit <- rstan::sampling(stanmodels$all_lines_plants, data = model_data, ...)

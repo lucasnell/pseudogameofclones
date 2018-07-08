@@ -4,7 +4,7 @@
 \alias{load_data}
 \title{Load aphid growth data.}
 \usage{
-load_data(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 1))
+load_data(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 0.9))
 }
 \arguments{
 \item{file}{A filename to read from. If left empty, this will read from the

@@ -17,22 +17,39 @@ knitr::opts_chunk$set(
   comment = "#>",
   dev = "svglite", 
   fig.width = 6,
-  fig.height = 4
+  fig.height = 4,
+  echo = FALSE
 )
 knitr::opts_knit$set(root.dir = normalizePath(".."))
-# source(".Rprofile")
+options(tibble.print_min = 4L, tibble.print_max = 4L)
+```
+```{r source_Rprofile, eval = FALSE}
+source(".Rprofile")
+```
+
+
+
+```{r library_pkgs, warning=FALSE}
+suppressPackageStartupMessages({
+    library(clonewars)
+})
 bayesplot::color_scheme_set("viridis")
 ```
 
 
-```{r library_pkgs, warning=FALSE, echo=FALSE}
-suppressPackageStartupMessages({
-    library(clonewars)
-})
-```
+This document outlines the structure of the model and what priors are required.
+In general, my goal is to create weakly informative prior distributions:
+
+> We characterize a prior distribution as *weakly informative* if it is proper but
+> is set up so that the information it does provide is intentionally weaker
+> than whatever actual prior knowledge is available. (p 55, Gelman et al. 2014)
+
+Gelman, A., J. B. Carlin, H. S. Stern, D. B. Dunson, A. Vehtari, and D. B. Rubin. 2014.
+*Bayesian Data Analysis*. Third edition. CRC Press, Boca Raton, FL, USA.
 
 
-## Model
+
+# Model description
 
 Below is the model I'm fitting:
 
@@ -50,17 +67,33 @@ $\varepsilon$ is process error.
 
 ### Estimating process error
 
-$\sigma_\varepsilon$ is bound $\ge 0$ and sampled as $\sim \text{Half-Cauchy}(w_0, \eta)$.
+
+\begin{align}
+    \varepsilon &\sim N(0, \sigma^2_\varepsilon) \\
+    \sigma_\varepsilon &\sim \text{Half-Cauchy}(w_0, \eta) \\
+\end{align}
+
+
+
+#### Estimated from model:
+
+- $\sigma_\varepsilon$: standard deviation of the process error
+
+
+#### Priors to define:
+
+- $w_0$: location parameter for the half-Cauchy distribution that generates
+  $\sigma_\varepsilon$ values
+- $\eta$: scale parameter for the half-Cauchy distribution that generates
+  $\sigma_\varepsilon$ values
 
 
 ### Estimating growth rates 
 
 Growth rates are bound $\ge 0$ and have one estimate per aphid line,
 resulting in a vector of growth rates, $\mathbf{R}$.
-The growth rate estimate for clonal line $i$ ($r = \mathbf{R}_i$) is generated
-as follows:
+The growth rate estimate for clonal line $i$ is generated as follows:
 
-$$
 \begin{align}
     
     \mathbf{R}_i &= \exp \left( \theta + s_\theta ~ \mathbf{Z_{(\theta)}}_{i} \right) \\
@@ -70,7 +103,7 @@ $$
     \mathbf{Z_{(\theta)}} &\sim \text{N}(0,1) \\
     
 \end{align}
-$$
+
 
 
 #### Estimated from model:
@@ -83,7 +116,8 @@ $$
 #### Priors to define:
 
 - $\mu_\theta$: mean of the normal distribution that generates $\theta$ values
-- $\sigma^{2}_\theta$: variance of the normal distribution that generates $\theta$ values
+- $\sigma_\theta$: standard deviation of the normal distribution that generates
+  $\theta$ values
 - $x_0$: location parameter for the half-Cauchy distribution that generates
   $s_\theta$ values
 - $\gamma$: scale parameter for the half-Cauchy distribution that generates
@@ -104,7 +138,7 @@ for effects of variability in plant resources affecting aphid density dependence
 I used the inverse logit function to bound final $\alpha$ estimates between 0 and 1.
 For clonal line $i$ and plant $j$, estimates are generated as follows:
 
-$$
+
 \begin{align}
 
     \mathbf{A}_i &= \text{logit}^{-1} \hspace{-0.25em}
@@ -125,7 +159,7 @@ $$
     \mathbf{Z_{(\phi)}} &\sim N(0,1) \\
     \mathbf{Z_{(A)}} &\sim N(0,1) \\
 \end{align}
-$$
+
 
 
 
@@ -142,7 +176,8 @@ $$
 #### Priors to define:
 
 - $\mu_\phi$: mean of the normal distribution that generates $\phi$ values
-- $\sigma^{2}_\phi$: variance of the normal distribution that generates $\phi$ values
+- $\sigma_\phi$: standard deviation of the normal distribution that generates $\phi$
+  values
 - $y_0$: location parameter for the half-Cauchy distribution that generates
   $s_\phi$ values
 - $\delta$: scale parameter for the half-Cauchy distribution that generates
@@ -165,24 +200,72 @@ $$
 
 
 
-<!---
-********************************************************************************
-********************************************************************************
-********************************************************************************
-********************************************************************************
-
-BELOW HERE HAS NOT BEEN UPDATED FOR NEW STRUCTURING OF ALPHA AND R
-
-********************************************************************************
-********************************************************************************
-********************************************************************************
-********************************************************************************
--->
 
 
 
 
-## Growth rates
+
+# Creating priors
+
+
+
+
+## Process error priors
+
+```{r define_process_priors}
+# Below are the location and scale parameters for the half-Cauchy distribution
+# that generates values for the process error standard deviation
+w_0 <- 0.15
+eta <- 0.5
+```
+
+
+$\sigma_\varepsilon$ is bound $\ge 0$ and sampled as $\sim \text{Half-Cauchy}(w_0, \eta)$
+Based on simulations, a value of 1 would be very high---so high as to be not
+realistically possible.
+Values of ~ 0.15 seemed to result in simulations matching some preliminary experimental
+results we've seen in the lab.
+Below, `r sprintf('"sigma%.2f"', w_0)` is simulated data with process error set to
+`r w_0`, "sigma1" has process error set to 1.0.
+The others are the preliminary data.
+
+```{r load_prior}
+load_prior_data() %>% 
+    add_row(line = paste0("sigma", w_0), rep = rep(1:5, each=16), date = rep(5:20,5),
+            X = sim_lines(R0 = 0.2, alpha = 1/1000, n_reps = 5, nobs_ts = rep(16, 5), 
+                          sigma_process = w_0) %>% 
+                as.numeric()) %>% 
+    add_row(line = "sigma1", rep = rep(1:5, each=16), date = rep(5:20,5),
+            X = sim_lines(R0 = 0.2, alpha = 1/1000, n_reps = 5, nobs_ts = rep(16, 5), 
+                          sigma_process = 1) %>% 
+                as.numeric()) %>% 
+    mutate(rep = factor(rep)) %>% 
+    ggplot(aes(date, X)) +
+    geom_line(aes(color = rep)) +
+    facet_wrap(~ line) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE)
+```
+
+
+I chose a half-Cauchy distribution (truncated to be $\ge 0$) with `r w_0` as the
+location and `r eta` for scale because this results in somewhat-low densities at
+values close to 1.
+
+```{r process_error_plot}
+compare_priors("cauchy", w_0, eta, xlim = c(0, 1)) +
+    geom_vline(xintercept = w_0) +
+    ggtitle(expression(sigma[epsilon] %~% plain("Half-Cauchy")(w[0] * "," ~ eta))) +
+    coord_cartesian(ylim = c(0, 0.65)) +
+    NULL
+```
+
+
+
+
+
+
+## Growth rate priors
+
 
 From data sent to me from A.R. Ives related to this paper:
 
@@ -197,12 +280,8 @@ with all the lower estimates.
 For each of these Leslie matrices, I estimated the intrinsic daily rate of increase
 ($r$) in aphid populations in the lab as $r = \log(\lambda)$, where $\lambda$ is the
 dominant eigenvector of the matrix.
-Thus I have fast and slow estimates of population growth, and from these I estimated
-the mean and standard deviation of the population-growth parameter.
-If the clonal lines from Meisner et al. (2014) are representative of the lines
-we currently have, and if these Leslie matrices truly represent the edges of possible
-$r$ values, then this standard deviation should be an upper estimate.
-The SE of $r$ is what I'll use for the standard deviation of the mean.
+Thus I have fast and slow estimates of population growth to use as prior information
+about our population-growth assays.
 
 
 ```{r load_leslies}
@@ -222,106 +301,287 @@ slow <- read_csv("data-raw/leslie_slow.csv", col_names = FALSE,
     .[1] %>% 
     Re() %>% 
     log()
-fast; slow
-mean(c(fast, slow)); sd(c(fast, slow))
-sd(c(fast, slow)) / sqrt(2)
+cat(sprintf("fast = %.4g\n", fast))
+cat(sprintf("slow = %.4g\n", slow))
 ```
 
 
-The cauchy distribution with scale = 0.005 seems about right for sampling the
-among-line SD.
 
-```{r R0_sd_plot}
-compare_priors(sd(c(fast, slow)) / sqrt(2), 0.005, xlim = c(0, 0.05)) +
-    geom_vline(xintercept = sd(c(fast, slow)) / sqrt(2))
+```{r define_R_priors}
+# mean and SD  of the normal distribution that generates theta values
+#   (theta = among-line mean of the log-transformed growth rates)
+mu_theta <- signif(mean(log(c(fast, slow))), 4)
+sigma_theta <- signif(sd(log(c(fast, slow))) * 10, 4)
+
+# location and scale parameters for the half-Cauchy distribution that generates
+#   s_theta values
+#   (s_theta = among-line standard deviation of the log-transformed growth rates)
+x_0 <- signif(sd(log(c(fast, slow))), 4)
+gamma <- 1.0
 ```
+
+
+I also simulated some data with $r = \{ 0.25, 0.5, 0.75, 1.25 \}$ to compare the 
+simulations to the preliminary data.
+Below, "rX" indicates a panel of simulated data with $r$ set to the number X.
+The others are the preliminary data.
+From these simulations, values of $r > 0.5$ seem pretty unlikely.
+
+
+```{r load_prior2, fig.height=6}
+sim_R <- function(df_, R_, alpha_ = 1/2000) {
+    add_row(df_, 
+            line = paste0("r", R_), rep = rep(1:5, each=15), 
+            date = rep(1:15, 5) + 3,
+            X = sim_lines(R0 = R_, alpha = alpha_, n_reps = 5,
+                          nobs_ts = rep(15, 5), sigma_process = w_0) %>% 
+                as.numeric())
+}
+
+load_prior_data() %>% 
+    sim_R(0.25) %>% 
+    sim_R(0.5) %>% 
+    sim_R(0.75) %>% 
+    sim_R(1) %>% 
+    sim_R(1.25) %>% 
+    mutate(rep = factor(rep)) %>% 
+    ggplot(aes(date, X)) +
+    geom_line(aes(color = rep)) +
+    facet_wrap(~ line, nrow = 3) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE)
+```
+
+
+
+For the among-line mean of the log-transformed growth rates ($\mu_\theta$), 
+I used `mean(log(c(fast, slow)))`, `r mu_theta`.
+For the standard deviation of $\mu_\theta$ ($\sigma_\theta$),
+I used `sd(log(c(fast, slow))) * 10`, `r sigma_theta`.
+I multiplied by 10 to add extra uncertainty because of the limited number of lines
+from which I derived my priors.
+In the plot below, I've exponentiated the x-axis so that it displays the values of
+$r$ that would result.
+
+
+```{r mean_theta_distr}
+dlnorm_ <- function(x, location, scale) {
+    dlnorm(x, meanlog = location, sdlog = scale)
+}
+compare_priors(dlnorm_, mu_theta, sigma_theta, xlim = c(0, 1.25)) +
+    geom_vline(xintercept = exp(mu_theta)) +
+    ggtitle(expression(plain(exp)(theta %~% plain(N)(mu[theta] * "," ~ sigma[theta]^2)))) +
+    NULL
+```
+
+
+For sampling $s_\theta$, I use `sd(log(c(fast, slow)))` (`r x_0`) for the location
+parameter and `r gamma` for the scale parameter.
+The latter was chosen to indicate even more uncertainty in $s_\theta$ than in
+$\mu_\theta$.
+
+```{r s_theta_distr}
+compare_priors("cauchy", x_0, gamma, xlim = c(0, 2)) +
+    geom_vline(xintercept = x_0) +
+    ggtitle(expression(s[theta] %~% plain("Half-Cauchy")(x[0] * "," ~ gamma))) +
+    coord_cartesian(ylim = c(0, 0.32)) +
+    NULL
+```
+
+
+
 
 
 ## Density dependence
 
+
+For density dependence, I'm going to use data from preliminary population-growth
+assays that used the same methods that we're using.
+We conducted these assays on 4 aphid lines that we no longer maintain in the lab
+and won't be using for our analyses or cage experiments.
+
+If we look at the deterministic portion of our model...
+
+$$
+X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right)
+$$
+... $X_{t+1} = X_t$ when $\alpha = 1 / \exp(X_t) = 1 / N_t$.
+Because each repetition is run until the plant dies and populations crash,
+I'll assume that for each repetition, our estimate of $\alpha$ is $1 / \max(N_t)$.
+
+Here is how I coded it:
+
+```{r load_prior_data_alpha, echo = TRUE}
+prior_df <- load_prior_data() %>% 
+    group_by(line, rep) %>% 
+    summarize(alpha = 1 / max(N)) %>% 
+    ungroup()
+prior_df
+```
+```{r logit_funs_and_application}
+logit <- function(p) log(p / (1-p))
+inv_logit <- function(x) 1 / (1 + exp(-x))
+prior_df <- prior_df %>% 
+    mutate(logit_alpha = logit(alpha))
+```
+
+
+
+```{r define_alpha_priors}
+# mean and standard deviations of the normal distribution that generates phi values
+#   (phi = among-line mean of the logit-transformed density dependences)
+mu_phi <- prior_df %>% 
+    group_by(line) %>% 
+    summarize(logit_alpha = mean(logit_alpha)) %>% 
+    ungroup() %>% 
+    summarize(logit_alpha = mean(logit_alpha)) %>% 
+    .[["logit_alpha"]] %>% 
+    signif(4)
+sigma_phi <- prior_df %>% 
+    group_by(line) %>% 
+    summarize(logit_alpha = mean(logit_alpha)) %>% 
+    ungroup() %>% 
+    summarize(logit_alpha = sd(logit_alpha)) %>% 
+    .[["logit_alpha"]] %>% 
+    `*`(., 10) %>%
+    signif(4)
+
+# location and scale parameters for the half-Cauchy distribution that generates
+#   s_phi values
+#   (s_phi = among-line standard deviation of the logit-transformed density dependences)
+y_0 <- prior_df %>% 
+    group_by(line) %>% 
+    summarize(logit_alpha = mean(logit_alpha)) %>% 
+    ungroup() %>% 
+    summarize(logit_alpha = sd(logit_alpha)) %>% 
+    .[["logit_alpha"]] %>% 
+    signif(4)
+delta <- 5
+
+# location and scale parameters for the half-Cauchy distribution that generates
+#   values in S
+#   (S = vector of the within-line standard deviations in the logit-transformed
+#    density dependences for each aphid line)
+z_0 <- prior_df %>%
+    group_by(line) %>% 
+    summarize(logit_alpha = sd(logit_alpha),
+              n = n()) %>% 
+    ungroup() %>% 
+    summarize(logit_alpha = mean(logit_alpha)) %>%
+    .[["logit_alpha"]] %>%
+    signif(4) %>%
+    identity()
+zeta <- prior_df %>%
+    group_by(line) %>% 
+    summarize(logit_alpha = sd(logit_alpha),
+              n = n()) %>% 
+    ungroup() %>% 
+    summarize(logit_alpha = sd(logit_alpha)) %>%
+    .[["logit_alpha"]] %>%
+    `*`(., 10) %>% 
+    signif(4) %>%
+    identity()
+```
+
+
 ### Among-line distribution
 
-Because Meisner et al. (2014) used cages of 8 plants, I'm setting my desired mean
-for $\alpha$ by multiplying their density-dependence estimate ($0.000467$) by 8:
-$\bar\alpha = 0.000467 \times 8 = 0.003736$.
-
-They parameterized their density dependence slightly differently from the model I'm
-using, so I'm setting the standard deviation for $\alpha$ to be fairly wide.
-So for the distribution of mean alpha among all lines, the beta curve below looks
-good to me.
-The beta distribution is particularly nice because it's bound between 0 and 1, just
-like any reasonable $\alpha$ estimate should be.
-
+For estimates relating to the among-line distribution of $\text{logit}(\alpha)$,
+I first calculated $\text{logit}(\alpha)$ for each line-rep combo,
+then calculated the mean for each line.
+After that, I used the mean across lines, `r sprintf("%.3f", mu_phi)`,
+as my prior for $\mu_\phi$.
+I multiplied the standard deviation across lines by 10 (resulting in `r sigma_phi`)
+for my prior on $\sigma_\phi$ to decrease my certainty in estimates.
+For the plot below, I inverse-logit transformed the x-axis to show the resulting $\alpha$
+values from these priors.
+It still has pretty low densities above 0.5, which is reasonable because that
+would indicate a "carrying capacity" of < 2.
 
 ```{r alpha_overall_mean_plot}
-compare_priors(0.003736, 0.0015, xlim = c(0, 0.01), beta = TRUE) +
-    geom_vline(xintercept = 0.003736)
+logit_dlnorm <- function(p, location, scale) {
+    dnorm(logit(p), location, scale)
+}
+compare_priors(logit_dlnorm, mu_phi, sigma_phi, xlim = c(0, 1)) +
+    geom_vline(xintercept = inv_logit(mu_phi), linetype = 2) +
+    ggtitle(expression({plain("logit")^{-1}}(
+        phi %~% plain(N)(mu[phi] * "," ~ sigma[phi]^2))))
 ```
 
 
-For sampling mean alphas for each line, I'm going to increase the SD to 
-0.002 to allow for a greater possibility of more extreme values for each line.
+For the distribution of $s_\phi$ values, I used the SD for among-line mean
+$\text{logit}(\alpha)$ for the location (`r y_0`), and
+`r delta` for the scale parameter.
+The latter was chosen simply because I'm not very sure of what it should be, and 
+this value results in a pretty flat prior distribution.
+
 
 ```{r alpha_line_means_plot}
-compare_priors(0.003736, 0.002, xlim = c(0, 0.01), beta = TRUE) +
-    geom_vline(xintercept = 0.003736)
+compare_priors("cauchy", y_0, delta, xlim = c(0, 10)) +
+    geom_vline(xintercept = y_0) +
+    ggtitle(expression(s[phi] %~% plain("Half-Cauchy")(y[0] * "," ~ delta))) +
+    coord_cartesian(ylim = c(0, 0.07))
 ```
 
-
-For the among-line SD distribution, I used a cauchy distribution with location = 0.0015
-and scale = 0.0005 because it looks most reasonable to me.
-
-```{r alpha_among_line_sd_plot}
-compare_priors(0.0015, 0.0005, xlim = c(0, 0.005)) +
-    geom_vline(xintercept = 0.0015)
-```
 
 
 ### Within-line distribution
 
-I'm really not sure about the degree to which different plants will affect the
-density dependence within an aphid line.
-I'll use some raw data from Meisner et al. (2014) to get some idea.
-Below is from their cage experiments when they added parasitoid wasps after aphid
-densities were allowed to peak (35 days).
-I didn't use these estimates for mean alpha because of the potential effect of wasps,
-but this is probably as good an estimate of variance among plants that I'll get.
-Notice that I'm dividing the max number of aphids by 8 because there were 8 plants
-in this experiment.
+For estimates relating to the *within*-line distribution of $\text{logit}(\alpha)$,
+I first calculated $\text{logit}(\alpha)$ for each line-rep combo,
+then calculated the standard deviation of these estimates for each line.
+After that, I used the mean of SD estimates across lines, `r z_0`,
+as my prior for $z_0$.
+I used $10 \times$ the SD of SD estimates across lines, `r zeta`, 
+as my prior for $\zeta$.
+This results in the following weakly informative prior:
 
-
-```{r Meisner_cage_data}
-read_csv("data-raw/MeisnerLongtermCageData.csv",
-         col_types = "iiiiii") %>% 
-    filter(treatment == 0, year == 2009) %>% 
-    group_by(replicate) %>% 
-    summarize(alpha = 1 / max(aphids / 8)) %>% 
-    select(alpha) %>% 
-    summarize(sd = sd(alpha)) %>% 
-    unlist() %>% 
-    signif(3)
-```
-
-
-I'm choosing a cauchy distribution with location of 0.00142 and scale of 0.02 
-because I'm pretty uncertain of this parameter.
 
 ```{r alpha_within_line_sd_plot}
-compare_priors(0.00142, 0.02, xlim = c(0, 0.1)) +
-    geom_vline(xintercept = 0.00142)
+compare_priors("cauchy", z_0, zeta, xlim = c(0, 10)) +
+    geom_vline(xintercept = z_0) +
+    ggtitle(expression(bold(S) %~% plain("Half-Cauchy")(z[0] * "," ~ zeta))) +
+    coord_cartesian(ylim = c(0, 0.044)) +
+    NULL
 ```
 
 
 
-## Process error
 
-I'm not really sure what this should be, but based on simulations, a value of 1 would
-be very high.
-Thus I chose a cauchy distribution with 0.1 as the location and scale because
-this appears about right.
+# Final priors
 
-```{r process_error_plot}
-compare_priors(0.1, 0.1, xlim = c(0, 1)) +
-    geom_vline(xintercept = 0.1)
+```{r priors_table}
+data_frame(
+    par = c(
+        "w_0",
+        "eta",
+        "mu_theta",
+        "sigma_theta",
+        "x_0",
+        "gamma",
+        "mu_phi",
+        "sigma_phi",
+        "y_0",
+        "delta",
+        "z_0",
+        "zeta"
+    ),
+    value = c(
+        w_0,
+        eta,
+        mu_theta,
+        sigma_theta,
+        x_0,
+        gamma,
+        mu_phi,
+        sigma_phi,
+        y_0,
+        delta,
+        z_0,
+        zeta
+    )
+) %>% 
+    knitr::kable(format = "html")
+
+
 ```
 

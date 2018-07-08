@@ -4,7 +4,7 @@
 \alias{load_prior_data}
 \title{Load data that won't be used for the actual analysis, to develop priors.}
 \usage{
-load_prior_data(file, filter_pars = list(begin = 0.5, end = 1))
+load_prior_data(file, filter_pars = list(begin = 0.5, end = 0.9))
 }
 \arguments{
 \item{file}{A filename to read from. If left empty, this will read from the
