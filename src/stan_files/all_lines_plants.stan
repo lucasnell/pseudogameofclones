@@ -1,7 +1,7 @@
 
 /*
     This version differs from `all_lines.stan` because it also models variability
-    in density dependence (variable `a`) within clonal lines.
+    in density dependence (variable `A`) within clonal lines.
 */
 
 data {
@@ -9,86 +9,98 @@ data {
     int<lower=1> max_reps;                      // Max reps per time series
     int<lower=1> n_lines;                       // number of aphid lines
     int<lower=1> nobs_ts[N_ts];                 // # observations for each time series
-    int<lower=1, upper=n_lines> line_ts[N_ts];  // aphid line for each time series
+    int<lower=1, upper=n_lines> L[N_ts];        // aphid line for each time series
     matrix<lower=0>[max_reps, N_ts] X;          // log(N_t)
     // Priors for process error:
-    real w_0;
-    real eta;
+    real tau;
+    real sigma_tau;
     // Priors for growth rates:
     real mu_theta;
     real sigma_theta;
-    real x_0;
     real gamma;
+    real sigma_gamma;
     // Priors for density dependence:
     real mu_phi;
     real sigma_phi;
-    real y_0;
     real delta;
-    real z_0;
+    real sigma_delta;
     real zeta;
+    real sigma_zeta;
 }
 parameters {
-    // Means (on transformed scale):
-    real mu_r;
-    real mu_a;
-    // SDs (on transformed scale):
-    real<lower=0> sd_r;
-    real<lower=0> sd_a;                  // variation between lines
-    vector<lower=0>[n_lines] sd_wi_a;    // variation within lines
-    // Z-transforms:
-    vector[n_lines] Z_r;
-    vector[n_lines] Z_a;
-    vector[N_ts] Z_wi_a;
 
-    real<lower=0> process;
+    // Z-transforms:
+
+    real Z_theta;
+    real Z_phi;
+    real Z_s_theta;
+    real Z_s_phi;
+    vector[n_lines] Z_S;
+    vector[n_lines] Z_R;
+    vector[n_lines] Z_A;
+    vector[N_ts] Z_P;
+    real Z_s_epsilon;
+
 }
 transformed parameters {
 
-    vector<lower=0>[n_lines] r;             // estimated growth rate
-    vector<lower=0, upper=1>[n_lines] a;    // estimated density dependence
+    // Means (on transformed scale):
+    real theta;                             // mean growth rates (r)
+    real phi;                               // mean density dependences (alpha)
+    // SDs (on transformed scale):
+    real s_theta;                           // variation in r between lines
+    real s_phi;                             // variation in alpha between lines
+    vector[n_lines] S;                      // variation in alpha within lines
+
+    // Final estimates:
+    vector[n_lines] R;                      // growth rates (r)
+    vector[n_lines] A;                      // density dependences (alpha) per aphid line
+    vector[N_ts] P;                         // density dependences per time series
+    real s_epsilon;                         // SD of process error
+
     matrix[max_reps, N_ts] X_pred;          // predicted X not including process error
 
-    r = exp(mu_r + sd_r * Z_r);
-    a = inv_logit(mu_a + sd_a * Z_a);
 
-    for (i in 1:N_ts) {
-        // a for this time series:
-        real a_ = inv_logit(mu_a + sd_a * Z_a[line_ts[i]] +
-            Z_wi_a[i] * sd_wi_a[line_ts[i]]);
-        // r for this time series:
-        real r_ = r[line_ts[i]];
+    theta = mu_theta + sigma_theta * Z_theta;
+    phi = mu_phi + sigma_phi * Z_phi;
+
+    s_theta = exp(gamma + sigma_gamma * Z_s_theta);
+    s_phi = exp(delta + sigma_delta * Z_s_phi);
+    S = exp(zeta + sigma_zeta * Z_S);
+
+    R = exp(theta + s_theta * Z_R);
+    A = inv_logit(phi + s_phi * Z_A);
+    s_epsilon = exp(tau + sigma_tau * Z_s_epsilon);
+
+    for (j in 1:N_ts) {
         // number of observations for this time series:
-        int n_ = nobs_ts[i];
+        int n_ = nobs_ts[j];
+        // R for this time series:
+        real r_ = R[L[j]];
+        // A for this time series:
+        real a_ = inv_logit(phi + s_phi * Z_A[L[j]] + S[L[j]] * Z_P[j]);
+        P[j] = a_;
         // Now filling in `X_pred`:
-        X_pred[1, i] = X[1, i];
-        X_pred[2:n_, i] = X[1:(n_-1), i] + r_ * (1 - a_ * exp(X[1:(n_-1), i]));
-        if (n_ < max_reps) for (j in (n_+1):max_reps) X_pred[j, i] = 0;
+        X_pred[1, j] = X[1, j];
+        X_pred[2:n_, j] = X[1:(n_-1), j] + r_ * (1 - a_ * exp(X[1:(n_-1), j]));
+        if (n_ < max_reps) for (t in (n_+1):max_reps) X_pred[t, j] = 0;
     }
 
 }
 model {
 
-    // Process error sampling:
-    process ~ cauchy(w_0, eta)T[0,];
+    Z_theta ~ normal(0, 1);
+    Z_phi ~ normal(0, 1);
+    Z_s_theta ~ normal(0, 1);
+    Z_s_phi ~ normal(0, 1);
+    Z_S ~ normal(0, 1);
+    Z_R ~ normal(0, 1);
+    Z_A ~ normal(0, 1);
+    Z_P ~ normal(0, 1);
+    Z_s_epsilon ~ normal(0, 1);
 
-    // Growth rate sampling:
-    mu_r ~ normal(mu_theta, sigma_theta);  // mean (on transformed scale)
-    sd_r ~ cauchy(x_0, gamma)T[0,];  // sd (on transformed scale)
-
-    // Density dependence sampling:
-    mu_a ~ normal(mu_phi, sigma_phi);  // among-line mean (on transformed scale)
-    sd_a ~ cauchy(y_0, delta)T[0,];  // among-line sd (on transformed scale)
-    for (i in 1:n_lines) {
-        sd_wi_a[i] ~ cauchy(z_0, zeta)T[0,];  // within-line sd (on transformed scale)
-    }
-
-    // Z-scores:
-    Z_r ~ normal(0,1);
-    Z_a ~ normal(0,1);
-    Z_wi_a ~ normal(0,1);
-
-    for (i in 1:N_ts) {
-        X[2:nobs_ts[i], i] ~ normal(X_pred[2:nobs_ts[i], i], process);
+    for (j in 1:N_ts) {
+        X[2:nobs_ts[j], j] ~ normal(X_pred[2:nobs_ts[j], j], s_epsilon);
     }
 
 }
