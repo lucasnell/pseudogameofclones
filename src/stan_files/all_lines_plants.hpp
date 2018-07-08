@@ -40,7 +40,7 @@ static int current_statement_begin__;
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
     reader.add_event(0, 0, "start", "model_all_lines_plants");
-    reader.add_event(77, 77, "end", "model_all_lines_plants");
+    reader.add_event(94, 94, "end", "model_all_lines_plants");
     return reader;
 }
 
@@ -53,6 +53,18 @@ private:
     vector<int> nobs_ts;
     vector<int> line_ts;
     matrix_d X;
+    double w_0;
+    double eta;
+    double mu_theta;
+    double sigma_theta;
+    double x_0;
+    double gamma;
+    double mu_phi;
+    double sigma_phi;
+    double y_0;
+    double delta;
+    double z_0;
+    double zeta;
 public:
     model_all_lines_plants(stan::io::var_context& context__,
         std::ostream* pstream__ = 0)
@@ -143,6 +155,78 @@ public:
                     X(m_mat__,n_mat__) = vals_r__[pos__++];
                 }
             }
+            current_statement_begin__ = 15;
+            context__.validate_dims("data initialization", "w_0", "double", context__.to_vec());
+            w_0 = double(0);
+            vals_r__ = context__.vals_r("w_0");
+            pos__ = 0;
+            w_0 = vals_r__[pos__++];
+            current_statement_begin__ = 16;
+            context__.validate_dims("data initialization", "eta", "double", context__.to_vec());
+            eta = double(0);
+            vals_r__ = context__.vals_r("eta");
+            pos__ = 0;
+            eta = vals_r__[pos__++];
+            current_statement_begin__ = 18;
+            context__.validate_dims("data initialization", "mu_theta", "double", context__.to_vec());
+            mu_theta = double(0);
+            vals_r__ = context__.vals_r("mu_theta");
+            pos__ = 0;
+            mu_theta = vals_r__[pos__++];
+            current_statement_begin__ = 19;
+            context__.validate_dims("data initialization", "sigma_theta", "double", context__.to_vec());
+            sigma_theta = double(0);
+            vals_r__ = context__.vals_r("sigma_theta");
+            pos__ = 0;
+            sigma_theta = vals_r__[pos__++];
+            current_statement_begin__ = 20;
+            context__.validate_dims("data initialization", "x_0", "double", context__.to_vec());
+            x_0 = double(0);
+            vals_r__ = context__.vals_r("x_0");
+            pos__ = 0;
+            x_0 = vals_r__[pos__++];
+            current_statement_begin__ = 21;
+            context__.validate_dims("data initialization", "gamma", "double", context__.to_vec());
+            gamma = double(0);
+            vals_r__ = context__.vals_r("gamma");
+            pos__ = 0;
+            gamma = vals_r__[pos__++];
+            current_statement_begin__ = 23;
+            context__.validate_dims("data initialization", "mu_phi", "double", context__.to_vec());
+            mu_phi = double(0);
+            vals_r__ = context__.vals_r("mu_phi");
+            pos__ = 0;
+            mu_phi = vals_r__[pos__++];
+            current_statement_begin__ = 24;
+            context__.validate_dims("data initialization", "sigma_phi", "double", context__.to_vec());
+            sigma_phi = double(0);
+            vals_r__ = context__.vals_r("sigma_phi");
+            pos__ = 0;
+            sigma_phi = vals_r__[pos__++];
+            current_statement_begin__ = 25;
+            context__.validate_dims("data initialization", "y_0", "double", context__.to_vec());
+            y_0 = double(0);
+            vals_r__ = context__.vals_r("y_0");
+            pos__ = 0;
+            y_0 = vals_r__[pos__++];
+            current_statement_begin__ = 26;
+            context__.validate_dims("data initialization", "delta", "double", context__.to_vec());
+            delta = double(0);
+            vals_r__ = context__.vals_r("delta");
+            pos__ = 0;
+            delta = vals_r__[pos__++];
+            current_statement_begin__ = 27;
+            context__.validate_dims("data initialization", "z_0", "double", context__.to_vec());
+            z_0 = double(0);
+            vals_r__ = context__.vals_r("z_0");
+            pos__ = 0;
+            z_0 = vals_r__[pos__++];
+            current_statement_begin__ = 28;
+            context__.validate_dims("data initialization", "zeta", "double", context__.to_vec());
+            zeta = double(0);
+            vals_r__ = context__.vals_r("zeta");
+            pos__ = 0;
+            zeta = vals_r__[pos__++];
 
             // validate, data variables
             current_statement_begin__ = 8;
@@ -162,6 +246,18 @@ public:
             }
             current_statement_begin__ = 13;
             check_greater_or_equal(function__,"X",X,0);
+            current_statement_begin__ = 15;
+            current_statement_begin__ = 16;
+            current_statement_begin__ = 18;
+            current_statement_begin__ = 19;
+            current_statement_begin__ = 20;
+            current_statement_begin__ = 21;
+            current_statement_begin__ = 23;
+            current_statement_begin__ = 24;
+            current_statement_begin__ = 25;
+            current_statement_begin__ = 26;
+            current_statement_begin__ = 27;
+            current_statement_begin__ = 28;
             // initialize data variables
 
 
@@ -170,27 +266,27 @@ public:
             // validate, set parameter ranges
             num_params_r__ = 0U;
             param_ranges_i__.clear();
-            current_statement_begin__ = 17;
+            current_statement_begin__ = 32;
             ++num_params_r__;
-            current_statement_begin__ = 18;
+            current_statement_begin__ = 33;
             ++num_params_r__;
-            current_statement_begin__ = 20;
+            current_statement_begin__ = 35;
             ++num_params_r__;
-            current_statement_begin__ = 21;
+            current_statement_begin__ = 36;
             ++num_params_r__;
-            current_statement_begin__ = 22;
+            current_statement_begin__ = 37;
             validate_non_negative_index("sd_wi_a", "n_lines", n_lines);
             num_params_r__ += n_lines;
-            current_statement_begin__ = 24;
+            current_statement_begin__ = 39;
             validate_non_negative_index("Z_r", "n_lines", n_lines);
             num_params_r__ += n_lines;
-            current_statement_begin__ = 25;
+            current_statement_begin__ = 40;
             validate_non_negative_index("Z_a", "n_lines", n_lines);
             num_params_r__ += n_lines;
-            current_statement_begin__ = 26;
+            current_statement_begin__ = 41;
             validate_non_negative_index("Z_wi_a", "N_ts", N_ts);
             num_params_r__ += N_ts;
-            current_statement_begin__ = 28;
+            current_statement_begin__ = 43;
             ++num_params_r__;
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
@@ -433,21 +529,21 @@ public:
 
 
             // transformed parameters
-            current_statement_begin__ = 32;
+            current_statement_begin__ = 47;
             validate_non_negative_index("r", "n_lines", n_lines);
             Eigen::Matrix<T__,Eigen::Dynamic,1>  r(static_cast<Eigen::VectorXd::Index>(n_lines));
             (void) r;  // dummy to suppress unused var warning
 
             stan::math::initialize(r, DUMMY_VAR__);
             stan::math::fill(r,DUMMY_VAR__);
-            current_statement_begin__ = 33;
+            current_statement_begin__ = 48;
             validate_non_negative_index("a", "n_lines", n_lines);
             Eigen::Matrix<T__,Eigen::Dynamic,1>  a(static_cast<Eigen::VectorXd::Index>(n_lines));
             (void) a;  // dummy to suppress unused var warning
 
             stan::math::initialize(a, DUMMY_VAR__);
             stan::math::fill(a,DUMMY_VAR__);
-            current_statement_begin__ = 34;
+            current_statement_begin__ = 49;
             validate_non_negative_index("X_pred", "max_reps", max_reps);
             validate_non_negative_index("X_pred", "N_ts", N_ts);
             Eigen::Matrix<T__,Eigen::Dynamic,Eigen::Dynamic>  X_pred(static_cast<Eigen::VectorXd::Index>(max_reps),static_cast<Eigen::VectorXd::Index>(N_ts));
@@ -457,28 +553,28 @@ public:
             stan::math::fill(X_pred,DUMMY_VAR__);
 
 
-            current_statement_begin__ = 36;
+            current_statement_begin__ = 51;
             stan::math::assign(r, exp(add(mu_r,multiply(sd_r,Z_r))));
-            current_statement_begin__ = 37;
+            current_statement_begin__ = 52;
             stan::math::assign(a, inv_logit(add(mu_a,multiply(sd_a,Z_a))));
-            current_statement_begin__ = 39;
+            current_statement_begin__ = 54;
             for (int i = 1; i <= N_ts; ++i) {
                 {
-                current_statement_begin__ = 41;
+                current_statement_begin__ = 56;
                 T__ a_;
                 (void) a_;  // dummy to suppress unused var warning
 
                 stan::math::initialize(a_, DUMMY_VAR__);
                 stan::math::fill(a_,DUMMY_VAR__);
                 stan::math::assign(a_,inv_logit(((mu_a + (sd_a * get_base1(Z_a,get_base1(line_ts,i,"line_ts",1),"Z_a",1))) + (get_base1(Z_wi_a,i,"Z_wi_a",1) * get_base1(sd_wi_a,get_base1(line_ts,i,"line_ts",1),"sd_wi_a",1)))));
-                current_statement_begin__ = 44;
+                current_statement_begin__ = 59;
                 T__ r_;
                 (void) r_;  // dummy to suppress unused var warning
 
                 stan::math::initialize(r_, DUMMY_VAR__);
                 stan::math::fill(r_,DUMMY_VAR__);
                 stan::math::assign(r_,get_base1(r,get_base1(line_ts,i,"line_ts",1),"r",1));
-                current_statement_begin__ = 46;
+                current_statement_begin__ = 61;
                 int n_(0);
                 (void) n_;  // dummy to suppress unused var warning
 
@@ -486,18 +582,18 @@ public:
                 stan::math::assign(n_,get_base1(nobs_ts,i,"nobs_ts",1));
 
 
-                current_statement_begin__ = 48;
+                current_statement_begin__ = 63;
                 stan::math::assign(get_base1_lhs(X_pred,1,i,"X_pred",1), get_base1(X,1,i,"X",1));
-                current_statement_begin__ = 49;
+                current_statement_begin__ = 64;
                 stan::model::assign(X_pred, 
                             stan::model::cons_list(stan::model::index_min_max(2, n_), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), 
                             add(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (n_ - 1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X"),multiply(r_,subtract(1,multiply(a_,exp(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (n_ - 1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X")))))), 
                             "assigning variable X_pred");
-                current_statement_begin__ = 50;
+                current_statement_begin__ = 65;
                 if (as_bool(logical_lt(n_,max_reps))) {
-                    current_statement_begin__ = 50;
+                    current_statement_begin__ = 65;
                     for (int j = (n_ + 1); j <= max_reps; ++j) {
-                        current_statement_begin__ = 50;
+                        current_statement_begin__ = 65;
                         stan::math::assign(get_base1_lhs(X_pred,j,i,"X_pred",1), 0);
                     }
                 }
@@ -531,50 +627,50 @@ public:
 
             const char* function__ = "validate transformed params";
             (void) function__;  // dummy to suppress unused var warning
-            current_statement_begin__ = 32;
+            current_statement_begin__ = 47;
             check_greater_or_equal(function__,"r",r,0);
-            current_statement_begin__ = 33;
+            current_statement_begin__ = 48;
             check_greater_or_equal(function__,"a",a,0);
             check_less_or_equal(function__,"a",a,1);
-            current_statement_begin__ = 34;
+            current_statement_begin__ = 49;
             check_greater_or_equal(function__,"X_pred",X_pred,0);
 
             // model body
 
-            current_statement_begin__ = 58;
-            lp_accum__.add(normal_log<propto__>(mu_r, 0.2711385, 0.01517227));
-            current_statement_begin__ = 59;
-            lp_accum__.add(normal_log<propto__>(mu_a, 0.0037360000000000002, 0.0015));
-            current_statement_begin__ = 61;
-            lp_accum__.add(cauchy_log<propto__>(sd_r, 0.02145683, 0.0050000000000000001));
+            current_statement_begin__ = 72;
+            lp_accum__.add(cauchy_log<propto__>(process, w_0, eta));
+            if (process < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
+            else lp_accum__.add(-cauchy_ccdf_log(0, w_0, eta));
+            current_statement_begin__ = 75;
+            lp_accum__.add(normal_log<propto__>(mu_r, mu_theta, sigma_theta));
+            current_statement_begin__ = 76;
+            lp_accum__.add(cauchy_log<propto__>(sd_r, x_0, gamma));
             if (sd_r < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
-            else lp_accum__.add(-cauchy_ccdf_log(0, 0.02145683, 0.0050000000000000001));
-            current_statement_begin__ = 62;
-            lp_accum__.add(cauchy_log<propto__>(sd_a, 0.0015, 0.00050000000000000001));
+            else lp_accum__.add(-cauchy_ccdf_log(0, x_0, gamma));
+            current_statement_begin__ = 79;
+            lp_accum__.add(normal_log<propto__>(mu_a, mu_phi, sigma_phi));
+            current_statement_begin__ = 80;
+            lp_accum__.add(cauchy_log<propto__>(sd_a, y_0, delta));
             if (sd_a < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
-            else lp_accum__.add(-cauchy_ccdf_log(0, 0.0015, 0.00050000000000000001));
-            current_statement_begin__ = 63;
+            else lp_accum__.add(-cauchy_ccdf_log(0, y_0, delta));
+            current_statement_begin__ = 81;
             for (int i = 1; i <= n_lines; ++i) {
 
-                current_statement_begin__ = 64;
-                lp_accum__.add(cauchy_log<propto__>(get_base1(sd_wi_a,i,"sd_wi_a",1), 0.00142, 0.02));
+                current_statement_begin__ = 82;
+                lp_accum__.add(cauchy_log<propto__>(get_base1(sd_wi_a,i,"sd_wi_a",1), z_0, zeta));
                 if (get_base1(sd_wi_a,i,"sd_wi_a",1) < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
-                else lp_accum__.add(-cauchy_ccdf_log(0, 0.00142, 0.02));
+                else lp_accum__.add(-cauchy_ccdf_log(0, z_0, zeta));
             }
-            current_statement_begin__ = 67;
+            current_statement_begin__ = 86;
             lp_accum__.add(normal_log<propto__>(Z_r, 0, 1));
-            current_statement_begin__ = 68;
+            current_statement_begin__ = 87;
             lp_accum__.add(normal_log<propto__>(Z_a, 0, 1));
-            current_statement_begin__ = 69;
+            current_statement_begin__ = 88;
             lp_accum__.add(normal_log<propto__>(Z_wi_a, 0, 1));
-            current_statement_begin__ = 71;
-            lp_accum__.add(cauchy_log<propto__>(process, 0.10000000000000001, 0.10000000000000001));
-            if (process < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
-            else lp_accum__.add(-cauchy_ccdf_log(0, 0.10000000000000001, 0.10000000000000001));
-            current_statement_begin__ = 73;
+            current_statement_begin__ = 90;
             for (int i = 1; i <= N_ts; ++i) {
 
-                current_statement_begin__ = 74;
+                current_statement_begin__ = 91;
                 lp_accum__.add(normal_log<propto__>(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(2, get_base1(nobs_ts,i,"nobs_ts",1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X"), stan::model::rvalue(X_pred, stan::model::cons_list(stan::model::index_min_max(2, get_base1(nobs_ts,i,"nobs_ts",1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X_pred"), process));
             }
 
@@ -705,21 +801,21 @@ public:
         (void) DUMMY_VAR__;  // suppress unused var warning
 
         try {
-            current_statement_begin__ = 32;
+            current_statement_begin__ = 47;
             validate_non_negative_index("r", "n_lines", n_lines);
             vector_d r(static_cast<Eigen::VectorXd::Index>(n_lines));
             (void) r;  // dummy to suppress unused var warning
 
             stan::math::initialize(r, std::numeric_limits<double>::quiet_NaN());
             stan::math::fill(r,DUMMY_VAR__);
-            current_statement_begin__ = 33;
+            current_statement_begin__ = 48;
             validate_non_negative_index("a", "n_lines", n_lines);
             vector_d a(static_cast<Eigen::VectorXd::Index>(n_lines));
             (void) a;  // dummy to suppress unused var warning
 
             stan::math::initialize(a, std::numeric_limits<double>::quiet_NaN());
             stan::math::fill(a,DUMMY_VAR__);
-            current_statement_begin__ = 34;
+            current_statement_begin__ = 49;
             validate_non_negative_index("X_pred", "max_reps", max_reps);
             validate_non_negative_index("X_pred", "N_ts", N_ts);
             matrix_d X_pred(static_cast<Eigen::VectorXd::Index>(max_reps),static_cast<Eigen::VectorXd::Index>(N_ts));
@@ -729,28 +825,28 @@ public:
             stan::math::fill(X_pred,DUMMY_VAR__);
 
 
-            current_statement_begin__ = 36;
+            current_statement_begin__ = 51;
             stan::math::assign(r, exp(add(mu_r,multiply(sd_r,Z_r))));
-            current_statement_begin__ = 37;
+            current_statement_begin__ = 52;
             stan::math::assign(a, inv_logit(add(mu_a,multiply(sd_a,Z_a))));
-            current_statement_begin__ = 39;
+            current_statement_begin__ = 54;
             for (int i = 1; i <= N_ts; ++i) {
                 {
-                current_statement_begin__ = 41;
+                current_statement_begin__ = 56;
                 double a_(0.0);
                 (void) a_;  // dummy to suppress unused var warning
 
                 stan::math::initialize(a_, std::numeric_limits<double>::quiet_NaN());
                 stan::math::fill(a_,DUMMY_VAR__);
                 stan::math::assign(a_,inv_logit(((mu_a + (sd_a * get_base1(Z_a,get_base1(line_ts,i,"line_ts",1),"Z_a",1))) + (get_base1(Z_wi_a,i,"Z_wi_a",1) * get_base1(sd_wi_a,get_base1(line_ts,i,"line_ts",1),"sd_wi_a",1)))));
-                current_statement_begin__ = 44;
+                current_statement_begin__ = 59;
                 double r_(0.0);
                 (void) r_;  // dummy to suppress unused var warning
 
                 stan::math::initialize(r_, std::numeric_limits<double>::quiet_NaN());
                 stan::math::fill(r_,DUMMY_VAR__);
                 stan::math::assign(r_,get_base1(r,get_base1(line_ts,i,"line_ts",1),"r",1));
-                current_statement_begin__ = 46;
+                current_statement_begin__ = 61;
                 int n_(0);
                 (void) n_;  // dummy to suppress unused var warning
 
@@ -758,18 +854,18 @@ public:
                 stan::math::assign(n_,get_base1(nobs_ts,i,"nobs_ts",1));
 
 
-                current_statement_begin__ = 48;
+                current_statement_begin__ = 63;
                 stan::math::assign(get_base1_lhs(X_pred,1,i,"X_pred",1), get_base1(X,1,i,"X",1));
-                current_statement_begin__ = 49;
+                current_statement_begin__ = 64;
                 stan::model::assign(X_pred, 
                             stan::model::cons_list(stan::model::index_min_max(2, n_), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), 
                             add(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (n_ - 1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X"),multiply(r_,subtract(1,multiply(a_,exp(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (n_ - 1)), stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list())), "X")))))), 
                             "assigning variable X_pred");
-                current_statement_begin__ = 50;
+                current_statement_begin__ = 65;
                 if (as_bool(logical_lt(n_,max_reps))) {
-                    current_statement_begin__ = 50;
+                    current_statement_begin__ = 65;
                     for (int j = (n_ + 1); j <= max_reps; ++j) {
-                        current_statement_begin__ = 50;
+                        current_statement_begin__ = 65;
                         stan::math::assign(get_base1_lhs(X_pred,j,i,"X_pred",1), 0);
                     }
                 }
@@ -777,12 +873,12 @@ public:
             }
 
             // validate transformed parameters
-            current_statement_begin__ = 32;
+            current_statement_begin__ = 47;
             check_greater_or_equal(function__,"r",r,0);
-            current_statement_begin__ = 33;
+            current_statement_begin__ = 48;
             check_greater_or_equal(function__,"a",a,0);
             check_less_or_equal(function__,"a",a,1);
-            current_statement_begin__ = 34;
+            current_statement_begin__ = 49;
             check_greater_or_equal(function__,"X_pred",X_pred,0);
 
             // write transformed parameters

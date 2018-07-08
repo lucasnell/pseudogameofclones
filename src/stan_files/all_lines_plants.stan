@@ -11,6 +11,21 @@ data {
     int<lower=1> nobs_ts[N_ts];                 // # observations for each time series
     int<lower=1, upper=n_lines> line_ts[N_ts];  // aphid line for each time series
     matrix<lower=0>[max_reps, N_ts] X;          // log(N_t)
+    // Priors for process error:
+    real w_0;
+    real eta;
+    // Priors for growth rates:
+    real mu_theta;
+    real sigma_theta;
+    real x_0;
+    real gamma;
+    // Priors for density dependence:
+    real mu_phi;
+    real sigma_phi;
+    real y_0;
+    real delta;
+    real z_0;
+    real zeta;
 }
 parameters {
     // Means (on transformed scale):
@@ -53,22 +68,24 @@ transformed parameters {
 }
 model {
 
-    // Inputs here are your priors:
-    // Means (on transformed scale)
-    mu_r ~ normal(0.2711385, 0.01517227);
-    mu_a ~ normal(0.003736, 0.0015);
-    // SDs (on transformed scale)
-    sd_r ~ cauchy(0.02145683, 0.005)T[0,];
-    sd_a ~ cauchy(0.0015, 0.0005)T[0,];
+    // Process error sampling:
+    process ~ cauchy(w_0, eta)T[0,];
+
+    // Growth rate sampling:
+    mu_r ~ normal(mu_theta, sigma_theta);  // mean (on transformed scale)
+    sd_r ~ cauchy(x_0, gamma)T[0,];  // sd (on transformed scale)
+
+    // Density dependence sampling:
+    mu_a ~ normal(mu_phi, sigma_phi);  // among-line mean (on transformed scale)
+    sd_a ~ cauchy(y_0, delta)T[0,];  // among-line sd (on transformed scale)
     for (i in 1:n_lines) {
-        sd_wi_a[i] ~ cauchy(0.00142, 0.02)T[0,];
+        sd_wi_a[i] ~ cauchy(z_0, zeta)T[0,];  // within-line sd (on transformed scale)
     }
-    // Z-transforms
+
+    // Z-scores:
     Z_r ~ normal(0,1);
     Z_a ~ normal(0,1);
     Z_wi_a ~ normal(0,1);
-
-    process ~ cauchy(0.1, 0.1)T[0,];
 
     for (i in 1:N_ts) {
         X[2:nobs_ts[i], i] ~ normal(X_pred[2:nobs_ts[i], i], process);
