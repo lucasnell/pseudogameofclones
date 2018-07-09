@@ -137,14 +137,14 @@ about our population-growth assays.
 
 
 ```{r load_leslies}
-fast <- leslie %>% 
+fast <- clonewars::leslie %>% 
     .[["fast"]] %>% 
     eigen() %>% 
     .[["values"]] %>% 
     .[1] %>% 
     Re() %>% 
     log()
-slow <- leslie %>% 
+slow <- clonewars::leslie %>% 
     .[["slow"]] %>% 
     eigen() %>% 
     .[["values"]] %>% 

@@ -2,7 +2,6 @@
 
 export(compare_priors)
 export(fit_lines)
-export(leslie)
 export(line_data)
 export(load_data)
 export(load_prior_data)
