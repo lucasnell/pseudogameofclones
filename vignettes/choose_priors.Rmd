@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
   fig.height = 4,
   echo = FALSE
 )
-knitr::opts_knit$set(root.dir = normalizePath(".."))
+# knitr::opts_knit$set(root.dir = normalizePath(".."))
 options(tibble.print_min = 4L, tibble.print_max = 4L)
 ```
 ```{r source_Rprofile, eval = FALSE}
@@ -40,7 +40,8 @@ dlnorm_ <- function(x, location, scale) {
 ```
 
 
-This document outlines the structure of the model and what priors are required.
+This document outlines how I created my prior values.
+See `vignette("Model description")` for my model description.
 In general, my goal is to create weakly informative prior distributions:
 
 > We characterize a prior distribution as *weakly informative* if it is proper but
@@ -51,161 +52,6 @@ Gelman, A., J. B. Carlin, H. S. Stern, D. B. Dunson, A. Vehtari, and D. B. Rubin
 *Bayesian Data Analysis*. Third edition. CRC Press, Boca Raton, FL, USA.
 
 
-
-# Model description
-
-Below is the model I'm fitting:
-
-$$
-X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
-$$
-
-where $X_t$ is log aphid counts for a particular plant at time $t$,
-$r$ is the aphid line's growth rate,
-$\alpha$ is the line's density dependence,
-and
-$\varepsilon$ is process error.
-
-
-### Note on $Z$ and non-centered distributions
-
-Below, all mentions of $Z$ refer to Z-scores (i.e., $Z \sim \text{N}(0,1)$).
-These are used to generate non-centered parameterizations of all distributions
-(see section 28.6 in the Stan Modeling Language User's Guide and Reference Manual,
-version 2.17.0).
-Each $Z$ in an equation is not referring to the same object, but to a separate
-Z-score used to generate deviates from the focal distribution.
-
-
-
-### Estimating process error
-
-
-\begin{align}
-    \varepsilon &= s_\varepsilon Z \\
-    s_\varepsilon &\sim \exp ( \tau + \sigma_\tau Z ) \\
-\end{align}
-
-
-
-#### Estimated from model:
-
-- $s_\varepsilon$: standard deviation of the process error
-
-
-#### Priors to define:
-
-- $\tau$: mean for the normal distribution that generates $\log(s_\varepsilon)$ values
-- $\sigma_\tau$: sd for the normal distribution that generates $\log(s_\varepsilon)$
-  values
-
-
-
-
-### Estimating growth rates 
-
-Growth rates are bound $\ge 0$ and have one estimate per aphid line,
-resulting in a vector of growth rates, $\mathbf{R}$.
-The growth rate estimate for clonal line $i$ is generated as follows:
-
-
-\begin{align}
-    
-    \mathbf{R}_i &= \exp \left( \theta + s_\theta ~ Z \right) \\
-    
-    \theta &= \mu_{\theta} + \sigma_{\theta} ~ Z \\
-    s_\theta &= \exp(\gamma + \sigma_\gamma ~ Z) \\
-    
-\end{align}
-
-
-
-#### Estimated from model:
-
-- $\mathbf{R}$: vector of growth rates for each aphid line
-- $\theta$: among-line mean of the log-transformed growth rates
-- $s_\theta$: among-line standard deviation of the log-transformed growth rates
-
-
-#### Priors to define:
-
-- $\mu_\theta$: mean of the normal distribution that generates $\theta$ values
-- $\sigma_\theta$: standard deviation of the normal distribution that generates
-  $\theta$ values
-- $\gamma$: mean for the normal distribution that generates $\log(s_\theta)$ values
-- $\sigma_\gamma$: sd for the normal distribution that generates $\log(s_\theta)$ values
-
-
-
-
-
-### Estimating density dependence
-
-Density dependences are bound between 0 and 1 and also have estimates for each line.
-They differ from $r$ in that they also have variance within aphid lines, to account
-for effects of variability in plant resources affecting aphid density dependence.
-I used the inverse logit function to bound final $\alpha$ estimates between 0 and 1.
-For clonal line $i$ and plant $j$, estimates are generated as follows:
-
-
-\begin{align}
-
-    \mathbf{A}_i &= \text{logit}^{-1} \hspace{-0.25em}
-        \left(
-            \phi + s_\phi ~ Z
-        \right) \\
-    
-    \mathbf{P}_{j} &= \text{logit}^{-1} \hspace{-0.25em}
-        \left(
-            \text{logit}(\mathbf{A}_{\mathbf{L}_j}) +
-            \hat{s}_{\phi} ~ Z
-        \right) \\
-    
-    \phi &= \mu_{\phi} + \sigma_{\phi} ~ Z \\
-    s_{\phi} &= \exp(\delta + \sigma_\delta ~ Z) \\
-    \hat{s}_{\phi} &= \exp(\zeta + \sigma_\zeta ~ Z) \\
-\end{align}
-
-
-
-
-#### Estimated from model:
-
-- $\mathbf{A}$: vector of density dependences for each aphid line
-- $\mathbf{P}$: vector of density dependences for each plant (i.e., each time series)
-- $\phi$: among-line mean of the logit-transformed density dependences
-- $s_\phi$: among-line standard deviation of the logit-transformed density dependences
-- $\hat{s}_{\phi}$: the within-line standard deviations in the logit-transformed
-  density dependences for each aphid line
-
-
-#### Priors to define:
-
-- $\mu_\phi$: mean of the normal distribution that generates $\phi$ values
-- $\sigma_\phi$: standard deviation of the normal distribution that generates $\phi$
-  values
-- $\delta$: mean for the normal distribution that generates $\log(s_\phi)$ values
-- $\sigma_\delta$: sd for the normal distribution that generates $\log(s_\phi)$ values
-- $\zeta$: mean for the normal distribution that generates values in
-  $\log(\hat{s}_{\phi})$
-- $\sigma_\zeta$: sd for the normal distribution that generates values in
-  $\log(\hat{s}_{\phi})$
-
-
-#### Other:
-
-- $\mathbf{L}_j$ is an identifier vector that returns the index to the aphid line
-  for time series $j$.
-
-
-
-
-
-
-
-
-
-# Creating priors
 
 
 
@@ -291,17 +137,15 @@ about our population-growth assays.
 
 
 ```{r load_leslies}
-fast <- read_csv("data-raw/leslie_fast.csv", col_names = FALSE,
-                 col_types = cols(.default = col_double())) %>% 
-    as.matrix() %>% 
+fast <- leslie %>% 
+    .[["fast"]] %>% 
     eigen() %>% 
     .[["values"]] %>% 
     .[1] %>% 
     Re() %>% 
     log()
-slow <- read_csv("data-raw/leslie_slow.csv", col_names = FALSE,
-                 col_types = cols(.default = col_double())) %>% 
-    as.matrix() %>% 
+slow <- leslie %>% 
+    .[["slow"]] %>% 
     eigen() %>% 
     .[["values"]] %>% 
     .[1] %>% 

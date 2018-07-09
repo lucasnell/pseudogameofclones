@@ -4,10 +4,10 @@
 \alias{sim_lines}
 \title{Simulate log-transformed counts of aphid populations for one or more lines.}
 \usage{
-sim_lines(R0, alpha, n_reps, nobs_ts, sigma_process = 0.1)
+sim_lines(R, alpha, n_reps, nobs_ts, sigma_process = 0.1)
 }
 \arguments{
-\item{R0}{Vector of population growth rates for each line.}
+\item{R}{Vector of population growth rates for each line.}
 
 \item{alpha}{Vector of density dependencies for each line.}
 
