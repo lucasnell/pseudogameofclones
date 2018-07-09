@@ -137,7 +137,7 @@ load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 0
                    stem2_juv + stem2_adults + leaf2_juv + leaf2_adults +
                    stem3_juv + stem3_adults + leaf3_juv + leaf3_adults +
                    comments,
-               disp = comments,  # <-- "disp" is for dispersed aphids, ones not on the plant
+               disp = comments,  # <-- dispersed aphids, ones not on the plant
                # makes no sense for it to be 0, then >0 the next day:
                N = ifelse(N == 0, 1, N)) %>%
         select(line, rep, date, N, disp) %>%

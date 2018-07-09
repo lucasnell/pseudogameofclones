@@ -50,30 +50,30 @@ fit_lines <- function(data, X, L, ...) {
     nobs_ts_ <- apply(X_, 2, function(x) sum(!is.na(x)))
     X_[is.na(X_)] <- 0
 
-    model_data <- list(N_ts = ncol(X_),
-                       max_reps = max(nobs_ts_),
-                       n_lines = n_lines_,
-                       nobs_ts = nobs_ts_,
-                       L = L_,
-                       X = X_,
+    model_data_ <- list(N_ts = ncol(X_),
+                        max_reps = max(nobs_ts_),
+                        n_lines = n_lines_,
+                        nobs_ts = nobs_ts_,
+                        L = L_,
+                        X = X_,
 
-                       # -----------
-                       # Priors:
-                       # -----------
-                       tau = -1.8970,
-                       sigma_tau = 1.0000,
-                       mu_theta = -1.3070,
-                       sigma_theta = 0.7922,
-                       gamma = -2.5360,
-                       sigma_gamma = 1.0000,
-                       mu_phi = -6.1300,
-                       sigma_phi = 3.1620,
-                       delta = -1.1510,
-                       sigma_delta = 2.0000,
-                       zeta = -0.9733,
-                       sigma_zeta = 2.8340)
+                        # -----------
+                        # Priors:
+                        # -----------
+                        tau = -1.8970,
+                        sigma_tau = 1.0000,
+                        mu_theta = -1.3070,
+                        sigma_theta = 0.7922,
+                        gamma = -2.5360,
+                        sigma_gamma = 1.0000,
+                        mu_phi = -6.1300,
+                        sigma_phi = 3.1620,
+                        delta = -1.1510,
+                        sigma_delta = 2.0000,
+                        zeta = -0.9733,
+                        sigma_zeta = 2.8340)
 
-    growth_fit <- rstan::sampling(stanmodels$all_lines_plants, data = model_data, ...)
+    growth_fit <- rstan::sampling(stanmodels$all_lines_plants, data = model_data_, ...)
 
     return(growth_fit)
 }

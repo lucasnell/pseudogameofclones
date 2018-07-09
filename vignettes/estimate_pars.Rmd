@@ -60,9 +60,12 @@ str(model_data, give.attr = FALSE)
 ## Run model
 
 ```{r run_model, eval = FALSE}
-# # Takes ~ 20 min
-# stan_fit <- model_data %>% 
-#     fit_lines(control = list(adapt_delta = 0.9))
+# # Takes ~ 5 min at adapt_delta = 0.9, ~20 min at adapt_delta = 0.99
+# stan_fit <- model_data %>%
+#     fit_lines(
+#         control = list(adapt_delta = 0.99)
+#     )
+# write_rds(stan_fit, "~/Desktop/stan_fit.rds")
 stan_fit <- read_rds("~/Desktop/stan_fit.rds")
 ```
 
@@ -71,36 +74,53 @@ stan_fit <- read_rds("~/Desktop/stan_fit.rds")
 
 ```{r examine_model, eval = FALSE}
 
+growth %>% 
+    group_by(line) %>% 
+    summarize(reps = rep %>% unique() %>% length()) %>% 
+    mutate(line = as.integer(line)) %>% 
+    as.data.frame()
+
 # http://mc-stan.org/bayesplot/articles/visual-mcmc-diagnostics.html
 
 posterior <- as.array(stan_fit)
-mcmc_intervals(posterior, pars = sprintf("r[%i]", 1:7))
-mcmc_intervals(posterior, pars = sprintf("a[%i]", 1:7))
+
+mcmc_intervals(posterior, pars = sprintf("R[%i]", 1:7))
+mcmc_intervals(posterior, pars = sprintf("A[%i]", 1:7))
 
 
-apply(rstan::extract(stan_fit, "a", permuted = FALSE), 3, mean)
-apply(rstan::extract(stan_fit, "process", permuted = FALSE), 3, mean)
+apply(rstan::extract(stan_fit, "A", permuted = FALSE), 3, mean)
+apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, mean)
 
-print(stan_fit, digits = 6, pars = c("r", "a", "process"), probs = c())
+apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE), 3, mean)
+apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE), 3, quantile,
+      probs = c(0.025, 0.975))
 
+
+
+print(stan_fit, digits = 6, pars = c("R", "A", "s_epsilon"), probs = c())
+
+# parameters of interest
+pars_interest <- c(sprintf("A[%i]", 1:7), sprintf("R[%i]", 1:7),
+                   paste0(rep(c("", "s_"),each=2), c("theta", "phi")),
+                   "s_epsilon", "S")
 
 # Rhats
-rhats <- rhat(stan_fit)
-mcmc_rhat(rhats)  # + yaxis_text(hjust = 1)
+rhats <- rhat(stan_fit, pars = pars_interest)
+mcmc_rhat(rhats)  + yaxis_text(hjust = 1)
 
 # Neff / N
-neff_ratios <- neff_ratio(stan_fit, pars = )
+neff_ratios <- neff_ratio(stan_fit, pars = pars_interest)
 mcmc_neff(neff_ratios, size = 2) + yaxis_text(hjust = 1)
 
 
 # Autocorrelation
-mcmc_acf(posterior, pars = sprintf("r[%i]", 1:7), lags = 10)
+mcmc_acf(posterior, pars = sprintf("R[%i]", 1:7), lags = 10)
 
 
 lp <- log_posterior(stan_fit)
 np <- nuts_params(stan_fit)
 
-mcmc_trace(posterior, pars = sprintf("r[%i]", 1:7), np = np)
+mcmc_trace(posterior, pars = sprintf("R[%i]", 1:7), np = np)
 
 mcmc_trace(posterior, pars = "process", np = np)
 
@@ -110,8 +130,8 @@ mcmc_parcoord(posterior, np = np)
 
 mcmc_scatter(
   posterior,
-  pars = c("process", "r[6]"),
-  transform = list(`r[6]` = "log"),
+  pars = c("process", "R[6]"),
+  transform = list(`R[6]` = "log"),
   np = np
 )
 
@@ -141,4 +161,64 @@ pred_df %>%
 
 ```
 
+
+
+
+
+
+
+```{r paige_data}
+
+g_df <- paste0('~/Dropbox/Aphid Project 2017/Lucas_traits/',
+       'traits_data_entry.xlsx') %>% 
+    readxl::read_excel() %>%
+    mutate(line = ifelse(line == 'WI-L4 (H+3)', 'WI-L4', line),
+           line = ifelse(line == 'WI-L4ØA', 'WI-L4Ø', line),
+           date = as.Date(paste(year, month, day, sep = "-"))) %>%
+    # Change any NAs to zeros:
+    mutate_at(vars(matches("_juv$|_adults$")),
+              function(x) ifelse(is.na(x), 0, x)) %>%
+    # filter(line %in% lines_to_keep) %>%
+    mutate(comments = clonewars:::parse_comments(comments),
+           N = stem1_juv + stem1_adults + leaf1_juv + leaf1_adults +
+               stem2_juv + stem2_adults + leaf2_juv + leaf2_adults +
+               stem3_juv + stem3_adults + leaf3_juv + leaf3_adults +
+               comments,
+           disp = comments,  # <-- dispersed aphids, ones not on the plant
+           # makes no sense for it to be 0, then >0 the next day:
+           N = ifelse(N == 0, 1, N)) %>%
+    select(line, rep, observer, date, N, disp) %>%
+    mutate_at(vars(rep, N, disp), funs(as.integer)) %>%
+    mutate(X = log(N)  # ,
+           # ham = ifelse(line %in% w_ham, 1, 0)) %>%
+           ) %>%
+    group_by(line, rep) %>%
+    arrange(date) %>%
+    ungroup() %>%
+    arrange(line, rep, date)
+
+
+
+paige_counts <- g_df %>%
+    group_by(line, rep) %>% 
+    arrange(date) %>%
+    summarize(p = tail(N, 1) / max(N),
+              two_down = all((tail(N, 3) %>% diff() %>% sign(.)) == -1),
+              date = max(date),
+              paige = "Paige Zenkovich" %in% observer) %>% 
+    ungroup() %>% 
+    filter(paige) %>% 
+    mutate(done = p <= 0.8 | two_down) %>% 
+    select(date, done, p, two_down, line, rep) %>% 
+    arrange(date) %>% 
+    as.data.frame()
+
+paige_counts
+paige_counts %>% 
+    .[["done"]] %>% 
+    `!`(.) %>% 
+    sum()
+
+
+```
 
