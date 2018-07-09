@@ -57,6 +57,9 @@
     <li>
       <a href="../articles/estimate_pars.html">Estimating aphid population parameters</a>
     </li>
+    <li>
+      <a href="../articles/model_description.html">Model description</a>
+    </li>
   </ul>
 </li>
       </ul>
@@ -91,159 +94,11 @@
 
     
     
-<p>This document outlines the structure of the model and what priors are required. In general, my goal is to create weakly informative prior distributions:</p>
+<p>This document outlines how I created my prior values. See <code>vignette("Model description")</code> for my model description. In general, my goal is to create weakly informative prior distributions:</p>
 <blockquote>
 <p>We characterize a prior distribution as <em>weakly informative</em> if it is proper but is set up so that the information it does provide is intentionally weaker than whatever actual prior knowledge is available. (p 55, Gelman et al. 2014)</p>
 </blockquote>
 <p>Gelman, A., J. B. Carlin, H. S. Stern, D. B. Dunson, A. Vehtari, and D. B. Rubin. 2014. <em>Bayesian Data Analysis</em>. Third edition. CRC Press, Boca Raton, FL, USA.</p>
-<div id="model-description" class="section level1">
-<h1 class="hasAnchor">
-<a href="#model-description" class="anchor"></a>Model description</h1>
-<p>Below is the model I’m fitting:</p>
-<p><span class="math display">\[
-X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
-\]</span></p>
-<p>where <span class="math inline">\(X_t\)</span> is log aphid counts for a particular plant at time <span class="math inline">\(t\)</span>, <span class="math inline">\(r\)</span> is the aphid line’s growth rate, <span class="math inline">\(\alpha\)</span> is the line’s density dependence, and <span class="math inline">\(\varepsilon\)</span> is process error.</p>
-<div id="note-on-z-and-non-centered-distributions" class="section level3">
-<h3 class="hasAnchor">
-<a href="#note-on-z-and-non-centered-distributions" class="anchor"></a>Note on <span class="math inline">\(Z\)</span> and non-centered distributions</h3>
-<p>Below, all mentions of <span class="math inline">\(Z\)</span> refer to Z-scores (i.e., <span class="math inline">\(Z \sim \text{N}(0,1)\)</span>). These are used to generate non-centered parameterizations of all distributions (see section 28.6 in the Stan Modeling Language User’s Guide and Reference Manual, version 2.17.0). Each <span class="math inline">\(Z\)</span> in an equation is not referring to the same object, but to a separate Z-score used to generate deviates from the focal distribution.</p>
-</div>
-<div id="estimating-process-error" class="section level3">
-<h3 class="hasAnchor">
-<a href="#estimating-process-error" class="anchor"></a>Estimating process error</h3>
-<span class="math display">\[\begin{align}
-    \varepsilon &amp;= s_\varepsilon Z \\
-    s_\varepsilon &amp;\sim \exp ( \tau + \sigma_\tau Z ) \\
-\end{align}\]</span>
-<div id="estimated-from-model" class="section level4">
-<h4 class="hasAnchor">
-<a href="#estimated-from-model" class="anchor"></a>Estimated from model:</h4>
-<ul>
-<li>
-<span class="math inline">\(s_\varepsilon\)</span>: standard deviation of the process error</li>
-</ul>
-</div>
-<div id="priors-to-define" class="section level4">
-<h4 class="hasAnchor">
-<a href="#priors-to-define" class="anchor"></a>Priors to define:</h4>
-<ul>
-<li>
-<span class="math inline">\(\tau\)</span>: mean for the normal distribution that generates <span class="math inline">\(\log(s_\varepsilon)\)</span> values</li>
-<li>
-<span class="math inline">\(\sigma_\tau\)</span>: sd for the normal distribution that generates <span class="math inline">\(\log(s_\varepsilon)\)</span> values</li>
-</ul>
-</div>
-</div>
-<div id="estimating-growth-rates" class="section level3">
-<h3 class="hasAnchor">
-<a href="#estimating-growth-rates" class="anchor"></a>Estimating growth rates</h3>
-<p>Growth rates are bound <span class="math inline">\(\ge 0\)</span> and have one estimate per aphid line, resulting in a vector of growth rates, <span class="math inline">\(\mathbf{R}\)</span>. The growth rate estimate for clonal line <span class="math inline">\(i\)</span> is generated as follows:</p>
-<span class="math display">\[\begin{align}
-    
-    \mathbf{R}_i &amp;= \exp \left( \theta + s_\theta ~ Z \right) \\
-    
-    \theta &amp;= \mu_{\theta} + \sigma_{\theta} ~ Z \\
-    s_\theta &amp;= \exp(\gamma + \sigma_\gamma ~ Z) \\
-    
-\end{align}\]</span>
-<div id="estimated-from-model-1" class="section level4">
-<h4 class="hasAnchor">
-<a href="#estimated-from-model-1" class="anchor"></a>Estimated from model:</h4>
-<ul>
-<li>
-<span class="math inline">\(\mathbf{R}\)</span>: vector of growth rates for each aphid line</li>
-<li>
-<span class="math inline">\(\theta\)</span>: among-line mean of the log-transformed growth rates</li>
-<li>
-<span class="math inline">\(s_\theta\)</span>: among-line standard deviation of the log-transformed growth rates</li>
-</ul>
-</div>
-<div id="priors-to-define-1" class="section level4">
-<h4 class="hasAnchor">
-<a href="#priors-to-define-1" class="anchor"></a>Priors to define:</h4>
-<ul>
-<li>
-<span class="math inline">\(\mu_\theta\)</span>: mean of the normal distribution that generates <span class="math inline">\(\theta\)</span> values</li>
-<li>
-<span class="math inline">\(\sigma_\theta\)</span>: standard deviation of the normal distribution that generates <span class="math inline">\(\theta\)</span> values</li>
-<li>
-<span class="math inline">\(\gamma\)</span>: mean for the normal distribution that generates <span class="math inline">\(\log(s_\theta)\)</span> values</li>
-<li>
-<span class="math inline">\(\sigma_\gamma\)</span>: sd for the normal distribution that generates <span class="math inline">\(\log(s_\theta)\)</span> values</li>
-</ul>
-</div>
-</div>
-<div id="estimating-density-dependence" class="section level3">
-<h3 class="hasAnchor">
-<a href="#estimating-density-dependence" class="anchor"></a>Estimating density dependence</h3>
-<p>Density dependences are bound between 0 and 1 and also have estimates for each line. They differ from <span class="math inline">\(r\)</span> in that they also have variance within aphid lines, to account for effects of variability in plant resources affecting aphid density dependence. I used the inverse logit function to bound final <span class="math inline">\(\alpha\)</span> estimates between 0 and 1. For clonal line <span class="math inline">\(i\)</span> and plant <span class="math inline">\(j\)</span>, estimates are generated as follows:</p>
-<span class="math display">\[\begin{align}
-
-    \mathbf{A}_i &amp;= \text{logit}^{-1} \hspace{-0.25em}
-        \left(
-            \phi + s_\phi ~ Z
-        \right) \\
-    
-    \mathbf{P}_{j} &amp;= \text{logit}^{-1} \hspace{-0.25em}
-        \left(
-            \phi + s_\phi ~ Z + 
-            \mathbf{S}_{\mathbf{L}_j} ~ Z
-        \right) \\
-    
-    \phi &amp;= \mu_{\phi} + \sigma_{\phi} ~ Z \\
-    s_{\phi} &amp;= \exp(\delta + \sigma_\delta ~ Z) \\
-    \mathbf{S} &amp;= \exp(\zeta + \sigma_\zeta ~ Z) \\
-\end{align}\]</span>
-<div id="estimated-from-model-2" class="section level4">
-<h4 class="hasAnchor">
-<a href="#estimated-from-model-2" class="anchor"></a>Estimated from model:</h4>
-<ul>
-<li>
-<span class="math inline">\(\mathbf{A}\)</span>: vector of density dependences for each aphid line</li>
-<li>
-<span class="math inline">\(\mathbf{P}\)</span>: vector of density dependences for each plant (i.e., each time series)</li>
-<li>
-<span class="math inline">\(\phi\)</span>: among-line mean of the logit-transformed density dependences</li>
-<li>
-<span class="math inline">\(s_\phi\)</span>: among-line standard deviation of the logit-transformed density dependences</li>
-<li>
-<span class="math inline">\(\mathbf{S}\)</span>: vector of the within-line standard deviations in the logit-transformed density dependences for each aphid line</li>
-</ul>
-</div>
-<div id="priors-to-define-2" class="section level4">
-<h4 class="hasAnchor">
-<a href="#priors-to-define-2" class="anchor"></a>Priors to define:</h4>
-<ul>
-<li>
-<span class="math inline">\(\mu_\phi\)</span>: mean of the normal distribution that generates <span class="math inline">\(\phi\)</span> values</li>
-<li>
-<span class="math inline">\(\sigma_\phi\)</span>: standard deviation of the normal distribution that generates <span class="math inline">\(\phi\)</span> values</li>
-<li>
-<span class="math inline">\(\delta\)</span>: mean for the normal distribution that generates <span class="math inline">\(\log(s_\phi)\)</span> values</li>
-<li>
-<span class="math inline">\(\sigma_\delta\)</span>: sd for the normal distribution that generates <span class="math inline">\(\log(s_\phi)\)</span> values</li>
-<li>
-<span class="math inline">\(\zeta\)</span>: mean for the normal distribution that generates values in <span class="math inline">\(\log(\mathbf{S})\)</span>
-</li>
-<li>
-<span class="math inline">\(\sigma_\zeta\)</span>: sd for the normal distribution that generates values in <span class="math inline">\(\log(\mathbf{S})\)</span>
-</li>
-</ul>
-</div>
-<div id="other" class="section level4">
-<h4 class="hasAnchor">
-<a href="#other" class="anchor"></a>Other:</h4>
-<ul>
-<li>
-<span class="math inline">\(\mathbf{L}_j\)</span> is an identifier vector that returns the index to the aphid line for time series <span class="math inline">\(j\)</span>.</li>
-</ul>
-</div>
-</div>
-</div>
-<div id="creating-priors" class="section level1">
-<h1 class="hasAnchor">
-<a href="#creating-priors" class="anchor"></a>Creating priors</h1>
 <div id="process-error-priors" class="section level2">
 <h2 class="hasAnchor">
 <a href="#process-error-priors" class="anchor"></a>Process error priors</h2>
@@ -310,7 +165,6 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right)
 <a href="#within-line-distribution" class="anchor"></a>Within-line distribution</h3>
 <p>For estimates relating to the <em>within</em>-line distribution of <span class="math inline">\(\text{logit}(\alpha)\)</span>, I first calculated <span class="math inline">\(\text{logit}(\alpha)\)</span> for each line-rep combo, then calculated the standard deviation of these estimates for each line. After that, I used the mean of log-transformed SD estimates across lines, -0.9733, as my prior for <span class="math inline">\(\zeta\)</span>. I used <span class="math inline">\(10 \times\)</span> the SD of log-transformed SD estimates across lines, -0.9733, as my prior for <span class="math inline">\(\zeta\)</span>. This results in the following weakly informative prior:</p>
 <p><img src="choose_priors_files/figure-html/alpha_within_line_sd_plot-1.svg" width="576"></p>
-</div>
 </div>
 </div>
 <div id="final-priors" class="section level1">
@@ -432,14 +286,9 @@ sigma_zeta
       <h2 class="hasAnchor">
 <a href="#tocnav" class="anchor"></a>Contents</h2>
       <ul class="nav nav-pills nav-stacked">
-<li><a href="#model-description">Model description</a></li>
-      <li>
-<a href="#creating-priors">Creating priors</a><ul class="nav nav-pills nav-stacked">
 <li><a href="#process-error-priors">Process error priors</a></li>
       <li><a href="#growth-rate-priors">Growth rate priors</a></li>
       <li><a href="#density-dependence">Density dependence</a></li>
-      </ul>
-</li>
       <li><a href="#final-priors">Final priors</a></li>
       </ul>
 </div>
