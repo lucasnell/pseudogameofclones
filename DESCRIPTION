@@ -15,7 +15,11 @@ Depends:
     methods,
     rstan (>= 2.17.3),
     bayesplot,
-    tidyverse
+    dplyr,
+    tidyr,
+    readr,
+    purrr,
+    tibble
 Imports:
     rstantools (>= 1.5.0),
     readxl,
