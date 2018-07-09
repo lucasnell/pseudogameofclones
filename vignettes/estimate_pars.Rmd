@@ -60,10 +60,10 @@ str(model_data, give.attr = FALSE)
 ## Run model
 
 ```{r run_model, eval = FALSE}
-# # Takes ~ 5 min at adapt_delta = 0.9, ~20 min at adapt_delta = 0.99
+# # Takes ~ 2 min at adapt_delta = 0.9
 # stan_fit <- model_data %>%
 #     fit_lines(
-#         control = list(adapt_delta = 0.99)
+#         control = list(adapt_delta = 0.9)
 #     )
 # write_rds(stan_fit, "~/Desktop/stan_fit.rds")
 stan_fit <- read_rds("~/Desktop/stan_fit.rds")
@@ -102,7 +102,7 @@ print(stan_fit, digits = 6, pars = c("R", "A", "s_epsilon"), probs = c())
 # parameters of interest
 pars_interest <- c(sprintf("A[%i]", 1:7), sprintf("R[%i]", 1:7),
                    paste0(rep(c("", "s_"),each=2), c("theta", "phi")),
-                   "s_epsilon", "S")
+                   "hats_phi", "s_epsilon")
 
 # Rhats
 rhats <- rhat(stan_fit, pars = pars_interest)
@@ -114,15 +114,17 @@ mcmc_neff(neff_ratios, size = 2) + yaxis_text(hjust = 1)
 
 
 # Autocorrelation
-mcmc_acf(posterior, pars = sprintf("R[%i]", 1:7), lags = 10)
+mcmc_acf(posterior, pars = pars_interest[1:7], lags = 10)
+mcmc_acf(posterior, pars = pars_interest[8:14], lags = 10)
+mcmc_acf(posterior, pars = pars_interest[15:length(pars_interest)], lags = 10)
 
 
 lp <- log_posterior(stan_fit)
 np <- nuts_params(stan_fit)
 
-mcmc_trace(posterior, pars = sprintf("R[%i]", 1:7), np = np)
-
-mcmc_trace(posterior, pars = "process", np = np)
+mcmc_trace(posterior, pars = pars_interest[1:7], np = np)
+mcmc_trace(posterior, pars = pars_interest[8:14], np = np)
+mcmc_trace(posterior, pars = pars_interest[15:length(pars_interest)], np = np)
 
 mcmc_nuts_divergence(np, lp)
 

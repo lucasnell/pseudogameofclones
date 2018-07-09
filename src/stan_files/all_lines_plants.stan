@@ -35,7 +35,7 @@ parameters {
     real Z_phi;
     real Z_s_theta;
     real Z_s_phi;
-    vector[n_lines] Z_S;
+    real Z_hats_phi;
     vector[n_lines] Z_R;
     vector[n_lines] Z_A;
     vector[N_ts] Z_P;
@@ -50,7 +50,7 @@ transformed parameters {
     // SDs (on transformed scale):
     real s_theta;                           // variation in r between lines
     real s_phi;                             // variation in alpha between lines
-    vector[n_lines] S;                      // variation in alpha within lines
+    real hats_phi;                          // variation in alpha within lines
 
     // Final estimates:
     vector[n_lines] R;                      // growth rates (r)
@@ -66,7 +66,7 @@ transformed parameters {
 
     s_theta = exp(gamma + sigma_gamma * Z_s_theta);
     s_phi = exp(delta + sigma_delta * Z_s_phi);
-    S = exp(zeta + sigma_zeta * Z_S);
+    hats_phi = exp(zeta + sigma_zeta * Z_hats_phi);
 
     R = exp(theta + s_theta * Z_R);
     A = inv_logit(phi + s_phi * Z_A);
@@ -78,7 +78,7 @@ transformed parameters {
         // R for this time series:
         real r_ = R[L[j]];
         // A for this time series:
-        real a_ = inv_logit(phi + s_phi * Z_A[L[j]] + S[L[j]] * Z_P[j]);
+        real a_ = inv_logit(phi + s_phi * Z_A[L[j]] + hats_phi * Z_P[j]);
         P[j] = a_;
         // Now filling in `X_pred`:
         X_pred[1, j] = X[1, j];
@@ -93,7 +93,7 @@ model {
     Z_phi ~ normal(0, 1);
     Z_s_theta ~ normal(0, 1);
     Z_s_phi ~ normal(0, 1);
-    Z_S ~ normal(0, 1);
+    Z_hats_phi ~ normal(0, 1);
     Z_R ~ normal(0, 1);
     Z_A ~ normal(0, 1);
     Z_P ~ normal(0, 1);

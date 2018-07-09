@@ -157,13 +157,13 @@ For clonal line $i$ and plant $j$, estimates are generated as follows:
     
     \mathbf{P}_{j} &= \text{logit}^{-1} \hspace{-0.25em}
         \left(
-            \phi + s_\phi ~ Z + 
-            \mathbf{S}_{\mathbf{L}_j} ~ Z
+            \text{logit}(\mathbf{A}_{\mathbf{L}_j}) +
+            \hat{s}_{\phi} ~ Z
         \right) \\
     
     \phi &= \mu_{\phi} + \sigma_{\phi} ~ Z \\
     s_{\phi} &= \exp(\delta + \sigma_\delta ~ Z) \\
-    \mathbf{S} &= \exp(\zeta + \sigma_\zeta ~ Z) \\
+    \hat{s}_{\phi} &= \exp(\zeta + \sigma_\zeta ~ Z) \\
 \end{align}
 
 
@@ -175,8 +175,8 @@ For clonal line $i$ and plant $j$, estimates are generated as follows:
 - $\mathbf{P}$: vector of density dependences for each plant (i.e., each time series)
 - $\phi$: among-line mean of the logit-transformed density dependences
 - $s_\phi$: among-line standard deviation of the logit-transformed density dependences
-- $\mathbf{S}$: vector of the within-line standard deviations in the
-    logit-transformed density dependences for each aphid line
+- $\hat{s}_{\phi}$: the within-line standard deviations in the logit-transformed
+  density dependences for each aphid line
 
 
 #### Priors to define:
@@ -186,9 +186,10 @@ For clonal line $i$ and plant $j$, estimates are generated as follows:
   values
 - $\delta$: mean for the normal distribution that generates $\log(s_\phi)$ values
 - $\sigma_\delta$: sd for the normal distribution that generates $\log(s_\phi)$ values
-- $\zeta$: mean for the normal distribution that generates values in $\log(\mathbf{S})$
+- $\zeta$: mean for the normal distribution that generates values in
+  $\log(\hat{s}_{\phi})$
 - $\sigma_\zeta$: sd for the normal distribution that generates values in
-  $\log(\mathbf{S})$
+  $\log(\hat{s}_{\phi})$
 
 
 #### Other:
@@ -232,11 +233,11 @@ The others are the preliminary data.
 load_prior_data() %>% 
     add_row(line = paste0("sigma", signif(exp(tau), 2)), rep = rep(1:5, each=16),
             date = rep(5:20,5),
-            X = sim_lines(R0 = 0.2, alpha = 1/1000, n_reps = 5, nobs_ts = rep(16, 5), 
+            X = sim_lines(R = 0.2, alpha = 1/1000, n_reps = 5, nobs_ts = rep(16, 5), 
                           sigma_process = exp(tau)) %>% 
                 as.numeric()) %>% 
     add_row(line = "sigma1", rep = rep(1:5, each=16), date = rep(5:20,5),
-            X = sim_lines(R0 = 0.2, alpha = 1/1000, n_reps = 5, nobs_ts = rep(16, 5), 
+            X = sim_lines(R = 0.2, alpha = 1/1000, n_reps = 5, nobs_ts = rep(16, 5), 
                           sigma_process = 1) %>% 
                 as.numeric()) %>% 
     mutate(rep = factor(rep)) %>% 
@@ -359,7 +360,7 @@ sim_R <- function(df_, R_, alpha_ = 1/2000) {
     add_row(df_, 
             line = paste0("r", R_), rep = rep(1:5, each=15), 
             date = rep(1:15, 5) + 3,
-            X = sim_lines(R0 = R_, alpha = alpha_, n_reps = 5,
+            X = sim_lines(R = R_, alpha = alpha_, n_reps = 5,
                           nobs_ts = rep(15, 5), sigma_process = exp(tau)) %>% 
                 as.numeric())
 }
@@ -478,9 +479,9 @@ sigma_phi <- prior_df %>%
 # - $\sigma_\delta$: sdlog parameter for the log-normal distribution that generates
 #   $s_\phi$ values
 # - $\zeta$: meanlog parameter for the log-normal distribution that generates
-#   values in $\mathbf{S}$
+#   values in $\hat{s}_{\phi}$
 # - $\sigma_\zeta$: sdlog parameter for the log-normal distribution that generates
-#   values in $\mathbf{S}$
+#   values in $\hat{s}_{\phi}$
 
 # meanlog and sdlog parameters for the log-normal distribution that generates
 #   s_phi values
@@ -496,8 +497,8 @@ delta <- prior_df %>%
 sigma_delta <- 2
 
 # meanlog and sdlog parameters for the log-normal distribution that generates
-#   values in S
-#   (S = vector of the within-line standard deviations in the logit-transformed
+#   values in hat_s_phi
+#   (hat_s_phi = vector of the within-line standard deviations in the logit-transformed
 #    density dependences for each aphid line)
 zeta <- prior_df %>%
     group_by(line) %>% 
@@ -578,7 +579,7 @@ This results in the following weakly informative prior:
 ```{r alpha_within_line_sd_plot}
 compare_priors("normal", zeta, sigma_zeta, xlim = zeta + c(-1,1) * sigma_zeta * 3) +
     geom_vline(xintercept = zeta) +
-    ggtitle(expression(bold(S) %~% plain("Lognormal")(zeta * "," ~ sigma[zeta]))) +
+    ggtitle(expression(hat(s)[phi] %~% plain("Lognormal")(zeta * "," ~ sigma[zeta]))) +
     scale_x_continuous(breaks = log(10^(-3:2)),
                        labels = 10^(-3:2)) +
     coord_cartesian(ylim = c(0, 0.4 / sigma_zeta)) +
