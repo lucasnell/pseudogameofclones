@@ -137,7 +137,8 @@ sim_cages <- function(X_0, max_t, R, A, D_slope, D_inter,
         set_names(c("rep", "plant", paste0("line", 1:n_lines))) %>%
         gather("line", "X", -rep, -plant) %>%
         mutate(line = gsub("line", "", line) %>% as.integer(),
-               date = rep(0:max_t, n_reps * n_plants * n_lines)) %>%
+               date = rep(0:max_t, n_reps * n_plants * n_lines),
+               X = ifelse(X < 0, -Inf, X)) %>%
         identity()
 
     return(X_df)

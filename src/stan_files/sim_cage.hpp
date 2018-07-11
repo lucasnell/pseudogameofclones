@@ -40,7 +40,7 @@ static int current_statement_begin__;
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
     reader.add_event(0, 0, "start", "model_sim_cage");
-    reader.add_event(113, 113, "end", "model_sim_cage");
+    reader.add_event(133, 133, "end", "model_sim_cage");
     return reader;
 }
 
@@ -349,16 +349,42 @@ public:
             for (int i = 1; i <= n_plants; ++i) {
 
                 current_statement_begin__ = 65;
+                stan::math::assign(get_base1_lhs(X_out,i,"X_out",1), rep_matrix(-(20),(max_t + 1),n_lines));
+                current_statement_begin__ = 66;
                 for (int j = 1; j <= n_lines; ++j) {
 
-                    current_statement_begin__ = 66;
+                    current_statement_begin__ = 67;
                     stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),1,j,"X_out",2), get_base1(X_0,i,j,"X_0",1));
                 }
             }
-            current_statement_begin__ = 70;
+            {
+            current_statement_begin__ = 73;
+            validate_non_negative_index("extant", "n_plants", n_plants);
+            validate_non_negative_index("extant", "n_lines", n_lines);
+            matrix_d extant(static_cast<Eigen::VectorXd::Index>(n_plants),static_cast<Eigen::VectorXd::Index>(n_lines));
+            (void) extant;  // dummy to suppress unused var warning
+
+            stan::math::initialize(extant, std::numeric_limits<double>::quiet_NaN());
+            stan::math::fill(extant,DUMMY_VAR__);
+            stan::math::assign(extant,rep_matrix(1,n_plants,n_lines));
+            current_statement_begin__ = 75;
+            double immigration(0.0);
+            (void) immigration;  // dummy to suppress unused var warning
+
+            stan::math::initialize(immigration, std::numeric_limits<double>::quiet_NaN());
+            stan::math::fill(immigration,DUMMY_VAR__);
+            current_statement_begin__ = 76;
+            double emigration(0.0);
+            (void) emigration;  // dummy to suppress unused var warning
+
+            stan::math::initialize(emigration, std::numeric_limits<double>::quiet_NaN());
+            stan::math::fill(emigration,DUMMY_VAR__);
+
+
+            current_statement_begin__ = 78;
             for (int t = 1; t <= max_t; ++t) {
                 {
-                current_statement_begin__ = 76;
+                current_statement_begin__ = 84;
                 validate_non_negative_index("Z", "n_plants", n_plants);
                 vector_d Z(static_cast<Eigen::VectorXd::Index>(n_plants));
                 (void) Z;  // dummy to suppress unused var warning
@@ -366,7 +392,7 @@ public:
                 stan::math::initialize(Z, std::numeric_limits<double>::quiet_NaN());
                 stan::math::fill(Z,DUMMY_VAR__);
                 stan::math::assign(Z,rep_vector(0,n_plants));
-                current_statement_begin__ = 78;
+                current_statement_begin__ = 86;
                 validate_non_negative_index("D", "n_lines", n_lines);
                 validate_non_negative_index("D", "n_plants", n_plants);
                 matrix_d D(static_cast<Eigen::VectorXd::Index>(n_lines),static_cast<Eigen::VectorXd::Index>(n_plants));
@@ -374,7 +400,7 @@ public:
 
                 stan::math::initialize(D, std::numeric_limits<double>::quiet_NaN());
                 stan::math::fill(D,DUMMY_VAR__);
-                current_statement_begin__ = 80;
+                current_statement_begin__ = 88;
                 validate_non_negative_index("total_D", "n_lines", n_lines);
                 vector_d total_D(static_cast<Eigen::VectorXd::Index>(n_lines));
                 (void) total_D;  // dummy to suppress unused var warning
@@ -384,62 +410,56 @@ public:
                 stan::math::assign(total_D,rep_vector(0,n_lines));
 
 
-                current_statement_begin__ = 81;
+                current_statement_begin__ = 89;
                 for (int i = 1; i <= n_plants; ++i) {
 
-                    current_statement_begin__ = 82;
+                    current_statement_begin__ = 90;
                     for (int j = 1; j <= n_lines; ++j) {
 
-                        current_statement_begin__ = 83;
-                        stan::math::assign(get_base1_lhs(Z,i,"Z",1), (get_base1(Z,i,"Z",1) + (get_base1(A,j,"A",1) * exp(get_base1(get_base1(X_out,i,"X_out",1),t,j,"X_out",2)))));
-                        current_statement_begin__ = 84;
-                        stan::math::assign(get_base1_lhs(D,j,i,"D",1), (get_base1(D_inter,j,"D_inter",1) + (get_base1(D_slope,j,"D_slope",1) * get_base1(get_base1(X_out,i,"X_out",1),t,j,"X_out",2))));
-                        current_statement_begin__ = 85;
+                        current_statement_begin__ = 91;
+                        stan::math::assign(get_base1_lhs(Z,i,"Z",1), (get_base1(Z,i,"Z",1) + ((get_base1(extant,i,j,"extant",1) * get_base1(A,j,"A",1)) * exp(get_base1(get_base1(X_out,i,"X_out",1),t,j,"X_out",2)))));
+                        current_statement_begin__ = 92;
+                        stan::math::assign(get_base1_lhs(D,j,i,"D",1), (get_base1(extant,i,j,"extant",1) * exp((get_base1(D_inter,j,"D_inter",1) + (get_base1(D_slope,j,"D_slope",1) * get_base1(get_base1(X_out,i,"X_out",1),t,j,"X_out",2))))));
+                        current_statement_begin__ = 93;
                         stan::math::assign(get_base1_lhs(total_D,j,"total_D",1), (get_base1(total_D,j,"total_D",1) + get_base1(D,j,i,"D",1)));
                     }
                 }
-                current_statement_begin__ = 92;
+                current_statement_begin__ = 100;
                 for (int i = 1; i <= n_plants; ++i) {
 
-                    current_statement_begin__ = 94;
+                    current_statement_begin__ = 102;
                     for (int j = 1; j <= n_lines; ++j) {
-                        {
-                        current_statement_begin__ = 97;
-                        double immigration(0.0);
-                        (void) immigration;  // dummy to suppress unused var warning
 
-                        stan::math::initialize(immigration, std::numeric_limits<double>::quiet_NaN());
-                        stan::math::fill(immigration,DUMMY_VAR__);
-                        stan::math::assign(immigration,((get_base1(total_D,j,"total_D",1) - get_base1(D,j,i,"D",1)) / (n_plants - 1)));
-                        current_statement_begin__ = 98;
-                        double emigration(0.0);
-                        (void) emigration;  // dummy to suppress unused var warning
-
-                        stan::math::initialize(emigration, std::numeric_limits<double>::quiet_NaN());
-                        stan::math::fill(emigration,DUMMY_VAR__);
-                        stan::math::assign(emigration,get_base1(D,j,i,"D",1));
-                        current_statement_begin__ = 99;
-                        double net_D(0.0);
-                        (void) net_D;  // dummy to suppress unused var warning
-
-                        stan::math::initialize(net_D, std::numeric_limits<double>::quiet_NaN());
-                        stan::math::fill(net_D,DUMMY_VAR__);
-                        stan::math::assign(net_D,(immigration - emigration));
-
-
-                        current_statement_begin__ = 101;
-                        stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), ((get_base1(get_base1(X_out,i,"X_out",1),t,j,"X_out",2) + (get_base1(R,j,"R",1) * (1 - get_base1(Z,i,"Z",1)))) + net_D));
-                        current_statement_begin__ = 103;
-                        stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), (get_base1(get_base1(X_out,i,"X_out",1),(t + 1),j,"X_out",2) + (normal_rng(0,1, base_rng__) * process_error)));
-                        current_statement_begin__ = 106;
-                        if (as_bool(logical_lt(get_base1(get_base1(X_out,i,"X_out",1),(t + 1),j,"X_out",2),0))) {
-                            current_statement_begin__ = 106;
-                            stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), 0);
+                        current_statement_begin__ = 104;
+                        if (as_bool(logical_eq(get_base1(extant,i,j,"extant",1),0))) {
+                            current_statement_begin__ = 104;
+                            continue;
                         }
+                        current_statement_begin__ = 106;
+                        stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), (get_base1(get_base1(X_out,i,"X_out",1),t,j,"X_out",2) + (get_base1(R,j,"R",1) * (1 - get_base1(Z,i,"Z",1)))));
+                        current_statement_begin__ = 108;
+                        stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), (get_base1(get_base1(X_out,i,"X_out",1),(t + 1),j,"X_out",2) + (normal_rng(0,1, base_rng__) * process_error)));
+                        current_statement_begin__ = 111;
+                        stan::math::assign(immigration, ((get_base1(total_D,j,"total_D",1) - get_base1(D,j,i,"D",1)) / (n_plants - 1)));
+                        current_statement_begin__ = 112;
+                        stan::math::assign(emigration, get_base1(D,j,i,"D",1));
+                        current_statement_begin__ = 115;
+                        stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), ((exp(get_base1(get_base1(X_out,i,"X_out",1),(t + 1),j,"X_out",2)) + immigration) - emigration));
+                        current_statement_begin__ = 119;
+                        if (as_bool(logical_lt(get_base1(get_base1(X_out,i,"X_out",1),(t + 1),j,"X_out",2),1))) {
+
+                            current_statement_begin__ = 120;
+                            stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), -(20));
+                            current_statement_begin__ = 121;
+                            stan::math::assign(get_base1_lhs(extant,i,j,"extant",1), 0);
+                        } else {
+                            current_statement_begin__ = 122;
+                            stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), log(get_base1(get_base1(X_out,i,"X_out",1),(t + 1),j,"X_out",2)));
                         }
                     }
                 }
                 }
+            }
             }
 
             // validate generated quantities

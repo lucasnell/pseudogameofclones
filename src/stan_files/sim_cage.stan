@@ -62,52 +62,72 @@ generated quantities {
 
     // Fill with initial values:
     for (i in 1:n_plants) {
+        X_out[i] = rep_matrix(-20, max_t+1, n_lines);
         for (j in 1:n_lines) {
             X_out[i][1,j] = X_0[i,j];
         }
     }
 
-    for (t in 1:max_t) {
+    {
+        // Matrix to keep track of extinctions
+        matrix[n_plants, n_lines] extant = rep_matrix(1, n_plants, n_lines);
+        // For calculation of dispersal
+        real immigration;
+        real emigration;
 
-        /*
-         Go through once to get some parameters first:
-        */
-        // Summed density dependences * X_t among all lines for each plant
-        vector[n_plants] Z = rep_vector(0, n_plants);
-        // Dispersed abundances for all lines and plants
-        matrix[n_lines, n_plants] D;
-        // Total dispersed aphids per line
-        vector[n_lines] total_D = rep_vector(0, n_lines);
-        for (i in 1:n_plants) {
-            for (j in 1:n_lines) {
-                Z[i] += A[j] * exp(X_out[i][t,j]);
-                D[j,i] = D_inter[j] + D_slope[j] * X_out[i][t,j];
-                total_D[j] += D[j,i];
+        for (t in 1:max_t) {
+
+            /*
+             Go through once to get some parameters first:
+            */
+            // Summed density dependences * X_t among all lines for each plant
+            vector[n_plants] Z = rep_vector(0, n_plants);
+            // Dispersed abundances for all lines and plants (in units of N, not X)
+            matrix[n_lines, n_plants] D;
+            // Total dispersed aphids per line (also in units of N)
+            vector[n_lines] total_D = rep_vector(0, n_lines);
+            for (i in 1:n_plants) {
+                for (j in 1:n_lines) {
+                    Z[i] += (extant[i,j] * A[j] * exp(X_out[i][t,j]));
+                    D[j,i] = extant[i,j] * exp(D_inter[j] + D_slope[j] * X_out[i][t,j]);
+                    total_D[j] += D[j,i];
+                }
             }
-        }
 
-        /*
-         Now go back through to simulate at time t+1
-        */
-        for (i in 1:n_plants) {
+            /*
+             Now go back through to simulate at time t+1
+            */
+            for (i in 1:n_plants) {
 
-            for (j in 1:n_lines) {
+                for (j in 1:n_lines) {
 
-                // Calculate the net influx of this aphid line from other plants.
-                real immigration = (total_D[j] - D[j,i]) / (n_plants - 1);
-                real emigration = D[j,i];
-                real net_D = immigration - emigration;
+                    if (extant[i,j] == 0) continue;
 
-                X_out[i][t+1,j] = X_out[i][t,j] + R[j] * (1 - Z[i]) + net_D;
-                // Add process error:
-                X_out[i][t+1,j] += (normal_rng(0, 1) * process_error);
+                    X_out[i][t+1,j] = X_out[i][t,j] + R[j] * (1 - Z[i]);
+                    // Add process error:
+                    X_out[i][t+1,j] += (normal_rng(0, 1) * process_error);
 
-                // Check if < 1 aphid
-                if (X_out[i][t+1,j] < 0) X_out[i][t+1,j] = 0;
+                    // Calculate the net influx of this aphid line from other plants.
+                    immigration = (total_D[j] - D[j,i]) / (n_plants - 1);
+                    emigration = D[j,i];
+
+                    // Now temporary convert X to units of N, to add dispersal:
+                    X_out[i][t+1,j] = exp(X_out[i][t+1,j]) + immigration - emigration;
+                    /*
+                     Convert back to units of X, but check for extinction first
+                    */
+                    if (X_out[i][t+1,j] < 1) {
+                        X_out[i][t+1,j] = -20;
+                        extant[i,j] = 0;
+                    } else X_out[i][t+1,j] = log(X_out[i][t+1,j]);
+
+                }
 
             }
 
         }
 
     }
+
+
 }

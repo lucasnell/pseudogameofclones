@@ -66,7 +66,8 @@ n_reps <- 10
 
 ```{r do_sims}
 
-sim_df <- sim_cages(X_0, max_t, R, A, D_slope, D_inter, process_error, n_reps)
+sim_df <- sim_cages(X_0, max_t, R, A, D_slope, D_inter, process_error, n_reps) %>% 
+    mutate(N = exp(X))
 
 
 
@@ -83,13 +84,17 @@ sim_df %>%
     NULL
 
 sim_df %>% 
+    mutate(line = factor(line, levels = 1:7, labels = levels(growth$line)),
+           rep = factor(rep)) %>% 
     group_by(rep, line, date) %>% 
-    summarize(X = sum(X)) %>%
+    summarize(X = N %>% sum() %>% log()) %>%
     ungroup() %>% 
     ggplot(aes(date, X)) +
-    geom_line(aes(color = factor(line))) +
-    facet_wrap(~ factor(rep)) +
-    scale_color_brewer(palette = "Dark2") +
+    geom_line(aes(color = line)) +
+    facet_wrap(~ rep) +
+    scale_color_brewer("Aphid line:", palette = "Dark2", guide = guide_legend(ncol = 2)) +
+    theme(legend.position = c(1, 0), legend.justification = c(1, 0)) +
+    # coord_cartesian(ylim = c(0, 10)) +
     NULL
 ```
 
