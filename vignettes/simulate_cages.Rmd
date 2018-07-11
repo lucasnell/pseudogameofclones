@@ -1,0 +1,95 @@
+---
+title: "Simulate cages"
+author: "Lucas A. Nell"
+date: "2018-07-03"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Simulate cages}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  dev = "svglite", 
+  fig.width = 6,
+  fig.height = 4
+)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+options(tibble.print_min = 4L, tibble.print_max = 4L)
+```
+```{r source_Rprofile, eval = FALSE, echo = FALSE}
+source(".Rprofile")
+```
+
+```{r library_pkgs, warning=FALSE}
+suppressPackageStartupMessages({
+    library(clonewars)
+})
+```
+
+
+## Load dataset
+
+```{r load_growth_dataset}
+growth <- load_data()
+```
+
+
+## Load stan fit data
+
+```{r load_stan_fit_data}
+stan_fit <- read_rds("data-raw/stan_fit.rds")
+```
+
+
+
+```{r}
+n_plants <- 16
+n_lines <- 8-1  # WI-L4Ø had all its reps filtered out, more are on the way
+X_0 <- matrix(rep(log(50), n_lines * n_plants), n_plants, n_lines)
+max_t <- 180
+R <- apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, mean) %>%
+    as.numeric()
+A <- apply(rstan::extract(stan_fit, "A", permuted = FALSE), 3, mean) %>%
+    as.numeric()
+D_slope <- disp_estimates$slope[disp_estimates$line != "WI-L4Ø"]
+D_inter <- disp_estimates$inter[disp_estimates$line != "WI-L4Ø"]
+process_error <- apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE), 3, mean) %>%
+    as.numeric()
+n_reps <- 10
+```
+
+```{r do_sims}
+
+sim_df <- sim_cages(X_0, max_t, R, A, D_slope, D_inter, process_error, n_reps)
+
+
+
+```
+
+
+```{r plot_sims}
+sim_df %>% 
+    filter(rep == 1, date < 10) %>% 
+    ggplot(aes(date, X)) +
+    geom_line(aes(color = factor(line))) +
+    facet_wrap(~ factor(plant)) +
+    scale_color_brewer(palette = "Dark2") +
+    NULL
+
+sim_df %>% 
+    group_by(rep, line, date) %>% 
+    summarize(X = sum(X)) %>%
+    ungroup() %>% 
+    ggplot(aes(date, X)) +
+    geom_line(aes(color = factor(line))) +
+    facet_wrap(~ factor(rep)) +
+    scale_color_brewer(palette = "Dark2") +
+    NULL
+```
+

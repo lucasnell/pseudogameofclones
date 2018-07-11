@@ -1,10 +1,6 @@
 
 
 
-
-
-
-
 #' Fit multiple time series for multiple aphid lines.
 #'
 #' @param data An optional data frame, list, or environment that contains `X`.
@@ -78,3 +74,71 @@ fit_lines <- function(data, X, L, ...) {
     return(growth_fit)
 }
 
+
+
+
+#' Simulate cages with the same starting conditions.
+#'
+#'
+#'
+#' @param X_0 Matrix of `log(# aphids)` at time t=0. Should be matrix of size
+#'     `n_plants` x `n_lines`.
+#' @param max_t Time steps per cage. Single integer.
+#' @param R Max growth rates per aphid line. Vector of length `n_lines`.
+#' @param A Density dependence per aphid line. Vector of length `n_lines`.
+#' @param D_slope Dispersal slope per aphid line. Vector of length `n_lines`.
+#' @param D_inter Dispersal intercept per aphid line. Vector of length `n_lines`.
+#' @param process_error SD of process error. Single double.
+#' @param n_reps Number of reps (i.e., cages) per chain.
+#' @param n_chains Number of chains to use. Note that values >1 will result in
+#'     extra info being printed to the console. You can ignore this. Defaults to `1`.
+#' @param ... Other options passed to `rstan::sampling()`.
+#'
+#' @export
+#'
+sim_cages <- function(X_0, max_t, R, A, D_slope, D_inter,
+                      process_error, n_reps, n_chains = 1, ...) {
+
+    n_plants <- nrow(X_0)
+    n_lines <- ncol(X_0)
+
+    model_data_ <- list(
+        n_plants = n_plants,
+        n_lines = n_lines,
+        X_0 = X_0,
+        max_t = max_t,
+        R = R,
+        A = A,
+        D_slope = D_slope,
+        D_inter = D_inter,
+        process_error = process_error
+    )
+
+    z <- capture.output({
+        stan_sims <- rstan::sampling(stanmodels$sim_cage, data = model_data_,
+                                     algorithm = "Fixed_param", chains = n_chains,
+                                     iter = n_reps, warmup = 0, ...)
+    })
+
+    n_reps <- n_reps * n_chains
+
+    X_array <- rstan::extract(stan_sims, "X_out")[[1]]
+
+    X_mat <- lapply(1:n_reps, function(j) {
+        M <- lapply(1:n_plants, function(i) X_array[j,i,,])
+        M <- do.call(rbind, M)
+        cbind(rep(1:n_plants, each = max_t + 1), M)
+    })
+    X_mat <- do.call(what = rbind, X_mat)
+    X_mat <- cbind(rep(1:n_reps, each = n_plants * (max_t + 1)), X_mat)
+
+    X_df <- X_mat %>%
+        as_data_frame() %>%
+        set_names(c("rep", "plant", paste0("line", 1:n_lines))) %>%
+        gather("line", "X", -rep, -plant) %>%
+        mutate(line = gsub("line", "", line) %>% as.integer(),
+               date = rep(0:max_t, n_reps * n_plants * n_lines)) %>%
+        identity()
+
+    return(X_df)
+}
