@@ -7,28 +7,28 @@
 fit_lines(data, X, L, ...)
 }
 \arguments{
-\item{data}{An optional data frame, list, or environment that contains `X`.
+\item{data}{An optional data frame, list, or environment that contains \code{X}.
 By default, variables are taken from the environment from which
 the function was called.}
 
-\item{X}{Name of the matrix in `data` that contains the log-transformed counts
+\item{X}{Name of the matrix in \code{data} that contains the log-transformed counts
 through time (1 time series per column).
-This option is not required if the proper object inside `data` is literally
-named `X` (as would be the case if you used `line_data()`).
-Each column should contain `NA`s at the end (ONLY the end) if
+This option is not required if the proper object inside \code{data} is literally
+named \code{X} (as would be the case if you used \code{line_data()}).
+Each column should contain \code{NA}s at the end (ONLY the end) if
 it wasn't observed as many times as was the time series in the matrix with
 the most observations.
 \emph{Other than at the end, missing values are not yet supported}.}
 
-\item{L}{Vector (of the same length as number of columns in `X`) containing
-the line number for each time-series column in `X`.
-This option is not required if the proper object inside `data` is literally
-named `L` (as would be the case if you used `line_data()`).}
+\item{L}{Vector (of the same length as number of columns in \code{X}) containing
+the line number for each time-series column in \code{X}.
+This option is not required if the proper object inside \code{data} is literally
+named \code{L} (as would be the case if you used \code{line_data()}).}
 
-\item{...}{Arguments passed to `rstan::sampling` (e.g., iter, chains).}
+\item{...}{Arguments passed to \code{rstan::sampling} (e.g., iter, chains).}
 }
 \value{
-A `stanfit` object containing the model fit.
+A \code{stanfit} object containing the model fit.
 }
 \description{
 Fit multiple time series for multiple aphid lines.

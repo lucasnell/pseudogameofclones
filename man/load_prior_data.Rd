@@ -10,10 +10,10 @@ load_prior_data(file, filter_pars = list(begin = 0.5, end = 0.9))
 \item{file}{A filename to read from. If left empty, this will read from the
 default path on your DropBox folder.}
 
-\item{filter_pars}{A list with the names `"begin"` and `"end"`, containing single
+\item{filter_pars}{A list with the names \code{"begin"} and \code{"end"}, containing single
 numbers with threshold for filtering the beginning and ending of time series,
-respectively. Set to `NULL` to avoid filtering entirely.
-Defaults to `list(begin = 0.5, end = 1.0)`.}
+respectively. Set to \code{NULL} to avoid filtering entirely.
+Defaults to \code{list(begin = 0.5, end = 1.0)}.}
 }
 \description{
 Load data that won't be used for the actual analysis, to develop priors.

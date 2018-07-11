@@ -9,13 +9,13 @@ compare_priors(distributions, location = 0, scale = 1, df_t = 2,
 }
 \arguments{
 \item{distributions}{Vector of which distribution(s) to plot.
-Can also be a single function that takes the `location` and `scale` arguments.}
+Can also be a single function that takes the \code{location} and \code{scale} arguments.}
 
 \item{location}{Location for all distributions}
 
 \item{scale}{Scale for all}
 
-\item{df_t}{Degrees of freedom for `"student_t"` distribution. Defaults to 2.}
+\item{df_t}{Degrees of freedom for \code{"student_t"} distribution. Defaults to 2.}
 
 \item{xlim}{X limit for the plot.}
 }

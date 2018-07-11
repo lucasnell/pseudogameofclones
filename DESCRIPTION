@@ -38,3 +38,4 @@ BugReports: https://github.com/lucasnell/aphid_repetition/issues
 Suggests: knitr,
     rmarkdown
 VignetteBuilder: knitr
+Roxygen: list(markdown = TRUE)

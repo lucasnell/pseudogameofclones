@@ -7,14 +7,14 @@
 make_pred_df(stan_fit, orig_data, line, rep, alpha = 0.05)
 }
 \arguments{
-\item{stan_fit}{The `stanfit` object containing the model fit.}
+\item{stan_fit}{The \code{stanfit} object containing the model fit.}
 
 \item{orig_data}{The original data frame.}
 
-\item{line}{An optional parameter specifying the name of the column in `orig_data`
+\item{line}{An optional parameter specifying the name of the column in \code{orig_data}
 that contains info on the aphid line.}
 
-\item{rep}{An optional parameter specifying the name of the column in `orig_data`
+\item{rep}{An optional parameter specifying the name of the column in \code{orig_data}
 that contains info on the rep within each aphid line.}
 }
 \description{

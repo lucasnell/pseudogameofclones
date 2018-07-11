@@ -2,7 +2,7 @@
 % Please edit documentation in R/data_manip.R
 \name{line_data}
 \alias{line_data}
-\title{Convert a data frame of data to one to be used in `fit_lines`.}
+\title{Convert a data frame of data to one to be used in \code{fit_lines}.}
 \usage{
 line_data(data, line, rep, date, X)
 }
@@ -19,11 +19,11 @@ line_data(data, line, rep, date, X)
 }
 \value{
 A list containing (1) a matrix of log(N), where each time series has its own
-    column (named `X` in the output list) and (2) a vector of integers indicating
-    the aphid-line number for each time-series column in (named `L`).
-    Aphid line numbers come from converting the original factor column into
-    an integer. You can replicate the same integers by running `as.integer(line)`.
+column (named \code{X} in the output list) and (2) a vector of integers indicating
+the aphid-line number for each time-series column in (named \code{L}).
+Aphid line numbers come from converting the original factor column into
+an integer. You can replicate the same integers by running \code{as.integer(line)}.
 }
 \description{
-Convert a data frame of data to one to be used in `fit_lines`.
+Convert a data frame of data to one to be used in \code{fit_lines}.
 }

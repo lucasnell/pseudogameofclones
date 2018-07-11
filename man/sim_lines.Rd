@@ -15,7 +15,7 @@ sim_lines(R, alpha, n_reps, nobs_ts, sigma_process = 0.1)
 
 \item{nobs_ts}{Number of observations per time series.}
 
-\item{sigma_process}{Process error. Defaults to `0.1`.}
+\item{sigma_process}{Process error. Defaults to \code{0.1}.}
 }
 \value{
 A matrix with simulated log(N) through time.

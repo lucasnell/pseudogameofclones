@@ -7,7 +7,7 @@
 \title{The 'clonewars' package.}
 \description{
 Analyses and simulations related to repeated aphid clonal
-    evolution experiments.
+evolution experiments.
 }
 \references{
 Stan Development Team (2018). RStan: the R interface to Stan. R package version 2.17.3. http://mc-stan.org
