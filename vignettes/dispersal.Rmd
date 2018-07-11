@@ -1,0 +1,148 @@
+---
+title: "Estimating dispersal"
+author: "Lucas A. Nell"
+date: "2018-07-03"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Estimating dispersal}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  dev = "svglite", 
+  fig.width = 6,
+  fig.height = 4
+)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+options(tibble.print_min = 4L, tibble.print_max = 4L)
+```
+```{r source_Rprofile, eval = FALSE, echo = FALSE}
+source(".Rprofile")
+```
+
+```{r library_pkgs, warning=FALSE, echo=TRUE}
+suppressPackageStartupMessages({
+    library(clonewars)
+    library(lme4)
+})
+```
+
+
+This file contains the analyses to estimate aphid dispersal.
+
+
+
+## Load data
+
+I don't need to do the same filtering when loading the dataset for dispersal estimates
+as when loading data for population-growth parameter estimation.
+The only filtering I need to do is removing (1) a weird rep for line "Clover-2017-2" (when
+one adult just stayed on the side of the cage until it died)
+and (2) the first day of counts if both individuals were on the ground.
+
+
+```{r load_data}
+growth <- load_data(noNA = FALSE, filter_pars = NULL,
+                    remove_unfinished = FALSE) %>% 
+    filter(!(date == 0 & disp == N), 
+           !(line == "Clover-2017-2" & rep == 1))
+```
+
+
+
+## Dispersal ~ N plot
+
+Below, colors represent different reps.
+
+
+```{r disp_N_plot}
+growth %>% 
+    ggplot(aes(N, disp, color = factor(rep))) +
+    geom_point(shape = 16, alpha = 0.5) +
+    facet_wrap(~ line) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    scale_fill_brewer(palette = "Dark2", guide = FALSE) +
+    scale_y_continuous(trans = "log1p", breaks = 4^(0:3)) +
+    scale_x_continuous(trans = "log", breaks = 10^(0:3)) +
+    NULL
+```
+
+
+## Fitting GLMMM
+
+Fitting a GLMM of `dispersal ~ X` (`X = log(N)`) where each line 
+(and each `rep` within `line`) gets a separate intercept and slope.
+
+```{r fit_glmm}
+(disp_mod <- glmer(disp ~ X + (X | line/rep), data = growth,
+    family = "poisson")) %>%
+    summary()
+```
+
+
+Estimates for each line:
+
+```{r make_disp_mod_df}
+disp_estimates <- disp_mod %>% 
+    ranef() %>% 
+    .[["line"]] %>% 
+    `+`({
+        disp_mod %>%
+            fixef() %>% 
+            rep(growth$line %>% levels() %>% length()) %>% 
+            matrix(ncol = 2, byrow = TRUE)
+    }) %>% 
+    rownames_to_column() %>% 
+    rename(line = rowname, slope = X, inter = `(Intercept)`)
+disp_estimates %>% 
+    knitr::kable(format = "html")
+```
+
+
+
+Code to make predictions from `disp_mod` based on a vector of `X` and aphid line
+names:
+
+```{r prediction_fxn}
+predict_disp <- function(X, aphid_line) {
+    inds <- map_int(aphid_line, ~ which(disp_estimates$line == .x))
+    m <- disp_estimates$slope[inds]
+    b <- disp_estimates$inter[inds]
+    y <- exp(m * X + b)
+    return(y)
+}
+```
+
+
+## Plotting predictions
+
+```{r glmm_prediction_plot}
+growth %>% 
+    mutate(disp_pred = predict_disp(X, line)) %>%
+    ggplot(aes(X, disp_pred, color = line)) +
+    geom_point(aes(y = disp), alpha = 0.5, shape = 16) +
+    geom_line(size = 0.75) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    facet_wrap(~ line, nrow = 2) +
+    scale_y_continuous("Dispersed aphids", trans = "log1p",
+                       breaks = c(0, 4^(0:3))) +
+    scale_x_continuous("Total aphids", 
+                       breaks = log(10^(0:3)),
+                       labels = 10^(0:3)) +
+    NULL
+```
+
+
+
+## Saving output as matrix
+
+```{r save_output, eval = FALSE}
+devtools::use_data(disp_estimates, overwrite = TRUE)
+```
+
