@@ -10,10 +10,15 @@
 #' @noRd
 #'
 parse_comments <- function(comments) {
-    comments = strsplit(comments, ' ')
-    out <- map(comments, ~ suppressWarnings(as.numeric(.x))) %>%
-        map(~ if(all(is.na(.x))) {0} else {sum(.x[!is.na(.x)])}) %>%
-        unlist
+    comments_ = strsplit(comments, "")
+    out <- comments_ %>%
+        map_int(~ keep(.x, function(y) y %in% c(paste(0:9), " ", ",")) %>%
+                    paste(collapse = "") %>%
+                    trimws() %>%
+                    strsplit(", | |,") %>%
+                    unlist() %>%
+                    as.integer() %>%
+                    sum())
     out <- ifelse(is.na(out) | is.null(out), 0, out)
     return(out)
 }
@@ -110,7 +115,8 @@ threshold_filter <- function(X_vec, p) {
 #'
 #' growth <- load_data()
 #'
-load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 0.9)) {
+load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 0.9),
+                      remove_unfinished = TRUE) {
 
     # Lines that we still have and should keep for analyses
     lines_to_keep <- c("R10", "WIA-5D", "WI-L4", "WI-L4Ø", "UT3", "WI-2016-593",
@@ -152,17 +158,19 @@ load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 0
         arrange(line, rep, date)
 
     # Removing lines that aren't yet done:
-    not_done <- growth %>%
-        group_by(line, rep) %>%
-        arrange(date) %>%
-        summarize(p = tail(N, 1) / max(N),
-                  three_down = all((tail(N, 4) %>% diff() %>% sign(.)) == -1)) %>%
-        ungroup() %>%
-        filter(p > 0.8 & !three_down) %>%
-        arrange(line, rep) %>%
-        select(line, rep)
-    if (nrow(not_done) > 0) {
-        growth <- clonewars:::filter_line_rep(growth, not_done, exclude = TRUE)
+    if (remove_unfinished) {
+        not_done <- growth %>%
+            group_by(line, rep) %>%
+            arrange(date) %>%
+            summarize(p = tail(N, 1) / max(N),
+                      three_down = all((tail(N, 4) %>% diff() %>% sign(.)) == -1)) %>%
+            ungroup() %>%
+            filter(p > 0.8 & !three_down) %>%
+            arrange(line, rep) %>%
+            select(line, rep)
+        if (nrow(not_done) > 0) {
+            growth <- clonewars:::filter_line_rep(growth, not_done, exclude = TRUE)
+        }
     }
 
     if (!is.null(filter_pars)) {
