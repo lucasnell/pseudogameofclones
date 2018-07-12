@@ -69,7 +69,12 @@ n_reps <- 10
 sim_df <- sim_cages(X_0, max_t, R, A, D_slope, D_inter, process_error, n_reps) %>% 
     mutate(N = exp(X))
 
-
+sim_by_cage <- sim_df %>% 
+    mutate(line = factor(line, levels = 1:7, labels = levels(growth$line)),
+           rep = factor(rep)) %>% 
+    group_by(rep, line, date) %>% 
+    summarize(X = N %>% sum() %>% log()) %>%
+    ungroup()
 
 ```
 
@@ -83,12 +88,7 @@ sim_df %>%
     scale_color_brewer(palette = "Dark2") +
     NULL
 
-sim_df %>% 
-    mutate(line = factor(line, levels = 1:7, labels = levels(growth$line)),
-           rep = factor(rep)) %>% 
-    group_by(rep, line, date) %>% 
-    summarize(X = N %>% sum() %>% log()) %>%
-    ungroup() %>% 
+sim_by_cage %>% 
     ggplot(aes(date, X)) +
     geom_line(aes(color = line)) +
     facet_wrap(~ rep) +
