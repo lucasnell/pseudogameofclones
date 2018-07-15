@@ -1,0 +1,143 @@
+---
+title: "Plant death"
+author: "Lucas A. Nell"
+date: "2018-07-15"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Plant death}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  dev = "svglite", 
+  fig.width = 6,
+  fig.height = 4
+)
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+options(tibble.print_min = 8L, tibble.print_max = 8L)
+```
+```{r source_Rprofile, eval = FALSE, echo = FALSE}
+source(".Rprofile")
+```
+
+```{r library_pkgs, warning=FALSE}
+suppressPackageStartupMessages({
+    library(clonewars)
+    library(lme4)
+})
+```
+
+
+
+## Looking at when the max is reached
+
+```{r until_max_model}
+until_max <- load_data(noNA = FALSE, filter_pars = NULL, remove_unfinished = TRUE) %>%
+    mutate(rep = factor(rep)) %>% 
+    group_by(line, rep) %>%
+    filter(1:n() <= which(N == max(N))[1]) %>%
+    summarize(days = max(date)) %>% 
+    ungroup() %>%
+    identity()
+
+load_data(noNA = FALSE, filter_pars = NULL, remove_unfinished = TRUE) %>% 
+    # filter(line == "Clover-2017-2", rep == 6)
+    group_by(line) %>% 
+    summarize(rep = length(unique(rep)))
+
+
+until_max %>% 
+    ggplot(aes(line, days, color = line)) +
+    geom_point()
+
+# Can't use X or cumsum(N) because it's autocorrelated with the # days that've passed
+# This model has lower AIC than those with line as covariate
+# Check that this is still the case when you have more reps!
+until_max_mod <- lm(days ~ 1, data = until_max)
+until_max_mod %>% 
+    summary()
+```
+
+
+
+
+## Looking at mortality after max is reached
+
+```{r after_max_model}
+
+after_max <- load_data(noNA = FALSE, filter_pars = NULL, remove_unfinished = TRUE) %>% 
+    mutate(rep = factor(rep)) %>% 
+    group_by(line, rep) %>%
+    filter(1:n() >= which(N == max(N))[1]) %>%
+    mutate(N_ratio = N / lag(N),
+           N_diff = N - lag(N)) %>% 
+    ungroup() %>%
+    filter(!is.na(N_ratio))
+
+after_max %>% 
+    ggplot(aes(date, N_diff)) +
+    geom_line(aes(color = rep)) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    facet_wrap(~ line, nrow = 2) +
+    NULL
+
+after_max %>% 
+    ggplot(aes(N_ratio)) +
+    geom_histogram(bins = 20, fill = "dodgerblue")
+
+
+after_max %>% 
+    ggplot(aes(date, N_ratio)) +
+    # ggplot(aes(date, N)) +
+    geom_line(aes(color = rep)) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    facet_wrap(~ line, nrow = 2) +
+    NULL
+
+after_max %>% 
+    ggplot(aes(pgr, color = rep)) +
+    geom_freqpoly(bins = 5) +
+    facet_wrap(~ line, nrow = 2) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    scale_fill_brewer(palette = "Dark2", guide = FALSE) +
+    NULL
+
+after_max %>% 
+    group_by(line, rep) %>% 
+    summarize(N_ratio = mean(N_ratio)) %>% 
+    group_by(line) %>% 
+    summarize(N_ratio = mean(N_ratio))
+
+# AIC is lower than for mixed models including rep and/or line
+after_max_mod <- lm(N_ratio ~ 1, data = after_max)
+after_max_mod %>%
+    summary()
+```
+
+
+```{r make_output}
+plant_death <- list(
+    days_to_max = until_max_mod %>% 
+        coef() %>% 
+        .[["(Intercept)"]] %>% 
+        round() %>% 
+        as.integer()
+    ,
+    after_max_mortality = after_max_mod %>% 
+        coef() %>% 
+        .[["(Intercept)"]] %>% 
+        signif(4)
+)
+plant_death
+```
+
+```{r save_output, eval = FALSE}
+devtools::use_data(plant_death, overwrite = TRUE)
+```
+
