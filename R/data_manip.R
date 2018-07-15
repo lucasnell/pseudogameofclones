@@ -133,6 +133,7 @@ load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 0
     growth <- readxl::read_excel(file) %>%
         mutate(line = ifelse(line == 'WI-L4 (H+3)', 'WI-L4', line),
                line = ifelse(line == 'WI-L4ØA', 'WI-L4Ø', line),
+               line = ifelse(line == 'WI-L4 (Ham-)', 'WI-L4Ø', line),
                date = as.Date(paste(year, month, day, sep = "-"))) %>%
         # Change any NAs to zeros:
         mutate_at(vars(matches("_juv$|_adults$")),
