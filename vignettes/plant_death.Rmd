@@ -31,6 +31,16 @@ suppressPackageStartupMessages({
     library(clonewars)
     library(lme4)
 })
+logit <- function(p) {
+    suppressWarnings({x <- log(p/(1 - p))})
+    x <- ifelse(is.nan(x), NA, x)
+    return(x)
+}
+inv_logit <- function(x) {
+    p <- 1 / (1 + exp(-x))
+    p <- ifelse(is.na(p) & !is.na(x), 1, p)
+    return(p)
+}
 ```
 
 
@@ -46,14 +56,9 @@ until_max <- load_data(noNA = FALSE, filter_pars = NULL, remove_unfinished = TRU
     ungroup() %>%
     identity()
 
-load_data(noNA = FALSE, filter_pars = NULL, remove_unfinished = TRUE) %>% 
-    # filter(line == "Clover-2017-2", rep == 6)
-    group_by(line) %>% 
-    summarize(rep = length(unique(rep)))
-
-
 until_max %>% 
     ggplot(aes(line, days, color = line)) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
     geom_point()
 
 # Can't use X or cumsum(N) because it's autocorrelated with the # days that've passed
@@ -70,54 +75,93 @@ until_max_mod %>%
 ## Looking at mortality after max is reached
 
 ```{r after_max_model}
-
 after_max <- load_data(noNA = FALSE, filter_pars = NULL, remove_unfinished = TRUE) %>% 
     mutate(rep = factor(rep)) %>% 
     group_by(line, rep) %>%
     filter(1:n() >= which(N == max(N))[1]) %>%
     mutate(N_ratio = N / lag(N),
-           N_diff = N - lag(N)) %>% 
+           date = date - min(date),
+           N_ratio_ = N / N[1]) %>% 
     ungroup() %>%
     filter(!is.na(N_ratio))
 
 after_max %>% 
-    ggplot(aes(date, N_diff)) +
-    geom_line(aes(color = rep)) +
-    scale_color_brewer(palette = "Dark2", guide = FALSE) +
-    facet_wrap(~ line, nrow = 2) +
-    NULL
-
-after_max %>% 
-    ggplot(aes(N_ratio)) +
-    geom_histogram(bins = 20, fill = "dodgerblue")
-
-
-after_max %>% 
     ggplot(aes(date, N_ratio)) +
-    # ggplot(aes(date, N)) +
     geom_line(aes(color = rep)) +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
     facet_wrap(~ line, nrow = 2) +
     NULL
 
+
 after_max %>% 
-    ggplot(aes(pgr, color = rep)) +
-    geom_freqpoly(bins = 5) +
-    facet_wrap(~ line, nrow = 2) +
+    filter(N_ratio < 1) %>%
+    ggplot(aes(date, logit(N_ratio))) +
+    # ggplot(aes(date, N_ratio_)) +
+    # geom_point(aes(color = line)) +
+    geom_line(aes(color = line, linetype = rep), alpha = 0.5) +
+    stat_summary(fun.y = mean, geom = "point", size = 4, shape = 1) +
+    stat_smooth(method = "lm", se = FALSE) +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
-    scale_fill_brewer(palette = "Dark2", guide = FALSE) +
+        scale_linetype_manual(guide = FALSE, values = 1:7) +
+    NULL
+
+
+
+after_max %>% 
+    ggplot(aes(date, N_ratio_)) +
+    geom_line(aes(color = line, linetype = rep), alpha = 0.5) +
+    stat_summary(fun.y = mean, geom = "point", size = 4, shape = 1) +
+    stat_smooth(method = "lm", se = FALSE) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    scale_linetype_manual(guide = FALSE, values = 1:7) +
     NULL
 
 after_max %>% 
-    group_by(line, rep) %>% 
-    summarize(N_ratio = mean(N_ratio)) %>% 
-    group_by(line) %>% 
-    summarize(N_ratio = mean(N_ratio))
+    ggplot(aes(N_ratio, color = line)) +
+    geom_freqpoly(bins = 10, size = 0.75) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    facet_wrap(~ line, ncol = 2) +
+    NULL
 
-# AIC is lower than for mixed models including rep and/or line
-after_max_mod <- lm(N_ratio ~ 1, data = after_max)
-after_max_mod %>%
+
+# AIC is lower than for other combos of date and line
+# This indicates that there is more structure here than simply
+# a mortality that increases as the plant dies, but I'm just ignoring
+# random effects for simplicity (for now, at least).
+after_max_mod <- after_max %>% 
+    filter(N_ratio < 1) %>% 
+    {lmer(logit(N_ratio) ~ date + (date | line:rep), data = ., REML = FALSE)}
+after_max_mod %>% 
     summary()
+
+# To simulate line:rep coefficients, see this:
+print(VarCorr(after_max_mod), comp = "Std.Dev.")
+
+
+# How to extract each line:rep's coefficients:
+after_max_coefs <- after_max_mod %>%
+    ranef() %>% 
+    .[["line:rep"]] %>% 
+    `+`(
+        after_max_mod %>%
+            fixef() %>% 
+            rep(each = after_max_mod@flist %>% .[["line:rep"]] %>% 
+                    levels() %>% length()) %>% 
+            matrix(ncol = after_max_mod@cnms %>% .[["line:rep"]] %>%
+                       length())
+    )
+
+# For simplicity, I'm just going to use this:
+after_max_coefs <- after_max_mod %>%
+    fixef()
+
+N <- numeric(11)
+N[1] <- 500
+for (t in 1:10) {
+    N[t+1] <- N[t] * inv_logit(after_max_coefs[["(Intercept)"]] + 
+                                   after_max_coefs[["date"]] * t)
+}
+plot(N, type = "l")
 ```
 
 
@@ -129,9 +173,8 @@ plant_death <- list(
         round() %>% 
         as.integer()
     ,
-    after_max_mortality = after_max_mod %>% 
-        coef() %>% 
-        .[["(Intercept)"]] %>% 
+    after_max_mort_coefs = after_max_coefs %>% 
+        as.numeric() %>% 
         signif(4)
 )
 plant_death
