@@ -89,6 +89,13 @@ fit_lines <- function(data, X, L, ...) {
 #' @param D_slope Dispersal slope per aphid line. Vector of length `n_lines`.
 #' @param D_inter Dispersal intercept per aphid line. Vector of length `n_lines`.
 #' @param process_error SD of process error. Single double.
+#' @param plant_mort_coefs Coefficients (b0, then b1) for aphid mortality after
+#'     plant starts dying.
+#' @param plant_death_age Number of days after which a plant starts dying.
+#' @param plant_repl Data frame containing two columns, the first
+#'     indicating the date of replacement, the second indicating the plant that
+#'     gets replaced on that date. There should be no repeat plants per date,
+#'     but multiple plants can be replaced on the same date.
 #' @param n_reps Number of reps (i.e., cages) per chain.
 #' @param n_chains Number of chains to use. Note that values >1 will result in
 #'     extra info being printed to the console. You can ignore this. Defaults to `1`.
@@ -97,10 +104,61 @@ fit_lines <- function(data, X, L, ...) {
 #' @export
 #'
 sim_cages <- function(X_0, max_t, R, A, D_slope, D_inter,
-                      process_error, n_reps, n_chains = 1, ...) {
+                      process_error,
+                      plant_mort_coefs, plant_death_age, plant_repl,
+                      n_reps, n_chains = 1, ...) {
 
     n_plants <- nrow(X_0)
     n_lines <- ncol(X_0)
+
+    # plant_repl <- data_frame(date = sort(sample.int(10, 20, TRUE)) * 10L) %>%
+    #     group_by(date) %>%
+    #     mutate(plant = sample.int(5, n(), FALSE)) %>%
+    #     ungroup()
+
+
+    plant_repl <- plant_repl %>%
+        set_names(c("date", "plant")) %>%
+        arrange(date, plant)
+    # This prevents a weird error if the number of rows in plant_repl is 1
+    if ((plant_repl$date %>% unique() %>% length()) == 1) {
+        plant_repl <- plant_repl %>%
+            add_row(date = max_t + 100, plant = 1)
+    }
+
+    # Check that there aren't duplicates within a date:
+    plant_repl %>%
+        group_by(date) %>%
+        summarize(unq = length(unique(plant)) == n()) %>%
+        .[["unq"]] %>%
+        all() %>%
+        {if (!.) stop("No duplicates allowed within dates.")}
+
+    # Time points when plant replacements occur
+    repl_times <- plant_repl %>%
+        .[["date"]] %>%
+        unique()
+    # Number of replacements
+    n_repl <- repl_times %>%
+        length()
+    # Max # plant replaced per replacement
+    max_repl <- plant_repl %>%
+        group_by(date) %>%
+        summarize(n = n()) %>%
+        .[["n"]] %>%
+        max()
+
+    # Plants to replace when replacements occur (zeros are ignored):
+    #     matrix<lower=0, upper=n_plants>[n_repl, max_repl] repl_plants;
+    repl_plants <- array(0, dim = c(n_repl, max_repl))
+    for (i in 1:n_repl) {
+        d <- repl_times[i]
+        plants_ <- plant_repl %>%
+            filter(date == d) %>%
+            .[["plant"]]
+        repl_plants[i, 1:length(plants_)] <- plants_
+    }
+
 
     model_data_ <- list(
         n_plants = n_plants,
@@ -111,7 +169,13 @@ sim_cages <- function(X_0, max_t, R, A, D_slope, D_inter,
         A = A,
         D_slope = D_slope,
         D_inter = D_inter,
-        process_error = process_error
+        process_error = process_error,
+        plant_mort_coefs = plant_mort_coefs,
+        plant_death_age = plant_death_age,
+        n_repl = n_repl,
+        max_repl = max_repl,
+        repl_times = repl_times,
+        repl_plants = repl_plants
     )
 
     z <- capture.output({

@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 knitr::opts_knit$set(root.dir = normalizePath(".."))
 options(tibble.print_min = 4L, tibble.print_max = 4L)
 ```
-```{r source_Rprofile, eval = FALSE, echo = FALSE}
+```{r source_Rprofile, echo = FALSE}
 source(".Rprofile")
 ```
 
@@ -61,27 +61,49 @@ D_slope <- disp_estimates$slope[disp_estimates$line != "WI-L4Ø"]
 D_inter <- disp_estimates$inter[disp_estimates$line != "WI-L4Ø"]
 process_error <- apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE), 3, mean) %>%
     as.numeric()
+plant_mort_coefs <- clonewars::plant_death$after_max_mort_coefs
+plant_death_age <- clonewars::plant_death$days_to_max
+repl_every <- 4
+plants_per <- 4  # plants to replace per replacement day
+plant_repl <- data_frame(date = seq(repl_every, max_t, repl_every)) %>%
+    mutate(plant = case_when(
+        (date / repl_every) %% 4 == 1 ~ list(1:plants_per),
+        (date / repl_every) %% 4 == 2 ~ list((plants_per + 1):(2 * plants_per)),
+        (date / repl_every) %% 4 == 3 ~ list((2 * plants_per + 1):(3 * plants_per)),
+        (date / repl_every) %% 4 == 0 ~ list((3 * plants_per + 1):n_plants),
+        TRUE ~ list(NA)
+        )) %>%
+    unnest()
+# plant_repl <- data_frame(date = 2000, plant = 1)
 n_reps <- 10
+n_chains <- 1
 ```
 
-```{r do_sims}
 
-sim_df <- sim_cages(X_0, max_t, R, A, D_slope, D_inter, process_error, n_reps) %>% 
-    mutate(N = exp(X))
+
+
+```{r do_sims}
+set.seed(654651984L)
+sim_df <- sim_cages(X_0, max_t, R, A, D_slope, D_inter, process_error,
+                    plant_mort_coefs, plant_death_age, plant_repl,
+                    n_reps) %>% 
+    mutate(N = exp(X)) %>%
+    identity()
 
 sim_by_cage <- sim_df %>% 
-    mutate(line = factor(line, levels = 1:7, labels = levels(growth$line)),
+    mutate(line = factor(line,
+                         levels = seq_along(levels(growth$line)),
+                         labels = levels(growth$line)),
            rep = factor(rep)) %>% 
     group_by(rep, line, date) %>% 
     summarize(X = N %>% sum() %>% log()) %>%
     ungroup()
-
 ```
 
 
 ```{r plot_sims}
 sim_df %>% 
-    filter(rep == 1, date < 10) %>% 
+    filter(rep == 1, date < 60) %>% 
     ggplot(aes(date, X)) +
     geom_line(aes(color = factor(line))) +
     facet_wrap(~ factor(plant)) +
@@ -89,12 +111,16 @@ sim_df %>%
     NULL
 
 sim_by_cage %>% 
-    ggplot(aes(date, X)) +
+    mutate(N = exp(X)) %>% 
+    ggplot(aes(date, N)) +
+    # ggplot(aes(date, X)) +
     geom_line(aes(color = line)) +
     facet_wrap(~ rep) +
     scale_color_brewer("Aphid line:", palette = "Dark2", guide = guide_legend(ncol = 2)) +
     theme(legend.position = c(1, 0), legend.justification = c(1, 0)) +
     # coord_cartesian(ylim = c(0, 10)) +
     NULL
+
+
 ```
 

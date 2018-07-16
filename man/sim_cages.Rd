@@ -4,8 +4,8 @@
 \alias{sim_cages}
 \title{Simulate cages with the same starting conditions.}
 \usage{
-sim_cages(X_0, max_t, R, A, D_slope, D_inter, process_error, n_reps,
-  n_chains = 1, ...)
+sim_cages(X_0, max_t, R, A, D_slope, D_inter, process_error, plant_mort_coefs,
+  plant_death_age, plant_repl, n_reps, n_chains = 1, ...)
 }
 \arguments{
 \item{X_0}{Matrix of \code{log(# aphids)} at time t=0. Should be matrix of size
@@ -22,6 +22,16 @@ sim_cages(X_0, max_t, R, A, D_slope, D_inter, process_error, n_reps,
 \item{D_inter}{Dispersal intercept per aphid line. Vector of length \code{n_lines}.}
 
 \item{process_error}{SD of process error. Single double.}
+
+\item{plant_mort_coefs}{Coefficients (b0, then b1) for aphid mortality after
+plant starts dying.}
+
+\item{plant_death_age}{Number of days after which a plant starts dying.}
+
+\item{plant_repl}{Data frame containing two columns, the first
+indicating the date of replacement, the second indicating the plant that
+gets replaced on that date. There should be no repeat plants per date,
+but multiple plants can be replaced on the same date.}
 
 \item{n_reps}{Number of reps (i.e., cages) per chain.}
 
