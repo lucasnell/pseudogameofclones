@@ -99,7 +99,7 @@ threshold_filter <- function(X_vec, p) {
 #'
 #' @param file A filename to read from. If left empty, this will read from the
 #'     default path on your DropBox folder.
-#' @param noNA Boolean for whether time series with NAs should be included.
+#' @param allow_NA Boolean for whether time series with NAs should be included.
 #'     Defaults to `TRUE`.
 #' @param filter_pars A list with the names `"begin"` and `"end"`, containing single
 #'     numbers with threshold for filtering the beginning and ending of time series,
@@ -115,8 +115,8 @@ threshold_filter <- function(X_vec, p) {
 #'
 #' growth <- load_data()
 #'
-load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 0.9),
-                      remove_unfinished = TRUE) {
+load_data <- function(file, filter_pars = list(begin = 0.5, end = 0.9),
+                      remove_unfinished = TRUE, allow_NA = TRUE) {
 
     # Lines that we still have and should keep for analyses
     lines_to_keep <- c("R10", "WIA-5D", "WI-L4", "WI-L4Ø", "UT3", "WI-2016-593",
@@ -174,6 +174,7 @@ load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 0
         }
     }
 
+    # Filter part(s) of time series if desired:
     if (!is.null(filter_pars)) {
         growth <- growth %>%
             # Filter the beginning and end of the time series:
@@ -186,17 +187,36 @@ load_data <- function(file, noNA = TRUE, filter_pars = list(begin = 0.5, end = 0
     }
 
 
-    if (noNA) {
+    # Dealing with missing values
+    missing <- growth %>%
+        group_by(line, rep) %>%
+        arrange(date) %>%
+        summarize(dates = list(which(! min(date):max(date) %in% date)),
+                  diff = (date %>% length()) - (min(date):max(date) %>% length())) %>%
+        ungroup() %>%
+        filter(diff != 0) %>%
+        identity()
+    if (any(missing$diff > 0)) stop("\nNo duplicates allowed.", call. = FALSE);
 
-        missing <- growth %>%
-            group_by(line, rep) %>%
-            arrange(date) %>%
-            summarize(m = date %>% diff() %>% max()) %>%
-            ungroup() %>%
-            filter(m > 1) %>%
-            select(-m)
+    if (!allow_NA & nrow(missing) > 0) {
 
         growth <- clonewars:::filter_line_rep(growth, missing, exclude = TRUE)
+
+    } else if (nrow(missing) > 0) {
+
+        missing <- missing %>%
+            unnest() %>%
+            rename(date = dates)
+
+        df_ <- growth[1:nrow(missing),] %>%
+            mutate_if(~ inherits(.x, "integer"), function(x) NA_integer_) %>%
+            mutate_if(~ inherits(.x, "numeric"), function(x) NA_real_) %>%
+            mutate_if(~ inherits(.x, "character"), function(x) NA_character_) %>%
+            mutate(line = missing$line, rep = missing$rep, date = missing$date)
+
+        growth <- bind_rows(growth, df_) %>%
+            arrange(line, rep, date)
+
     }
 
     # Change to factor now to avoid having to drop levels
