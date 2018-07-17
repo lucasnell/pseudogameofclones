@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 knitr::opts_knit$set(root.dir = normalizePath(".."))
 options(tibble.print_min = 4L, tibble.print_max = 4L)
 ```
-```{r source_Rprofile, eval = FALSE, echo = FALSE}
+```{r source_Rprofile, echo = FALSE}
 source(".Rprofile")
 ```
 
@@ -61,13 +61,13 @@ str(model_data, give.attr = FALSE)
 
 ```{r run_model, eval = FALSE}
 # # Takes ~ 2 min at adapt_delta = 0.9
-# set.seed(65136)
-# stan_fit <- model_data %>%
-#     fit_lines(
-#         control = list(adapt_delta = 0.9)
-#     )
+set.seed(65136)
+stan_fit <- model_data %>%
+    fit_lines(
+        # control = list(adapt_delta = 0.9)
+    )
 # write_rds(stan_fit, "data-raw/stan_fit.rds")
-stan_fit <- read_rds("data-raw/stan_fit.rds")
+# stan_fit <- read_rds("data-raw/stan_fit.rds")
 ```
 
 

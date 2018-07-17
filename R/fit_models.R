@@ -35,23 +35,55 @@ fit_lines <- function(data, X, L, ...) {
     L <- substitute(L)
 
     X_ <- eval(X, envir = data)
+
+    # int<lower=1, upper=n_lines> L[N_ts];            // aphid line for each time series
     L_ <- eval(L, envir = data)
-    n_lines_ <- length(unique(L_))
+
     if (length(L_) != ncol(X_)) {
         stop("\nIn `fit_lines`, `L` must have the same length as number of ",
              "columns in `X`", call. = FALSE)
     }
 
+    # int<lower=1> N_ts;                              // Number of time series (line + rep)
+    # int<lower=1> max_nobs;                          // Max # observations per time series
+    # int<lower=0> max_miss;                          // Max # missing per time series
+    # int<lower=1, upper=max_nobs+max_miss> max_time; // Max # time points per times series
+    # int<lower=1> n_lines;                           // Number of aphid lines
 
-    nobs_ts_ <- apply(X_, 2, function(x) sum(!is.na(x)))
-    X_[is.na(X_)] <- 0
+    N_ts_ <- ncol(X_)
 
-    model_data_ <- list(N_ts = ncol(X_),
-                        max_reps = max(nobs_ts_),
-                        n_lines = n_lines_,
-                        nobs_ts = nobs_ts_,
+    max_nobs_ <- apply(X_, 2, function(x) sum(!is.na(x) & !is.infinite(x))) %>%
+        max()
+    max_miss_ <- apply(X_, 2, function(x) sum(is.infinite(x))) %>%
+        max()
+    max_time_ <- apply(X_, 2, function(x) sum(!is.na(x))) %>%
+        max()
+    n_lines_ <- length(unique(L_))
+
+    # int<lower=0> ii_obs[N_ts, max_nobs];            // indices for observations (0 --> NA)
+    # int<lower=0> ii_miss[N_ts, max_miss];           // indices for missing (0 --> NA)
+    # matrix<lower=0>[max_nobs, N_ts] X_obs;          // observed log(N_t) (Inf --> NA)
+
+    ii_obs_ <- array(0, dim = c(N_ts_, max_nobs_))
+    ii_miss_ <- array(0, dim = c(N_ts_, max_miss_))
+    X_obs_ <- matrix(Inf, max_nobs_, N_ts_)
+    for (i in 1:N_ts_) {
+        obs <- which(!is.infinite(X_[,i]) & !is.na(X_[,i]))
+        ii_obs_[i, 1:length(obs)] <- obs
+        misses <- which(is.infinite(X_[,i]))
+        if (length(misses) > 0) ii_miss_[i, 1:length(misses)] <- misses
+        X_obs_[1:length(obs), i] <- X_[obs, i]
+    }
+
+    model_data_ <- list(N_ts = N_ts_,
                         L = L_,
-                        X = X_,
+                        max_nobs = max_nobs_,
+                        max_miss = max_miss_,
+                        max_time = max_time_,
+                        n_lines = n_lines_,
+                        ii_obs = ii_obs_,
+                        ii_miss = ii_miss_,
+                        X_obs = X_obs_,
 
                         # -----------
                         # Priors:
@@ -69,7 +101,8 @@ fit_lines <- function(data, X, L, ...) {
                         zeta = -0.9733,
                         sigma_zeta = 2.8340)
 
-    growth_fit <- rstan::sampling(stanmodels$all_lines_plants, data = model_data_, ...)
+    growth_fit <- rstan::sampling(stanmodels$all_lines_plants, data = model_data_,
+                                  ...)
 
     return(growth_fit)
 }
