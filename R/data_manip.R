@@ -325,21 +325,17 @@ load_prior_data <- function(file, filter_pars = list(begin = 0.5, end = 0.9)) {
 line_data <- function(data, line, rep, date, X) {
 
     if (missing(line)) line <- quote(line)
-    if (missing(rep)) rep <- quote(rep)
-    if (missing(date)) date <- quote(date)
-    if (missing(X)) X <- quote(X)
-
     line <- substitute(line)
     line <- eval(line, data)
     stopifnot(inherits(line, "factor"))
     line <- as.integer(line)
-
+    if (missing(rep)) rep <- quote(rep)
     rep <- substitute(rep)
     rep <- eval(rep, data)
-
+    if (missing(date)) date <- quote(date)
     date <- substitute(date)
     date <- eval(date, data)
-
+    if (missing(X)) X <- quote(X)
     X <- substitute(X)
     X <- eval(X, data)
 
@@ -352,8 +348,6 @@ line_data <- function(data, line, rep, date, X) {
 
     # Coerce to list of data frames
     dat_frames <- data_frame(line, rep, date, X) %>%
-        # Setting missing observations as Inf:
-        mutate(X = ifelse(is.na(X), Inf, X)) %>%
         split(.$line) %>%
         map(~ split(.x, .x$rep)) %>%
         # Unlist just one level
