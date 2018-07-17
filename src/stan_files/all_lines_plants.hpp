@@ -57,7 +57,7 @@ n_noninf_vector(const Eigen::Matrix<T0__, Eigen::Dynamic,1>& x, std::ostream* ps
     int current_statement_begin__ = -1;
     try {
         {
-        current_statement_begin__ = 6;
+        current_statement_begin__ = 4;
         int n_noninf(0);
         (void) n_noninf;  // dummy to suppress unused var warning
 
@@ -65,16 +65,16 @@ n_noninf_vector(const Eigen::Matrix<T0__, Eigen::Dynamic,1>& x, std::ostream* ps
         stan::math::assign(n_noninf,0);
 
 
-        current_statement_begin__ = 7;
+        current_statement_begin__ = 5;
         for (int i = 1; i <= rows(x); ++i) {
 
-            current_statement_begin__ = 8;
+            current_statement_begin__ = 6;
             if (as_bool(logical_negation(is_inf(get_base1(x,i,"x",1))))) {
-                current_statement_begin__ = 8;
+                current_statement_begin__ = 6;
                 stan::math::assign(n_noninf, (n_noninf + 1));
             }
         }
-        current_statement_begin__ = 10;
+        current_statement_begin__ = 8;
         return stan::math::promote_scalar<fun_return_scalar_t__>(n_noninf);
         }
     } catch (const std::exception& e) {
@@ -106,14 +106,20 @@ remove_inf_vector(const Eigen::Matrix<T0__, Eigen::Dynamic,1>& x, std::ostream* 
     int current_statement_begin__ = -1;
     try {
         {
-        current_statement_begin__ = 13;
-        validate_non_negative_index("out", "n_noninf_vector(x, pstream__)", n_noninf_vector(x, pstream__));
-        Eigen::Matrix<fun_scalar_t__,Eigen::Dynamic,1>  out(static_cast<Eigen::VectorXd::Index>(n_noninf_vector(x, pstream__)));
+        current_statement_begin__ = 11;
+        int n_(0);
+        (void) n_;  // dummy to suppress unused var warning
+
+        stan::math::fill(n_, std::numeric_limits<int>::min());
+        stan::math::assign(n_,n_noninf_vector(x, pstream__));
+        current_statement_begin__ = 12;
+        validate_non_negative_index("out", "n_", n_);
+        Eigen::Matrix<fun_scalar_t__,Eigen::Dynamic,1>  out(static_cast<Eigen::VectorXd::Index>(n_));
         (void) out;  // dummy to suppress unused var warning
 
         stan::math::initialize(out, std::numeric_limits<double>::quiet_NaN());
         stan::math::fill(out,DUMMY_VAR__);
-        current_statement_begin__ = 14;
+        current_statement_begin__ = 13;
         int j(0);
         (void) j;  // dummy to suppress unused var warning
 
@@ -121,19 +127,19 @@ remove_inf_vector(const Eigen::Matrix<T0__, Eigen::Dynamic,1>& x, std::ostream* 
         stan::math::assign(j,1);
 
 
-        current_statement_begin__ = 15;
+        current_statement_begin__ = 14;
         for (int i = 1; i <= rows(x); ++i) {
 
-            current_statement_begin__ = 16;
+            current_statement_begin__ = 15;
             if (as_bool(logical_negation(is_inf(get_base1(x,i,"x",1))))) {
 
-                current_statement_begin__ = 17;
+                current_statement_begin__ = 16;
                 stan::math::assign(get_base1_lhs(out,j,"out",1), get_base1(x,i,"x",1));
-                current_statement_begin__ = 18;
+                current_statement_begin__ = 17;
                 stan::math::assign(j, (j + 1));
             }
         }
-        current_statement_begin__ = 21;
+        current_statement_begin__ = 20;
         return stan::math::promote_scalar<fun_return_scalar_t__>(out);
         }
     } catch (const std::exception& e) {
@@ -164,7 +170,7 @@ n_nonzeros_int(const std::vector<int>& x, std::ostream* pstream__) {
     int current_statement_begin__ = -1;
     try {
         {
-        current_statement_begin__ = 24;
+        current_statement_begin__ = 23;
         int n_nonzero(0);
         (void) n_nonzero;  // dummy to suppress unused var warning
 
@@ -172,16 +178,16 @@ n_nonzeros_int(const std::vector<int>& x, std::ostream* pstream__) {
         stan::math::assign(n_nonzero,0);
 
 
-        current_statement_begin__ = 25;
+        current_statement_begin__ = 24;
         for (int i = 1; i <= get_base1(dims(x),1,"dims(x)",1); ++i) {
 
-            current_statement_begin__ = 26;
+            current_statement_begin__ = 25;
             if (as_bool(logical_neq(get_base1(x,i,"x",1),0))) {
-                current_statement_begin__ = 26;
+                current_statement_begin__ = 25;
                 stan::math::assign(n_nonzero, (n_nonzero + 1));
             }
         }
-        current_statement_begin__ = 28;
+        current_statement_begin__ = 27;
         return stan::math::promote_scalar<fun_return_scalar_t__>(n_nonzero);
         }
     } catch (const std::exception& e) {
@@ -211,11 +217,11 @@ remove_zeros_int(const std::vector<int>& x, std::ostream* pstream__) {
     int current_statement_begin__ = -1;
     try {
         {
-        current_statement_begin__ = 31;
+        current_statement_begin__ = 30;
         validate_non_negative_index("out", "n_nonzeros_int(x, pstream__)", n_nonzeros_int(x, pstream__));
         vector<int> out(n_nonzeros_int(x, pstream__), 0);
         stan::math::fill(out, std::numeric_limits<int>::min());
-        current_statement_begin__ = 32;
+        current_statement_begin__ = 31;
         int j(0);
         (void) j;  // dummy to suppress unused var warning
 
@@ -223,19 +229,19 @@ remove_zeros_int(const std::vector<int>& x, std::ostream* pstream__) {
         stan::math::assign(j,1);
 
 
-        current_statement_begin__ = 33;
+        current_statement_begin__ = 32;
         for (int i = 1; i <= get_base1(dims(x),1,"dims(x)",1); ++i) {
 
-            current_statement_begin__ = 34;
+            current_statement_begin__ = 33;
             if (as_bool(logical_neq(get_base1(x,i,"x",1),0))) {
 
-                current_statement_begin__ = 35;
+                current_statement_begin__ = 34;
                 stan::math::assign(get_base1_lhs(out,j,"out",1), get_base1(x,i,"x",1));
-                current_statement_begin__ = 36;
+                current_statement_begin__ = 35;
                 stan::math::assign(j, (j + 1));
             }
         }
-        current_statement_begin__ = 39;
+        current_statement_begin__ = 38;
         return stan::math::promote_scalar<fun_return_scalar_t__>(out);
         }
     } catch (const std::exception& e) {

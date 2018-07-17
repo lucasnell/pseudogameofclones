@@ -64,6 +64,7 @@ str(model_data, give.attr = FALSE)
 set.seed(65136)
 stan_fit <- model_data %>%
     fit_lines(
+        chains = 1
         # control = list(adapt_delta = 0.9)
     )
 # write_rds(stan_fit, "data-raw/stan_fit.rds")

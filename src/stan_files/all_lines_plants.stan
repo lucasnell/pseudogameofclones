@@ -1,6 +1,4 @@
 
-
-
 functions {
     int n_noninf_vector(vector x) {
         int n_noninf = 0;
@@ -10,7 +8,8 @@ functions {
         return n_noninf;
     }
     vector remove_inf_vector(vector x) {
-        vector[n_noninf_vector(x)] out;
+        int n_ = n_noninf_vector(x);
+        vector[n_] out;
         int j = 1;
         for (i in 1:rows(x)) {
             if (!is_inf(x[i])) {
@@ -39,6 +38,7 @@ functions {
         return out;
     }
 }
+
 data {
     int<lower=1> N_ts;                              // Number of time series (line + rep)
     int<lower=1> max_nobs;                          // Max # observations per time series
