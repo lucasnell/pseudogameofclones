@@ -1,8 +1,14 @@
 
-/*
-    This version differs from `all_lines.stan` because it also models variability
-    in density dependence (variable `A`) within clonal lines.
-*/
+functions {
+    vector ricker(vector X, int n_, real r_, real a_) {
+        int X_size = rows(X);
+        vector[X_size] X_out;
+        X_out[1] = X[1];
+        X_out[2:n_] = X[1:(n_-1)] + r_ * (1 - a_ * exp(X[1:(n_-1)]));
+        if (n_ < X_size) for (t in (n_+1):X_size) X_out[t] = 0;
+        return X_out;
+    }
+}
 
 data {
     int<lower=1> N_ts;                          // Number of time series (line + rep)
@@ -81,9 +87,7 @@ transformed parameters {
         real a_ = inv_logit(phi + s_phi * Z_A[L[j]] + hats_phi * Z_P[j]);
         P[j] = a_;
         // Now filling in `X_pred`:
-        X_pred[1, j] = X[1, j];
-        X_pred[2:n_, j] = X[1:(n_-1), j] + r_ * (1 - a_ * exp(X[1:(n_-1), j]));
-        if (n_ < max_reps) for (t in (n_+1):max_reps) X_pred[t, j] = 0;
+        X_pred[, j] = ricker(X[, j], n_, r_, a_);
     }
 
 }
