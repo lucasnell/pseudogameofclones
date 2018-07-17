@@ -191,18 +191,14 @@ load_data <- function(file, filter_pars = list(begin = 0.5, end = 0.9),
     missing <- growth %>%
         group_by(line, rep) %>%
         arrange(date) %>%
-        summarize(dates = list(which(! min(date):max(date) %in% date)),
-                  diff = (date %>% length()) - (min(date):max(date) %>% length())) %>%
+        summarize(dates = list(which(! min(date):max(date) %in% date) + min(date) - 1),
+                  diff = length(date) - length(min(date):max(date))) %>%
         ungroup() %>%
         filter(diff != 0) %>%
         identity()
     if (any(missing$diff > 0)) stop("\nNo duplicates allowed.", call. = FALSE);
 
-    if (!allow_NA & nrow(missing) > 0) {
-
-        growth <- clonewars:::filter_line_rep(growth, missing, exclude = TRUE)
-
-    } else if (nrow(missing) > 0) {
+    if (allow_NA & nrow(missing) > 0) {
 
         missing <- missing %>%
             unnest() %>%
@@ -214,14 +210,19 @@ load_data <- function(file, filter_pars = list(begin = 0.5, end = 0.9),
             mutate_if(~ inherits(.x, "character"), function(x) NA_character_) %>%
             mutate(line = missing$line, rep = missing$rep, date = missing$date)
 
-        growth <- bind_rows(growth, df_) %>%
-            arrange(line, rep, date)
+        growth <- bind_rows(growth, df_)
+
+    } else if (nrow(missing) > 0) {
+
+        growth <- clonewars:::filter_line_rep(growth, missing, exclude = TRUE)
 
     }
 
-    # Change to factor now to avoid having to drop levels
+    # Change to factor now to avoid having to drop levels, and make sure it's
+    # ordered properly
     growth <- growth %>%
-        mutate(line = factor(line))
+        mutate(line = factor(line)) %>%
+        arrange(line, rep, date)
 
     return(growth)
 }

@@ -1,41 +1,12 @@
 
 functions {
-    int n_noninf_vector(vector x) {
-        int n_noninf = 0;
-        for (i in 1:rows(x)) {
-            if (!is_inf(x[i])) n_noninf += 1;
-        }
-        return n_noninf;
-    }
-    vector remove_inf_vector(vector x) {
-        int n_ = n_noninf_vector(x);
-        vector[n_] out;
-        int j = 1;
-        for (i in 1:rows(x)) {
-            if (!is_inf(x[i])) {
-                out[j] = x[i];
-                j += 1;
-            }
-        }
-        return out;
-    }
-    int n_nonzeros_int(int[] x) {
-        int n_nonzero = 0;
-        for (i in 1:(dims(x)[1])) {
-            if (x[i] != 0) n_nonzero += 1;
-        }
-        return n_nonzero;
-    }
-    int[] remove_zeros_int(int[] x) {
-        int out[n_nonzeros_int(x)];
-        int j = 1;
-        for (i in 1:(dims(x)[1])) {
-            if (x[i] != 0) {
-                out[j] = x[i];
-                j += 1;
-            }
-        }
-        return out;
+    vector ricker(vector X, int n_, real r_, real a_) {
+        int X_size = rows(X);
+        vector[X_size] X_out;
+        X_out[1] = X[1];
+        X_out[2:n_] = X[1:(n_-1)] + r_ * (1 - a_ * exp(X[1:(n_-1)]));
+        if (n_ < X_size) for (t in (n_+1):X_size) X_out[t] = 0;
+        return X_out;
     }
 }
 
@@ -116,9 +87,7 @@ transformed parameters {
         real a_ = inv_logit(phi + s_phi * Z_A[L[j]] + hats_phi * Z_P[j]);
         P[j] = a_;
         // Now filling in `X_pred`:
-        X_pred[1, j] = X[1, j];
-        X_pred[2:n_, j] = X[1:(n_-1), j] + r_ * (1 - a_ * exp(X[1:(n_-1), j]));
-        if (n_ < max_reps) for (t in (n_+1):max_reps) X_pred[t, j] = 0;
+        X_pred[, j] = ricker(X[, j], n_, r_, a_);
     }
 
 }

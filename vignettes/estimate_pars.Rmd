@@ -45,8 +45,43 @@ this document.
 
 ```{r load_data}
 growth <- load_data()
-growth
 ```
+
+This is how many reps I have of each line:
+
+```{r view_reps}
+growth %>% 
+    group_by(line) %>% 
+    summarize(n = rep %>% unique() %>% length()) %>% 
+    knitr::kable()
+```
+
+
+## Impute missing data
+
+From [Moritz et al. (2015)](https://arxiv.org/abs/1510.03924), the
+seasonal kalman filter from the `zoo` package works well, so I'm using this here to
+impute missing values.
+
+```{r impute_NAs}
+impute <- function(X) {
+    if (any(is.na(X))) {
+        X_ <- X %>% 
+            # Change to weekly frequency for the fit
+            zoo::zooreg(frequency = 7) %>%
+            zoo::na.StructTS() %>%
+            as.numeric()
+        return(X_)
+    }
+    return(X)
+}
+
+growth <- growth %>% 
+    group_by(line, rep) %>% 
+    mutate(X = impute(X)) %>%
+    ungroup()
+```
+
 
 ## Convert data
 
@@ -60,13 +95,12 @@ str(model_data, give.attr = FALSE)
 ## Run model
 
 ```{r run_model, eval = FALSE}
-# # Takes ~ 2 min at adapt_delta = 0.9
-set.seed(65136)
-stan_fit <- model_data %>%
-    fit_lines(
-        chains = 1
-        # control = list(adapt_delta = 0.9)
-    )
+# # Takes ~ 3 min at adapt_delta = 0.9
+# set.seed(65136)
+# stan_fit <- model_data %>%
+#     fit_lines(
+#         control = list(adapt_delta = 0.9)
+#     )
 # write_rds(stan_fit, "data-raw/stan_fit.rds")
 stan_fit <- read_rds("data-raw/stan_fit.rds")
 ```
@@ -76,12 +110,6 @@ stan_fit <- read_rds("data-raw/stan_fit.rds")
 
 ```{r examine_model, eval = FALSE}
 
-growth %>% 
-    group_by(line) %>% 
-    summarize(reps = rep %>% unique() %>% length()) %>% 
-    # mutate(line = as.integer(line)) %>% 
-    as.data.frame()
-
 # http://mc-stan.org/bayesplot/articles/visual-mcmc-diagnostics.html
 
 posterior <- as.array(stan_fit)
@@ -90,8 +118,8 @@ mcmc_intervals(posterior, pars = sprintf("R[%i]", 1:7))
 mcmc_intervals(posterior, pars = sprintf("A[%i]", 1:7))
 
 
-apply(rstan::extract(stan_fit, "A", permuted = FALSE), 3, mean)
 apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, mean)
+apply(rstan::extract(stan_fit, "A", permuted = FALSE), 3, mean)
 
 apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE), 3, mean)
 apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE), 3, quantile,
@@ -134,7 +162,7 @@ mcmc_parcoord(posterior, np = np)
 
 mcmc_scatter(
   posterior,
-  pars = c("process", "R[6]"),
+  pars = c("s_epsilon", "R[6]"),
   transform = list(`R[6]` = "log"),
   np = np
 )
@@ -151,7 +179,7 @@ pred_df <- make_pred_df(stan_fit, growth)
 
 pred_df %>%
     # filter(rep == 1) %>% 
-    filter(rep == 4, line == "Clover-2017-2") %>%
+    # filter(rep == 4, line == "Clover-2017-2") %>%
     ggplot(aes(date, X)) +
     geom_ribbon(aes(ymin = X_lower, ymax = X_upper),
                 fill = "gray70", alpha = 0.5) +
@@ -159,7 +187,7 @@ pred_df %>%
     geom_point(shape = 1, color = "firebrick", alpha = 0.5) +
     geom_line(aes(y = X_pred), color = "dodgerblue3", size = 0.5) +
     # facet_wrap(~ rep + line, nrow = 2) +
-    # facet_wrap(~ rep + line, nrow = 5) +
+    facet_wrap(~ rep + line, nrow = 4) +
     NULL
 
 
