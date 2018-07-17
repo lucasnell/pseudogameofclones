@@ -40,9 +40,81 @@ static int current_statement_begin__;
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
     reader.add_event(0, 0, "start", "model_sim_cage");
-    reader.add_event(215, 215, "end", "model_sim_cage");
+    reader.add_event(1, 1, "include", "/chunks/helpers.stan");
+    reader.add_event(1, 0, "start", "/chunks/helpers.stan");
+    reader.add_event(45, 44, "end", "/chunks/helpers.stan");
+    reader.add_event(45, 2, "restart", "model_sim_cage");
+    reader.add_event(226, 183, "end", "model_sim_cage");
     return reader;
 }
+
+template <typename T0__, typename T2__, typename T3__>
+Eigen::Matrix<typename boost::math::tools::promote_args<T0__, T2__, T3__>::type, Eigen::Dynamic,1>
+ricker(const Eigen::Matrix<T0__, Eigen::Dynamic,1>& X,
+           const int& n_,
+           const T2__& r_,
+           const T3__& a_, std::ostream* pstream__) {
+    typedef typename boost::math::tools::promote_args<T0__, T2__, T3__>::type fun_scalar_t__;
+    typedef fun_scalar_t__ fun_return_scalar_t__;
+    const static bool propto__ = true;
+    (void) propto__;
+        fun_scalar_t__ DUMMY_VAR__(std::numeric_limits<double>::quiet_NaN());
+        (void) DUMMY_VAR__;  // suppress unused var warning
+
+    int current_statement_begin__ = -1;
+    try {
+        {
+        current_statement_begin__ = 6;
+        int X_size(0);
+        (void) X_size;  // dummy to suppress unused var warning
+
+        stan::math::fill(X_size, std::numeric_limits<int>::min());
+        stan::math::assign(X_size,rows(X));
+        current_statement_begin__ = 7;
+        validate_non_negative_index("X_out", "X_size", X_size);
+        Eigen::Matrix<fun_scalar_t__,Eigen::Dynamic,1>  X_out(static_cast<Eigen::VectorXd::Index>(X_size));
+        (void) X_out;  // dummy to suppress unused var warning
+
+        stan::math::initialize(X_out, std::numeric_limits<double>::quiet_NaN());
+        stan::math::fill(X_out,DUMMY_VAR__);
+
+
+        current_statement_begin__ = 8;
+        stan::math::assign(get_base1_lhs(X_out,1,"X_out",1), get_base1(X,1,"X",1));
+        current_statement_begin__ = 9;
+        stan::model::assign(X_out, 
+                    stan::model::cons_list(stan::model::index_min_max(2, n_), stan::model::nil_index_list()), 
+                    add(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (n_ - 1)), stan::model::nil_index_list()), "X"),multiply(r_,subtract(1,multiply(a_,exp(stan::model::rvalue(X, stan::model::cons_list(stan::model::index_min_max(1, (n_ - 1)), stan::model::nil_index_list()), "X")))))), 
+                    "assigning variable X_out");
+        current_statement_begin__ = 10;
+        if (as_bool(logical_lt(n_,X_size))) {
+            current_statement_begin__ = 10;
+            for (int t = (n_ + 1); t <= X_size; ++t) {
+                current_statement_begin__ = 10;
+                stan::math::assign(get_base1_lhs(X_out,t,"X_out",1), 0);
+            }
+        }
+        current_statement_begin__ = 11;
+        return stan::math::promote_scalar<fun_return_scalar_t__>(X_out);
+        }
+    } catch (const std::exception& e) {
+        stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
+        // Next line prevents compiler griping about no return
+        throw std::runtime_error("*** IF YOU SEE THIS, PLEASE REPORT A BUG ***");
+    }
+}
+
+
+struct ricker_functor__ {
+    template <typename T0__, typename T2__, typename T3__>
+        Eigen::Matrix<typename boost::math::tools::promote_args<T0__, T2__, T3__>::type, Eigen::Dynamic,1>
+    operator()(const Eigen::Matrix<T0__, Eigen::Dynamic,1>& X,
+           const int& n_,
+           const T2__& r_,
+           const T3__& a_, std::ostream* pstream__) const {
+        return ricker(X, n_, r_, a_, pstream__);
+    }
+};
 
 int
 find_int_array(const int& x,
@@ -57,7 +129,7 @@ find_int_array(const int& x,
     int current_statement_begin__ = -1;
     try {
         {
-        current_statement_begin__ = 5;
+        current_statement_begin__ = 15;
         int result(0);
         (void) result;  // dummy to suppress unused var warning
 
@@ -65,16 +137,16 @@ find_int_array(const int& x,
         stan::math::assign(result,0);
 
 
-        current_statement_begin__ = 6;
+        current_statement_begin__ = 16;
         for (int i = 1; i <= get_base1(dims(y),1,"dims(y)",1); ++i) {
 
-            current_statement_begin__ = 7;
+            current_statement_begin__ = 17;
             if (as_bool(logical_eq(get_base1(y,i,"y",1),x))) {
-                current_statement_begin__ = 7;
+                current_statement_begin__ = 17;
                 stan::math::assign(result, 1);
             }
         }
-        current_statement_begin__ = 9;
+        current_statement_begin__ = 19;
         return stan::math::promote_scalar<fun_return_scalar_t__>(result);
         }
     } catch (const std::exception& e) {
@@ -106,7 +178,7 @@ get_n_replaced(const std::vector<std::vector<int> >& repl_plants,
     int current_statement_begin__ = -1;
     try {
         {
-        current_statement_begin__ = 14;
+        current_statement_begin__ = 24;
         int n_repl_plants(0);
         (void) n_repl_plants;  // dummy to suppress unused var warning
 
@@ -114,10 +186,10 @@ get_n_replaced(const std::vector<std::vector<int> >& repl_plants,
         stan::math::assign(n_repl_plants,0);
 
 
-        current_statement_begin__ = 15;
+        current_statement_begin__ = 25;
         for (int i_ = 1; i_ <= get_base1(dims(repl_plants),2,"dims(repl_plants)",1); ++i_) {
             {
-            current_statement_begin__ = 16;
+            current_statement_begin__ = 26;
             int i(0);
             (void) i;  // dummy to suppress unused var warning
 
@@ -125,14 +197,14 @@ get_n_replaced(const std::vector<std::vector<int> >& repl_plants,
             stan::math::assign(i,get_base1(get_base1(repl_plants,repl_ind,"repl_plants",1),i_,"repl_plants",2));
 
 
-            current_statement_begin__ = 17;
+            current_statement_begin__ = 27;
             if (as_bool(logical_neq(i,0))) {
-                current_statement_begin__ = 17;
+                current_statement_begin__ = 27;
                 stan::math::assign(n_repl_plants, (n_repl_plants + 1));
             }
             }
         }
-        current_statement_begin__ = 19;
+        current_statement_begin__ = 29;
         return stan::math::promote_scalar<fun_return_scalar_t__>(n_repl_plants);
         }
     } catch (const std::exception& e) {
@@ -166,12 +238,12 @@ get_not_replaced(const int& n_non_repl_plants,
     int current_statement_begin__ = -1;
     try {
         {
-        current_statement_begin__ = 24;
+        current_statement_begin__ = 34;
         validate_non_negative_index("non_repl_plants", "n_non_repl_plants", n_non_repl_plants);
         vector<int> non_repl_plants(n_non_repl_plants, 0);
         stan::math::fill(non_repl_plants, std::numeric_limits<int>::min());
         stan::math::assign(non_repl_plants,rep_array(0,n_non_repl_plants));
-        current_statement_begin__ = 25;
+        current_statement_begin__ = 35;
         int ii(0);
         (void) ii;  // dummy to suppress unused var warning
 
@@ -179,19 +251,19 @@ get_not_replaced(const int& n_non_repl_plants,
         stan::math::assign(ii,1);
 
 
-        current_statement_begin__ = 26;
+        current_statement_begin__ = 36;
         for (int i = 1; i <= n_plants; ++i) {
 
-            current_statement_begin__ = 27;
+            current_statement_begin__ = 37;
             if (as_bool(logical_negation(find_int_array(i,stan::model::rvalue(repl_plants, stan::model::cons_list(stan::model::index_uni(repl_ind), stan::model::cons_list(stan::model::index_omni(), stan::model::nil_index_list())), "repl_plants"), pstream__)))) {
 
-                current_statement_begin__ = 28;
+                current_statement_begin__ = 38;
                 stan::math::assign(get_base1_lhs(non_repl_plants,ii,"non_repl_plants",1), i);
-                current_statement_begin__ = 29;
+                current_statement_begin__ = 39;
                 stan::math::assign(ii, (ii + 1));
             }
         }
-        current_statement_begin__ = 32;
+        current_statement_begin__ = 42;
         return stan::math::promote_scalar<fun_return_scalar_t__>(non_repl_plants);
         }
     } catch (const std::exception& e) {
@@ -264,19 +336,19 @@ public:
 
         // initialize member variables
         try {
-            current_statement_begin__ = 36;
+            current_statement_begin__ = 47;
             context__.validate_dims("data initialization", "n_plants", "int", context__.to_vec());
             n_plants = int(0);
             vals_i__ = context__.vals_i("n_plants");
             pos__ = 0;
             n_plants = vals_i__[pos__++];
-            current_statement_begin__ = 37;
+            current_statement_begin__ = 48;
             context__.validate_dims("data initialization", "n_lines", "int", context__.to_vec());
             n_lines = int(0);
             vals_i__ = context__.vals_i("n_lines");
             pos__ = 0;
             n_lines = vals_i__[pos__++];
-            current_statement_begin__ = 38;
+            current_statement_begin__ = 49;
             validate_non_negative_index("X_0", "n_plants", n_plants);
             validate_non_negative_index("X_0", "n_lines", n_lines);
             context__.validate_dims("data initialization", "X_0", "matrix_d", context__.to_vec(n_plants,n_lines));
@@ -292,13 +364,13 @@ public:
                     X_0(m_mat__,n_mat__) = vals_r__[pos__++];
                 }
             }
-            current_statement_begin__ = 39;
+            current_statement_begin__ = 50;
             context__.validate_dims("data initialization", "max_t", "int", context__.to_vec());
             max_t = int(0);
             vals_i__ = context__.vals_i("max_t");
             pos__ = 0;
             max_t = vals_i__[pos__++];
-            current_statement_begin__ = 40;
+            current_statement_begin__ = 51;
             validate_non_negative_index("R", "n_lines", n_lines);
             context__.validate_dims("data initialization", "R", "vector_d", context__.to_vec(n_lines));
             validate_non_negative_index("R", "n_lines", n_lines);
@@ -309,7 +381,7 @@ public:
             for (size_t i_vec__ = 0; i_vec__ < R_i_vec_lim__; ++i_vec__) {
                 R[i_vec__] = vals_r__[pos__++];
             }
-            current_statement_begin__ = 41;
+            current_statement_begin__ = 52;
             validate_non_negative_index("A", "n_lines", n_lines);
             context__.validate_dims("data initialization", "A", "vector_d", context__.to_vec(n_lines));
             validate_non_negative_index("A", "n_lines", n_lines);
@@ -320,7 +392,7 @@ public:
             for (size_t i_vec__ = 0; i_vec__ < A_i_vec_lim__; ++i_vec__) {
                 A[i_vec__] = vals_r__[pos__++];
             }
-            current_statement_begin__ = 42;
+            current_statement_begin__ = 53;
             validate_non_negative_index("D_slope", "n_lines", n_lines);
             context__.validate_dims("data initialization", "D_slope", "vector_d", context__.to_vec(n_lines));
             validate_non_negative_index("D_slope", "n_lines", n_lines);
@@ -331,7 +403,7 @@ public:
             for (size_t i_vec__ = 0; i_vec__ < D_slope_i_vec_lim__; ++i_vec__) {
                 D_slope[i_vec__] = vals_r__[pos__++];
             }
-            current_statement_begin__ = 43;
+            current_statement_begin__ = 54;
             validate_non_negative_index("D_inter", "n_lines", n_lines);
             context__.validate_dims("data initialization", "D_inter", "vector_d", context__.to_vec(n_lines));
             validate_non_negative_index("D_inter", "n_lines", n_lines);
@@ -342,13 +414,13 @@ public:
             for (size_t i_vec__ = 0; i_vec__ < D_inter_i_vec_lim__; ++i_vec__) {
                 D_inter[i_vec__] = vals_r__[pos__++];
             }
-            current_statement_begin__ = 44;
+            current_statement_begin__ = 55;
             context__.validate_dims("data initialization", "process_error", "double", context__.to_vec());
             process_error = double(0);
             vals_r__ = context__.vals_r("process_error");
             pos__ = 0;
             process_error = vals_r__[pos__++];
-            current_statement_begin__ = 45;
+            current_statement_begin__ = 56;
             validate_non_negative_index("plant_mort_coefs", "2", 2);
             context__.validate_dims("data initialization", "plant_mort_coefs", "vector_d", context__.to_vec(2));
             validate_non_negative_index("plant_mort_coefs", "2", 2);
@@ -359,25 +431,25 @@ public:
             for (size_t i_vec__ = 0; i_vec__ < plant_mort_coefs_i_vec_lim__; ++i_vec__) {
                 plant_mort_coefs[i_vec__] = vals_r__[pos__++];
             }
-            current_statement_begin__ = 47;
+            current_statement_begin__ = 58;
             context__.validate_dims("data initialization", "plant_death_age", "int", context__.to_vec());
             plant_death_age = int(0);
             vals_i__ = context__.vals_i("plant_death_age");
             pos__ = 0;
             plant_death_age = vals_i__[pos__++];
-            current_statement_begin__ = 48;
+            current_statement_begin__ = 59;
             context__.validate_dims("data initialization", "n_repl", "int", context__.to_vec());
             n_repl = int(0);
             vals_i__ = context__.vals_i("n_repl");
             pos__ = 0;
             n_repl = vals_i__[pos__++];
-            current_statement_begin__ = 49;
+            current_statement_begin__ = 60;
             context__.validate_dims("data initialization", "max_repl", "int", context__.to_vec());
             max_repl = int(0);
             vals_i__ = context__.vals_i("max_repl");
             pos__ = 0;
             max_repl = vals_i__[pos__++];
-            current_statement_begin__ = 50;
+            current_statement_begin__ = 61;
             validate_non_negative_index("repl_times", "n_repl", n_repl);
             context__.validate_dims("data initialization", "repl_times", "int", context__.to_vec(n_repl));
             validate_non_negative_index("repl_times", "n_repl", n_repl);
@@ -388,7 +460,7 @@ public:
             for (size_t i_0__ = 0; i_0__ < repl_times_limit_0__; ++i_0__) {
                 repl_times[i_0__] = vals_i__[pos__++];
             }
-            current_statement_begin__ = 52;
+            current_statement_begin__ = 63;
             validate_non_negative_index("repl_plants", "n_repl", n_repl);
             validate_non_negative_index("repl_plants", "max_repl", max_repl);
             context__.validate_dims("data initialization", "repl_plants", "int", context__.to_vec(n_repl,max_repl));
@@ -406,36 +478,36 @@ public:
             }
 
             // validate, data variables
-            current_statement_begin__ = 36;
+            current_statement_begin__ = 47;
             check_greater_or_equal(function__,"n_plants",n_plants,1);
-            current_statement_begin__ = 37;
+            current_statement_begin__ = 48;
             check_greater_or_equal(function__,"n_lines",n_lines,1);
-            current_statement_begin__ = 38;
+            current_statement_begin__ = 49;
             check_greater_or_equal(function__,"X_0",X_0,0);
-            current_statement_begin__ = 39;
+            current_statement_begin__ = 50;
             check_greater_or_equal(function__,"max_t",max_t,1);
-            current_statement_begin__ = 40;
+            current_statement_begin__ = 51;
             check_greater_or_equal(function__,"R",R,0);
-            current_statement_begin__ = 41;
+            current_statement_begin__ = 52;
             check_greater_or_equal(function__,"A",A,0);
             check_less_or_equal(function__,"A",A,1);
-            current_statement_begin__ = 42;
-            current_statement_begin__ = 43;
-            current_statement_begin__ = 44;
+            current_statement_begin__ = 53;
+            current_statement_begin__ = 54;
+            current_statement_begin__ = 55;
             check_greater_or_equal(function__,"process_error",process_error,0);
-            current_statement_begin__ = 45;
-            current_statement_begin__ = 47;
+            current_statement_begin__ = 56;
+            current_statement_begin__ = 58;
             check_greater_or_equal(function__,"plant_death_age",plant_death_age,1);
-            current_statement_begin__ = 48;
+            current_statement_begin__ = 59;
             check_greater_or_equal(function__,"n_repl",n_repl,1);
-            current_statement_begin__ = 49;
+            current_statement_begin__ = 60;
             check_greater_or_equal(function__,"max_repl",max_repl,1);
             check_less_or_equal(function__,"max_repl",max_repl,n_plants);
-            current_statement_begin__ = 50;
+            current_statement_begin__ = 61;
             for (int k0__ = 0; k0__ < n_repl; ++k0__) {
                 check_greater_or_equal(function__,"repl_times[k0__]",repl_times[k0__],0);
             }
-            current_statement_begin__ = 52;
+            current_statement_begin__ = 63;
             for (int k0__ = 0; k0__ < n_repl; ++k0__) {
                 for (int k1__ = 0; k1__ < max_repl; ++k1__) {
                     check_greater_or_equal(function__,"repl_plants[k0__][k1__]",repl_plants[k0__][k1__],0);
@@ -585,7 +657,7 @@ public:
 
             if (!include_gqs__) return;
             // declare and define generated quantities
-            current_statement_begin__ = 56;
+            current_statement_begin__ = 67;
             validate_non_negative_index("X_out", "(max_t + 1)", (max_t + 1));
             validate_non_negative_index("X_out", "n_lines", n_lines);
             validate_non_negative_index("X_out", "n_plants", n_plants);
@@ -594,20 +666,20 @@ public:
             stan::math::fill(X_out,DUMMY_VAR__);
 
 
-            current_statement_begin__ = 59;
+            current_statement_begin__ = 70;
             for (int i = 1; i <= n_plants; ++i) {
 
-                current_statement_begin__ = 60;
+                current_statement_begin__ = 71;
                 stan::math::assign(get_base1_lhs(X_out,i,"X_out",1), rep_matrix(stan::math::negative_infinity(),(max_t + 1),n_lines));
-                current_statement_begin__ = 61;
+                current_statement_begin__ = 72;
                 for (int j = 1; j <= n_lines; ++j) {
 
-                    current_statement_begin__ = 62;
+                    current_statement_begin__ = 73;
                     stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),1,j,"X_out",2), get_base1(X_0,i,j,"X_0",1));
                 }
             }
             {
-            current_statement_begin__ = 68;
+            current_statement_begin__ = 79;
             validate_non_negative_index("extinct", "n_plants", n_plants);
             validate_non_negative_index("extinct", "n_lines", n_lines);
             matrix_d extinct(static_cast<Eigen::VectorXd::Index>(n_plants),static_cast<Eigen::VectorXd::Index>(n_lines));
@@ -616,18 +688,18 @@ public:
             stan::math::initialize(extinct, std::numeric_limits<double>::quiet_NaN());
             stan::math::fill(extinct,DUMMY_VAR__);
             stan::math::assign(extinct,rep_matrix(0,n_plants,n_lines));
-            current_statement_begin__ = 70;
+            current_statement_begin__ = 81;
             validate_non_negative_index("plant_ages", "n_plants", n_plants);
             vector<int> plant_ages(n_plants, 0);
             stan::math::fill(plant_ages, std::numeric_limits<int>::min());
             stan::math::assign(plant_ages,rep_array(0,n_plants));
-            current_statement_begin__ = 72;
+            current_statement_begin__ = 83;
             int repl_ind(0);
             (void) repl_ind;  // dummy to suppress unused var warning
 
             stan::math::fill(repl_ind, std::numeric_limits<int>::min());
             stan::math::assign(repl_ind,1);
-            current_statement_begin__ = 74;
+            current_statement_begin__ = 85;
             validate_non_negative_index("emigrants", "n_lines", n_lines);
             validate_non_negative_index("emigrants", "n_plants", n_plants);
             matrix_d emigrants(static_cast<Eigen::VectorXd::Index>(n_lines),static_cast<Eigen::VectorXd::Index>(n_plants));
@@ -636,7 +708,7 @@ public:
             stan::math::initialize(emigrants, std::numeric_limits<double>::quiet_NaN());
             stan::math::fill(emigrants,DUMMY_VAR__);
             stan::math::assign(emigrants,rep_matrix(0,n_lines,n_plants));
-            current_statement_begin__ = 75;
+            current_statement_begin__ = 86;
             validate_non_negative_index("immigrants", "n_lines", n_lines);
             validate_non_negative_index("immigrants", "n_plants", n_plants);
             matrix_d immigrants(static_cast<Eigen::VectorXd::Index>(n_lines),static_cast<Eigen::VectorXd::Index>(n_plants));
@@ -645,7 +717,7 @@ public:
             stan::math::initialize(immigrants, std::numeric_limits<double>::quiet_NaN());
             stan::math::fill(immigrants,DUMMY_VAR__);
             stan::math::assign(immigrants,rep_matrix(0,n_lines,n_plants));
-            current_statement_begin__ = 78;
+            current_statement_begin__ = 89;
             validate_non_negative_index("morts", "max_t", max_t);
             vector_d morts(static_cast<Eigen::VectorXd::Index>(max_t));
             (void) morts;  // dummy to suppress unused var warning
@@ -654,10 +726,10 @@ public:
             stan::math::fill(morts,DUMMY_VAR__);
 
 
-            current_statement_begin__ = 79;
+            current_statement_begin__ = 90;
             for (int x = 1; x <= max_t; ++x) {
                 {
-                current_statement_begin__ = 80;
+                current_statement_begin__ = 91;
                 double x_(0.0);
                 (void) x_;  // dummy to suppress unused var warning
 
@@ -666,14 +738,14 @@ public:
                 stan::math::assign(x_,x);
 
 
-                current_statement_begin__ = 81;
+                current_statement_begin__ = 92;
                 stan::math::assign(get_base1_lhs(morts,x,"morts",1), inv_logit((get_base1(plant_mort_coefs,1,"plant_mort_coefs",1) + (get_base1(plant_mort_coefs,2,"plant_mort_coefs",1) * x_))));
                 }
             }
-            current_statement_begin__ = 84;
+            current_statement_begin__ = 95;
             for (int t = 1; t <= max_t; ++t) {
                 {
-                current_statement_begin__ = 90;
+                current_statement_begin__ = 101;
                 validate_non_negative_index("D_lambdas", "n_lines", n_lines);
                 validate_non_negative_index("D_lambdas", "n_plants", n_plants);
                 matrix_d D_lambdas(static_cast<Eigen::VectorXd::Index>(n_lines),static_cast<Eigen::VectorXd::Index>(n_plants));
@@ -681,7 +753,7 @@ public:
 
                 stan::math::initialize(D_lambdas, std::numeric_limits<double>::quiet_NaN());
                 stan::math::fill(D_lambdas,DUMMY_VAR__);
-                current_statement_begin__ = 92;
+                current_statement_begin__ = 103;
                 validate_non_negative_index("Z", "n_plants", n_plants);
                 vector_d Z(static_cast<Eigen::VectorXd::Index>(n_plants));
                 (void) Z;  // dummy to suppress unused var warning
@@ -691,65 +763,65 @@ public:
                 stan::math::assign(Z,rep_vector(0,n_plants));
 
 
-                current_statement_begin__ = 93;
+                current_statement_begin__ = 104;
                 for (int i = 1; i <= n_plants; ++i) {
 
-                    current_statement_begin__ = 95;
+                    current_statement_begin__ = 106;
                     stan::math::assign(get_base1_lhs(plant_ages,i,"plant_ages",1), (get_base1(plant_ages,i,"plant_ages",1) + 1));
-                    current_statement_begin__ = 96;
+                    current_statement_begin__ = 107;
                     for (int j = 1; j <= n_lines; ++j) {
 
-                        current_statement_begin__ = 97;
+                        current_statement_begin__ = 108;
                         stan::math::assign(get_base1_lhs(D_lambdas,j,i,"D_lambdas",1), exp((get_base1(D_inter,j,"D_inter",1) + (get_base1(D_slope,j,"D_slope",1) * get_base1(get_base1(X_out,i,"X_out",1),t,j,"X_out",2)))));
-                        current_statement_begin__ = 98;
+                        current_statement_begin__ = 109;
                         stan::math::assign(get_base1_lhs(Z,i,"Z",1), (get_base1(Z,i,"Z",1) + (get_base1(A,j,"A",1) * exp(get_base1(get_base1(X_out,i,"X_out",1),t,j,"X_out",2)))));
                     }
                 }
-                current_statement_begin__ = 102;
+                current_statement_begin__ = 113;
                 for (int j = 1; j <= n_lines; ++j) {
                     {
-                    current_statement_begin__ = 103;
+                    current_statement_begin__ = 114;
                     int dispersed_(0);
                     (void) dispersed_;  // dummy to suppress unused var warning
 
                     stan::math::fill(dispersed_, std::numeric_limits<int>::min());
 
 
-                    current_statement_begin__ = 104;
+                    current_statement_begin__ = 115;
                     for (int from_i = 1; from_i <= n_plants; ++from_i) {
 
-                        current_statement_begin__ = 105;
+                        current_statement_begin__ = 116;
                         for (int to_i = 1; to_i <= n_plants; ++to_i) {
 
-                            current_statement_begin__ = 106;
+                            current_statement_begin__ = 117;
                             if (as_bool(logical_eq(from_i,to_i))) {
-                                current_statement_begin__ = 106;
+                                current_statement_begin__ = 117;
                                 continue;
                             }
-                            current_statement_begin__ = 107;
+                            current_statement_begin__ = 118;
                             stan::math::assign(dispersed_, poisson_rng((get_base1(D_lambdas,j,from_i,"D_lambdas",1) / (n_plants - 1)), base_rng__));
-                            current_statement_begin__ = 108;
+                            current_statement_begin__ = 119;
                             stan::math::assign(get_base1_lhs(emigrants,j,from_i,"emigrants",1), (get_base1(emigrants,j,from_i,"emigrants",1) + dispersed_));
-                            current_statement_begin__ = 109;
+                            current_statement_begin__ = 120;
                             stan::math::assign(get_base1_lhs(immigrants,j,to_i,"immigrants",1), (get_base1(immigrants,j,to_i,"immigrants",1) + dispersed_));
                         }
                     }
                     }
                 }
-                current_statement_begin__ = 117;
+                current_statement_begin__ = 128;
                 for (int i = 1; i <= n_plants; ++i) {
 
-                    current_statement_begin__ = 119;
+                    current_statement_begin__ = 130;
                     for (int j = 1; j <= n_lines; ++j) {
                         {
-                        current_statement_begin__ = 122;
+                        current_statement_begin__ = 133;
                         double immigration(0.0);
                         (void) immigration;  // dummy to suppress unused var warning
 
                         stan::math::initialize(immigration, std::numeric_limits<double>::quiet_NaN());
                         stan::math::fill(immigration,DUMMY_VAR__);
                         stan::math::assign(immigration,get_base1(immigrants,j,i,"immigrants",1));
-                        current_statement_begin__ = 123;
+                        current_statement_begin__ = 134;
                         double emigration(0.0);
                         (void) emigration;  // dummy to suppress unused var warning
 
@@ -758,71 +830,71 @@ public:
                         stan::math::assign(emigration,get_base1(emigrants,j,i,"emigrants",1));
 
 
-                        current_statement_begin__ = 129;
+                        current_statement_begin__ = 140;
                         stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), get_base1(get_base1(X_out,i,"X_out",1),t,j,"X_out",2));
-                        current_statement_begin__ = 136;
+                        current_statement_begin__ = 147;
                         if (as_bool(logical_lte(get_base1(plant_ages,i,"plant_ages",1),plant_death_age))) {
 
-                            current_statement_begin__ = 137;
+                            current_statement_begin__ = 148;
                             stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), (get_base1(get_base1(X_out,i,"X_out",1),(t + 1),j,"X_out",2) + (get_base1(R,j,"R",1) * (1 - get_base1(Z,i,"Z",1)))));
                         }
-                        current_statement_begin__ = 140;
+                        current_statement_begin__ = 151;
                         stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), (get_base1(get_base1(X_out,i,"X_out",1),(t + 1),j,"X_out",2) + (normal_rng(0,1, base_rng__) * process_error)));
-                        current_statement_begin__ = 143;
+                        current_statement_begin__ = 154;
                         stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), ((exp(get_base1(get_base1(X_out,i,"X_out",1),(t + 1),j,"X_out",2)) + immigration) - emigration));
-                        current_statement_begin__ = 149;
+                        current_statement_begin__ = 160;
                         if (as_bool(logical_gt(get_base1(plant_ages,i,"plant_ages",1),plant_death_age))) {
 
-                            current_statement_begin__ = 150;
+                            current_statement_begin__ = 161;
                             stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), (get_base1(get_base1(X_out,i,"X_out",1),(t + 1),j,"X_out",2) * get_base1(morts,(get_base1(plant_ages,i,"plant_ages",1) - plant_death_age),"morts",1)));
                         }
-                        current_statement_begin__ = 154;
+                        current_statement_begin__ = 165;
                         if (as_bool(logical_lt(get_base1(get_base1(X_out,i,"X_out",1),(t + 1),j,"X_out",2),1))) {
 
-                            current_statement_begin__ = 155;
+                            current_statement_begin__ = 166;
                             stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), stan::math::negative_infinity());
-                            current_statement_begin__ = 156;
+                            current_statement_begin__ = 167;
                             stan::math::assign(get_base1_lhs(extinct,i,j,"extinct",1), 1);
                         } else {
-                            current_statement_begin__ = 157;
+                            current_statement_begin__ = 168;
                             stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), log(get_base1(get_base1(X_out,i,"X_out",1),(t + 1),j,"X_out",2)));
                         }
                         }
                     }
                 }
-                current_statement_begin__ = 167;
+                current_statement_begin__ = 178;
                 if (as_bool(logical_eq(t,get_base1(repl_times,repl_ind,"repl_times",1)))) {
                     {
-                    current_statement_begin__ = 169;
+                    current_statement_begin__ = 180;
                     int n_repl_plants(0);
                     (void) n_repl_plants;  // dummy to suppress unused var warning
 
                     stan::math::fill(n_repl_plants, std::numeric_limits<int>::min());
                     stan::math::assign(n_repl_plants,get_n_replaced(repl_plants,repl_ind, pstream__));
-                    current_statement_begin__ = 170;
+                    current_statement_begin__ = 181;
                     int n_non_repl_plants(0);
                     (void) n_non_repl_plants;  // dummy to suppress unused var warning
 
                     stan::math::fill(n_non_repl_plants, std::numeric_limits<int>::min());
                     stan::math::assign(n_non_repl_plants,(n_plants - n_repl_plants));
-                    current_statement_begin__ = 171;
+                    current_statement_begin__ = 182;
                     double n_non_repl_plants_(0.0);
                     (void) n_non_repl_plants_;  // dummy to suppress unused var warning
 
                     stan::math::initialize(n_non_repl_plants_, std::numeric_limits<double>::quiet_NaN());
                     stan::math::fill(n_non_repl_plants_,DUMMY_VAR__);
                     stan::math::assign(n_non_repl_plants_,n_non_repl_plants);
-                    current_statement_begin__ = 173;
+                    current_statement_begin__ = 184;
                     validate_non_negative_index("non_repl_plants", "n_non_repl_plants", n_non_repl_plants);
                     vector<int> non_repl_plants(n_non_repl_plants, 0);
                     stan::math::fill(non_repl_plants, std::numeric_limits<int>::min());
                     stan::math::assign(non_repl_plants,get_not_replaced(n_non_repl_plants,n_plants,repl_plants,repl_ind, pstream__));
 
 
-                    current_statement_begin__ = 177;
+                    current_statement_begin__ = 188;
                     for (int i_ = 1; i_ <= get_base1(dims(repl_plants),2,"dims(repl_plants)",1); ++i_) {
                         {
-                        current_statement_begin__ = 178;
+                        current_statement_begin__ = 189;
                         int i(0);
                         (void) i;  // dummy to suppress unused var warning
 
@@ -830,19 +902,19 @@ public:
                         stan::math::assign(i,get_base1(get_base1(repl_plants,repl_ind,"repl_plants",1),i_,"repl_plants",2));
 
 
-                        current_statement_begin__ = 179;
+                        current_statement_begin__ = 190;
                         if (as_bool(logical_eq(i,0))) {
-                            current_statement_begin__ = 179;
+                            current_statement_begin__ = 190;
                             continue;
                         }
-                        current_statement_begin__ = 180;
+                        current_statement_begin__ = 191;
                         stan::math::assign(get_base1_lhs(plant_ages,i,"plant_ages",1), 0);
                         }
                     }
-                    current_statement_begin__ = 184;
+                    current_statement_begin__ = 195;
                     for (int j = 1; j <= n_lines; ++j) {
                         {
-                        current_statement_begin__ = 186;
+                        current_statement_begin__ = 197;
                         double aphid_pool_j(0.0);
                         (void) aphid_pool_j;  // dummy to suppress unused var warning
 
@@ -851,10 +923,10 @@ public:
                         stan::math::assign(aphid_pool_j,0);
 
 
-                        current_statement_begin__ = 188;
+                        current_statement_begin__ = 199;
                         for (int i_ = 1; i_ <= max_repl; ++i_) {
                             {
-                            current_statement_begin__ = 189;
+                            current_statement_begin__ = 200;
                             int i(0);
                             (void) i;  // dummy to suppress unused var warning
 
@@ -862,25 +934,25 @@ public:
                             stan::math::assign(i,get_base1(get_base1(repl_plants,repl_ind,"repl_plants",1),i_,"repl_plants",2));
 
 
-                            current_statement_begin__ = 190;
+                            current_statement_begin__ = 201;
                             if (as_bool(logical_eq(i,0))) {
-                                current_statement_begin__ = 190;
+                                current_statement_begin__ = 201;
                                 continue;
                             }
-                            current_statement_begin__ = 191;
+                            current_statement_begin__ = 202;
                             stan::math::assign(aphid_pool_j, (aphid_pool_j + exp(get_base1(get_base1(X_out,i,"X_out",1),(t + 1),j,"X_out",2))));
-                            current_statement_begin__ = 192;
+                            current_statement_begin__ = 203;
                             stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), stan::math::negative_infinity());
-                            current_statement_begin__ = 193;
+                            current_statement_begin__ = 204;
                             stan::math::assign(get_base1_lhs(extinct,i,j,"extinct",1), 1);
                             }
                         }
-                        current_statement_begin__ = 196;
+                        current_statement_begin__ = 207;
                         stan::math::assign(aphid_pool_j, (aphid_pool_j / n_non_repl_plants_));
-                        current_statement_begin__ = 197;
+                        current_statement_begin__ = 208;
                         for (int i_ = 1; i_ <= n_non_repl_plants; ++i_) {
                             {
-                            current_statement_begin__ = 198;
+                            current_statement_begin__ = 209;
                             int i(0);
                             (void) i;  // dummy to suppress unused var warning
 
@@ -888,18 +960,18 @@ public:
                             stan::math::assign(i,get_base1(non_repl_plants,i_,"non_repl_plants",1));
 
 
-                            current_statement_begin__ = 200;
+                            current_statement_begin__ = 211;
                             if (as_bool((primitive_value(logical_eq(get_base1(extinct,i,j,"extinct",1),1)) && primitive_value(logical_lt(aphid_pool_j,1))))) {
-                                current_statement_begin__ = 200;
+                                current_statement_begin__ = 211;
                                 continue;
                             }
-                            current_statement_begin__ = 202;
+                            current_statement_begin__ = 213;
                             stan::math::assign(get_base1_lhs(get_base1_lhs(X_out,i,"X_out",1),(t + 1),j,"X_out",2), log((exp(get_base1(get_base1(X_out,i,"X_out",1),(t + 1),j,"X_out",2)) + aphid_pool_j)));
                             }
                         }
                         }
                     }
-                    current_statement_begin__ = 206;
+                    current_statement_begin__ = 217;
                     stan::math::assign(repl_ind, (repl_ind + 1));
                     }
                 }
@@ -908,7 +980,7 @@ public:
             }
 
             // validate generated quantities
-            current_statement_begin__ = 56;
+            current_statement_begin__ = 67;
 
             // write generated quantities
             for (int k_2__ = 0; k_2__ < n_lines; ++k_2__) {
