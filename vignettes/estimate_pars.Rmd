@@ -67,7 +67,18 @@ impute <- function(X) {
 ## Load data
 
 ```{r load_data}
-growth <- load_data(impute_fxn = impute)
+growth <- 
+    load_data(impute_fxn = impute) %>%
+    mutate(line = paste(line)) %>% 
+    bind_rows(clonewars:::load_pz_data(impute_fxn = impute)) %>% 
+    mutate_at(vars(line, rep), funs(factor)) %>% 
+    # Now filter out early part of each time series, before N > 6
+    # N <= 6 is when the stochasticity associated with only starting with 2 adults
+    # appears to be strongest
+    group_by(line, rep) %>% 
+    filter(1:n() >= which(N > 6)[1]) %>%
+    mutate(date = date - min(date)) %>%
+    ungroup()
 ```
 
 This is how many reps I have of each line:
@@ -88,7 +99,7 @@ growth %>%
 growth %>% 
     ggplot(aes(date, X, color = factor(rep))) +
     geom_line(size = 0.75) +
-    geom_point() +
+    # geom_point() +
     facet_wrap(~ line, nrow = 2) +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
     NULL
@@ -111,7 +122,7 @@ str(model_data, give.attr = FALSE)
 ## Run model
 
 ```{r run_model, eval = FALSE}
-# # Takes ~ 3 min at adapt_delta = 0.9
+# # Takes ~ 7 min at adapt_delta = 0.9
 # set.seed(65136)
 # stan_fit <- model_data %>%
 #     fit_lines(
@@ -130,8 +141,8 @@ stan_fit <- read_rds("data-raw/stan_fit.rds")
 
 posterior <- as.array(stan_fit)
 
-mcmc_intervals(posterior, pars = sprintf("R[%i]", 1:7))
-mcmc_intervals(posterior, pars = sprintf("A[%i]", 1:7))
+mcmc_intervals(posterior, pars = sprintf("R[%i]", 1:8))
+mcmc_intervals(posterior, pars = sprintf("A[%i]", 1:8))
 
 
 apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, mean)
@@ -146,7 +157,7 @@ apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE), 3, quantile,
 print(stan_fit, digits = 6, pars = c("R", "A", "s_epsilon"), probs = c())
 
 # parameters of interest
-pars_interest <- c(sprintf("A[%i]", 1:7), sprintf("R[%i]", 1:7),
+pars_interest <- c(sprintf("A[%i]", 1:8), sprintf("R[%i]", 1:8),
                    paste0(rep(c("", "s_"),each=2), c("theta", "phi")),
                    "hats_phi", "s_epsilon")
 
@@ -160,17 +171,17 @@ mcmc_neff(neff_ratios, size = 2) + yaxis_text(hjust = 1)
 
 
 # Autocorrelation
-mcmc_acf(posterior, pars = pars_interest[1:7], lags = 10)
-mcmc_acf(posterior, pars = pars_interest[8:14], lags = 10)
-mcmc_acf(posterior, pars = pars_interest[15:length(pars_interest)], lags = 10)
+mcmc_acf(posterior, pars = pars_interest[1:8], lags = 10)
+mcmc_acf(posterior, pars = pars_interest[9:16], lags = 10)
+mcmc_acf(posterior, pars = pars_interest[17:length(pars_interest)], lags = 10)
 
 
 lp <- log_posterior(stan_fit)
 np <- nuts_params(stan_fit)
 
-mcmc_trace(posterior, pars = pars_interest[1:7], np = np)
-mcmc_trace(posterior, pars = pars_interest[8:14], np = np)
-mcmc_trace(posterior, pars = pars_interest[15:length(pars_interest)], np = np)
+mcmc_trace(posterior, pars = pars_interest[1:8], np = np)
+mcmc_trace(posterior, pars = pars_interest[9:16], np = np)
+mcmc_trace(posterior, pars = pars_interest[17:length(pars_interest)], np = np)
 
 mcmc_nuts_divergence(np, lp)
 
@@ -210,65 +221,4 @@ pred_df %>%
 
 ```
 
-
-
-
-
-
-
-```{r paige_data}
-
-g_df <- paste0('~/Dropbox/Aphid Project 2017/Lucas_traits/',
-       'traits_data_entry.xlsx') %>% 
-    readxl::read_excel() %>%
-    mutate(line = ifelse(line == 'WI-L4 (H+3)', 'WI-L4', line),
-           line = ifelse(line == 'WI-L4ØA', 'WI-L4Ø', line),
-           line = ifelse(line == 'WI-L4 (Ham-)', 'WI-L4Ø', line),
-           date = as.Date(paste(year, month, day, sep = "-"))) %>%
-    # Change any NAs to zeros:
-    mutate_at(vars(matches("_juv$|_adults$")),
-              function(x) ifelse(is.na(x), 0, x)) %>%
-    # filter(line %in% lines_to_keep) %>%
-    mutate(comments = clonewars:::parse_comments(comments),
-           N = stem1_juv + stem1_adults + leaf1_juv + leaf1_adults +
-               stem2_juv + stem2_adults + leaf2_juv + leaf2_adults +
-               stem3_juv + stem3_adults + leaf3_juv + leaf3_adults +
-               comments,
-           disp = comments,  # <-- dispersed aphids, ones not on the plant
-           # makes no sense for it to be 0, then >0 the next day:
-           N = ifelse(N == 0, 1, N)) %>%
-    select(line, rep, observer, date, N, disp) %>%
-    mutate_at(vars(rep, N, disp), funs(as.integer)) %>%
-    mutate(X = log(N)  # ,
-           # ham = ifelse(line %in% w_ham, 1, 0)) %>%
-           ) %>%
-    group_by(line, rep) %>%
-    arrange(date) %>%
-    ungroup() %>%
-    arrange(line, rep, date)
-
-
-
-paige_counts <- g_df %>%
-    group_by(line, rep) %>% 
-    arrange(date) %>%
-    summarize(p = tail(N, 1) / max(N),
-              two_down = all((tail(N, 3) %>% diff() %>% sign(.)) == -1),
-              date = max(date),
-              paige = "Paige Zenkovich" %in% observer) %>% 
-    ungroup() %>% 
-    filter(paige) %>% 
-    mutate(done = p <= 0.8 | two_down) %>% 
-    select(date, done, p, two_down, line, rep) %>% 
-    arrange(date) %>% 
-    as.data.frame()
-
-paige_counts
-paige_counts %>% 
-    .[["done"]] %>% 
-    `!`(.) %>% 
-    sum()
-
-
-```
 

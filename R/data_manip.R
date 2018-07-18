@@ -393,18 +393,20 @@ load_prior_data <- function(filter_pars = list(start = 0.5, end = 0.9), file = N
 line_data <- function(data, line, rep, date, X) {
 
     if (missing(line)) line <- quote(line)
+    if (missing(rep)) rep <- quote(rep)
+    if (missing(date)) date <- quote(date)
+    if (missing(X)) X <- quote(X)
+
     line <- substitute(line)
+    rep <- substitute(rep)
+    date <- substitute(date)
+    X <- substitute(X)
+
     line <- eval(line, data)
     stopifnot(inherits(line, "factor"))
     line <- as.integer(line)
-    if (missing(rep)) rep <- quote(rep)
-    rep <- substitute(rep)
     rep <- eval(rep, data)
-    if (missing(date)) date <- quote(date)
-    date <- substitute(date)
     date <- eval(date, data)
-    if (missing(X)) X <- quote(X)
-    X <- substitute(X)
     X <- eval(X, data)
 
     if (length(line) != length(rep) |
@@ -416,12 +418,15 @@ line_data <- function(data, line, rep, date, X) {
 
     # Coerce to list of data frames
     dat_frames <- data_frame(line, rep, date, X) %>%
+        arrange(line, rep, date) %>%
         split(.$line) %>%
         map(~ split(.x, .x$rep)) %>%
         # Unlist just one level
         flatten() %>%
         # No need for names
         set_names(NULL) %>%
+        # Remove empty data frames
+        discard(~ nrow(.x) == 0) %>%
         # Make absolutely sure it's arranged by date:
         map(~ arrange(.x, date))
 
@@ -459,8 +464,8 @@ line_data <- function(data, line, rep, date, X) {
 make_pred_df <- function(stan_fit, orig_data, line, rep, alpha = 0.05) {
 
     if (missing(line)) line <- quote(line)
-    line <- substitute(line)
     if (missing(rep)) rep <- quote(rep)
+    line <- substitute(line)
     rep <- substitute(rep)
 
     n_ts <- orig_data %>%
@@ -491,8 +496,72 @@ make_pred_df <- function(stan_fit, orig_data, line, rep, alpha = 0.05) {
                    unlist()) %>%
         filter(X_pred != 0) %>%
         select(-ts) %>%
-        bind_cols(orig_data) %>%
+        bind_cols(arrange(orig_data, line, rep, date)) %>%
         select(line, rep, date, X, X_pred, X_lower, X_upper, everything()) %>%
         identity()
 }
 
+
+
+
+
+
+#' Load data from PZ counts that were almost finished.
+#'
+#' Here, I'm adding a last date that has 0.75 of the max.
+#' This function is temporary and should be removed when counts are finished.
+#'
+#' @inheritParams load_data
+#'
+#' @export
+#'
+#'
+load_pz_data <- function(filter_pars = list(start = 0.0, end = 0.8),
+                         remove_unfinished = TRUE, allow_NA = TRUE,
+                         impute_fxn = NULL, file = NA) {
+
+    pz_reps <- initial_read(file) %>%
+        select(-comments) %>%
+        group_by(line, rep) %>%
+        arrange(date) %>%
+        summarize(p = tail(N, 1) / max(N),
+                  three_down = all((tail(N, 4) %>% diff() %>% sign(.)) == -1),
+                  done = p <= 0.8 | three_down,
+                  pz = "Paige Zenkovich" %in% observer | "PZ" %in% observer) %>%
+        ungroup() %>%
+        filter(pz, !done) %>%
+        select(line, rep)
+
+
+    pz_growth <-
+        initial_read() %>%
+        # We no longer need these columns:
+        select(-observer, -comments) %>%
+        # Filter for only PZ reps:
+        filter_line_rep(pz_reps, FALSE) %>%
+        # Now add extra date for each rep, setting N to 0.75 * <max(N) within rep>
+        split(.$line) %>%
+        map_dfr(~ split(.x, .x$rep) %>%
+                    map_dfr(function(y_) {
+                        add_row(y_, line = y_$line[1], rep = y_$rep[1],
+                                date = max(y_$date) + 1,
+                                N = round(max(y_$N, na.rm = TRUE) * 0.75),
+                                X = log(round(max(y_$N, na.rm = TRUE) * 0.75)),
+                                ham = y_$ham[1]) %>%
+                            arrange(date)
+                    })) %>%
+        # Dealing with missing values:
+        handle_NAs(allow_NA, impute_fxn) %>%
+        # Remove rows where the first two aphids were recorded and re-add it so that
+        # these dates are present for all reps (they're currently not all present)
+        standardize_day0() %>%
+        # Filter part(s) of time series if desired:
+        filter_data(filter_pars) %>%
+        # NOT changing to factor bc this data frame is made to be merged, and doing so
+        # with another data frame with different lines will cause annoying warnings
+        # mutate(line = factor(line)) %>%
+        # Make sure it's ordered properly
+        arrange(line, rep, date)
+
+    return(pz_growth)
+}
