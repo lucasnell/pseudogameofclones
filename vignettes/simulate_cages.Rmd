@@ -36,7 +36,29 @@ suppressPackageStartupMessages({
 ## Load dataset
 
 ```{r load_growth_dataset}
-growth <- load_data()
+impute <- function(X) {
+    if (any(is.na(X))) {
+        X_ <- X %>% 
+            # Change to weekly frequency for the fit
+            zoo::zooreg(frequency = 7) %>%
+            zoo::na.StructTS() %>%
+            as.numeric()
+        return(X_)
+    }
+    return(X)
+}
+growth <- 
+    load_data(impute_fxn = impute) %>%
+    mutate(line = paste(line)) %>% 
+    bind_rows(clonewars:::load_pz_data(impute_fxn = impute)) %>% 
+    mutate_at(vars(line, rep), funs(factor)) %>% 
+    # Now filter out early part of each time series, before N > 6
+    # N <= 6 is when the stochasticity associated with only starting with 2 adults
+    # appears to be strongest
+    group_by(line, rep) %>% 
+    filter(1:n() >= which(N > 6)[1]) %>%
+    mutate(date = date - min(date)) %>%
+    ungroup()
 ```
 
 
@@ -50,15 +72,15 @@ stan_fit <- read_rds("data-raw/stan_fit.rds")
 
 ```{r}
 n_plants <- 16
-n_lines <- 8-1  # WI-L4Ø had all its reps filtered out, more are on the way
+n_lines <- 8
 X_0 <- matrix(rep(log(50), n_lines * n_plants), n_plants, n_lines)
 max_t <- 180
 R <- apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, mean) %>%
     as.numeric()
 A <- apply(rstan::extract(stan_fit, "A", permuted = FALSE), 3, mean) %>%
     as.numeric()
-D_slope <- disp_estimates$slope[disp_estimates$line != "WI-L4Ø"]
-D_inter <- disp_estimates$inter[disp_estimates$line != "WI-L4Ø"]
+D_slope <- disp_estimates$slope
+D_inter <- disp_estimates$inter
 process_error <- apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE), 3, mean) %>%
     as.numeric()
 plant_mort_coefs <- clonewars::plant_death$after_max_mort_coefs
@@ -75,7 +97,7 @@ plant_repl <- data_frame(date = seq(repl_every, max_t, repl_every)) %>%
         )) %>%
     unnest()
 # plant_repl <- data_frame(date = 2000, plant = 1)
-n_reps <- 10
+n_reps <- 100
 n_chains <- 1
 ```
 
@@ -97,6 +119,13 @@ sim_by_cage <- sim_df %>%
            rep = factor(rep)) %>% 
     group_by(rep, line, date) %>% 
     summarize(X = N %>% sum() %>% log()) %>%
+    ungroup() %>% 
+    mutate(N = exp(X)) %>% 
+    group_by(rep, date) %>% 
+    arrange(line) %>% 
+    mutate(prop = N / sum(N),
+           prop_end = cumsum(prop),
+           prop_start = lag(prop_end, default = 0)) %>%
     ungroup()
 ```
 
@@ -111,14 +140,43 @@ sim_df %>%
     NULL
 
 sim_by_cage %>% 
+    filter(rep %in% 1:12) %>% 
     mutate(N = exp(X)) %>% 
     ggplot(aes(date, N)) +
     # ggplot(aes(date, X)) +
     geom_line(aes(color = line)) +
     facet_wrap(~ rep) +
-    scale_color_brewer("Aphid line:", palette = "Dark2", guide = guide_legend(ncol = 2)) +
-    theme(legend.position = c(1, 0), legend.justification = c(1, 0)) +
+    scale_color_brewer("Aphid line:", palette = "Dark2") +
     # coord_cartesian(ylim = c(0, 10)) +
+    NULL
+
+
+sim_by_cage %>% 
+    filter(rep %in% 1:12) %>% 
+    ggplot(aes(date, fill = line)) +
+    geom_ribbon(aes(ymin = prop_start, ymax = prop_end), color = NA) +
+    facet_wrap(~ rep, nrow = 4) +
+    scale_fill_brewer("Aphid line:", palette = "Dark2") +
+    NULL
+
+
+sim_by_cage %>% 
+    ggplot(aes(date, color = line)) +
+    geom_line(aes(y = prop, group = rep), alpha = 0.25) +
+    facet_wrap(~ line, ncol = 4) +
+    scale_color_brewer("Aphid line:", palette = "Dark2", guide = FALSE) +
+    ylab("Relative abundance") +
+    xlab("Day") +
+    NULL
+
+
+sim_by_cage %>%
+    group_by(rep, date) %>% 
+    summarize(E = -sum(prop * log(prop)) /
+                  log(line %>% levels() %>% length())) %>% 
+    ungroup() %>% 
+    ggplot(aes(date, E)) +
+    geom_line(aes(group = rep), alpha = 0.25, color = "dodgerblue") +
     NULL
 
 
