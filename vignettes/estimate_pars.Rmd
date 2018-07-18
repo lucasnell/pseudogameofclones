@@ -20,9 +20,9 @@ knitr::opts_chunk$set(
   fig.height = 4
 )
 knitr::opts_knit$set(root.dir = normalizePath(".."))
-options(tibble.print_min = 4L, tibble.print_max = 4L)
+options(tibble.print_min = 4L, tibble.print_max = 8L)
 ```
-```{r source_Rprofile, eval = FALSE, echo = FALSE}
+```{r source_Rprofile, echo = FALSE}
 source(".Rprofile")
 ```
 
@@ -40,28 +40,14 @@ It is not yet finished, and much of the code below is not run during the making 
 this document.
 
 
-
-## Load data
-
-```{r load_data}
-growth <- load_data()
-```
-
-This is how many reps I have of each line:
-
-```{r view_reps}
-growth %>% 
-    group_by(line) %>% 
-    summarize(n = rep %>% unique() %>% length()) %>% 
-    knitr::kable()
-```
-
-
-## Impute missing data
+## Imputing missing data
 
 From [Moritz et al. (2015)](https://arxiv.org/abs/1510.03924), the
-seasonal kalman filter from the `zoo` package works well, so I'm using this here to
-impute missing values.
+seasonal kalman filter from the `zoo` package works well, so I'm creating this function
+here to impute missing values below.
+We're only missing 1 or 2 time points across a time series of >15, so this
+shouldn't have too big an impact on our results.
+
 
 ```{r impute_NAs}
 impute <- function(X) {
@@ -75,15 +61,45 @@ impute <- function(X) {
     }
     return(X)
 }
-
-growth <- growth %>% 
-    group_by(line, rep) %>% 
-    mutate(X = impute(X)) %>%
-    ungroup()
 ```
 
 
-## Convert data
+## Load data
+
+```{r load_data}
+growth <- load_data(impute_fxn = impute)
+```
+
+This is how many reps I have of each line:
+
+```{r view_reps, echo=FALSE}
+growth %>% 
+    group_by(line) %>% 
+    summarize(n = rep %>% unique() %>% length()) %>% 
+    knitr::kable()
+```
+
+
+
+
+## See time series data
+
+```{r filter_data}
+growth %>% 
+    ggplot(aes(date, X, color = factor(rep))) +
+    geom_line(size = 0.75) +
+    geom_point() +
+    facet_wrap(~ line, nrow = 2) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    NULL
+```
+
+
+
+
+
+
+## Convert data for stan
 
 ```{r convert_data}
 model_data <- growth %>% 
@@ -207,6 +223,7 @@ g_df <- paste0('~/Dropbox/Aphid Project 2017/Lucas_traits/',
     readxl::read_excel() %>%
     mutate(line = ifelse(line == 'WI-L4 (H+3)', 'WI-L4', line),
            line = ifelse(line == 'WI-L4ØA', 'WI-L4Ø', line),
+           line = ifelse(line == 'WI-L4 (Ham-)', 'WI-L4Ø', line),
            date = as.Date(paste(year, month, day, sep = "-"))) %>%
     # Change any NAs to zeros:
     mutate_at(vars(matches("_juv$|_adults$")),

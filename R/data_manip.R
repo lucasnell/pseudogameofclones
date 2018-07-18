@@ -24,32 +24,70 @@ parse_comments <- function(comments) {
 }
 
 
-#' Function for filtering out time series after X starts decreasing.
+
+
+#' Initial read of excel file.
 #'
-#' Note that this function is designed to be run within a single time series, meaning
-#' within a line and rep combination.
-#' So for a data frame, you should `dplyr::group` by line and rep, then use
-#' `dplyr::summarize` when using this function.
+#' @param line_lgl_fun Function for what to do with logical specifying whether a line
+#'     will be included in the analyses or not. Takes only the functions
+#'     ```base::`!` ```or `base::identity`.
+#'     Defaults to `base::identity`.
+#' @param file
 #'
-#' @param X_vec A vector of log(N) through time. This is assumed to be sorted by date!
-#' @param p The proportion of the max value of `X_vec` that is kept after the max is
-#'     reached.
-#'     For example, if `p = 0.9` and `mX` is the max value of `X_vec`, then we would
-#'     retain all points until `X_vec == mX`, PLUS we would retain any values
-#'     after `X_vec == mX` where `X_vec >= p * mX` (in this case, when `X_vec`
-#'     values are at least 90% of the maximum).
 #'
 #' @noRd
 #'
-dec_filter <- function(X_vec, p) {
-    max_X <- max(X_vec)
-    max_ind <- which(X_vec == max_X)[1]
-    inds <- unique(c(1:max_ind, which(X_vec >= p * max_X)))
-    return(1:length(X_vec) %in% inds)
+initial_read <- function(file, line_lgl_fun = base::identity) {
+
+    if (missing(file)) {
+        file <- paste0('~/Dropbox/Aphid Project 2017/Lucas_traits/',
+                       'traits_data_entry.xlsx')
+    }
+    if (is.null(file) | is.na(file)) {
+        file <- paste0('~/Dropbox/Aphid Project 2017/Lucas_traits/',
+                       'traits_data_entry.xlsx')
+    }
+
+    if (!identical(line_lgl_fun, base::identity) & !identical(line_lgl_fun, base::`!`)) {
+        stop("initial_read can only take base::identity or base::`!` for the ",
+             "line_lgl_fun argument.")
+    }
+
+    readxl::read_excel(file) %>%
+        mutate(line = ifelse(line == 'WI-L4 (H+3)', 'WI-L4', line),
+               line = ifelse(line == 'WI-L4ØA', 'WI-L4Ø', line),
+               line = ifelse(line == 'WI-L4 (Ham-)', 'WI-L4Ø', line),
+               date = as.Date(paste(year, month, day, sep = "-"))) %>%
+        # Change any NAs to zeros:
+        mutate_at(vars(matches("_juv$|_adults$")),
+                  function(x) ifelse(is.na(x), 0, x)) %>%
+        # Filter for or out lines that we still have and should keep for analyses
+        # (filtering depends on whether line_lgl_fun is identity or `!`)
+        filter(line_lgl_fun(line %in% c("R10", "WIA-5D", "WI-L4", "WI-L4Ø", "UT3",
+                                        "WI-2016-593", "Clover-2017-2",
+                                        "Clover-2017-6"))) %>%
+        mutate(disp = clonewars:::parse_comments(comments),  # <-- "dispersed" aphids
+               N = stem1_juv + stem1_adults + leaf1_juv + leaf1_adults +
+                   stem2_juv + stem2_adults + leaf2_juv + leaf2_adults +
+                   stem3_juv + stem3_adults + leaf3_juv + leaf3_adults +
+                   disp,
+               # makes no sense for it to be 0, then >0 the next day:
+               N = ifelse(N == 0, 1, N)) %>%
+        select(-matches("_juv$|_adults$"), -year, -month, -day) %>%
+        mutate_at(vars(rep, N, disp), funs(as.integer)) %>%
+        mutate(X = log(N),
+               # Retained lines that have *Hamiltonella defensa*:
+               ham = ifelse(line %in% c("R10", "WI-L4", "UT3", "Clover-2017-2"),
+                            1, 0)) %>%
+        group_by(line, rep) %>%
+        mutate(date = as.integer(date - min(date))) %>%
+        ungroup() %>%
+        arrange(line, rep, date)
 }
 
 
-#' Title
+
+#' Filter one data frame based on another.
 #'
 #' @param in_df A data frame to be filtered, with the columns `line` and `rep`.
 #' @param comp_df A data frame to use for filtering, with the columns `line` and `rep`.
@@ -69,96 +107,16 @@ filter_line_rep <- function(in_df, comp_df, exclude) {
     return(in_df %>% filter(in_comp))
 }
 
-#' Function for filtering out X above a threshold.
+
+
+#' Removing lines that aren't yet done.
 #'
-#' Note that this function is designed to be run within a single time series, meaning
-#' within a line and rep combination.
-#' So for a data frame, you should `dplyr::group` by line and rep, then use
-#' `dplyr::summarize` when using this function.
-#'
-#' @param X_vec A vector of log(N) through time. This is assumed to be sorted by date!
-#' @param p The proportion of the max value of `X_vec` where points begin being retained.
-#'     For example, if `p = 0.5` and `mX` is the max value of `X_vec`, then we would
-#'     retain all points starting with `X_vec >= p * mX`
-#'     (in this case, when `X_vec` values are at least 50% of the maximum).
+#' @inheritParams handle_NAs
+#' @inheritParams load_data
 #'
 #' @noRd
 #'
-threshold_filter <- function(X_vec, p) {
-    max_X <- max(X_vec)
-    threshold <- max_X * p
-    # Index to first above the threshold
-    first_ind <- which(X_vec >= threshold)[1]
-    return(1:length(X_vec) >= first_ind)
-}
-
-
-
-
-#' Load aphid growth data.
-#'
-#' @param file A filename to read from. If left empty, this will read from the
-#'     default path on your DropBox folder.
-#' @param allow_NA Boolean for whether time series with NAs should be included.
-#'     Defaults to `TRUE`.
-#' @param filter_pars A list with the names `"begin"` and `"end"`, containing single
-#'     numbers with threshold for filtering the beginning and ending of time series,
-#'     respectively. Set to `NULL` to avoid filtering entirely.
-#'     Defaults to `list(begin = 0.5, end = 1.0)`.
-#'
-#' @return A data frame containing the aphid population-growth data.
-#'
-#' @export
-#'
-#'
-#' @examples
-#'
-#' growth <- load_data()
-#'
-load_data <- function(file, filter_pars = list(begin = 0.5, end = 0.9),
-                      remove_unfinished = TRUE, allow_NA = TRUE) {
-
-    # Lines that we still have and should keep for analyses
-    lines_to_keep <- c("R10", "WIA-5D", "WI-L4", "WI-L4Ø", "UT3", "WI-2016-593",
-                       "Clover-2017-2", "Clover-2017-6")
-
-    # Lines with *Hamiltonella defensa*
-    w_ham <- c("R10", "WI-L4", "UT3", "Clover-2017-2")
-
-    if (missing(file)) {
-        file <- paste0('~/Dropbox/Aphid Project 2017/Lucas_traits/',
-                       'traits_data_entry.xlsx')
-    }
-
-    growth <- readxl::read_excel(file) %>%
-        mutate(line = ifelse(line == 'WI-L4 (H+3)', 'WI-L4', line),
-               line = ifelse(line == 'WI-L4ØA', 'WI-L4Ø', line),
-               line = ifelse(line == 'WI-L4 (Ham-)', 'WI-L4Ø', line),
-               date = as.Date(paste(year, month, day, sep = "-"))) %>%
-        # Change any NAs to zeros:
-        mutate_at(vars(matches("_juv$|_adults$")),
-                         function(x) ifelse(is.na(x), 0, x)) %>%
-        filter(line %in% lines_to_keep) %>%
-        mutate(comments = clonewars:::parse_comments(comments),
-               N = stem1_juv + stem1_adults + leaf1_juv + leaf1_adults +
-                   stem2_juv + stem2_adults + leaf2_juv + leaf2_adults +
-                   stem3_juv + stem3_adults + leaf3_juv + leaf3_adults +
-                   comments,
-               disp = comments,  # <-- dispersed aphids, ones not on the plant
-               # makes no sense for it to be 0, then >0 the next day:
-               N = ifelse(N == 0, 1, N)) %>%
-        select(line, rep, date, N, disp) %>%
-        mutate_at(vars(rep, N, disp), funs(as.integer)) %>%
-        mutate(X = log(N),
-               ham = ifelse(line %in% w_ham, 1, 0)) %>%
-        group_by(line, rep) %>%
-        mutate(date = as.integer(date - min(date)),
-               r = log(N / lag(N)) / (date - lag(date))) %>%
-        arrange(date) %>%
-        ungroup() %>%
-        arrange(line, rep, date)
-
-    # Removing lines that aren't yet done:
+handle_unfinished <- function(growth, remove_unfinished) {
     if (remove_unfinished) {
         not_done <- growth %>%
             group_by(line, rep) %>%
@@ -170,24 +128,21 @@ load_data <- function(file, filter_pars = list(begin = 0.5, end = 0.9),
             arrange(line, rep) %>%
             select(line, rep)
         if (nrow(not_done) > 0) {
-            growth <- clonewars:::filter_line_rep(growth, not_done, exclude = TRUE)
+            growth <- filter_line_rep(growth, not_done, exclude = TRUE)
         }
     }
-
-    # Filter part(s) of time series if desired:
-    if (!is.null(filter_pars)) {
-        growth <- growth %>%
-            # Filter the beginning and end of the time series:
-            group_by(line, rep) %>%
-            # Beginning filter:
-            filter(clonewars:::threshold_filter(X, filter_pars$begin)) %>%
-            # End filter:
-            filter(clonewars:::dec_filter(X, filter_pars$end)) %>%
-            ungroup()
-    }
+    return(growth)
+}
 
 
-    # Dealing with missing values
+#' Dealing with missing values in input data frame.
+#'
+#' @param growth Input data frame that's been read from excel sheet.
+#' @inheritParams load_data
+#'
+#' @noRd
+#'
+handle_NAs <- function(growth, allow_NA, impute_fxn) {
     missing <- growth %>%
         group_by(line, rep) %>%
         arrange(date) %>%
@@ -210,17 +165,180 @@ load_data <- function(file, filter_pars = list(begin = 0.5, end = 0.9),
             mutate_if(~ inherits(.x, "character"), function(x) NA_character_) %>%
             mutate(line = missing$line, rep = missing$rep, date = missing$date)
 
-        growth <- bind_rows(growth, df_)
+        growth <- bind_rows(growth, df_) %>%
+            arrange(line, rep, date)
 
+        # Impute data if impute function provided
+        if (!is.null(impute_fxn)) {
+            stopifnot(inherits(impute_fxn, "function"))
+            growth <- growth %>%
+                group_by(line, rep) %>%
+                arrange(date) %>%
+                mutate(X = impute_fxn(X),
+                       N = ifelse(is.na(N), exp(X), N)) %>%
+                ungroup()
+        }
     } else if (nrow(missing) > 0) {
-
-        growth <- clonewars:::filter_line_rep(growth, missing, exclude = TRUE)
-
+        growth <- filter_line_rep(growth, missing, exclude = TRUE)
     }
+    return(growth)
+}
 
-    # Change to factor now to avoid having to drop levels, and make sure it's
-    # ordered properly
+
+
+#' Standardize day 0 aphid counts.
+#'
+#' Some counts have the day we first added aphids included, while some don't.
+#' This function fixes this.
+#'
+#' @inheritParams handle_NAs
+#'
+#' @noRd
+#'
+standardize_day0 <- function(growth) {
     growth <- growth %>%
+        filter(!(date == 0 & disp == N)) %>%
+        group_by(line, rep) %>%
+        mutate(date = date - min(date) + 1) %>%
+        ungroup() %>%
+        split(.$line) %>%
+        map_dfr(~ split(.x, .x$rep) %>%
+                    map_dfr(function(y_) {
+                        add_row(y_, line = y_$line[1], rep = y_$rep[1], date = 0,
+                                N = 2, X = log(2), ham = y_$ham[1]) %>%
+                            arrange(date)
+                    }))
+    return(growth)
+}
+
+
+
+
+
+#' Function for filtering the end of a time series (for last X above a threshold).
+#'
+#' Note that this function is designed to be run within a single time series, meaning
+#' within a line and rep combination.
+#' So for a data frame, you should `dplyr::group` by line and rep, then use
+#' `dplyr::summarize` when using this function.
+#'
+#' @param X_vec A vector of log(N) through time. This is assumed to be sorted by date!
+#' @param p The proportion of the max value of `X_vec` that is kept after the max is
+#'     reached.
+#'     For example, if `p = 0.9` and `mX` is the max value of `X_vec`, then we would
+#'     retain all points until `X_vec == mX`, PLUS we would retain any values
+#'     after `X_vec == mX` where `X_vec >= p * mX` (in this case, when `X_vec`
+#'     values are at least 90% of the maximum).
+#'
+#' @noRd
+#'
+end_filter <- function(X_vec, p) {
+    max_X <- max(X_vec, na.rm = TRUE)
+    max_ind <- which(X_vec == max_X)[1]
+    end_ <- tail(which(X_vec >= p * max_X), 1)
+    return(1:length(X_vec) <= end_)
+}
+
+
+
+#' Function for filtering the start of a time series (for first X above a threshold).
+#'
+#' Note that this function is designed to be run within a single time series, meaning
+#' within a line and rep combination.
+#' So for a data frame, you should `dplyr::group` by line and rep, then use
+#' `dplyr::summarize` when using this function.
+#'
+#' @param X_vec A vector of log(N) through time. This is assumed to be sorted by date!
+#' @param p The proportion of the max value of `X_vec` where points start being retained.
+#'     For example, if `p = 0.5` and `mX` is the max value of `X_vec`, then we would
+#'     retain all points starting with `X_vec >= p * mX`
+#'     (in this case, when `X_vec` values are at least 50% of the maximum).
+#'
+#' @noRd
+#'
+start_filter <- function(X_vec, p) {
+    max_X <- max(X_vec, na.rm = TRUE)
+    threshold <- max_X * p
+    # Index to first above the threshold
+    first_ind <- which(X_vec >= threshold)[1]
+    return(1:length(X_vec) >= first_ind)
+}
+
+
+
+
+#' Filter a time series if desired.
+#'
+#' @inheritParams handle_NAs
+#' @inheritParams load_data
+#'
+#' @noRd
+#'
+filter_data <- function(growth, filter_pars) {
+    if (!is.null(filter_pars)) {
+        growth <- growth %>%
+            # Filter the beginning and end of the time series:
+            group_by(line, rep) %>%
+            arrange(date)
+        # Start filter:
+        if (!is.null(filter_pars$start)) {
+            growth <- growth %>%
+                filter(clonewars:::start_filter(X, filter_pars$start))
+        }
+        # End filter:
+        if (!is.null(filter_pars$end)) {
+            growth <- growth %>%
+                filter(clonewars:::end_filter(X, filter_pars$end))
+        }
+        growth <- growth %>%
+            ungroup()
+    }
+    return(growth)
+}
+
+
+
+
+#' Load aphid growth data.
+#'
+#' @param file A filename to read from. If left empty, this will read from the
+#'     default path on your DropBox folder.
+#' @param filter_pars A list with the names `"start"` and `"end"`, containing single
+#'     numbers with threshold for filtering the beginning and ending of time series,
+#'     respectively. Set to `NULL` to avoid filtering entirely.
+#'     Defaults to `list(start = 0.5, end = 1.0)`.
+#' @param allow_NA Boolean for whether time series with NAs should be included.
+#'     Defaults to `TRUE`.
+#'
+#' @return A data frame containing the aphid population-growth data.
+#'
+#' @export
+#'
+#'
+#' @examples
+#'
+#' growth <- load_data()
+#'
+load_data <- function(filter_pars = list(start = 0.0, end = 0.8),
+                      remove_unfinished = TRUE, allow_NA = TRUE,
+                      impute_fxn = NULL, file = NA) {
+
+    growth <-
+        # First read through, to clean up the excel sheet:
+        initial_read(file) %>%
+        # We no longer need these columns:
+        select(-observer, -comments) %>%
+        # Removing lines that aren't yet done:
+        handle_unfinished(remove_unfinished) %>%
+        # Dealing with missing values:
+        handle_NAs(allow_NA, impute_fxn) %>%
+        # Remove rows where the first two aphids were recorded and re-add it so that
+        # these dates are present for all reps (they're currently not all present)
+        standardize_day0() %>%
+        # Filter part(s) of time series if desired:
+        filter_data(filter_pars) %>%
+        # Change to factor now to avoid having to drop levels, and make sure it's
+        # ordered properly
         mutate(line = factor(line)) %>%
         arrange(line, rep, date)
 
@@ -235,72 +353,21 @@ load_data <- function(file, filter_pars = list(begin = 0.5, end = 0.9),
 #' @export
 #'
 #'
-load_prior_data <- function(file, filter_pars = list(begin = 0.5, end = 0.9)) {
+load_prior_data <- function(filter_pars = list(start = 0.5, end = 0.9), file = NA) {
 
-    # Lines that we still have and should keep for actual analyses
-    # I will be excluding them here
-    analysis_lines <- c("R10", "WIA-5D", "WI-L4", "WI-L4Ø", "UT3", "WI-2016-593",
-                        "Clover-2017-2", "Clover-2017-6")
-
-    if (missing(file)) {
-        file <- paste0('~/Dropbox/Aphid Project 2017/Lucas_traits/',
-                       'traits_data_entry.xlsx')
-    }
-
-    growth <- readxl::read_excel(file) %>%
-        mutate(line = ifelse(line == 'WI-L4 (H+3)', 'WI-L4', line),
-               line = ifelse(line == 'WI-L4ØA', 'WI-L4Ø', line),
-               date = as.Date(paste(year, month, day, sep = "-"))) %>%
-        # Change any NAs to zeros:
-        mutate_at(vars(matches("_juv$|_adults$")),
-                  function(x) ifelse(is.na(x), 0, x)) %>%
-        filter(!line %in% analysis_lines) %>%
-        mutate(comments = clonewars:::parse_comments(comments),
-               N = stem1_juv + stem1_adults + leaf1_juv + leaf1_adults +
-                   stem2_juv + stem2_adults + leaf2_juv + leaf2_adults +
-                   stem3_juv + stem3_adults + leaf3_juv + leaf3_adults +
-                   comments,
-               disp = comments,  # <-- for dispersed aphids, ones not on the plant
-               # makes no sense for it to be 0, then >0 the next day:
-               N = ifelse(N == 0, 1, N)) %>%
-        select(line, rep, date, N, disp) %>%
-        mutate_at(vars(rep, N, disp), funs(as.integer)) %>%
-        mutate(X = log(N)) %>%
-        group_by(line, rep) %>%
-        mutate(date = as.integer(date - min(date)),
-               r = log(N / lag(N)) / (date - lag(date))) %>%
-        arrange(date) %>%
-        ungroup() %>%
+    growth <-
+        # First read through, to clean up the excel sheet:
+        initial_read(file, `!`) %>%
+        # We no longer need these columns:
+        select(-observer, -comments) %>%
+        # Removing lines that aren't yet done:
+        handle_unfinished(remove_unfinished = TRUE) %>%
+        # Filter part(s) of time series if desired:
+        filter_data(filter_pars) %>%
+        # Change to factor now to avoid having to drop levels, and make sure it's
+        # ordered properly
+        mutate(line = factor(line)) %>%
         arrange(line, rep, date)
-
-    # Removing lines that aren't yet done:
-    not_done <- growth %>%
-        group_by(line, rep) %>%
-        arrange(date) %>%
-        summarize(p = tail(N, 1) / max(N),
-                  three_down = all((tail(N, 4) %>% diff() %>% sign(.)) == -1)) %>%
-        ungroup() %>%
-        filter(p > 0.8 & !three_down) %>%
-        arrange(line, rep) %>%
-        select(line, rep)
-    if (nrow(not_done) > 0) {
-        growth <- clonewars:::filter_line_rep(growth, not_done, exclude = TRUE)
-    }
-
-    if (!is.null(filter_pars)) {
-        growth <- growth %>%
-            # Filter the beginning and end of the time series:
-            group_by(line, rep) %>%
-            # Beginning filter:
-            filter(clonewars:::threshold_filter(X, filter_pars$begin)) %>%
-            # End filter:
-            filter(clonewars:::dec_filter(X, filter_pars$end)) %>%
-            ungroup()
-    }
-
-    # Change to factor now to avoid having to drop levels
-    growth <- growth %>%
-        mutate(line = factor(line))
 
     return(growth)
 }
