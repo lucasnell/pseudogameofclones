@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 knitr::opts_knit$set(root.dir = normalizePath(".."))
 options(tibble.print_min = 4L, tibble.print_max = 4L)
 ```
-```{r source_Rprofile, eval = FALSE, echo = FALSE}
+```{r source_Rprofile, echo = FALSE}
 source(".Rprofile")
 ```
 
@@ -31,6 +31,16 @@ suppressPackageStartupMessages({
     library(clonewars)
     library(lme4)
 })
+logit <- function(p) {
+    suppressWarnings({x <- log(p/(1 - p))})
+    # x <- ifelse(is.nan(x), NA, x)
+    return(x)
+}
+inv_logit <- function(x) {
+    p <- 1 / (1 + exp(-x))
+    p <- ifelse(is.na(p) & !is.na(x), 1, p)
+    return(p)
+}
 ```
 
 
@@ -48,10 +58,32 @@ and (2) the first day of counts if both individuals were on the ground.
 
 
 ```{r load_data}
-growth <- load_data(noNA = FALSE, filter_pars = NULL,
+growth <- load_data(filter_pars = NULL,
                     remove_unfinished = FALSE) %>% 
-    filter(!(date == 0 & disp == N), 
-           !(line == "Clover-2017-2" & rep == 1))
+    filter(date != 0, 
+           !(line == "Clover-2017-2" & rep == 1),
+           !is.na(X), !is.na(N), !is.na(disp)) %>% 
+    mutate(
+        rep = factor(rep),
+        # For overdispersion:
+        od = 1:n(),
+        # For binomial of whether dispersal is > 0:
+        disp_b = ifelse(disp > 0, 1, 0)
+        )
+```
+
+
+## View sample sizes
+
+Below, `n_d` is the number of days where the number of dispersed individuals was
+greater than zero.
+
+```{r}
+growth %>% 
+    group_by(line) %>% 
+    summarize(n = rep %>% unique() %>% length(),
+              n_d = sum(disp > 0)) %>% 
+    knitr::kable()
 ```
 
 
@@ -63,26 +95,35 @@ Below, colors represent different reps.
 
 ```{r disp_N_plot}
 growth %>% 
-    ggplot(aes(N, disp, color = factor(rep))) +
+    ggplot(aes(X, disp, color = rep)) +
     geom_point(shape = 16, alpha = 0.5) +
     facet_wrap(~ line) +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
     scale_fill_brewer(palette = "Dark2", guide = FALSE) +
-    scale_y_continuous(trans = "log1p", breaks = 4^(0:3)) +
-    scale_x_continuous(trans = "log", breaks = 10^(0:3)) +
+    scale_y_continuous(breaks = 4^(0:3)) +
+    # scale_x_continuous(trans = "log", breaks = 10^(0:3)) +
+    coord_trans(y = "log1p") +
     NULL
 ```
 
 
 ## Fitting GLMMM
 
-Fitting a GLMM of `dispersal ~ X` (`X = log(N)`) where each line 
+Fitting a GLMM of `dispersal ~ X` (`X = log(N)`) where each line
 (and each `rep` within `line`) gets a separate intercept and slope.
+I'm doing this for now even though the AIC for this is actually higher
+than when the random effect is `(X | line:rep)` because I want line-specific
+estimates.
+Because I don't yet have my full dataset, I'm going to just use this information
+for the simulations without worrying about how much statistical evidence
+there is that lines are actually different.
+This will obviously change once I have all 10 reps for each line.
 
 ```{r fit_glmm}
-(disp_mod <- glmer(disp ~ X + (X | line/rep), data = growth,
-    family = "poisson")) %>%
-    summary()
+disp_mod <- glmer(disp ~ X + (X | line/rep), data = growth,
+                  family = "poisson",
+                  control = glmerControl(optimizer = "bobyqa"))
+disp_mod %>% summary()
 ```
 
 
@@ -101,7 +142,7 @@ disp_estimates <- disp_mod %>%
     rownames_to_column() %>% 
     rename(line = rowname, slope = X, inter = `(Intercept)`)
 disp_estimates %>% 
-    knitr::kable(format = "html")
+    knitr::kable(digits = 3)
 ```
 
 
@@ -125,22 +166,20 @@ predict_disp <- function(X, aphid_line) {
 ```{r glmm_prediction_plot}
 growth %>% 
     mutate(disp_pred = predict_disp(X, line)) %>%
-    ggplot(aes(X, disp_pred, color = line)) +
+    ggplot(aes(N, disp_pred, color = rep)) +
     geom_point(aes(y = disp), alpha = 0.5, shape = 16) +
-    geom_line(size = 0.75) +
+    geom_line(size = 0.75, color = "black") +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
     facet_wrap(~ line, nrow = 2) +
     scale_y_continuous("Dispersed aphids", trans = "log1p",
                        breaks = c(0, 4^(0:3))) +
-    scale_x_continuous("Total aphids", 
-                       breaks = log(10^(0:3)),
-                       labels = 10^(0:3)) +
+    scale_x_continuous("Total aphids") +
     NULL
 ```
 
 
 
-## Saving output as matrix
+## Saving output
 
 ```{r save_output, eval = FALSE}
 devtools::use_data(disp_estimates, overwrite = TRUE)
