@@ -87,28 +87,32 @@ plant_mort_coefs <- clonewars::plant_death$after_max_mort_coefs
 plant_death_age <- clonewars::plant_death$days_to_max
 repl_every <- 4
 plants_per <- 4  # plants to replace per replacement day
-plant_repl <- data_frame(date = seq(repl_every, max_t, repl_every)) %>%
-    mutate(plant = case_when(
-        (date / repl_every) %% 4 == 1 ~ list(1:plants_per),
-        (date / repl_every) %% 4 == 2 ~ list((plants_per + 1):(2 * plants_per)),
-        (date / repl_every) %% 4 == 3 ~ list((2 * plants_per + 1):(3 * plants_per)),
-        (date / repl_every) %% 4 == 0 ~ list((3 * plants_per + 1):n_plants),
-        TRUE ~ list(NA)
-        )) %>%
-    unnest()
-# plant_repl <- data_frame(date = 2000, plant = 1)
-n_reps <- 100
-n_chains <- 1
+# Make even distribution of plants:
+make_repl_plants <- function(repl_every, plants_per, n_plants, max_t) {
+    n_groups <- ceiling(n_plants / plants_per)
+    groups <- map(seq(1, n_plants, plants_per),
+                  ~ (.x:(.x+plants_per-1)) %>% 
+                      # Making sure none are beyond # plants:
+                      .[. <= n_plants] %>% 
+                      # Convert to C++ indices:
+                      `-`(1))
+    repl_times <- seq(repl_every, max_t, repl_every)
+    which_group <- rep(1:n_groups, ceiling(length(repl_times) / n_groups)) %>% 
+        .[1:length(repl_times)]
+    return(map(which_group, function(i) groups[[i]]))
+}
+repl_times <- seq(repl_every, max_t, repl_every) - 1
+repl_plants <- make_repl_plants(repl_every, plants_per, n_plants, max_t)
+n_cages <- 100
+n_cores <- parallel::detectCores() - 1
 ```
-
-
 
 
 ```{r do_sims}
 set.seed(654651984L)
-sim_df <- sim_cages(N_0, max_t, R, A, D_slope, D_inter, process_error,
-                    plant_mort_coefs, plant_death_age, plant_repl,
-                    n_reps) %>% 
+sim_df <- cwsims::sim_cages(n_cages, N_0, max_t, R, A, D_inter, D_slope, process_error,
+                            plant_mort_coefs, plant_death_age, repl_times, repl_plants,
+                            n_cores) %>% 
     mutate(X = log(N)) %>%
     identity()
 
