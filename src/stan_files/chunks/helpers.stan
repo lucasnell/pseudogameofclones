@@ -10,7 +10,7 @@ functions {
         return X_out;
     }
 
-        int find_int_array(int x, int[] y) {
+    int find_int_array(int x, int[] y) {
         int result = 0;
         for (i in 1:(dims(y)[1])) {
             if (y[i] == x) result = 1;
