@@ -1,0 +1,48 @@
+---
+title: "Simulation description"
+author: "Lucas A. Nell"
+date: "2018-07-09"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Simulation description}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  dev = "svglite", 
+  fig.width = 6,
+  fig.height = 4,
+  echo = FALSE
+)
+```
+
+
+
+
+This document outlines the structure of the simulations.
+
+
+
+# Model description
+
+Below is the model I'm fitting:
+
+$$
+X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
+$$
+
+where $X_t$ is log aphid counts for a particular plant at time $t$,
+$r$ is the aphid line's growth rate,
+$\alpha$ is the line's density dependence,
+and
+$\varepsilon$ is process error.
+
+
+
+
