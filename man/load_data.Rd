@@ -4,20 +4,21 @@
 \alias{load_data}
 \title{Load aphid growth data.}
 \usage{
-load_data(file, filter_pars = list(begin = 0.5, end = 0.9),
-  remove_unfinished = TRUE, allow_NA = TRUE)
+load_data(filter_pars = list(start = 0, end = 0.8),
+  remove_unfinished = TRUE, allow_NA = TRUE, impute_fxn = NULL,
+  file = NA)
 }
 \arguments{
-\item{file}{A filename to read from. If left empty, this will read from the
-default path on your DropBox folder.}
-
-\item{filter_pars}{A list with the names \code{"begin"} and \code{"end"}, containing single
+\item{filter_pars}{A list with the names \code{"start"} and \code{"end"}, containing single
 numbers with threshold for filtering the beginning and ending of time series,
 respectively. Set to \code{NULL} to avoid filtering entirely.
-Defaults to \code{list(begin = 0.5, end = 1.0)}.}
+Defaults to \code{list(start = 0.5, end = 1.0)}.}
 
 \item{allow_NA}{Boolean for whether time series with NAs should be included.
 Defaults to \code{TRUE}.}
+
+\item{file}{A filename to read from. If left empty, this will read from the
+default path on your DropBox folder.}
 }
 \value{
 A data frame containing the aphid population-growth data.

@@ -4,11 +4,11 @@
 \alias{sim_cages}
 \title{Simulate cages with the same starting conditions.}
 \usage{
-sim_cages(X_0, max_t, R, A, D_slope, D_inter, process_error, plant_mort_coefs,
+sim_cages(N_0, max_t, R, A, D_slope, D_inter, process_error, plant_mort_coefs,
   plant_death_age, plant_repl, n_reps, n_chains = 1, ...)
 }
 \arguments{
-\item{X_0}{Matrix of \code{log(# aphids)} at time t=0. Should be matrix of size
+\item{N_0}{Matrix of \code{# aphids} at time t=0. Should be matrix of size
 \code{n_plants} x \code{n_lines}.}
 
 \item{max_t}{Time steps per cage. Single integer.}

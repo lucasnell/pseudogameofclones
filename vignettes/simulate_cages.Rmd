@@ -73,7 +73,7 @@ stan_fit <- read_rds("data-raw/stan_fit.rds")
 ```{r}
 n_plants <- 16
 n_lines <- 8
-X_0 <- matrix(rep(log(50), n_lines * n_plants), n_plants, n_lines)
+N_0 <- matrix(rep(50, n_lines * n_plants), n_plants, n_lines)
 max_t <- 180
 R <- apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, mean) %>%
     as.numeric()
@@ -106,10 +106,10 @@ n_chains <- 1
 
 ```{r do_sims}
 set.seed(654651984L)
-sim_df <- sim_cages(X_0, max_t, R, A, D_slope, D_inter, process_error,
+sim_df <- sim_cages(N_0, max_t, R, A, D_slope, D_inter, process_error,
                     plant_mort_coefs, plant_death_age, plant_repl,
                     n_reps) %>% 
-    mutate(N = exp(X)) %>%
+    mutate(X = log(N)) %>%
     identity()
 
 sim_by_cage <- sim_df %>% 
@@ -118,9 +118,9 @@ sim_by_cage <- sim_df %>%
                          labels = levels(growth$line)),
            rep = factor(rep)) %>% 
     group_by(rep, line, date) %>% 
-    summarize(X = N %>% sum() %>% log()) %>%
+    summarize(X = N %>% sum() %>% log(),
+              N = N %>% sum()) %>%
     ungroup() %>% 
-    mutate(N = exp(X)) %>% 
     group_by(rep, date) %>% 
     arrange(line) %>% 
     mutate(prop = N / sum(N),

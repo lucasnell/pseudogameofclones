@@ -81,7 +81,7 @@ fit_lines <- function(data, X, L, ...) {
 #'
 #'
 #'
-#' @param X_0 Matrix of `log(# aphids)` at time t=0. Should be matrix of size
+#' @param N_0 Matrix of `# aphids` at time t=0. Should be matrix of size
 #'     `n_plants` x `n_lines`.
 #' @param max_t Time steps per cage. Single integer.
 #' @param R Max growth rates per aphid line. Vector of length `n_lines`.
@@ -103,13 +103,13 @@ fit_lines <- function(data, X, L, ...) {
 #'
 #' @export
 #'
-sim_cages <- function(X_0, max_t, R, A, D_slope, D_inter,
+sim_cages <- function(N_0, max_t, R, A, D_slope, D_inter,
                       process_error,
                       plant_mort_coefs, plant_death_age, plant_repl,
                       n_reps, n_chains = 1, ...) {
 
-    n_plants <- nrow(X_0)
-    n_lines <- ncol(X_0)
+    n_plants <- nrow(N_0)
+    n_lines <- ncol(N_0)
 
     # plant_repl <- data_frame(date = sort(sample.int(10, 20, TRUE)) * 10L) %>%
     #     group_by(date) %>%
@@ -163,7 +163,7 @@ sim_cages <- function(X_0, max_t, R, A, D_slope, D_inter,
     model_data_ <- list(
         n_plants = n_plants,
         n_lines = n_lines,
-        X_0 = X_0,
+        N_0 = N_0,
         max_t = max_t,
         R = R,
         A = A,
@@ -186,24 +186,24 @@ sim_cages <- function(X_0, max_t, R, A, D_slope, D_inter,
 
     n_reps <- n_reps * n_chains
 
-    X_array <- rstan::extract(stan_sims, "X_out")[[1]]
+    N_array <- rstan::extract(stan_sims, "N_out")[[1]]
 
-    X_mat <- lapply(1:n_reps, function(j) {
-        M <- lapply(1:n_plants, function(i) X_array[j,i,,])
+    N_mat <- lapply(1:n_reps, function(j) {
+        M <- lapply(1:n_plants, function(i) N_array[j,i,,])
         M <- do.call(rbind, M)
         cbind(rep(1:n_plants, each = max_t + 1), M)
     })
-    X_mat <- do.call(what = rbind, X_mat)
-    X_mat <- cbind(rep(1:n_reps, each = n_plants * (max_t + 1)), X_mat)
+    N_mat <- do.call(what = rbind, N_mat)
+    N_mat <- cbind(rep(1:n_reps, each = n_plants * (max_t + 1)), N_mat)
 
-    X_df <- X_mat %>%
+    N_df <- N_mat %>%
         as_data_frame() %>%
         set_names(c("rep", "plant", paste0("line", 1:n_lines))) %>%
-        gather("line", "X", -rep, -plant) %>%
+        gather("line", "N", -rep, -plant) %>%
         mutate(line = gsub("line", "", line) %>% as.integer(),
                date = rep(0:max_t, n_reps * n_plants * n_lines),
-               X = ifelse(X < 0, -Inf, X)) %>%
+               N = ifelse(N < 0, -Inf, N)) %>%
         identity()
 
-    return(X_df)
+    return(N_df)
 }

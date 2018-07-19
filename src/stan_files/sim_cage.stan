@@ -3,7 +3,7 @@
 data {
     int<lower=1> n_plants;                  // Number of plants per cage
     int<lower=1> n_lines;                   // number of aphid lines per cage
-    matrix<lower=0>[n_plants, n_lines] X_0; // log(N) at time t=0
+    matrix<lower=0>[n_plants, n_lines] N_0; // N at time t=0
     int<lower=1> max_t;                     // Time steps per cage
     vector<lower=0>[n_lines] R;             // Max growth rates per aphid line
     vector<lower=0,upper=1>[n_lines] A;     // Density dependence per aphid line
@@ -21,13 +21,13 @@ data {
 }
 generated quantities {
 
-    matrix[max_t+1, n_lines] X_out[n_plants];     // 3D array for output
+    matrix[max_t+1, n_lines] N_out[n_plants];     // 3D array for output
 
-    // Fill with initial values and -Inf for all other rows:
+    // Fill with initial values and 0 for all other rows:
     for (i in 1:n_plants) {
-        X_out[i] = rep_matrix(negative_infinity(), max_t+1, n_lines);
+        N_out[i] = rep_matrix(0, max_t+1, n_lines);
         for (j in 1:n_lines) {
-            X_out[i][1,j] = X_0[i,j];
+            N_out[i][1,j] = N_0[i,j];
         }
     }
 
@@ -41,12 +41,13 @@ generated quantities {
         // Matrices keeping track of numbers of dispersed aphids:
         matrix[n_lines, n_plants] emigrants = rep_matrix(0, n_lines, n_plants);
         matrix[n_lines, n_plants] immigrants = rep_matrix(0, n_lines, n_plants);
-        // mortality at a time x after plant death starts, to keep from having to do
-        // this calculation many times. `max_t` should be more than enough.
-        vector[max_t] morts;
-        for (x in 1:max_t) {
+        // log(mortality) at a time x after plant death starts, to keep from having to do
+        // this calculation many times. `max_t - plant_death_age` should be more
+        // than enough.
+        vector[(max_t - plant_death_age)] log_morts;
+        for (x in 1:(max_t - plant_death_age)) {
             real x_ = x;
-            morts[x] = inv_logit(plant_mort_coefs[1] + plant_mort_coefs[2] * x_);
+            log_morts[x] = log(inv_logit(plant_mort_coefs[1] + plant_mort_coefs[2] * x_));
         }
 
         for (t in 1:max_t) {
@@ -62,8 +63,8 @@ generated quantities {
                 // Update plant ages to time t+1:
                 plant_ages[i] += 1;
                 for (j in 1:n_lines) {
-                    D_lambdas[j,i] = exp(D_inter[j] + D_slope[j] * X_out[i][t,j]);
-                    Z[i] += (A[j] * exp(X_out[i][t,j]));
+                    D_lambdas[j,i] = exp(D_inter[j] + D_slope[j] * log(N_out[i][t,j]));
+                    Z[i] += (A[j] * N_out[i][t,j]);
                 }
             }
             // Generate numbers of dispersed aphids:
@@ -91,38 +92,32 @@ generated quantities {
                     real emigration = emigrants[j,i];
 
                     // If it's extinct and no one's coming in, skip the rest
-                    // if (extinct[i,j] == 1 && immigration == 0) continue;
+                    if (extinct[i,j] == 1 && immigration == 0) continue;
 
-                    // Start out new X based on previous time step
-                    X_out[i][t+1,j] = X_out[i][t,j];
+                    // Start out new N based on previous time step
+                    N_out[i][t+1,j] = N_out[i][t,j];
                     /*
-                     Now add growth and density dependence.
+                     Now add growth, density dependence, and process error.
                      If the plant is past plant-death age, then plant-death-induced
-                     mortality overrides replaces normal growth and density dependence,
-                     and will be added after adding dispersal.
+                     mortality replaces normal growth and density dependence.
                     */
                     if (plant_ages[i] <= plant_death_age) {
-                        X_out[i][t+1,j] += (R[j] * (1 - Z[i]));
-                    }
-                    // Add process error:
-                    X_out[i][t+1,j] += (normal_rng(0, 1) * process_error);
-
-                    // Temporarily convert X to units of N, to add dispersal:
-                    X_out[i][t+1,j] = exp(X_out[i][t+1,j]) + immigration - emigration;
-
-                    /*
-                     If the plant is past plant-death age, then add
-                     plant-death-induced mortality here.
-                    */
-                    if (plant_ages[i] > plant_death_age) {
-                        X_out[i][t+1,j] *= morts[(plant_ages[i] - plant_death_age)];
+                        N_out[i][t+1,j] *= exp(R[j] * (1 - Z[i]) +
+                            normal_rng(0, 1) * process_error);
+                    } else {
+                        int after_death = plant_ages[i] - plant_death_age;
+                        N_out[i][t+1,j] *= exp(log_morts[after_death] +
+                            normal_rng(0, 1) * process_error);
                     }
 
-                    // Convert back to units of X, but check for extinction first
-                    if (X_out[i][t+1,j] < 1) {
-                        X_out[i][t+1,j] = negative_infinity();
+                    // Add dispersal:
+                    N_out[i][t+1,j] += (immigration - emigration);
+
+                    // Check for extinction:
+                    if (N_out[i][t+1,j] < 1) {
+                        N_out[i][t+1,j] = 0;
                         extinct[i,j] = 1;
-                    } else X_out[i][t+1,j] = log(X_out[i][t+1,j]);
+                    }
 
                 }
 
@@ -156,8 +151,8 @@ generated quantities {
                     for (i_ in 1:max_repl) {
                         int i = repl_plants[repl_ind, i_];
                         if (i == 0) continue;
-                        aphid_pool_j += exp(X_out[i][t+1,j]);
-                        X_out[i][t+1,j] = negative_infinity();
+                        aphid_pool_j += N_out[i][t+1,j];
+                        N_out[i][t+1,j] = 0;
                         extinct[i,j] = 1;
                     }
                     // Now add a portion to non-replaced plant(s):
@@ -167,7 +162,7 @@ generated quantities {
                         // Check that it's not adding < 1 aphid to an extinct plant:
                         if (extinct[i,j] == 1 && aphid_pool_j < 1) continue;
                         // If not, add `aphid_pool_j`:
-                        X_out[i][t+1,j] = log(exp(X_out[i][t+1,j]) + aphid_pool_j);
+                        N_out[i][t+1,j] += aphid_pool_j;
                     }
                 }
                 // Now adjust index for `repl_times`
