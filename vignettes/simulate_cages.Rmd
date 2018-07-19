@@ -161,9 +161,12 @@ sim_by_cage %>%
 
 
 sim_by_cage %>% 
-    ggplot(aes(date, color = line)) +
-    geom_line(aes(y = prop, group = rep), alpha = 0.25) +
+    ggplot(aes(date, prop, color = line)) +
+    # ggplot(aes(date, gtools::logit(prop), group = rep, color = line)) +
+    geom_line(aes(group = rep), alpha = 0.25) +
     facet_wrap(~ line, ncol = 4) +
+    # geom_smooth(method = "loess", se = FALSE, span = 0.4, color = "black", linetype = 2) +
+    stat_summary(geom = "line", fun.y = mean, color = "black", size = 0.5) +
     scale_color_brewer("Aphid line:", palette = "Dark2", guide = FALSE) +
     ylab("Relative abundance") +
     xlab("Day") +
