@@ -116,16 +116,27 @@ stan_fit <- read_rds("data-raw/stan_fit.rds")
 
 ## Examine model output
 
-```{r examine_model, eval = FALSE}
+
+```{r examine_model, message=FALSE}
 
 # http://mc-stan.org/bayesplot/articles/visual-mcmc-diagnostics.html
 
 posterior <- as.array(stan_fit)
 
-mcmc_intervals(posterior, pars = sprintf("R[%i]", 1:8))
-mcmc_intervals(posterior, pars = sprintf("A[%i]", 1:8))
+mcmc_intervals(posterior, pars = sprintf("R[%i]", 1:8)) +
+    scale_y_discrete(labels = growth$line %>% levels()) +
+    ggtitle("Growth rates")
+mcmc_intervals(posterior, pars = sprintf("A[%i]", 1:8)) +
+    scale_y_discrete(labels = growth$line %>% levels()) +
+    ggtitle("Density dependences")
+```
 
 
+This code is looking at model output. I'm not including it yet in this vignette because
+it's not ready.
+
+
+```{r examine_model2, eval = FALSE}
 apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, mean)
 apply(rstan::extract(stan_fit, "A", permuted = FALSE), 3, mean)
 
