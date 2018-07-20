@@ -79,12 +79,13 @@ until_max %>%
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
     geom_point()
 
-# Can't use X or cumsum(N) because it's autocorrelated with the # days that've passed
-# This model has lower AIC than those with line as covariate
-# Check that this is still the case when you have more reps!
-until_max_mod <- lm(days ~ 1, data = until_max)
-until_max_mod %>% 
-    summary()
+until_max %>% 
+    ggplot(aes(days)) +
+    geom_histogram(bins = 10)
+
+until_max_summ <- until_max %>% 
+    summarize(max_mean = mean(days),
+              max_sd = sd(days))
 ```
 
 
@@ -150,12 +151,14 @@ after_max %>%
 ```{r after_max_model}
 # AIC is lower than for other combos of date and line
 after_max_mod <- after_max %>% 
-    # Removing rows with negative numbers dead:
-    filter(N_dead >= 0) %>% 
-    # mutate(N = ifelse(N_dead < 1, N - N_dead, N),
-    #        N_dead = ifelse(N_dead < 1, 0, N_dead)) %>%
+    # # Removing rows with negative numbers dead.
+    # filter(N_dead >= 0) %>% 
     # Rounding values of N and N_dead when N was imputed:
     mutate_at(vars(N, N_dead), round) %>% 
+    # Adjusting any negative N_dead numbers by making N_dead 0 and adding whatever
+    # negative amount was in N_dead to N
+    mutate(N = ifelse(N_dead < 1, N - N_dead, N),
+           N_dead = ifelse(N_dead < 1, 0, N_dead)) %>%
     {glmer(cbind(N, N_dead) ~ date + (date | line), family = "binomial", data = .)}
 after_max_mod %>% 
     summary()
@@ -200,12 +203,7 @@ after_max_coefs %>%
 
 ```{r make_output}
 plant_death <- list(
-    days_to_max = until_max_mod %>% 
-        coef() %>% 
-        .[["(Intercept)"]] %>% 
-        round() %>% 
-        as.integer()
-    ,
+    until_max_summ = as.data.frame(until_max_summ),
     after_max_mort_coefs = after_max_coefs
 )
 plant_death
