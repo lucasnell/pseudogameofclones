@@ -565,3 +565,28 @@ load_pz_data <- function(filter_pars = list(start = 0.0, end = 0.8),
 
     return(pz_growth)
 }
+
+
+#' Impute missing data.
+#'
+#' From [Moritz et al. (2015)](https://arxiv.org/abs/1510.03924), the
+#' seasonal kalman filter from the `zoo` package works well, so I'm creating this function
+#' here to impute missing values below.
+#' We're only missing 1 or 2 time points across a time series of >15, so this
+#' shouldn't have too big an impact on our results.
+#'
+#' @param X Vector of log(N) through time.
+#'
+#' @export
+#'
+impute <- function(X) {
+    if (any(is.na(X))) {
+        X_ <- X %>%
+            # Change to weekly frequency for the fit
+            zoo::zooreg(frequency = 7) %>%
+            zoo::na.StructTS() %>%
+            as.numeric()
+        return(X_)
+    }
+    return(X)
+}

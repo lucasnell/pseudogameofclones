@@ -36,17 +36,6 @@ suppressPackageStartupMessages({
 ## Load dataset
 
 ```{r load_growth_dataset}
-impute <- function(X) {
-    if (any(is.na(X))) {
-        X_ <- X %>% 
-            # Change to weekly frequency for the fit
-            zoo::zooreg(frequency = 7) %>%
-            zoo::na.StructTS() %>%
-            as.numeric()
-        return(X_)
-    }
-    return(X)
-}
 growth <- 
     load_data(impute_fxn = impute) %>%
     mutate(line = paste(line)) %>% 

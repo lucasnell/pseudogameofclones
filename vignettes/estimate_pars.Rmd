@@ -42,26 +42,7 @@ this document.
 
 ## Imputing missing data
 
-From [Moritz et al. (2015)](https://arxiv.org/abs/1510.03924), the
-seasonal kalman filter from the `zoo` package works well, so I'm creating this function
-here to impute missing values below.
-We're only missing 1 or 2 time points across a time series of >15, so this
-shouldn't have too big an impact on our results.
-
-
-```{r impute_NAs}
-impute <- function(X) {
-    if (any(is.na(X))) {
-        X_ <- X %>% 
-            # Change to weekly frequency for the fit
-            zoo::zooreg(frequency = 7) %>%
-            zoo::na.StructTS() %>%
-            as.numeric()
-        return(X_)
-    }
-    return(X)
-}
-```
+See `?impute` for information on imputing missing data.
 
 
 ## Load data
