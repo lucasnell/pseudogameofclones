@@ -8,8 +8,8 @@
 using namespace Rcpp;
 
 // sim_cages_
-std::vector<arma::cube> sim_cages_(const uint32& n_cages, const arma::mat& N_0, const uint32& max_t, const arma::rowvec& R, const arma::rowvec& A, const arma::rowvec& D_0, const arma::rowvec& D_1, const double& process_error, const std::vector<double>& plant_mort_coefs, const uint32& plant_death_age, const std::vector<uint32>& repl_times, const std::vector<std::vector<uint32> >& repl_plants, const uint32& n_cores, const bool& show_progress);
-RcppExport SEXP _cwsims_sim_cages_(SEXP n_cagesSEXP, SEXP N_0SEXP, SEXP max_tSEXP, SEXP RSEXP, SEXP ASEXP, SEXP D_0SEXP, SEXP D_1SEXP, SEXP process_errorSEXP, SEXP plant_mort_coefsSEXP, SEXP plant_death_ageSEXP, SEXP repl_timesSEXP, SEXP repl_plantsSEXP, SEXP n_coresSEXP, SEXP show_progressSEXP) {
+std::vector<arma::cube> sim_cages_(const uint32& n_cages, const arma::mat& N_0, const uint32& max_t, const arma::rowvec& R, const arma::rowvec& A, const arma::rowvec& D_0, const arma::rowvec& D_1, const double& process_error, const arma::rowvec& plant_mort_0, const arma::rowvec& plant_mort_1, const uint32& plant_death_age, const std::vector<uint32>& repl_times, const std::vector<std::vector<uint32> >& repl_plants, const uint32& n_cores, const bool& show_progress);
+RcppExport SEXP _cwsims_sim_cages_(SEXP n_cagesSEXP, SEXP N_0SEXP, SEXP max_tSEXP, SEXP RSEXP, SEXP ASEXP, SEXP D_0SEXP, SEXP D_1SEXP, SEXP process_errorSEXP, SEXP plant_mort_0SEXP, SEXP plant_mort_1SEXP, SEXP plant_death_ageSEXP, SEXP repl_timesSEXP, SEXP repl_plantsSEXP, SEXP n_coresSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -21,19 +21,20 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::rowvec& >::type D_0(D_0SEXP);
     Rcpp::traits::input_parameter< const arma::rowvec& >::type D_1(D_1SEXP);
     Rcpp::traits::input_parameter< const double& >::type process_error(process_errorSEXP);
-    Rcpp::traits::input_parameter< const std::vector<double>& >::type plant_mort_coefs(plant_mort_coefsSEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type plant_mort_0(plant_mort_0SEXP);
+    Rcpp::traits::input_parameter< const arma::rowvec& >::type plant_mort_1(plant_mort_1SEXP);
     Rcpp::traits::input_parameter< const uint32& >::type plant_death_age(plant_death_ageSEXP);
     Rcpp::traits::input_parameter< const std::vector<uint32>& >::type repl_times(repl_timesSEXP);
     Rcpp::traits::input_parameter< const std::vector<std::vector<uint32> >& >::type repl_plants(repl_plantsSEXP);
     Rcpp::traits::input_parameter< const uint32& >::type n_cores(n_coresSEXP);
     Rcpp::traits::input_parameter< const bool& >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(sim_cages_(n_cages, N_0, max_t, R, A, D_0, D_1, process_error, plant_mort_coefs, plant_death_age, repl_times, repl_plants, n_cores, show_progress));
+    rcpp_result_gen = Rcpp::wrap(sim_cages_(n_cages, N_0, max_t, R, A, D_0, D_1, process_error, plant_mort_0, plant_mort_1, plant_death_age, repl_times, repl_plants, n_cores, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_cwsims_sim_cages_", (DL_FUNC) &_cwsims_sim_cages_, 14},
+    {"_cwsims_sim_cages_", (DL_FUNC) &_cwsims_sim_cages_, 15},
     {NULL, NULL, 0}
 };
 

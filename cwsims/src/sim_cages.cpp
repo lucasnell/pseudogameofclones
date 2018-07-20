@@ -25,7 +25,7 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
               const uint32& plant_death_age,
               const std::vector<uint32>& repl_times,
               const std::vector<std::vector<uint32> >& repl_plants,
-              const arma::vec& log_morts,
+              const arma::mat& log_morts,
               pcg32& eng, arma::cube& N_out,
               Progress& p) {
 
@@ -65,16 +65,23 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
             // Update plant ages to time t+1:
             plant_ages[i]++;
             for (uint32 j = 0; j < n_lines; j++) {
+                if (N_out(i,j,t) == 0) {
+                    D_lambdas(i, j) = 0;
+                    continue;
+                }
                 D_lambdas(i, j) = std::exp(D_0(j) + D_1(j) * std::log(N_out(i,j,t)));
                 Z[i] += (A(j) * N_out(i,j,t));
             }
         }
         // Generate numbers of dispersed aphids:
+        emigrants.fill(0);
+        immigrants.fill(0);
         for (uint32 j = 0; j < n_lines; j++) {
             uint32 dispersed_;
             for (uint32 from_i = 0; from_i < n_plants; from_i++) {
                 for (uint32 to_i = 0; to_i < n_plants; to_i++) {
                     if (from_i == to_i) continue;
+                    if (D_lambdas(from_i, j) == 0) continue;
                     // Calculate lambda and reset distribution to it:
                     double lambda_ = D_lambdas(from_i, j) /
                         (static_cast<double>(n_plants) - 1.0);
@@ -98,9 +105,15 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
                 // Calculate the net influx of this aphid line from other plants.
                 const double& immigration(immigrants(i, j));
                 const double& emigration(emigrants(i, j));
+                double net_income = immigration - emigration;
 
-                // If it's extinct and no one's coming in, skip the rest
-                if (extinct(i,j) == 1 && immigration == 0) continue;
+                // If it's extinct and no one's coming in, make 0 and skip the rest:
+                if (extinct(i,j) == 1 && net_income <= 0) {
+                    N_out(i,j,t+1) = 0;
+                    continue;
+                }
+                // If it's extinct and immigrants are coming in, adjust extinct matrix:
+                if (extinct(i,j) == 1 && net_income > 0) extinct(i,j) = 0;
 
                 // Start out new N based on previous time step
                 N_out(i,j,t+1) = N_out(i,j,t);
@@ -115,12 +128,12 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
                 } else {
                     // (` - 1` below is to convert to C++ indices)
                     uint32 after_death = plant_ages[i] - plant_death_age - 1;
-                    N_out(i,j,t+1) *= std::exp(log_morts[after_death] +
+                    N_out(i,j,t+1) *= std::exp(log_morts(after_death,j) +
                         normal_rng(eng) * process_error);
                 }
 
                 // Add dispersal:
-                N_out(i,j,t+1) += (immigration - emigration);
+                N_out(i,j,t+1) += net_income;
 
                 // Check for extinction:
                 if (N_out(i,j,t+1) < 1) {
@@ -198,19 +211,21 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
 //'
 //' @noRd
 //'
-arma::vec make_log_morts(const uint32& max_t,
-                         const std::vector<double>& plant_mort_coefs,
+arma::mat make_log_morts(const uint32& max_t,
+                         const arma::rowvec& plant_mort_0,
+                         const arma::rowvec& plant_mort_1,
                          const uint32& plant_death_age) {
 
+    uint32 n_lines = plant_mort_0.n_elem;
     uint32 n_times = 1;
     if (max_t > plant_death_age) n_times = max_t - plant_death_age;
 
-    arma::vec log_morts(n_times);
+    arma::mat log_morts(n_times, n_lines);
     for (uint32 x = 0; x < n_times; x++) {
-        double alpha = plant_mort_coefs[0] + plant_mort_coefs[1] *
+        arma::rowvec alpha = plant_mort_0 + plant_mort_1 *
             static_cast<double>(x + 1);  // ` + 1` is to go from C++ index to # past death
         // Doing log(inverse_logit(alpha)):
-        log_morts[x] = alpha - std::log(std::exp(alpha) + 1);
+        log_morts.row(x) = alpha - arma::log(arma::exp(alpha) + 1);
     }
     return log_morts;
 }
@@ -250,7 +265,8 @@ std::vector<arma::cube> sim_cages_(const uint32& n_cages,
                                    const arma::rowvec& D_0,
                                    const arma::rowvec& D_1,
                                    const double& process_error,
-                                   const std::vector<double>& plant_mort_coefs,
+                                   const arma::rowvec& plant_mort_0,
+                                   const arma::rowvec& plant_mort_1,
                                    const uint32& plant_death_age,
                                    const std::vector<uint32>& repl_times,
                                    const std::vector<std::vector<uint32> >& repl_plants,
@@ -260,7 +276,8 @@ std::vector<arma::cube> sim_cages_(const uint32& n_cages,
 
     // log(mortality) at a time x after plant death starts, to keep from having to do
     // this calculation many times.
-    const arma::vec log_morts = make_log_morts(max_t, plant_mort_coefs, plant_death_age);
+    const arma::mat log_morts = make_log_morts(max_t, plant_mort_0, plant_mort_1,
+                                               plant_death_age);
 
     const std::vector<std::vector<uint64> > seeds = mc_seeds(n_cores);
 
@@ -281,8 +298,11 @@ std::vector<arma::cube> sim_cages_(const uint32& n_cages,
     if (D_1.n_elem != n_lines) {
         err_msg += "ERROR: D_1.n_elem != n_lines\n";
     }
-    if (plant_mort_coefs.size() != 2) {
-        err_msg += "ERROR: plant_mort_coefs.size() != 2\n";
+    if (plant_mort_0.n_elem != n_lines) {
+        err_msg += "ERROR: plant_mort_0.n_elem != n_lines\n";
+    }
+    if (plant_mort_1.n_elem != n_lines) {
+        err_msg += "ERROR: plant_mort_1.n_elem != n_lines\n";
     }
     if (repl_times.size() == 0) {
         err_msg += "ERROR: repl_times.size() == 0\n";

@@ -33,7 +33,8 @@ simplify_cage <- function(cage_array, rep, N_0_, max_t_) {
 #' @param D_0 Intercept for regression of dispersal ~ # aphids, one for each line.
 #' @param D_1 Coefficient for regression of dispersal ~ # aphids, one for each line.
 #' @param process_error SD of process error.
-#' @param plant_mort_coefs Coefficients for plant-death-induced aphid mortality.
+#' @param plant_mort_0 Intercept for plant-death-induced aphid mortality, one per line.
+#' @param plant_mort_1 Coefficient for plant-death-induced aphid mortality, one per line.
 #' @param plant_death_age Date on which plants begin to die. Use 0-based indexing!
 #' @param repl_times Vector of dates on which to replace plants. Use 0-based indexing!
 #' @param repl_plants List of vectors, each vector indicating the plants to replace
@@ -45,7 +46,7 @@ simplify_cage <- function(cage_array, rep, N_0_, max_t_) {
 #' @export
 #'
 sim_cages <- function(n_cages, N_0, max_t, R, A, D_0, D_1, process_error,
-                      plant_mort_coefs, plant_death_age, repl_times,
+                      plant_mort_0, plant_mort_1, plant_death_age, repl_times,
                       repl_plants, n_cores = 1, show_progress = FALSE) {
 
     sims <- cwsims::sim_cages_(n_cages = n_cages,
@@ -56,7 +57,8 @@ sim_cages <- function(n_cages, N_0, max_t, R, A, D_0, D_1, process_error,
                                D_0 = D_inter,
                                D_1 = D_slope,
                                process_error = process_error,
-                               plant_mort_coefs = plant_mort_coefs,
+                               plant_mort_0 = plant_mort_0,
+                               plant_mort_1 = plant_mort_1,
                                plant_death_age = plant_death_age,
                                repl_times = repl_times,
                                repl_plants = repl_plants,
