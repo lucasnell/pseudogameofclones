@@ -11,7 +11,7 @@
 #' @return A matrix with simulated log(N) through time.
 #' @export
 #'
-sim_lines <- function(R, alpha, n_reps, nobs_ts, c_p) {
+sim_lines <- function(R, alpha, n_reps, nobs_ts, sigma_process = 0.1) {
 
     # Number of aphid lines:
     n_lines <- length(R)
@@ -36,13 +36,16 @@ sim_lines <- function(R, alpha, n_reps, nobs_ts, c_p) {
     # R <- round(abs(rnorm(n_lines, 0.29, 0.003)), 5)
     # alpha <- round(abs(rnorm(n_lines, 0.002, 0.0003)), 5)
 
+
+    sigma_process <- sigma_process[1]
+
+
     X <- matrix(NA, max(nobs_ts), N_ts)
     X[1,] <- log(runif(ncol(X), 15, 25))
     for (i in 1:N_ts) {
         for (t in 1:(nobs_ts[i]-1)) {
-            sigma_p <- sqrt(c_p * exp(X[t,i]))
             X[(t+1),i] <- X[t,i] + R[line_ts[i]] *
-                (1 - alpha[line_ts[i]] * exp(X[t,i])) + rnorm(1, 0, sigma_p)
+                (1 - alpha[line_ts[i]] * exp(X[t,i])) + rnorm(1, 0, sigma_process)
         }
     }
 

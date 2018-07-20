@@ -57,23 +57,24 @@ Z-score used to generate deviates from the focal distribution.
 
 ## Estimating process error
 
-$$
+
 \begin{align}
-    \varepsilon &= Z ~ \sqrt{c N_t} \\
-    c &= \exp ( \tau + \sigma_\tau Z ) + 1 \\
+    \varepsilon &= s_\varepsilon Z \\
+    s_\varepsilon &\sim \exp ( \tau + \sigma_\tau Z ) \\
 \end{align}
-$$
+
 
 
 ### Estimated from model:
 
-- $c$: constant that multiplies by $N_t$ to get the variance of the process error
+- $s_\varepsilon$: standard deviation of the process error
 
 
 #### Priors to define:
 
-- $\tau$: mean for the normal distribution that generates values of $\log(c - 1)$
-- $\sigma_\tau$: sd for the normal distribution that generates values of $\log(c - 1)$
+- $\tau$: mean for the normal distribution that generates $\log(s_\varepsilon)$ values
+- $\sigma_\tau$: sd for the normal distribution that generates $\log(s_\varepsilon)$
+  values
 
 
 

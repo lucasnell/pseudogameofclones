@@ -61,38 +61,35 @@ Gelman, A., J. B. Carlin, H. S. Stern, D. B. Dunson, A. Vehtari, and D. B. Rubin
 ```{r define_process_priors}
 # Below are meanlog and sdlog parameters for the log-normal distribution
 # that generates values for the process error standard deviation
-tau <- signif(log(0.005), 4)
+tau <- signif(log(0.15), 4)
 sigma_tau <- 1
 ```
 
 
-<!-- $c$ is bound $\ge 1$ and sampled as $\sim 1 + \text{Lognormal}(\tau, \sigma_\tau)$ -->
-<!-- Based on simulations, an $c$ of 1.1 would be very high---so high as to be not -->
-<!-- realistically possible. -->
-<!-- Values of ~ 0.15 seemed to result in simulations matching some preliminary experimental -->
-<!-- results we've seen in the lab. -->
-<!-- Below, `r sprintf('"sigma%.2f"', tau)` is simulated data with process error set to -->
-<!-- `r tau`, "sigma1" has process error set to 1.0. -->
-<!-- The others are the preliminary data. -->
+$s_\varepsilon$ is bound $\ge 0$ and sampled as $\sim \text{Lognormal}(\tau, \sigma_\tau)$
+Based on simulations, an $s_\varepsilon$ of 1 would be very high---so high as to be not
+realistically possible.
+Values of ~ 0.15 seemed to result in simulations matching some preliminary experimental
+results we've seen in the lab.
+Below, `r sprintf('"sigma%.2f"', tau)` is simulated data with process error set to
+`r tau`, "sigma1" has process error set to 1.0.
+The others are the preliminary data.
 
 ```{r load_prior}
-tau <- log(3)
-
 load_prior_data() %>% 
-    # add_row(line = paste0("sigma", signif(exp(tau), 2)), rep = rep(1:5, each=16),
-    #         date = rep(0:15,5),
-    #         X = sim_lines(R = 0.2, alpha = 1/1000, n_reps = 5, nobs_ts = rep(16, 5), 
-    #                       c_p = 1 + exp(tau)) %>% 
-    #             as.numeric()) %>% 
-    add_row(line = "sigma1", rep = rep(1:5, each=16), date = rep(0:15,5),
+    add_row(line = paste0("sigma", signif(exp(tau), 2)), rep = rep(1:5, each=16),
+            date = rep(5:20,5),
             X = sim_lines(R = 0.2, alpha = 1/1000, n_reps = 5, nobs_ts = rep(16, 5), 
-                          c_p = 3) %>% 
+                          sigma_process = exp(tau)) %>% 
                 as.numeric()) %>% 
-    mutate(rep = factor(rep), X = ifelse(X < 0, 0, X)) %>% 
+    add_row(line = "sigma1", rep = rep(1:5, each=16), date = rep(5:20,5),
+            X = sim_lines(R = 0.2, alpha = 1/1000, n_reps = 5, nobs_ts = rep(16, 5), 
+                          sigma_process = 1) %>% 
+                as.numeric()) %>% 
+    mutate(rep = factor(rep)) %>% 
     ggplot(aes(date, X)) +
     geom_line(aes(color = rep)) +
     facet_wrap(~ line) +
-    coord_cartesian(ylim = c(0, 10)) +
     scale_color_brewer(palette = "Dark2", guide = FALSE)
 ```
 
