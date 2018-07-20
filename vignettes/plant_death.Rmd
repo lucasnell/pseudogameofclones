@@ -22,8 +22,8 @@ knitr::opts_chunk$set(
 knitr::opts_knit$set(root.dir = normalizePath(".."))
 options(tibble.print_min = 8L, tibble.print_max = 8L)
 ```
-```{r source_Rprofile, eval = FALSE, echo = FALSE}
-source(".Rprofile")
+```{r source_Rprofile, echo = FALSE}
+if (!isTRUE(getOption('knitr.in.progress'))) source(".Rprofile")
 ```
 
 ```{r library_pkgs, warning=FALSE}
