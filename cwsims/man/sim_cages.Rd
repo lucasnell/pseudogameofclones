@@ -4,9 +4,9 @@
 \alias{sim_cages}
 \title{Simulate multiple cages and simplify output.}
 \usage{
-sim_cages(n_cages, N_0, max_t, R, A, D_0, D_1, process_error, plant_mort_coefs,
-  plant_death_age, repl_times, repl_plants, n_cores = 1,
-  show_progress = FALSE)
+sim_cages(n_cages, N_0, max_t, R, A, D_0, D_1, process_error, plant_mort_0,
+  plant_mort_1, plant_death_age_mean, plant_death_age_sd, repl_times, repl_age,
+  n_cores = 1, show_progress = FALSE)
 }
 \arguments{
 \item{n_cages}{Number of cages to simulate.}
@@ -25,14 +25,17 @@ sim_cages(n_cages, N_0, max_t, R, A, D_0, D_1, process_error, plant_mort_coefs,
 
 \item{process_error}{SD of process error.}
 
-\item{plant_mort_coefs}{Coefficients for plant-death-induced aphid mortality.}
+\item{plant_mort_0}{Intercept for plant-death-induced aphid mortality, one per line.}
 
-\item{plant_death_age}{Date on which plants begin to die. Use 0-based indexing!}
+\item{plant_mort_1}{Coefficient for plant-death-induced aphid mortality, one per line.}
+
+\item{plant_death_age_mean}{Mean of distribution of plant-death ages.}
+
+\item{plant_death_age_sd}{SD of distribution of plant-death ages.}
 
 \item{repl_times}{Vector of dates on which to replace plants. Use 0-based indexing!}
 
-\item{repl_plants}{List of vectors, each vector indicating the plants to replace
-on the corresponding date in `repl_times`. Use 0-based indexing!}
+\item{repl_age}{Number of days past death when a plant will be replaced.}
 
 \item{n_cores}{Number of cores to use. Defaults to \code{1}.}
 

@@ -35,10 +35,10 @@ simplify_cage <- function(cage_array, rep, N_0_, max_t_) {
 #' @param process_error SD of process error.
 #' @param plant_mort_0 Intercept for plant-death-induced aphid mortality, one per line.
 #' @param plant_mort_1 Coefficient for plant-death-induced aphid mortality, one per line.
-#' @param plant_death_age Date on which plants begin to die. Use 0-based indexing!
+#' @param plant_death_age_mean Mean of distribution of plant-death ages.
+#' @param plant_death_age_sd SD of distribution of plant-death ages.
 #' @param repl_times Vector of dates on which to replace plants. Use 0-based indexing!
-#' @param repl_plants List of vectors, each vector indicating the plants to replace
-#'     on the corresponding date in `repl_times`. Use 0-based indexing!
+#' @param repl_age Number of days past death when a plant will be replaced.
 #' @param n_cores Number of cores to use. Defaults to \code{1}.
 #' @param show_progress Boolean for whether to show progress bar. Defaults to
 #'     \code{FALSE}.
@@ -46,28 +46,33 @@ simplify_cage <- function(cage_array, rep, N_0_, max_t_) {
 #' @export
 #'
 sim_cages <- function(n_cages, N_0, max_t, R, A, D_0, D_1, process_error,
-                      plant_mort_0, plant_mort_1, plant_death_age, repl_times,
-                      repl_plants, n_cores = 1, show_progress = FALSE) {
+                      plant_mort_0, plant_mort_1,
+                      plant_death_age_mean, plant_death_age_sd,
+                      repl_times, repl_age,
+                      n_cores = 1, show_progress = FALSE) {
 
-    sims <- cwsims::sim_cages_(n_cages = n_cages,
-                               N_0 = N_0,
-                               max_t = max_t,
-                               R = R,
-                               A = A,
-                               D_0 = D_inter,
-                               D_1 = D_slope,
-                               process_error = process_error,
-                               plant_mort_0 = plant_mort_0,
-                               plant_mort_1 = plant_mort_1,
-                               plant_death_age = plant_death_age,
-                               repl_times = repl_times,
-                               repl_plants = repl_plants,
-                               n_cores = n_cores,
-                               show_progress = show_progress)
+    sims <- sim_cages_(n_cages = n_cages,
+                       N_0 = N_0,
+                       max_t = max_t,
+                       R = R,
+                       A = A,
+                       D_0 = D_0,
+                       D_1 = D_1,
+                       process_error = process_error,
+                       plant_mort_0 = plant_mort_0,
+                       plant_mort_1 = plant_mort_1,
+                       plant_death_age_mean = plant_death_age_mean,
+                       plant_death_age_sd = plant_death_age_sd,
+                       repl_times = repl_times,
+                       repl_age = repl_age,
+                       n_cores = n_cores,
+                       show_progress = show_progress)
 
     sims <- map2_dfr(sims, 1:length(sims), ~ simplify_cage(.x, .y, N_0, max_t))
 
     return(sims)
 }
+
+
 
 
