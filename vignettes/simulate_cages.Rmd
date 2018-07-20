@@ -62,7 +62,7 @@ stan_fit <- read_rds("data-raw/stan_fit.rds")
 ```{r}
 n_plants <- 16
 n_lines <- 8
-N_0 <- matrix(rep(50, n_lines * n_plants), n_plants, n_lines)
+N_0 <- matrix(rep(48/16, n_lines * n_plants), n_plants, n_lines)
 max_t <- 180
 R <- apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, mean) %>%
     as.numeric()
@@ -72,7 +72,8 @@ D_slope <- disp_estimates$slope
 D_inter <- disp_estimates$inter
 process_error <- apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE), 3, mean) %>%
     as.numeric()
-plant_mort_coefs <- clonewars::plant_death$after_max_mort_coefs
+plant_mort_slope <- clonewars::plant_death$after_max_mort_coefs$date
+plant_mort_inter <- clonewars::plant_death$after_max_mort_coefs$inter
 plant_death_age <- clonewars::plant_death$days_to_max
 repl_every <- 4
 plants_per <- 4  # plants to replace per replacement day
@@ -100,30 +101,58 @@ n_cores <- parallel::detectCores() - 1
 ```{r do_sims}
 set.seed(654651984L)
 sim_df <- cwsims::sim_cages(n_cages, N_0, max_t, R, A, D_inter, D_slope, process_error,
-                            plant_mort_coefs, plant_death_age, repl_times, repl_plants,
-                            n_cores) %>% 
+                            plant_mort_inter, plant_mort_slope, plant_death_age,
+                            repl_times, repl_plants, n_cores) %>% 
     mutate(X = log(N)) %>%
     identity()
 
-sim_by_cage <- sim_df %>% 
+sim_by_cage <- sim_df %>%
     mutate(line = factor(line,
                          levels = seq_along(levels(growth$line)),
                          labels = levels(growth$line)),
            rep = factor(rep)) %>% 
     group_by(rep, line, date) %>% 
-    summarize(X = N %>% sum() %>% log(),
-              N = N %>% sum()) %>%
-    ungroup() %>% 
+    summarize(N = sum(N)) %>% 
     group_by(rep, date) %>% 
     arrange(line) %>% 
     mutate(prop = N / sum(N),
            prop_end = cumsum(prop),
            prop_start = lag(prop_end, default = 0)) %>%
-    ungroup()
+    ungroup() %>% 
+    mutate(X = log(N))
 ```
 
 
 ```{r plot_sims}
+
+
+sim_by_cage %>% 
+    filter(is.na(prop)) %>% 
+    group_by(rep) %>% 
+    summarize(date = min(date)) %>% 
+    as.data.frame()
+
+sim_by_cage %>%
+    filter(
+        (rep == 2    & date >= 44) |
+        (rep == 13   & date >= 57) |
+        (rep == 16   & date >= 49) |
+        (rep == 26   & date >= 97) |
+        (rep == 73   & date >= 72) |
+        (rep == 76   & date >= 60)
+    )
+sim_by_cage %>% 
+    filter(rep %in% c(2, 13, 16, 26, 73, 76)) %>% 
+    ggplot(aes(date, N)) +
+    geom_line(aes(color = line)) +
+    facet_wrap(~ rep) +
+    scale_color_brewer("Aphid line:", palette = "Dark2") +
+    # coord_cartesian(ylim = c(0, 10)) +
+    NULL
+
+
+
+
 sim_df %>% 
     filter(rep == 1, date < 60) %>% 
     ggplot(aes(date, X)) +
@@ -133,8 +162,7 @@ sim_df %>%
     NULL
 
 sim_by_cage %>% 
-    filter(rep %in% 1:12) %>% 
-    mutate(N = exp(X)) %>% 
+    filter(rep %in% sample.int(n_cages, 12)) %>% 
     ggplot(aes(date, N)) +
     # ggplot(aes(date, X)) +
     geom_line(aes(color = line)) +
@@ -159,21 +187,23 @@ sim_by_cage %>%
     geom_line(aes(group = rep), alpha = 0.25) +
     facet_wrap(~ line, ncol = 4) +
     # geom_smooth(method = "loess", se = FALSE, span = 0.4, color = "black", linetype = 2) +
-    stat_summary(geom = "line", fun.y = mean, color = "black", size = 0.5) +
-    scale_color_brewer("Aphid line:", palette = "Dark2", guide = FALSE) +
+    # stat_summary(geom = "line", fun.y = mean, color = "black", size = 0.5) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
     ylab("Relative abundance") +
     xlab("Day") +
     NULL
 
-
 sim_by_cage %>%
     group_by(rep, date) %>% 
-    summarize(E = -sum(prop * log(prop)) /
-                  log(line %>% levels() %>% length())) %>% 
+    summarize(H = -sum(prop[prop > 0] * log(prop[prop > 0])),
+              N = sum(prop > 0),
+              E = H / log(N)) %>% 
     ungroup() %>% 
-    ggplot(aes(date, E)) +
+    ggplot(aes(date, H)) +
     geom_line(aes(group = rep), alpha = 0.25, color = "dodgerblue") +
     NULL
+
+
 
 
 ```
