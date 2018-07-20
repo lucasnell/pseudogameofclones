@@ -6,3 +6,6 @@
 *.png
 inst/doc
 data-raw/*.rds
+under_constr/_test.*
+*.rda
+*.rds
