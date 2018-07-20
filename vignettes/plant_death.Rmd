@@ -48,13 +48,31 @@ inv_logit <- function(x) {
 ## Looking at when the max is reached
 
 ```{r until_max_model}
-until_max <- load_data(noNA = FALSE, filter_pars = NULL, remove_unfinished = TRUE) %>%
-    mutate(rep = factor(rep)) %>% 
-    group_by(line, rep) %>%
-    filter(1:n() <= which(N == max(N))[1]) %>%
+until_max <- 
+    load_data(impute_fxn = impute, filter_pars = NULL) %>%
+    mutate(line = paste(line)) %>%
+    bind_rows(clonewars:::load_pz_data(impute_fxn = impute, filter_pars = NULL)) %>%
+    mutate_at(vars(line, rep), funs(factor)) %>%
+    # Now filter out early part of each time series, before N > 6
+    # N <= 6 is when the stochasticity associated with only starting with 2 adults
+    # appears to be strongest
+    # Also filter out until the max is reached, then summarize to see how many days 
+    # from N <= 6 to the max N
+    group_by(line, rep) %>% 
+    filter(1:n() >= which(N > 6)[1],
+           1:n() <= which(N == max(N))[1]) %>%
+    mutate(date = date - min(date)) %>%
     summarize(days = max(date)) %>% 
-    ungroup() %>%
-    identity()
+    ungroup()
+
+# Original version:
+# until_max <- load_data(noNA = FALSE, filter_pars = NULL, remove_unfinished = TRUE) %>%
+#     mutate(rep = factor(rep)) %>% 
+#     group_by(line, rep) %>%
+#     filter(1:n() <= which(N == max(N))[1]) %>%
+#     summarize(days = max(date)) %>% 
+#     ungroup() %>%
+#     identity()
 
 until_max %>% 
     ggplot(aes(line, days, color = line)) +
@@ -74,18 +92,23 @@ until_max_mod %>%
 
 ## Looking at mortality after max is reached
 
-```{r after_max_model}
-after_max <- load_data(noNA = FALSE, filter_pars = NULL, remove_unfinished = TRUE) %>% 
+```{r after_max_data}
+after_max <- load_data(filter_pars = NULL, impute_fxn = impute) %>% 
     mutate(rep = factor(rep)) %>% 
     group_by(line, rep) %>%
     filter(1:n() >= which(N == max(N))[1]) %>%
     mutate(N_ratio = N / lag(N),
            date = date - min(date),
-           N_ratio_ = N / N[1]) %>% 
-    ungroup() %>%
+           N_ratio_ = N / N[1],
+           N_dead = lag(N) - N) %>% 
+    ungroup() %>% 
     filter(!is.na(N_ratio))
+```
 
-after_max %>% 
+Exploring data (not evaluated):
+
+```{r after_max_plots, eval = FALSE}
+after_max %>%
     ggplot(aes(date, N_ratio)) +
     geom_line(aes(color = rep)) +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
@@ -93,7 +116,7 @@ after_max %>%
     NULL
 
 
-after_max %>% 
+after_max %>%
     filter(N_ratio < 1) %>%
     ggplot(aes(date, logit(N_ratio))) +
     # ggplot(aes(date, N_ratio_)) +
@@ -107,7 +130,7 @@ after_max %>%
 
 
 
-after_max %>% 
+after_max %>%
     ggplot(aes(date, N_ratio_)) +
     geom_line(aes(color = line, linetype = rep), alpha = 0.5) +
     stat_summary(fun.y = mean, geom = "point", size = 4, shape = 1) +
@@ -116,52 +139,62 @@ after_max %>%
     scale_linetype_manual(guide = FALSE, values = 1:7) +
     NULL
 
-after_max %>% 
+after_max %>%
     ggplot(aes(N_ratio, color = line)) +
     geom_freqpoly(bins = 10, size = 0.75) +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
     facet_wrap(~ line, ncol = 2) +
     NULL
+```
 
-
+```{r after_max_model}
 # AIC is lower than for other combos of date and line
-# This indicates that there is more structure here than simply
-# a mortality that increases as the plant dies, but I'm just ignoring
-# random effects for simplicity (for now, at least).
 after_max_mod <- after_max %>% 
-    filter(N_ratio < 1) %>% 
-    {lmer(logit(N_ratio) ~ date + (date | line:rep), data = ., REML = FALSE)}
+    # Removing rows with negative numbers dead:
+    filter(N_dead >= 0) %>% 
+    # mutate(N = ifelse(N_dead < 1, N - N_dead, N),
+    #        N_dead = ifelse(N_dead < 1, 0, N_dead)) %>%
+    # Rounding values of N and N_dead when N was imputed:
+    mutate_at(vars(N, N_dead), round) %>% 
+    {glmer(cbind(N, N_dead) ~ date + (date | line), family = "binomial", data = .)}
 after_max_mod %>% 
     summary()
 
-# To simulate line:rep coefficients, see this:
-print(VarCorr(after_max_mod), comp = "Std.Dev.")
 
+after_max %>% 
+    group_by(line) %>% 
+    summarize(date = list(seq(min(date), max(date), length.out = 100))) %>% 
+    ungroup() %>% 
+    unnest() %>% 
+    mutate(N_ratio = predict(after_max_mod, type = "response", newdata = .)) %>% 
+    ggplot(aes(date, N_ratio, color = line)) +
+    geom_point(data = after_max, alpha = 0.5, shape = 16) +
+    geom_line(size = 0.75) +
+    facet_wrap(~ line) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE)
+```
 
-# How to extract each line:rep's coefficients:
+```{r after_max_coefs}
+# Each line's coefficients, with an added row for WI-L4Ø that's just the mean:
 after_max_coefs <- after_max_mod %>%
     ranef() %>% 
-    .[["line:rep"]] %>% 
+    .[["line"]] %>% 
     `+`(
         after_max_mod %>%
             fixef() %>% 
-            rep(each = after_max_mod@flist %>% .[["line:rep"]] %>% 
+            rep(each = after_max_mod@flist %>% .[["line"]] %>% 
                     levels() %>% length()) %>% 
-            matrix(ncol = after_max_mod@cnms %>% .[["line:rep"]] %>%
+            matrix(ncol = after_max_mod@cnms %>% .[["line"]] %>%
                        length())
-    )
-
-# For simplicity, I'm just going to use this:
-after_max_coefs <- after_max_mod %>%
-    fixef()
-
-N <- numeric(11)
-N[1] <- 500
-for (t in 1:10) {
-    N[t+1] <- N[t] * inv_logit(after_max_coefs[["(Intercept)"]] + 
-                                   after_max_coefs[["date"]] * t)
-}
-plot(N, type = "l")
+    ) %>% 
+    set_names(c("inter", "date")) %>% 
+    rownames_to_column("line") %>% 
+    add_row(line = "WI-L4Ø", inter = mean(.$inter), date = mean(.$date)) %>% 
+    # Ordering the same as all other data frames:
+    mutate(line = factor(line, levels = levels(until_max$line))) %>% 
+    arrange(line)
+after_max_coefs %>%
+    knitr::kable()
 ```
 
 
@@ -173,9 +206,7 @@ plant_death <- list(
         round() %>% 
         as.integer()
     ,
-    after_max_mort_coefs = after_max_coefs %>% 
-        as.numeric() %>% 
-        signif(4)
+    after_max_mort_coefs = after_max_coefs
 )
 plant_death
 ```
