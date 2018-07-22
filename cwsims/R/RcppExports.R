@@ -7,7 +7,7 @@
 #'
 NULL
 
-#' Update Z, plant_days, and D_lambdas
+#' Update Z and plant_days
 #'
 #' @noRd
 #'
@@ -37,7 +37,7 @@ NULL
 #' @noRd
 #'
 #'
-sim_cages_ <- function(n_cages, N_0, max_t, R, A, D_0, D_1, process_error, plant_mort_0, plant_mort_1, plant_death_age_mean, plant_death_age_sd, repl_times, repl_age, n_cores, show_progress) {
-    .Call(`_cwsims_sim_cages_`, n_cages, N_0, max_t, R, A, D_0, D_1, process_error, plant_mort_0, plant_mort_1, plant_death_age_mean, plant_death_age_sd, repl_times, repl_age, n_cores, show_progress)
+sim_cages_ <- function(n_cages, N_0, max_t, R, A, D_mat, process_error, plant_mort_0, plant_mort_1, plant_death_age_mean, plant_death_age_sd, repl_times, repl_age, n_cores, show_progress) {
+    .Call(`_cwsims_sim_cages_`, n_cages, N_0, max_t, R, A, D_mat, process_error, plant_mort_0, plant_mort_1, plant_death_age_mean, plant_death_age_sd, repl_times, repl_age, n_cores, show_progress)
 }
 

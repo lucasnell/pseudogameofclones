@@ -68,14 +68,13 @@ R <- apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, mean) %>%
     as.numeric()
 A <- apply(rstan::extract(stan_fit, "A", permuted = FALSE), 3, mean) %>%
     as.numeric()
-D_0 <- disp_estimates$inter
-D_1 <- disp_estimates$slope
+D_Binom <- clonewars::disp_estimates$binom
+D_Pois <- clonewars::disp_estimates$pois
 process_error <- apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE), 
                        3, mean) %>%
     as.numeric()
 plant_mort_0 <- clonewars::plant_death$after_max_mort_coefs$inter
 plant_mort_1 <- clonewars::plant_death$after_max_mort_coefs$date
-# plant_death_age <- clonewars::plant_death$days_to_max
 plant_death_age_mean <- clonewars::plant_death$until_max_summ$max_mean
 plant_death_age_sd <- clonewars::plant_death$until_max_summ$max_sd
 repl_times <- seq(4, max_t, 4) - 1
@@ -87,7 +86,7 @@ n_cores <- parallel::detectCores() - 1
 
 ```{r do_sims}
 set.seed(654651984L)
-sim_df <- cwsims::sim_cages(n_cages, N_0, max_t, R, A, D_0, D_1, process_error,
+sim_df <- cwsims::sim_cages(n_cages, N_0, max_t, R, A, D_Binom, D_Pois, process_error,
                             plant_mort_0, plant_mort_1,
                             plant_death_age_mean, plant_death_age_sd,
                             repl_times, repl_age, n_cores) %>% 
@@ -115,10 +114,22 @@ sim_by_cage <- sim_df %>%
 
 # This should have zero rows bc having total extinction makes no sense:
 sim_by_cage %>% 
+    filter(date == max_t) %>% 
     group_by(rep) %>% 
     summarize(N = sum(N)) %>% 
     ungroup() %>% 
     filter(N == 0)
+
+
+sim_df %>% 
+    mutate_at(vars(plant, line), factor) %>% 
+    filter(rep == 53, date < 50) %>% 
+    ggplot(aes(date, X)) +
+    geom_line(aes(color = line)) +
+    facet_wrap(~ plant, nrow = 4) +
+    scale_color_brewer("Aphid line:", palette = "Dark2") +
+    NULL
+
 
 sim_by_cage %>% 
     filter(rep %in% sample.int(n_cages, 12)) %>% 

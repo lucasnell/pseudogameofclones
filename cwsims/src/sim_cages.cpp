@@ -13,6 +13,13 @@
 using namespace Rcpp;
 
 
+inline double inv_logit(const double& alpha) {
+    return 1 / (1 + std::exp(-1 * alpha));
+}
+
+
+
+
 
 //' Sample the number of days PAST plant death.
 //'
@@ -32,94 +39,92 @@ inline sint32 sample_plant_days(const double& days_mean,
 
 
 
-//' Update Z, plant_days, and D_lambdas
+//' Update Z and plant_days
 //'
 //' @noRd
 //'
-void update_Z_pd_L(arma::vec& Z, arma::ivec& plant_days, arma::mat& D_lambdas,
-                   const uint32& t, const arma::cube& N_out,
-                   const arma::rowvec& A,
-                   const arma::rowvec& D_0, const arma::rowvec& D_1) {
+void update_Z_pd(arma::vec& Z, arma::ivec& plant_days,
+                 const uint32& t, const arma::cube& N_out,
+                 const arma::rowvec& A) {
     for (uint32 i = 0; i < Z.n_elem; i++) {
         Z(i) = 0;
         // Update # plant days PAST death for time t+1:
         plant_days(i)++;
-        for (uint32 j = 0; j < D_lambdas.n_cols; j++) {
-            if (N_out(i,j,t) == 0) {
-                D_lambdas(i, j) = 0;
-                continue;
-            }
-            D_lambdas(i, j) = std::exp(D_0(j) + D_1(j) * std::log(N_out(i,j,t)));
-            Z[i] += (A(j) * N_out(i,j,t));
+        for (uint32 j = 0; j < N_out.n_cols; j++) {
+            Z(i) += (A(j) * N_out(i,j,t));
         }
     }
     return;
 }
 
 
+
+
 /*
- Update dispersal with no Poisson overdispersion
- */
-void update_dispersal(arma::mat& emigrants, arma::mat& immigrants,
-                      std::poisson_distribution<uint32>& poisson_rng,
-                      pcg32& eng,
-                      const arma::mat& D_lambdas) {
-    emigrants.fill(0);
-    immigrants.fill(0);
-    uint32 n_lines = emigrants.n_cols;
-    uint32 n_plants = emigrants.n_rows;
-    for (uint32 j = 0; j < n_lines; j++) {
-        uint32 dispersed_;
-        for (uint32 from_i = 0; from_i < n_plants; from_i++) {
-            for (uint32 to_i = 0; to_i < n_plants; to_i++) {
-                if (from_i == to_i) continue;
-                if (D_lambdas(from_i, j) == 0) continue;
-                // Calculate lambda and reset distribution to it:
-                double lambda_ = D_lambdas(from_i, j) /
-                    (static_cast<double>(n_plants) - 1.0);
-                poisson_rng.param(
-                    std::poisson_distribution<uint32>::param_type(lambda_));
-                // Draw from distribution
-                dispersed_ = poisson_rng(eng);
-                emigrants(from_i, j) += dispersed_;
-                immigrants(to_i, j) += dispersed_;
-            }
-        }
-    }
-    return;
+Dispersal of one line from one plant to another:
+*/
+uint32 dispersal(const uint32& to_i, const uint32& from_i,
+                 const uint32& j, const uint32& t,
+                 const arma::cube& N_out, const arma::mat& D_mat,
+                 const arma::vec& Z,
+                 std::poisson_distribution<uint32>& poisson_rng,
+                 std::normal_distribution<double>& normal_rng,
+                 pcg32& eng) {
+
+    if (from_i == to_i | N_out(from_i, j, t) == 0) return 0;
+
+    const arma::rowvec& D(D_mat.row(j));
+
+    // Basing Pr(dispersal > 0) on the total # aphids, not just this line
+    double N = arma::accu(N_out(arma::span(from_i), arma::span::all, arma::span(t)));
+    double p = inv_logit(D(0) + D(1) * N + D(2) * N * N);
+    // If not dispersing, then stop right now and return zero:
+    double u = runif_01(eng);
+    if (u > p) return 0;
+
+    // Else we have to sample from Poisson with overdispersion:
+    // Calculate lambda and reset distribution to it:
+    double lambda_ = std::exp(D(3) + std::log(N_out(from_i,j,t)));
+    // Because we're splitting lambda_ over `n_plants - 1` plants:
+    lambda_ /= (static_cast<double>(N_out.n_rows) - 1.0);
+    poisson_rng.param(
+        std::poisson_distribution<uint32>::param_type(lambda_));
+    // Draw from distribution
+    double dispersed_ = static_cast<double>(poisson_rng(eng));
+    /* Add overdispersion: */
+    dispersed_ *= std::exp(normal_rng(eng) * D(4));
+
+    uint32 dispersed = std::round(dispersed_);
+
+    return dispersed;
 }
 
-
 /*
- Overloaded version for overdispersion:
+ Update dispersal, including overdispersion:
  */
 void update_dispersal(arma::mat& emigrants, arma::mat& immigrants,
+                      const uint32& t,
+                      const arma::cube& N_out, const arma::mat& D_mat,
+                      const arma::vec& Z,
                       std::poisson_distribution<uint32>& poisson_rng,
                       std::normal_distribution<double>& normal_rng,
-                      pcg32& eng,
-                      const arma::mat& D_lambdas,
-                      const double& overdispersion_sd) {
+                      pcg32& eng) {
     emigrants.fill(0);
     immigrants.fill(0);
     uint32 n_lines = emigrants.n_cols;
     uint32 n_plants = emigrants.n_rows;
+    uint32 dispersed_;
+
     for (uint32 j = 0; j < n_lines; j++) {
-        uint32 dispersed_;
         for (uint32 from_i = 0; from_i < n_plants; from_i++) {
             for (uint32 to_i = 0; to_i < n_plants; to_i++) {
-                if (from_i == to_i) continue;
-                if (D_lambdas(from_i, j) == 0) continue;
-                // Calculate lambda and reset distribution to it:
-                double lambda_ = D_lambdas(from_i, j) /
-                    (static_cast<double>(n_plants) - 1.0);
-                poisson_rng.param(
-                    std::poisson_distribution<uint32>::param_type(lambda_));
-                // Draw from distribution
-                dispersed_ = poisson_rng(eng);
-                /* Add overdispersion: */
-                dispersed_ += std::round(normal_rng(eng) * overdispersion_sd);
+
+                dispersed_ = dispersal(to_i, from_i, j, t, N_out, D_mat, Z,
+                                       poisson_rng, normal_rng, eng);
+
                 emigrants(from_i, j) += dispersed_;
                 immigrants(to_i, j) += dispersed_;
+
             }
         }
     }
@@ -135,7 +140,7 @@ void update_dispersal(arma::mat& emigrants, arma::mat& immigrants,
 //'
 void sim_cage(const arma::mat& N_0, const uint32& max_t,
               const arma::rowvec& R, const arma::rowvec& A,
-              const arma::rowvec& D_0, const arma::rowvec& D_1,
+              const arma::mat& D_mat,
               const double& process_error,
               const double& plant_death_age_mean,
               const double& plant_death_age_sd,
@@ -167,17 +172,16 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
     // Matrices keeping track of numbers of dispersed aphids:
     arma::mat emigrants(n_plants, n_lines, arma::fill::zeros);
     arma::mat immigrants(n_plants, n_lines, arma::fill::zeros);
-    // Dispersal lambdas (for Poisson distr.) for all lines and plants
-    arma::mat D_lambdas(n_plants, n_lines);
     // Summed density dependences * N_t among all lines for each plant
     arma::vec Z(n_plants);
 
     for (uint32 t = 0; t < max_t; t++) {
 
-        // Update Z, plant_days, and D_lambdas:
-        update_Z_pd_L(Z, plant_days, D_lambdas, t, N_out, A, D_0, D_1);
+        // Update Z and plant_days:
+        update_Z_pd(Z, plant_days, t, N_out, A);
         // Generate numbers of dispersed aphids:
-        update_dispersal(emigrants, immigrants, poisson_rng, eng, D_lambdas);
+        update_dispersal(emigrants, immigrants, t, N_out, D_mat, Z, poisson_rng,
+                         normal_rng, eng);
 
         // Start out new N based on previous time step
         N_out.slice(t+1) = N_out.slice(t);
@@ -263,7 +267,7 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
 
             /*
              In the rare event that all plants need replaced, aphids will
-             be dispersed evenly across all plants:
+             be dispersed evenly across all new plants:
              */
             if (not_replaced.size() == 0) {
                 // Adjust pools of aphid lines in replaced and non-replaced plants:
@@ -364,8 +368,7 @@ std::vector<arma::cube> sim_cages_(const uint32& n_cages,
                                    const uint32& max_t,
                                    const arma::rowvec& R,
                                    const arma::rowvec& A,
-                                   const arma::rowvec& D_0,
-                                   const arma::rowvec& D_1,
+                                   const arma::mat& D_mat,
                                    const double& process_error,
                                    const arma::rowvec& plant_mort_0,
                                    const arma::rowvec& plant_mort_1,
@@ -396,11 +399,11 @@ std::vector<arma::cube> sim_cages_(const uint32& n_cages,
     if (A.n_elem != n_lines) {
         err_msg += "ERROR: A.n_elem != n_lines\n";
     }
-    if (D_0.n_elem != n_lines) {
-        err_msg += "ERROR: D_0.n_elem != n_lines\n";
+    if (D_mat.n_rows != n_lines) {
+        err_msg += "ERROR: D_mat.n_rows != n_lines\n";
     }
-    if (D_1.n_elem != n_lines) {
-        err_msg += "ERROR: D_1.n_elem != n_lines\n";
+    if (D_mat.n_cols != 5) {
+        err_msg += "ERROR: D_mat.n_cols != 5\n";
     }
     if (plant_mort_0.n_elem != n_lines) {
         err_msg += "ERROR: plant_mort_0.n_elem != n_lines\n";
@@ -446,7 +449,7 @@ std::vector<arma::cube> sim_cages_(const uint32& n_cages,
     for (uint32 r = 0; r < n_cages; r++) {
         if (p.is_aborted()) continue;
         arma::cube& rep_cube(reps_out[r]);
-        sim_cage(N_0, max_t, R, A, D_0, D_1, process_error,
+        sim_cage(N_0, max_t, R, A, D_mat, process_error,
                  plant_death_age_mean, plant_death_age_sd,
                  repl_times, repl_age_, log_morts, eng, rep_cube);
         p.increment();

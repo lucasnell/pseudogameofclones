@@ -30,8 +30,14 @@ simplify_cage <- function(cage_array, rep, N_0_, max_t_) {
 #' @param max_t Max time points to simulate for each cage.
 #' @param R Growth rates for each line.
 #' @param A Density dependence for each line.
-#' @param D_0 Intercept for regression of dispersal ~ # aphids, one for each line.
-#' @param D_1 Coefficient for regression of dispersal ~ # aphids, one for each line.
+#' @param D_Binom Data frame containing intercept and coefficient estimates for
+#'     binomial GLM of `<whether dispersal > 0> ~ N_t + N_t^2`.
+#'     There should be one set of estimates for each line regardless of whether the model
+#'     estimated separate values for each line.
+#' @param D_Pois Data frame containing intercept and overdispersion estimates for
+#'     Poisson GLMM of `<# dispersed | dispersal occurs> ~ 1`.
+#'     There should be one set of estimates for each line regardless of whether the model
+#'     estimated separate values for each line.
 #' @param process_error SD of process error.
 #' @param plant_mort_0 Intercept for plant-death-induced aphid mortality, one per line.
 #' @param plant_mort_1 Coefficient for plant-death-induced aphid mortality, one per line.
@@ -45,19 +51,24 @@ simplify_cage <- function(cage_array, rep, N_0_, max_t_) {
 #'
 #' @export
 #'
-sim_cages <- function(n_cages, N_0, max_t, R, A, D_0, D_1, process_error,
+sim_cages <- function(n_cages, N_0, max_t, R, A, D_Binom, D_Pois, process_error,
                       plant_mort_0, plant_mort_1,
                       plant_death_age_mean, plant_death_age_sd,
                       repl_times, repl_age,
                       n_cores = 1, show_progress = FALSE) {
+
+    if (!identical(D_Binom$binom$line, D_Pois$pois$line)) {
+        stop("\nline columns should be identical in both D_Binom and D_Pois.")
+    }
+    D_mat <- as.matrix(cbind(D_Binom[,c("inter", "N1", "N2")], D_Pois[,c("inter", "od")]))
+    colnames(D_mat) <- NULL
 
     sims <- sim_cages_(n_cages = n_cages,
                        N_0 = N_0,
                        max_t = max_t,
                        R = R,
                        A = A,
-                       D_0 = D_0,
-                       D_1 = D_1,
+                       D_mat,
                        process_error = process_error,
                        plant_mort_0 = plant_mort_0,
                        plant_mort_1 = plant_mort_1,
