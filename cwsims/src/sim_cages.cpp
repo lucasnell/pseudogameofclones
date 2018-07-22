@@ -66,25 +66,17 @@ Dispersal of one line from one plant to another:
 uint32 dispersal(const uint32& to_i, const uint32& from_i,
                  const uint32& j, const uint32& t,
                  const arma::cube& N_out, const arma::mat& D_mat,
-                 const arma::vec& Z,
                  std::poisson_distribution<uint32>& poisson_rng,
                  std::normal_distribution<double>& normal_rng,
                  pcg32& eng) {
 
-    if (from_i == to_i | N_out(from_i, j, t) == 0) return 0;
+    if (N_out(from_i, j, t) == 0) return 0;
 
     const arma::rowvec& D(D_mat.row(j));
 
-    // Basing Pr(dispersal > 0) on the total # aphids, not just this line
-    double N = arma::accu(N_out(arma::span(from_i), arma::span::all, arma::span(t)));
-    double p = inv_logit(D(0) + D(1) * N + D(2) * N * N);
-    // If not dispersing, then stop right now and return zero:
-    double u = runif_01(eng);
-    if (u > p) return 0;
-
-    // Else we have to sample from Poisson with overdispersion:
+    // Sample from Poisson with overdispersion:
     // Calculate lambda and reset distribution to it:
-    double lambda_ = std::exp(D(3) + std::log(N_out(from_i,j,t)));
+    double lambda_ = std::exp(D(0) + std::log(N_out(from_i,j,t)));
     // Because we're splitting lambda_ over `n_plants - 1` plants:
     lambda_ /= (static_cast<double>(N_out.n_rows) - 1.0);
     poisson_rng.param(
@@ -92,7 +84,14 @@ uint32 dispersal(const uint32& to_i, const uint32& from_i,
     // Draw from distribution
     double dispersed_ = static_cast<double>(poisson_rng(eng));
     /* Add overdispersion: */
-    dispersed_ *= std::exp(normal_rng(eng) * D(4));
+    dispersed_ *= std::exp(normal_rng(eng) * D(1));
+    /*
+     Dealing with overdispersion:
+     */
+    // Make sure it isn't < 0:
+    if (dispersed_ < 0) dispersed_ = 0;
+    // Make sure it doesnt' exceed the number of aphids:
+    // if (dispersed_ > )
 
     uint32 dispersed = std::round(dispersed_);
 
@@ -105,7 +104,6 @@ uint32 dispersal(const uint32& to_i, const uint32& from_i,
 void update_dispersal(arma::mat& emigrants, arma::mat& immigrants,
                       const uint32& t,
                       const arma::cube& N_out, const arma::mat& D_mat,
-                      const arma::vec& Z,
                       std::poisson_distribution<uint32>& poisson_rng,
                       std::normal_distribution<double>& normal_rng,
                       pcg32& eng) {
@@ -116,15 +114,18 @@ void update_dispersal(arma::mat& emigrants, arma::mat& immigrants,
     uint32 dispersed_;
 
     for (uint32 j = 0; j < n_lines; j++) {
+
+        arma::rowvec disp_pools = N_out(arma::span::all, arma::span(j), arma::span(t));
         for (uint32 from_i = 0; from_i < n_plants; from_i++) {
             for (uint32 to_i = 0; to_i < n_plants; to_i++) {
 
-                dispersed_ = dispersal(to_i, from_i, j, t, N_out, D_mat, Z,
+                if (from_i == to_i) continue;
+
+                dispersed_ = dispersal(to_i, from_i, j, t, N_out, D_mat,
                                        poisson_rng, normal_rng, eng);
 
                 emigrants(from_i, j) += dispersed_;
                 immigrants(to_i, j) += dispersed_;
-
             }
         }
     }
@@ -180,7 +181,7 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
         // Update Z and plant_days:
         update_Z_pd(Z, plant_days, t, N_out, A);
         // Generate numbers of dispersed aphids:
-        update_dispersal(emigrants, immigrants, t, N_out, D_mat, Z, poisson_rng,
+        update_dispersal(emigrants, immigrants, t, N_out, D_mat, poisson_rng,
                          normal_rng, eng);
 
         // Start out new N based on previous time step
@@ -402,8 +403,8 @@ std::vector<arma::cube> sim_cages_(const uint32& n_cages,
     if (D_mat.n_rows != n_lines) {
         err_msg += "ERROR: D_mat.n_rows != n_lines\n";
     }
-    if (D_mat.n_cols != 5) {
-        err_msg += "ERROR: D_mat.n_cols != 5\n";
+    if (D_mat.n_cols != 2) {
+        err_msg += "ERROR: D_mat.n_cols != 2\n";
     }
     if (plant_mort_0.n_elem != n_lines) {
         err_msg += "ERROR: plant_mort_0.n_elem != n_lines\n";
