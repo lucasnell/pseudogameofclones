@@ -197,6 +197,39 @@ sim_by_cage %>%
     summarize(n = n())
 
 
+coexist_reps <- sim_by_cage %>% 
+    filter(date == max_t) %>% 
+    group_by(rep) %>% 
+    summarize(n_lines = sum(N > 0)) %>% 
+    filter(n_lines > 1) %>% 
+    .[["rep"]]
+
+
+
+sim_by_cage %>% 
+    filter(rep %in% coexist_reps) %>% 
+    ggplot(aes(date, fill = line)) +
+    geom_ribbon(aes(ymin = prop_start, ymax = prop_end), color = NA) +
+    facet_wrap(~ rep, nrow = 6) +
+    scale_fill_brewer("Aphid line:", palette = "Dark2") +
+    NULL
+
+
+# Below only works if the max # remaining lines is 2:
+
+sim_by_cage %>% 
+    filter(rep %in% coexist_reps, date == max_t, N > 0) %>% 
+    group_by(rep) %>% 
+    arrange(line) %>% 
+    summarize(l1 = list(line[1:2]), l2 = list(line[2:1])) %>% 
+    unnest() %>% 
+    ggplot(aes(l1, l2)) +
+    geom_abline(slope = 1, intercept = 0, color = "gray60") +
+    geom_point(position = position_jitter(width = 0.1, height = 0.1)) +
+    theme(panel.grid.major = element_line(color = "gray90")) +
+    scale_x_discrete(NULL, drop = FALSE) +
+    scale_y_discrete(NULL, drop = FALSE) +
+    NULL
 
 ```
 
