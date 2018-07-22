@@ -94,15 +94,19 @@ Below, colors represent different reps.
 
 
 ```{r disp_N_plot}
-growth %>% 
-    ggplot(aes(X, disp, color = rep)) +
+growth %>%
+    filter(disp > 0) %>% 
+    ggplot(aes(N, disp, color = rep)) +
     geom_point(shape = 16, alpha = 0.5) +
+    # stat_summary_bin(geom = "line", binwidth = 100, fun.y = mean, color = "black") +
+    # stat_smooth(method = "glm", se = FALSE, color = "black", formula = y ~ poly(x, 2),
+    #             method.args = list(family = "poisson")) +
     facet_wrap(~ line) +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
     scale_fill_brewer(palette = "Dark2", guide = FALSE) +
-    scale_y_continuous(breaks = 4^(0:3)) +
-    # scale_x_continuous(trans = "log", breaks = 10^(0:3)) +
-    coord_trans(y = "log1p") +
+    # scale_x_continuous(breaks = 10^(0:3), trans = "log") +
+    scale_y_continuous(breaks = 4^(0:3), trans = "log") +
+    # coord_trans(y = "log1p") +
     NULL
 ```
 
@@ -118,31 +122,75 @@ Because I don't yet have my full dataset, I'm going to just use this information
 for the simulations without worrying about how much statistical evidence
 there is that lines are actually different.
 This will obviously change once I have all 10 reps for each line.
+I added `(1 | od)` to account for overdispersion.
+
 
 ```{r fit_glmm}
-disp_mod <- glmer(disp ~ X + (X | line/rep), data = growth,
-                  family = "poisson",
-                  control = glmerControl(optimizer = "bobyqa"))
+# Chances of dispersal > 0 as a function of the # aphids on the plant:
+disp_mod <- glmer(disp_b ~ poly(N,2) + (1 | line/rep), data = growth,
+                  family = "binomial",
+                  control = glmerControl(optimizer = "bobyqa", 
+                                         optCtrl = list(maxfun = 2e4)))
+# Number of aphids dispersed as a function of the aphid line, with terms for
+# "effort" (log(# aphids)) and overdispersion
+disp_mod2 <- growth %>% 
+    filter(disp > 0) %>% 
+    {glmer(disp ~ 1 + (1 | line) + offset(X) + (1 | od),
+              data = ., family = "poisson")}
 disp_mod %>% summary()
+disp_mod2 %>% summary()
 ```
 
 
 Estimates for each line:
 
+<!---
+*************************
+*************************
+
+THE REMAINDER OF THE DOCUMENT IS NOT UPDATED FOR THE NEW MODELS
+
+*************************
+*************************
+-->
+
 ```{r make_disp_mod_df}
 disp_estimates <- disp_mod %>% 
     ranef() %>% 
     .[["line"]] %>% 
+    set_names(NULL) %>% 
+    {cbind(inter = ., N1 = rep(0, length(.)), N2 = rep(0, length(.)))} %>% 
     `+`({
         disp_mod %>%
             fixef() %>% 
             rep(growth$line %>% levels() %>% length()) %>% 
-            matrix(ncol = 2, byrow = TRUE)
+            matrix(ncol = length(disp_mod %>% fixef()), byrow = TRUE)
     }) %>% 
-    rownames_to_column() %>% 
-    rename(line = rowname, slope = X, inter = `(Intercept)`)
+    rownames_to_column("line")
 disp_estimates %>% 
     knitr::kable(digits = 3)
+```
+
+
+Overdispersion estimate:
+
+```{r make_disp_mod_df}
+# disp_od <- 
+disp_mod %>% str()
+# od       (Intercept) 2.3872
+# rep:line (Intercept) 4.7242
+
+VarCorr(disp_mod) %>% 
+    as.data.frame() %>% 
+    filter(grp != "line")
+
+z <- disp_mod %>% 
+    ranef() %>%
+    .[["rep:line"]]
+
+hist(z[,1])
+
+
 ```
 
 
@@ -151,11 +199,16 @@ Code to make predictions from `disp_mod` based on a vector of `X` and aphid line
 names:
 
 ```{r prediction_fxn}
-predict_disp <- function(X, aphid_line) {
+predict_disp <- function(N, aphid_line) {
     inds <- map_int(aphid_line, ~ which(disp_estimates$line == .x))
-    m <- disp_estimates$slope[inds]
-    b <- disp_estimates$inter[inds]
-    y <- exp(m * X + b)
+    
+    N_poly2 <- poly(N, 2, coefs = attr(poly(growth$N, 2), "coefs"))
+    x_mat <- cbind(rep(1, length(N)), N_poly2)
+    
+    beta_mat <- cbind(disp_estimates$inter[inds],
+                      disp_estimates$N1[inds],
+                      disp_estimates$N2[inds])
+    y <- inv_logit(rowSums(beta_mat * x_mat))
     return(y)
 }
 ```
@@ -165,15 +218,17 @@ predict_disp <- function(X, aphid_line) {
 
 ```{r glmm_prediction_plot}
 growth %>% 
-    mutate(disp_pred = predict_disp(X, line)) %>%
+    mutate(disp_pred = predict_disp(N, line)) %>%
+    # mutate(disp_pred = predict(disp_mod, type = "response")) %>%
     ggplot(aes(N, disp_pred, color = rep)) +
-    geom_point(aes(y = disp), alpha = 0.5, shape = 16) +
+    geom_point(aes(y = disp_b), alpha = 0.5, shape = 16) +
     geom_line(size = 0.75, color = "black") +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
     facet_wrap(~ line, nrow = 2) +
-    scale_y_continuous("Dispersed aphids", trans = "log1p",
-                       breaks = c(0, 4^(0:3))) +
+    # scale_y_continuous("Dispersed aphids", trans = "log1p",
+    #                    breaks = c(0, 4^(0:3))) +
     scale_x_continuous("Total aphids") +
+    # coord_cartesian(ylim = c(0, 10)) +
     NULL
 ```
 
