@@ -99,7 +99,7 @@ growth %>%
     geom_point(shape = 16, alpha = 0.5) +
     stat_smooth(method = "glm", se = FALSE, color = "black",
                 formula = y ~ 1 + offset(log(x)),
-                method.args = list(family = quasipoisson)) +
+                method.args = list(family = "poisson")) +
     facet_wrap(~ line) +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
     scale_fill_brewer(palette = "Dark2", guide = FALSE) +
@@ -124,21 +124,25 @@ I added `(1 | od)` to account for overdispersion.
 
 
 ```{r fit_glmm, warning=FALSE}
-disp_mod <- glm(disp ~ 0 + line,
-                data = growth,
-                family = quasipoisson, offset = X)
-disp_mod %>% 
-    summary()
+# Whether dispersed as a function of line and N and N^2:
+disp_binom <- glm(disp_b ~ 0 + line + N + I(N^2),
+                data = growth, family = binomial)
+# Number dispersed as function of line, with overdispersion:
+disp_pois <- glmer(disp ~ 0 + line + (1 | od),
+                   data = filter(growth, disp > 0),
+                   family = poisson, offset = X)
+disp_binom %>% summary()
+disp_pois %>% summary()
 ```
 
 
 
-Overdispersion estimate for the quasi-Poisson regression:
+Overdispersion estimate for the Poisson regression:
 
 ```{r make_disp_od}
-disp_od <- disp_mod %>%
-    summary() %>%
-    .[["dispersion"]]
+disp_od <- VarCorr(disp_pois) %>%
+    as.data.frame() %>% 
+    .[["sdcor"]]
 disp_od
 ```
 
@@ -148,17 +152,36 @@ Estimates for each line:
 
 ```{r make_disp_mod_df, echo = FALSE}
 disp_estimates <-
-    disp_mod %>% 
-    coef() %>% 
-    {names(.) <- gsub("line", "", names(.)); .} %>% 
-    cbind() %>% 
-    as.data.frame() %>% 
-    set_names("inter") %>% 
-    rownames_to_column("line") %>% 
-    mutate(od = disp_od)
+    list(
+        binom = disp_binom %>%
+            coef() %>% 
+            {names(.) <- gsub("line", "", names(.)); .} %>% 
+            {cbind(head(., -2), 
+                   rep(tail(., 2)[1], length(.)-2), 
+                   rep(tail(., 1), length(.)-2))} %>% 
+            as.data.frame() %>% 
+            set_names(c("inter", "N1", "N2")) %>% 
+            rownames_to_column("line"),
+        pois = disp_pois %>% 
+            fixef() %>% 
+            {names(.) <- gsub("line", "", names(.)); .} %>% 
+            cbind() %>% 
+            as.data.frame() %>% 
+            set_names("inter") %>% 
+            rownames_to_column("line") %>% 
+            mutate(od = disp_od)
+    )
+if (!identical(disp_estimates$binom$line, disp_estimates$pois$line)) {
+    stop("line columns should be identical in both parts of disp_estimates list.")
+}
 
 disp_estimates %>% 
-    knitr::kable(digits = 3)
+    map( ~ mutate_if(.x, is.numeric, sprintf, fmt = "%.3g")) %>% 
+    knitr::kable(
+        format = "html",
+        caption = paste("Model estimates for the binomial GLM (top) and",
+                        "Poisson GLMM (bottom), for each line.")
+        )
 ```
 
 
@@ -168,10 +191,18 @@ Code to make predictions from both models based on a vector of `N` and aphid lin
 names:
 
 ```{r prediction_fxn}
-predict_disp <- function(X, aphid_line) {
-    inds <- map_int(aphid_line, ~ which(disp_estimates$line == .x))
-    b0 <- disp_estimates$inter[inds]
-    return(exp(b0 + X))
+predict_disp <- function(N, aphid_line) {
+    inds <- map_int(aphid_line, ~ which(disp_estimates$binom$line == .x))
+    # Binomial estimate (Pr(dispersal > 0)):
+    b0 <- disp_estimates$binom$inter[inds]
+    b1 <- disp_estimates$binom$N1[inds]
+    b2 <- disp_estimates$binom$N2[inds]
+    pr_disp <- inv_logit(b0 + b1 * N + b2 * N^2)
+    # Poisson estimate (# dispersed | dispersal occurs):
+    b0 <- disp_estimates$pois$inter[inds]
+    X <- log(N)
+    n_disp <- exp(b0 + X)
+    return(pr_disp * n_disp)
 }
 ```
 
@@ -184,7 +215,7 @@ growth %>%
     geom_point(alpha = 0.5, shape = 16) +
     geom_line(data = expand.grid(N = 1:1000,
                                  line = growth$line %>% unique() %>% sort()) %>% 
-                  mutate(disp = predict_disp(log(N), line)),
+                  mutate(disp = predict_disp(N, line)),
         size = 0.75, color = "black") +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
     facet_wrap(~ line, nrow = 2) +
@@ -192,6 +223,11 @@ growth %>%
                        breaks = c(0, 4^(0:3))) +
     scale_x_continuous("Total aphids") +
     NULL
+
+# Generating overdispersion:
+over_pois <- function(n, lambda, sd) {
+    return(rpois(n, lambda) * rlnorm(n, meanlog = 0, sdlog = sd))
+}
 ```
 
 
