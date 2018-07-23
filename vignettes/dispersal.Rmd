@@ -221,6 +221,53 @@ growth %>%
 ```
 
 
+## Testing simulation
+
+```{r sim_disp}
+sim_disp <- function(N, aphid_line) {
+    inds <- map_int(aphid_line, ~ which(disp_estimates$binom$line == .x))
+    n <- length(N)
+    # Binomial estimate (Pr(dispersal > 0)):
+    b0 <- disp_estimates$binom$inter[inds]
+    b1 <- disp_estimates$binom$N1[inds]
+    b2 <- disp_estimates$binom$N2[inds]
+    pr_disp <- inv_logit(b0 + b1 * N + b2 * N^2)
+    binom_rnd <- rbinom(n, 1, pr_disp)
+    # Negative binomial estimate (# dispersed | dispersal occurs):
+    b0 <- disp_estimates$nb$inter[inds]
+    mu <- exp(b0) * N
+    theta <- disp_estimates$nb$theta[inds]
+    nb_rnd <- rnbinom(n, size = theta, mu = mu)
+    return(binom_rnd * nb_rnd)
+}
+```
+
+
+
+```{r}
+growth %>% 
+    mutate(disp_ = sim_disp(N, line)) %>% 
+    ggplot(aes(N, disp_, color = rep)) +
+    geom_point(alpha = 0.5, shape = 16) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    facet_wrap(~ line, nrow = 2) +
+    scale_y_continuous("Dispersed aphids", trans = "log1p",
+                       breaks = c(0, 4^(0:3))) +
+    scale_x_continuous("Total aphids") +
+    NULL
+# Other one to compare to:
+growth %>% 
+    ggplot(aes(N, disp, color = rep)) +
+    geom_point(alpha = 0.5, shape = 16) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    facet_wrap(~ line, nrow = 2) +
+    scale_y_continuous("Dispersed aphids", trans = "log1p",
+                       breaks = c(0, 4^(0:3))) +
+    scale_x_continuous("Total aphids") +
+    NULL
+```
+
+
 
 ## Saving output
 
