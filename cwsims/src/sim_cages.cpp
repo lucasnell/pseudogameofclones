@@ -133,18 +133,14 @@ arma::ivec emigration(const uint32& i,
     // Else we have to sample from negative binomial:
     // Calculate mu:
     double mu_ = D(3) * N_out(i,j,t);
-    // Because we're splitting mu_ over `n_plants - 1` plants:
-    double np = (static_cast<double>(N_out.n_rows) - 1.0);
+    // Because we're splitting mu_ over `n_plants` plants:
+    double np = static_cast<double>(N_out.n_rows);
     mu_ /= np;
     // Now for the theta parameter:
     double theta_ = D(4) / np;
     // Update inner Gamma distribution based on this:
     nb_rng.set_gamma(theta_, mu_);
     for (uint32 ii = 0; ii < disp_out.n_elem; ii++) {
-        if (ii == i) {
-            disp_out(ii) = 0;
-            continue;
-        }
         disp_out(ii) = nb_rng.sample(eng);
     }
 

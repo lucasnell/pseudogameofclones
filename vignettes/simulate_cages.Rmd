@@ -110,26 +110,44 @@ sim_by_cage <- sim_df %>%
 ```
 
 
-```{r plot_sims}
-
+```{r check_sim_output}
 # This should have zero rows bc having total extinction makes no sense:
 sim_by_cage %>% 
     filter(date == max_t) %>% 
     group_by(rep) %>% 
     summarize(N = sum(N)) %>% 
     ungroup() %>% 
-    filter(N == 0)
+    filter(N == 0) %>% 
+    nrow() %>% 
+    `==`(0) %>% 
+    stopifnot()
 # This should also have zero rows bc it means aphids spontaneously appeared
 sim_by_cage %>% 
     group_by(rep, line) %>% 
     filter(N == 0, dplyr::lead(N) > 0) %>% 
-    ungroup()
+    ungroup() %>% 
+    nrow() %>% 
+    `==`(0) %>% 
+    stopifnot()
+```
 
+
+```{r plot_sims}
+
+sim_df %>% 
+    filter(rep == 1, date < 50) %>% 
+    mutate_at(vars(plant, line), factor) %>% 
+    ggplot(aes(date, X)) +
+    geom_vline(xintercept = repl_times[repl_times < 50], color = "gray80") +
+    geom_line(aes(color = line)) +
+    facet_wrap(~ plant, nrow = 4) +
+    scale_color_brewer("Aphid line:", palette = "Dark2") +
+    NULL
 
 sim_by_cage %>% 
     filter(rep %in% sample.int(n_cages, 12)) %>% 
-    ggplot(aes(date, N)) +
-    # ggplot(aes(date, X)) +
+    # ggplot(aes(date, N)) +
+    ggplot(aes(date, X)) +
     geom_line(aes(color = line)) +
     facet_wrap(~ rep) +
     scale_color_brewer("Aphid line:", palette = "Dark2") +
@@ -221,21 +239,21 @@ sim_by_cage %>%
     NULL
 
 
-# Below only works if the max # remaining lines is 2:
-
-sim_by_cage %>% 
-    filter(rep %in% coexist_reps, date == max_t, N > 0) %>% 
-    group_by(rep) %>% 
-    arrange(line) %>% 
-    summarize(l1 = list(line[1:2]), l2 = list(line[2:1])) %>% 
-    unnest() %>% 
-    ggplot(aes(l1, l2)) +
-    geom_abline(slope = 1, intercept = 0, color = "gray60") +
-    geom_point(position = position_jitter(width = 0.1, height = 0.1)) +
-    theme(panel.grid.major = element_line(color = "gray90")) +
-    scale_x_discrete(NULL, drop = FALSE) +
-    scale_y_discrete(NULL, drop = FALSE) +
-    NULL
+# # Below only works if the max # remaining lines is 2:
+# 
+# sim_by_cage %>% 
+#     filter(rep %in% coexist_reps, date == max_t, N > 0) %>% 
+#     group_by(rep) %>% 
+#     arrange(line) %>% 
+#     summarize(l1 = list(line[1:2]), l2 = list(line[2:1])) %>% 
+#     unnest() %>% 
+#     ggplot(aes(l1, l2)) +
+#     geom_abline(slope = 1, intercept = 0, color = "gray60") +
+#     geom_point(position = position_jitter(width = 0.1, height = 0.1)) +
+#     theme(panel.grid.major = element_line(color = "gray90")) +
+#     scale_x_discrete(NULL, drop = FALSE) +
+#     scale_y_discrete(NULL, drop = FALSE) +
+#     NULL
 
 ```
 
