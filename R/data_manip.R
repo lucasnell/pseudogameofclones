@@ -73,7 +73,7 @@ initial_read <- function(file, line_lgl_fun = base::identity) {
                    disp,
                # makes no sense for it to be 0, then >0 the next day:
                N = ifelse(N == 0, 1, N)) %>%
-        select(-matches("_juv$|_adults$"), -year, -month, -day) %>%
+        dplyr::select(-matches("_juv$|_adults$"), -year, -month, -day) %>%
         mutate_at(vars(rep, N, disp), funs(as.integer)) %>%
         mutate(X = log(N),
                # Retained lines that have *Hamiltonella defensa*:
@@ -126,7 +126,7 @@ handle_unfinished <- function(growth, remove_unfinished) {
             ungroup() %>%
             filter(p > 0.8 & !three_down) %>%
             arrange(line, rep) %>%
-            select(line, rep)
+            dplyr::select(line, rep)
         if (nrow(not_done) > 0) {
             growth <- filter_line_rep(growth, not_done, exclude = TRUE)
         }
@@ -327,7 +327,7 @@ load_data <- function(filter_pars = list(start = 0.0, end = 0.8),
         # First read through, to clean up the excel sheet:
         initial_read(file) %>%
         # We no longer need these columns:
-        select(-observer, -comments) %>%
+        dplyr::select(-observer, -comments) %>%
         # Removing lines that aren't yet done:
         handle_unfinished(remove_unfinished) %>%
         # Dealing with missing values:
@@ -359,7 +359,7 @@ load_prior_data <- function(filter_pars = list(start = 0.5, end = 0.9), file = N
         # First read through, to clean up the excel sheet:
         initial_read(file, `!`) %>%
         # We no longer need these columns:
-        select(-observer, -comments) %>%
+        dplyr::select(-observer, -comments) %>%
         # Removing lines that aren't yet done:
         handle_unfinished(remove_unfinished = TRUE) %>%
         # Filter part(s) of time series if desired:
@@ -436,10 +436,10 @@ line_data <- function(data, line, rep, date, X) {
     X <- dat_frames %>%
             map(~ .x %>%
                     rename(!!paste(.x$line[1], .x$rep[1], sep = "_") := X) %>%
-                    select(!!paste(.x$line[1], .x$rep[1], sep = "_")) %>%
+                    dplyr::select(!!paste(.x$line[1], .x$rep[1], sep = "_")) %>%
                     mutate(n = 1:n())) %>%
             reduce(function(x, y) full_join(x, y, by = "n")) %>%
-            select(-n) %>%
+            dplyr::select(-n) %>%
             as.data.frame() %>%
             setNames(NULL) %>%
             as.matrix() %>%
@@ -484,7 +484,7 @@ make_pred_df <- function(stan_fit, orig_data, line, rep, alpha = 0.05) {
                    tbl_df() %>%
                    setNames(paste0("ts", 1:n_ts)) %>%
                    gather("ts", "X") %>%
-                   select(X) %>%
+                   dplyr::select(X) %>%
                    unlist(),
                X_upper = rstan::extract(stan_fit, "X_pred", permuted = FALSE) %>%
                    apply(3, quantile, probs = 1 - alpha / 2) %>%
@@ -492,12 +492,12 @@ make_pred_df <- function(stan_fit, orig_data, line, rep, alpha = 0.05) {
                    tbl_df() %>%
                    setNames(paste0("ts", 1:n_ts)) %>%
                    gather("ts", "X") %>%
-                   select(X) %>%
+                   dplyr::select(X) %>%
                    unlist()) %>%
         filter(X_pred != 0) %>%
-        select(-ts) %>%
+        dplyr::select(-ts) %>%
         bind_cols(arrange(orig_data, line, rep, date)) %>%
-        select(line, rep, date, X, X_pred, X_lower, X_upper, everything()) %>%
+        dplyr::select(line, rep, date, X, X_pred, X_lower, X_upper, everything()) %>%
         identity()
 }
 
@@ -521,7 +521,7 @@ load_pz_data <- function(filter_pars = list(start = 0.0, end = 0.8),
                          impute_fxn = NULL, file = NA) {
 
     pz_reps <- initial_read(file) %>%
-        select(-comments) %>%
+        dplyr::select(-comments) %>%
         group_by(line, rep) %>%
         arrange(date) %>%
         summarize(p = tail(N, 1) / max(N),
@@ -530,13 +530,13 @@ load_pz_data <- function(filter_pars = list(start = 0.0, end = 0.8),
                   pz = "Paige Zenkovich" %in% observer | "PZ" %in% observer) %>%
         ungroup() %>%
         filter(pz, !done) %>%
-        select(line, rep)
+        dplyr::select(line, rep)
 
 
     pz_growth <-
         initial_read() %>%
         # We no longer need these columns:
-        select(-observer, -comments) %>%
+        dplyr::select(-observer, -comments) %>%
         # Filter for only PZ reps:
         filter_line_rep(pz_reps, FALSE) %>%
         # Now add extra date for each rep, setting N to 0.75 * <max(N) within rep>
