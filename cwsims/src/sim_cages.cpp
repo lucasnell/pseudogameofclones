@@ -43,15 +43,18 @@ inline sint32 sample_plant_days(const double& days_mean,
 //'
 //' @noRd
 //'
-void update_Z_pd(arma::vec& Z, arma::ivec& plant_days,
-                 const uint32& t, const arma::cube& N_out,
-                 const arma::rowvec& A) {
-    for (uint32 i = 0; i < Z.n_elem; i++) {
+void update_Z_pd_Ntot(arma::vec& Z, arma::ivec& plant_days, arma::vec& Ntot,
+                      const uint32& t, const arma::cube& N_out,
+                      const arma::rowvec& A) {
+    for (uint32 i = 0; i < N_out.n_rows; i++) {
         Z(i) = 0;
+        Ntot(i) = 0;
         // Update # plant days PAST death for time t+1:
         plant_days(i)++;
         for (uint32 j = 0; j < N_out.n_cols; j++) {
-            Z(i) += (A(j) * N_out(i,j,t));
+            const double& N_(N_out(i,j,t));
+            Ntot(i) += N_;
+            Z(i) += (A(j) * N_);
         }
     }
     return;
@@ -60,76 +63,215 @@ void update_Z_pd(arma::vec& Z, arma::ivec& plant_days,
 
 
 
-/*
-Dispersal of one line from one plant to another:
-*/
-uint32 dispersal(const uint32& to_i, const uint32& from_i,
-                 const uint32& j, const uint32& t,
-                 const arma::cube& N_out, const arma::mat& D_mat,
-                 const arma::vec& Z,
-                 std::poisson_distribution<uint32>& poisson_rng,
-                 std::normal_distribution<double>& normal_rng,
-                 pcg32& eng) {
 
-    if (from_i == to_i | N_out(from_i, j, t) == 0) return 0;
+
+// Negative binomial simulator (I can't get the STL one working)
+class nbRNG {
+    std::poisson_distribution<arma::sword> poisson_rng;
+    std::gamma_distribution<double> gamma_rng;
+
+
+public:
+
+    nbRNG() : poisson_rng(1.0), gamma_rng(1.0, 1.0) {};
+
+    // Set Gamma distribution based on input theta and mu parameters
+    void set_gamma(const double& theta, const double& mu) {
+
+        double p = theta / (theta + mu);
+        double g_shape = theta;
+        double g_scale = (1 - p) / p;
+
+        gamma_rng.param(
+            std::gamma_distribution<double>::param_type(g_shape, g_scale));
+
+        return;
+    }
+
+    // This is for after the gamma distribution has been set.
+    arma::sword sample(pcg32& eng) {
+        double lambda_ = gamma_rng(eng);
+        poisson_rng.param(
+            std::poisson_distribution<arma::sword>::param_type(lambda_));
+        return poisson_rng(eng);
+    }
+
+};
+
+
+
+
+
+
+/*
+ Emigration of one line from one plant to all other plants:
+ */
+arma::ivec emigration(const uint32& i,
+                      const uint32& j, const uint32& t,
+                      const arma::cube& N_out, const arma::mat& D_mat,
+                      const arma::vec& Ntot,
+                      nbRNG& nb_rng, pcg32& eng) {
+
+    arma::ivec disp_out(N_out.n_rows);
+
+    if (N_out(i, j, t) == 0) {
+        disp_out.zeros();
+        return disp_out;
+    }
 
     const arma::rowvec& D(D_mat.row(j));
 
     // Basing Pr(dispersal > 0) on the total # aphids, not just this line
-    double N = arma::accu(N_out(arma::span(from_i), arma::span::all, arma::span(t)));
-    double p = inv_logit(D(0) + D(1) * N + D(2) * N * N);
-    // If not dispersing, then stop right now and return zero:
+    double p = inv_logit(D(0) + D(1) * Ntot(i) + D(2) * Ntot(i) * Ntot(i));
+    // If not dispersing, then stop right now and return all zeros:
     double u = runif_01(eng);
-    if (u > p) return 0;
+    if (u > p) {
+        disp_out.zeros();
+        return disp_out;
+    }
 
-    // Else we have to sample from Poisson with overdispersion:
-    // Calculate lambda and reset distribution to it:
-    double lambda_ = std::exp(D(3) + std::log(N_out(from_i,j,t)));
-    // Because we're splitting lambda_ over `n_plants - 1` plants:
-    lambda_ /= (static_cast<double>(N_out.n_rows) - 1.0);
-    poisson_rng.param(
-        std::poisson_distribution<uint32>::param_type(lambda_));
-    // Draw from distribution
-    double dispersed_ = static_cast<double>(poisson_rng(eng));
-    /* Add overdispersion: */
-    dispersed_ *= std::exp(normal_rng(eng) * D(4));
+    // Else we have to sample from negative binomial:
+    // Calculate mu:
+    double mu_ = D(3) * N_out(i,j,t);
+    // Because we're splitting mu_ over `n_plants - 1` plants:
+    double np = (static_cast<double>(N_out.n_rows) - 1.0);
+    mu_ /= np;
+    // Now for the theta parameter:
+    double theta_ = D(4) / np;
+    // Update inner Gamma distribution based on this:
+    nb_rng.set_gamma(theta_, mu_);
+    for (uint32 ii = 0; ii < disp_out.n_elem; ii++) {
+        if (ii == i) {
+            disp_out(ii) = 0;
+            continue;
+        }
+        disp_out(ii) = nb_rng.sample(eng);
+    }
 
-    uint32 dispersed = std::round(dispersed_);
-
-    return dispersed;
+    return disp_out;
 }
 
 /*
- Update dispersal, including overdispersion:
+ Update dispersal
  */
-void update_dispersal(arma::mat& emigrants, arma::mat& immigrants,
+void update_dispersal(arma::imat& emigrants, arma::imat& immigrants,
                       const uint32& t,
                       const arma::cube& N_out, const arma::mat& D_mat,
-                      const arma::vec& Z,
-                      std::poisson_distribution<uint32>& poisson_rng,
-                      std::normal_distribution<double>& normal_rng,
-                      pcg32& eng) {
-    emigrants.fill(0);
+                      const arma::vec& Ntot,
+                      nbRNG& nb_rng, pcg32& eng) {
+
     immigrants.fill(0);
     uint32 n_lines = emigrants.n_cols;
     uint32 n_plants = emigrants.n_rows;
-    uint32 dispersed_;
 
     for (uint32 j = 0; j < n_lines; j++) {
-        for (uint32 from_i = 0; from_i < n_plants; from_i++) {
-            for (uint32 to_i = 0; to_i < n_plants; to_i++) {
+        for (uint32 i = 0; i < n_plants; i++) {
+            // Emigrants of line j from plant i to all others:
+            arma::ivec e_ij = emigration(i, j, t, N_out, D_mat, Ntot, nb_rng, eng);
+            emigrants(i, j) = arma::accu(e_ij);
+            immigrants.col(j) += e_ij;
+        }
+    }
 
-                dispersed_ = dispersal(to_i, from_i, j, t, N_out, D_mat, Z,
-                                       poisson_rng, normal_rng, eng);
+    return;
 
-                emigrants(from_i, j) += dispersed_;
-                immigrants(to_i, j) += dispersed_;
+}
 
+
+
+
+
+
+
+//' Replace plants
+//'
+//' @noRd
+//'
+void replace_plants(uint32& repl_ind,
+                    arma::ivec& plant_days,
+                    arma::cube& N_out,
+                    arma::Mat<unsigned short>& extinct,
+                    std::normal_distribution<double>& normal_rng,
+                    pcg32& eng,
+                    const uint32& t,
+                    const sint32& repl_age,
+                    const double& plant_death_age_mean,
+                    const double& plant_death_age_sd) {
+
+    uint32 n_plants = N_out.n_rows;
+    uint32 n_lines = N_out.n_cols;
+
+    // Adjust index for `repl_times`
+    repl_ind++;
+
+    /*
+    Find the plants to replace and those not to, and update plant_days for
+    those that are replaced.
+    */
+    std::vector<uint32> replaced;
+    std::vector<uint32> not_replaced;
+    for (uint32 i = 0; i < n_plants; i++) {
+        if (plant_days(i) >= repl_age) {
+            replaced.push_back(i);
+            plant_days(i) = sample_plant_days(plant_death_age_mean,
+                       plant_death_age_sd, normal_rng, eng);
+        } else {
+            not_replaced.push_back(i);
+        }
+    }
+
+    // If none to replace, then continue
+    if (replaced.size() == 0) return;
+
+    /*
+    In the rare event that all plants need replaced, aphids will
+    be dispersed evenly across all new plants:
+    */
+    if (not_replaced.size() == 0) {
+        // Adjust pools of aphid lines in replaced and non-replaced plants:
+        for (uint32 j = 0; j < n_lines; j++) {
+            // Pool of aphids of line j:
+            double aphid_pool_j = arma::accu(N_out(arma::span::all, arma::span(j),
+                                                   arma::span(t+1)));
+            // Now add a portion to all plants:
+            aphid_pool_j /= static_cast<double>(n_plants);
+            // Make it extinct if it's trying to add < 1 aphid:
+            if (aphid_pool_j < 1) {
+                extinct.col(j).fill(1);
+                N_out(arma::span::all, arma::span(j), arma::span(t+1)).fill(0);
+                // Otherwise, fill with `aphid_pool_j`
+            } else {
+                N_out(arma::span::all, arma::span(j), arma::span(t+1)).fill(
+                        aphid_pool_j);
             }
+        }
+        return;
+    }
+
+    /*
+    Otherwise, disperse across all non-replaced plants only:
+    */
+    // Adjust pools of aphid lines in replaced and non-replaced plants:
+    for (uint32 j = 0; j < n_lines; j++) {
+        // Pool of aphids of line j to disperse across non-replaced plants:
+        double aphid_pool_j = 0;
+        // Calculate aphid_pool_j and remove from replaced plant(s):
+        for (const uint32& i : replaced) {
+            aphid_pool_j += N_out(i,j,t+1);
+            N_out(i,j,t+1) = 0;
+            extinct(i, j) = 1;
+        }
+        // Now add a portion to non-replaced plant(s):
+        aphid_pool_j /= static_cast<double>(not_replaced.size());
+        for (const uint32& i : not_replaced) {
+            // Check that it's not adding < 1 aphid to an extinct plant:
+            if (extinct(i,j) == 1 && aphid_pool_j < 1) continue;
+            // If not, add `aphid_pool_j`:
+            N_out(i,j,t+1) += aphid_pool_j;
+            extinct(i,j) = 0;
         }
     }
     return;
-
 }
 
 
@@ -152,14 +294,14 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
     uint32 n_plants = N_0.n_rows;
     uint32 n_lines = N_0.n_cols;
 
-    std::poisson_distribution<uint32> poisson_rng(1.0);
     std::normal_distribution<double> normal_rng(0.0, 1.0);
+    nbRNG nb_rng;
 
     // Fill with initial values:
     N_out.slice(0) = N_0;
 
     // Matrix to keep track of extinctions:
-    arma::mat extinct(n_plants, n_lines, arma::fill::zeros);
+    arma::Mat<unsigned short> extinct(n_plants, n_lines, arma::fill::zeros);
     // Vector to keep track of # days PAST death for plants
     // (these will start out negative)
     arma::ivec plant_days(n_plants);
@@ -170,18 +312,19 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
     // Index to keep track of position in `repl_times`
     uint32 repl_ind = 0;
     // Matrices keeping track of numbers of dispersed aphids:
-    arma::mat emigrants(n_plants, n_lines, arma::fill::zeros);
-    arma::mat immigrants(n_plants, n_lines, arma::fill::zeros);
+    arma::imat emigrants(n_plants, n_lines);
+    arma::imat immigrants(n_plants, n_lines);
+    // Summed total aphids per plant
+    arma::vec Ntot(n_plants);
     // Summed density dependences * N_t among all lines for each plant
     arma::vec Z(n_plants);
 
     for (uint32 t = 0; t < max_t; t++) {
 
         // Update Z and plant_days:
-        update_Z_pd(Z, plant_days, t, N_out, A);
+        update_Z_pd_Ntot(Z, plant_days, Ntot, t, N_out, A);
         // Generate numbers of dispersed aphids:
-        update_dispersal(emigrants, immigrants, t, N_out, D_mat, Z, poisson_rng,
-                         normal_rng, eng);
+        update_dispersal(emigrants, immigrants, t, N_out, D_mat, Ntot, nb_rng, eng);
 
         // Start out new N based on previous time step
         N_out.slice(t+1) = N_out.slice(t);
@@ -194,9 +337,9 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
             for (uint32 j = 0; j < n_lines; j++) {
 
                 // Calculate the net influx of this aphid line from other plants.
-                const double& immigration(immigrants(i, j));
-                const double& emigration(emigrants(i, j));
-                double net_income = immigration - emigration;
+                const arma::sword& immigration(immigrants(i, j));
+                const arma::sword& emigration(emigrants(i, j));
+                double net_income = static_cast<double>(immigration - emigration);
 
                 // If it's extinct and no one's coming in, make 0 and skip the rest:
                 if (extinct(i,j) == 1 && net_income <= 0) {
@@ -235,87 +378,15 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
 
 
         /*
-        If it's a replacement time point, disperse all aphids from replaced
-        plants to others
+         If it's a replacement time point, disperse all aphids from replaced
+         plants to others
         */
         // To make sure this doesn't past bounds:
         if (repl_ind >= repl_times.size()) continue;
         // Now check:
         if (t == repl_times[repl_ind]) {
-
-            // Adjust index for `repl_times`
-            repl_ind++;
-
-            /*
-             Find the plants to replace and those not to, and update plant_days for
-             those that are replaced.
-              */
-            std::vector<uint32> replaced;
-            std::vector<uint32> not_replaced;
-            for (uint32 i = 0; i < n_plants; i++) {
-                if (plant_days(i) >= repl_age) {
-                    replaced.push_back(i);
-                    plant_days(i) = sample_plant_days(plant_death_age_mean,
-                               plant_death_age_sd, normal_rng, eng);
-                } else {
-                    not_replaced.push_back(i);
-                }
-            }
-
-            // If none to replace, then continue
-            if (replaced.size() == 0) continue;
-
-            /*
-             In the rare event that all plants need replaced, aphids will
-             be dispersed evenly across all new plants:
-             */
-            if (not_replaced.size() == 0) {
-                // Adjust pools of aphid lines in replaced and non-replaced plants:
-                for (uint32 j = 0; j < n_lines; j++) {
-                    // Pool of aphids of line j:
-                    double aphid_pool_j = 0;
-                    // Calculate aphid_pool_j:
-                    for (uint32 i = 0; i < n_plants; i++) {
-                        aphid_pool_j += N_out(i,j,t+1);
-                    }
-                    // Now add a portion to all plants:
-                    aphid_pool_j /= static_cast<double>(n_plants);
-                    // Make it extinct if it's trying to add < 1 aphid:
-                    if (aphid_pool_j < 1) {
-                        extinct.col(j).fill(1);
-                        N_out(arma::span::all, arma::span(j), arma::span(t+1)).fill(0);
-                    // Otherwise, fill with `aphid_pool_j`
-                    } else {
-                        N_out(arma::span::all, arma::span(j), arma::span(t+1)).fill(
-                                aphid_pool_j);
-                    }
-                }
-                continue;
-            }
-
-            /*
-             Otherwise, disperse across all non-replaced plants only:
-             */
-            // Adjust pools of aphid lines in replaced and non-replaced plants:
-            for (uint32 j = 0; j < n_lines; j++) {
-                // Pool of aphids of line j to disperse across non-replaced plants:
-                double aphid_pool_j = 0;
-                // Calculate aphid_pool_j and remove from replaced plant(s):
-                for (const uint32& i : replaced) {
-                    aphid_pool_j += N_out(i,j,t+1);
-                    N_out(i,j,t+1) = 0;
-                    extinct(i, j) = 1;
-                }
-                // Now add a portion to non-replaced plant(s):
-                aphid_pool_j /= static_cast<double>(not_replaced.size());
-                for (const uint32& i : not_replaced) {
-                    // Check that it's not adding < 1 aphid to an extinct plant:
-                    if (extinct(i,j) == 1 && aphid_pool_j < 1) continue;
-                    // If not, add `aphid_pool_j`:
-                    N_out(i,j,t+1) += aphid_pool_j;
-                }
-            }
-
+            replace_plants(repl_ind, plant_days, N_out, extinct, normal_rng, eng, t,
+                           repl_age, plant_death_age_mean, plant_death_age_sd);
         }
 
 
@@ -389,7 +460,7 @@ std::vector<arma::cube> sim_cages_(const uint32& n_cages,
     const uint32 n_plants = N_0.n_rows;
     const uint32 n_lines = N_0.n_cols;
 
-    const sint32 repl_age_ = -1 * static_cast<sint32>(repl_age);
+    const sint32 repl_age_ = -1 * repl_age;
 
     std::string err_msg = "";
 

@@ -30,12 +30,12 @@ simplify_cage <- function(cage_array, rep, N_0_, max_t_) {
 #' @param max_t Max time points to simulate for each cage.
 #' @param R Growth rates for each line.
 #' @param A Density dependence for each line.
-#' @param D_Binom Data frame containing intercept and coefficient estimates for
+#' @param D_binom Data frame containing intercept and coefficient estimates for
 #'     binomial GLM of `<whether dispersal > 0> ~ N_t + N_t^2`.
 #'     There should be one set of estimates for each line regardless of whether the model
 #'     estimated separate values for each line.
-#' @param D_Pois Data frame containing intercept and overdispersion estimates for
-#'     Poisson GLMM of `<# dispersed | dispersal occurs> ~ 1`.
+#' @param D_nb Data frame containing intercept and overdispersion estimates for
+#'     negative binomial GLM of `<# dispersed | dispersal occurs> ~ 1`.
 #'     There should be one set of estimates for each line regardless of whether the model
 #'     estimated separate values for each line.
 #' @param process_error SD of process error.
@@ -51,16 +51,20 @@ simplify_cage <- function(cage_array, rep, N_0_, max_t_) {
 #'
 #' @export
 #'
-sim_cages <- function(n_cages, N_0, max_t, R, A, D_Binom, D_Pois, process_error,
+sim_cages <- function(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error,
                       plant_mort_0, plant_mort_1,
                       plant_death_age_mean, plant_death_age_sd,
                       repl_times, repl_age,
                       n_cores = 1, show_progress = FALSE) {
 
-    if (!identical(D_Binom$binom$line, D_Pois$pois$line)) {
-        stop("\nline columns should be identical in both D_Binom and D_Pois.")
+    if (!identical(D_binom$binom$line, D_nb$pois$line)) {
+        stop("\nline columns should be identical in both D_binom and D_nb.")
     }
-    D_mat <- as.matrix(cbind(D_Binom[,c("inter", "N1", "N2")], D_Pois[,c("inter", "od")]))
+    # So I don't have to do this every iteration:
+    D_nb$inter <- exp(D_nb$inter)
+    # Combining D_binom and D_nb into one dispersal matrix:
+    D_mat <- as.matrix(cbind(D_binom[,c("inter", "N1", "N2")],
+                             D_nb[,c("inter", "theta")]))
     colnames(D_mat) <- NULL
 
     sims <- sim_cages_(n_cages = n_cages,

@@ -28,6 +28,7 @@ if (!isTRUE(getOption('knitr.in.progress'))) source(".Rprofile")
 
 ```{r library_pkgs, warning=FALSE, echo=TRUE}
 suppressPackageStartupMessages({
+    library(MASS)
     library(clonewars)
     library(lme4)
 })
@@ -60,8 +61,7 @@ and (2) the first day of counts if both individuals were on the ground.
 ```{r load_data}
 growth <- load_data(filter_pars = NULL,
                     remove_unfinished = FALSE) %>% 
-    filter(date != 0, 
-           !(line == "Clover-2017-2" & rep == 1),
+    filter(date != 0,
            !is.na(X), !is.na(N), !is.na(disp)) %>% 
     mutate(
         rep = factor(rep),
@@ -93,13 +93,13 @@ growth %>%
 Below, colors represent different reps.
 
 
-```{r disp_N_plot}
+```{r disp_N_plot, warning=FALSE}
 growth %>%
     ggplot(aes(N, disp, color = rep)) +
     geom_point(shape = 16, alpha = 0.5) +
-    stat_smooth(method = "glm", se = FALSE, color = "black",
-                formula = y ~ 1 + offset(log(x)),
-                method.args = list(family = "poisson")) +
+    stat_smooth(data = growth %>% filter(disp > 0),
+                method = glm.nb, se = FALSE, color = "black",
+                formula = y ~ 1 + offset(log(x))) +
     facet_wrap(~ line) +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
     scale_fill_brewer(palette = "Dark2", guide = FALSE) +
@@ -126,24 +126,20 @@ I added `(1 | od)` to account for overdispersion.
 ```{r fit_glmm, warning=FALSE}
 # Whether dispersed as a function of line and N and N^2:
 disp_binom <- glm(disp_b ~ 0 + line + N + I(N^2),
-                data = growth, family = binomial)
-# Number dispersed as function of line, with overdispersion:
-disp_pois <- glmer(disp ~ 0 + line + (1 | od),
-                   data = filter(growth, disp > 0),
-                   family = poisson, offset = X)
+                  data = growth, family = binomial)
+# Number dispersed as function of line with X as offset:
+disp_nb <- glm.nb(disp ~ 0 + line + offset(X),
+                  data = filter(growth, disp > 0))
 disp_binom %>% summary()
-disp_pois %>% summary()
+disp_nb %>% summary()
 ```
 
 
 
-Overdispersion estimate for the Poisson regression:
+Theta estimate for the negative binomial regression:
 
 ```{r make_disp_od}
-disp_od <- VarCorr(disp_pois) %>%
-    as.data.frame() %>% 
-    .[["sdcor"]]
-disp_od
+disp_nb$theta
 ```
 
 
@@ -162,16 +158,16 @@ disp_estimates <-
             as.data.frame() %>% 
             set_names(c("inter", "N1", "N2")) %>% 
             rownames_to_column("line"),
-        pois = disp_pois %>% 
-            fixef() %>% 
+        nb = disp_nb %>% 
+            coef() %>% 
             {names(.) <- gsub("line", "", names(.)); .} %>% 
             cbind() %>% 
             as.data.frame() %>% 
             set_names("inter") %>% 
             rownames_to_column("line") %>% 
-            mutate(od = disp_od)
+            mutate(theta = disp_nb$theta)
     )
-if (!identical(disp_estimates$binom$line, disp_estimates$pois$line)) {
+if (!identical(disp_estimates$binom$line, disp_estimates$nb$line)) {
     stop("line columns should be identical in both parts of disp_estimates list.")
 }
 
@@ -180,7 +176,7 @@ disp_estimates %>%
     knitr::kable(
         format = "html",
         caption = paste("Model estimates for the binomial GLM (top) and",
-                        "Poisson GLMM (bottom), for each line.")
+                        "Negative binomial GLM (bottom), for each line.")
         )
 ```
 
@@ -198,10 +194,9 @@ predict_disp <- function(N, aphid_line) {
     b1 <- disp_estimates$binom$N1[inds]
     b2 <- disp_estimates$binom$N2[inds]
     pr_disp <- inv_logit(b0 + b1 * N + b2 * N^2)
-    # Poisson estimate (# dispersed | dispersal occurs):
-    b0 <- disp_estimates$pois$inter[inds]
-    X <- log(N)
-    n_disp <- exp(b0 + X)
+    # Negative binomial estimate (# dispersed | dispersal occurs):
+    b0 <- disp_estimates$nb$inter[inds]
+    n_disp <- exp(b0) * N
     return(pr_disp * n_disp)
 }
 ```
@@ -223,11 +218,6 @@ growth %>%
                        breaks = c(0, 4^(0:3))) +
     scale_x_continuous("Total aphids") +
     NULL
-
-# Generating overdispersion:
-over_pois <- function(n, lambda, sd) {
-    return(rpois(n, lambda) * rlnorm(n, meanlog = 0, sdlog = sd))
-}
 ```
 
 
