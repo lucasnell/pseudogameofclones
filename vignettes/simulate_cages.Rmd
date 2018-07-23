@@ -119,6 +119,11 @@ sim_by_cage %>%
     summarize(N = sum(N)) %>% 
     ungroup() %>% 
     filter(N == 0)
+# This should also have zero rows bc it means aphids spontaneously appeared
+sim_by_cage %>% 
+    group_by(rep, line) %>% 
+    filter(N == 0, dplyr::lead(N) > 0) %>% 
+    ungroup()
 
 
 sim_by_cage %>% 
