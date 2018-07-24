@@ -68,8 +68,10 @@ R <- apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, mean) %>%
     as.numeric()
 A <- apply(rstan::extract(stan_fit, "A", permuted = FALSE), 3, mean) %>%
     as.numeric()
-D_binom <- clonewars::disp_estimates$binom
-D_nb <- clonewars::disp_estimates$nb
+D_df <- clonewars::disp_estimates
+# Correcting for weirdness from WI-L4Ø due to only having one complete rep:
+D_df[D_df$line == "WI-L4Ø",c("inter","X")] <- 
+    colMeans(D_df[D_df$line != "WI-L4Ø", c("inter","X")])
 process_error <- apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE), 
                        3, mean) %>%
     as.numeric()
@@ -86,7 +88,7 @@ n_cores <- parallel::detectCores() - 1
 
 ```{r do_sims}
 set.seed(654651984L)
-sim_df <- cwsims::sim_cages(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error,
+sim_df <- cwsims::sim_cages(n_cages, N_0, max_t, R, A, D_df, process_error,
                             plant_mort_0, plant_mort_1,
                             plant_death_age_mean, plant_death_age_sd,
                             repl_times, repl_age, n_cores) %>% 
@@ -200,12 +202,72 @@ sim_by_cage %>%
 sim_by_cage %>% 
     filter(date == max_t) %>% 
     group_by(line) %>% 
+    summarize(n = sum(N > 0)) %>% 
+    mutate(disp = map_dbl(line,
+                          function(i) {
+                              inds <- disp_estimates$line == i
+                              gtools::inv.logit(disp_estimates$inter[inds] + 
+                                                    disp_estimates$X[inds] * log(500))
+                          })) %>% 
+    ggplot(aes(disp, n, color = line)) +
+    geom_point(size = 3) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    ylab("Number of times survived") +
+    xlab("Dispersal probability at N = 500") +
+    NULL
+
+sim_by_cage %>% 
+    filter(date == max_t) %>% 
+    group_by(line) %>% 
+    summarize(n = sum(N > 0)) %>% 
+    mutate(surv = map_dbl(line,
+                          function(i) {
+                              inds <- disp_estimates$line == i
+                              gtools::inv.logit(
+                                  plant_death$after_max_mort_coefs$inter[inds] + 
+                                      plant_death$after_max_mort_coefs$date[inds] * 5)
+                          })) %>% 
+    ggplot(aes(surv, n, color = line)) +
+    geom_point(size = 3) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    ylab("Number of times survived") +
+    xlab("Survival 5 days after plant death") +
+    NULL
+
+sim_by_cage %>% 
+    filter(date == max_t) %>% 
+    group_by(line) %>% 
+    summarize(n = sum(N > 0)) %>% 
+    mutate(R = map_dbl(line, ~ R[as.integer(.x)])) %>% 
+    ggplot(aes(R, n, color = line)) +
+    geom_point(size = 3) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    ylab("Number of times survived") +
+    xlab("Growth rate") +
+    NULL
+
+sim_by_cage %>% 
+    filter(date == max_t) %>% 
+    group_by(line) %>% 
+    summarize(n = sum(N > 0)) %>% 
+    mutate(A = map_dbl(line, ~ A[as.integer(.x)])) %>% 
+    ggplot(aes(A, n, color = line)) +
+    geom_point(size = 3) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    ylab("Number of times survived") +
+    xlab("Density dependence") +
+    NULL
+
+
+sim_by_cage %>% 
+    filter(date == max_t) %>% 
+    group_by(line) %>% 
     summarize(n = sum(prop == 1)) %>% 
     ggplot(aes(line, color = line)) +
     geom_linerange(aes(ymin = 0, ymax = n), size = 1) +
     geom_point(aes(y = n), size = 3) +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
-    ylab("Number of times as sole survivor") +
+    scale_y_continuous("Number of times as sole survivor") +
     xlab(NULL) +
     coord_flip() +
     NULL
