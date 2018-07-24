@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
   fig.height = 4
 )
 knitr::opts_knit$set(root.dir = normalizePath(".."))
-options(tibble.print_min = 4L, tibble.print_max = 4L)
+options(tibble.print_min = 4L, tibble.print_max = 8L)
 ```
 ```{r source_Rprofile, echo = FALSE}
 if (!isTRUE(getOption('knitr.in.progress'))) source(".Rprofile")
@@ -53,23 +53,32 @@ This file contains the analyses to estimate aphid dispersal.
 
 I don't need to do the same filtering when loading the dataset for dispersal estimates
 as when loading data for population-growth parameter estimation.
-The only filtering I need to do is removing (1) a weird rep for line "Clover-2017-2" (when
-one adult just stayed on the side of the cage until it died)
-and (2) the first day of counts if both individuals were on the ground.
+The only filtering I need to do is removing the first day of counts when both
+individuals were on the ground.
 
 
 ```{r load_data}
 growth <- load_data(filter_pars = NULL,
                     remove_unfinished = FALSE) %>% 
-    filter(date != 0,
-           !is.na(X), !is.na(N), !is.na(disp)) %>% 
-    mutate(
-        rep = factor(rep),
-        # For overdispersion:
-        od = 1:n(),
-        # For binomial of whether dispersal is > 0:
-        disp_b = ifelse(disp > 0, 1, 0)
-        )
+    filter(date != 0) %>% 
+    mutate(rep = factor(rep))
+```
+
+
+```{r growth_manip}
+growth <- growth %>% 
+    group_by(line, rep) %>% 
+    arrange(date) %>% 
+    mutate(disp = ifelse(is.na(disp), 0, disp),
+           N = round(impute(N)),
+           X = log(N),
+           pN = N - disp,  # numbers of aphids on plant
+           dD = disp - lag(disp, default = 0),
+           dD = ifelse(dD < 0, 0, dD),
+           date_ = which(date == max(date)) - date) %>% 
+    ungroup() %>% 
+    arrange(line, rep, date) %>% 
+    identity()
 ```
 
 
@@ -78,7 +87,7 @@ growth <- load_data(filter_pars = NULL,
 Below, `n_d` is the number of days where the number of dispersed individuals was
 greater than zero.
 
-```{r}
+```{r n_d_table}
 growth %>% 
     group_by(line) %>% 
     summarize(n = rep %>% unique() %>% length(),

@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
   fig.height = 4
 )
 knitr::opts_knit$set(root.dir = normalizePath(".."))
-options(tibble.print_min = 4L, tibble.print_max = 4L)
+options(tibble.print_min = 4L, tibble.print_max = 8L)
 ```
 ```{r source_Rprofile, echo = FALSE}
 if (!isTRUE(getOption('knitr.in.progress'))) source(".Rprofile")
@@ -77,8 +77,8 @@ plant_mort_0 <- clonewars::plant_death$after_max_mort_coefs$inter
 plant_mort_1 <- clonewars::plant_death$after_max_mort_coefs$date
 plant_death_age_mean <- clonewars::plant_death$until_max_summ$max_mean
 plant_death_age_sd <- clonewars::plant_death$until_max_summ$max_sd
-repl_times <- seq(4, max_t, 4) - 1
-repl_age <- 3
+repl_times <- seq(7, max_t, 7) - 1
+repl_age <- 5
 n_cages <- 100
 n_cores <- parallel::detectCores() - 1
 ```
@@ -119,16 +119,14 @@ sim_by_cage %>%
     ungroup() %>% 
     filter(N == 0) %>% 
     nrow() %>% 
-    `==`(0) %>% 
-    stopifnot()
+    `==`(0)
 # This should also have zero rows bc it means aphids spontaneously appeared
 sim_by_cage %>% 
     group_by(rep, line) %>% 
     filter(N == 0, dplyr::lead(N) > 0) %>% 
     ungroup() %>% 
     nrow() %>% 
-    `==`(0) %>% 
-    stopifnot()
+    `==`(0)
 ```
 
 
@@ -175,15 +173,15 @@ sim_by_cage %>%
     xlab("Day") +
     NULL
 
-sim_by_cage %>%
-    group_by(rep, date) %>% 
-    summarize(H = -sum(prop[prop > 0] * log(prop[prop > 0])),
-              N = sum(prop > 0),
-              E = H / log(N)) %>% 
-    ungroup() %>% 
-    ggplot(aes(date, N)) +
-    geom_line(aes(group = rep), alpha = 0.25, color = "dodgerblue") +
-    NULL
+# sim_by_cage %>%
+#     group_by(rep, date) %>% 
+#     summarize(H = -sum(prop[prop > 0] * log(prop[prop > 0])),
+#               N = sum(prop > 0),
+#               E = H / log(N)) %>% 
+#     ungroup() %>% 
+#     ggplot(aes(date, N)) +
+#     geom_line(aes(group = rep), alpha = 0.25, color = "dodgerblue") +
+#     NULL
 
 
 sim_by_cage %>% 
@@ -230,13 +228,16 @@ coexist_reps <- sim_by_cage %>%
 
 
 
-sim_by_cage %>% 
-    filter(rep %in% coexist_reps) %>% 
-    ggplot(aes(date, fill = line)) +
-    geom_ribbon(aes(ymin = prop_start, ymax = prop_end), color = NA) +
-    facet_wrap(~ rep, nrow = 6) +
-    scale_fill_brewer("Aphid line:", palette = "Dark2") +
-    NULL
+# sim_by_cage %>% 
+#     filter(rep %in% coexist_reps) %>% 
+#     ggplot(aes(date, fill = line)) +
+#     geom_ribbon(aes(ymin = prop_start, ymax = prop_end), color = NA) +
+#     facet_wrap(~ rep, nrow = 6) +
+#     scale_fill_brewer("Aphid line:", palette = "Dark2") +
+#     NULL
+
+
+
 
 
 # # Below only works if the max # remaining lines is 2:
