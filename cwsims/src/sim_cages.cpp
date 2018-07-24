@@ -43,18 +43,15 @@ inline sint32 sample_plant_days(const double& days_mean,
 //'
 //' @noRd
 //'
-void update_Z_pd_Ntot(arma::vec& Z, arma::ivec& plant_days, arma::vec& Ntot,
-                      const uint32& t, const arma::cube& N_out,
-                      const arma::rowvec& A) {
+void update_Z_pd(arma::vec& Z, arma::ivec& plant_days,
+                 const uint32& t, const arma::cube& N_out,
+                 const arma::rowvec& A) {
     for (uint32 i = 0; i < N_out.n_rows; i++) {
         Z(i) = 0;
-        Ntot(i) = 0;
         // Update # plant days PAST death for time t+1:
         plant_days(i)++;
         for (uint32 j = 0; j < N_out.n_cols; j++) {
-            const double& N_(N_out(i,j,t));
-            Ntot(i) += N_;
-            Z(i) += (A(j) * N_);
+            Z(i) += (A(j) * N_out(i,j,t));
         }
     }
     return;
@@ -106,12 +103,10 @@ public:
 /*
  Emigration of one line from one plant to all other plants:
  */
-arma::ivec emigration(const uint32& i,
-                      const uint32& j, const uint32& t,
+arma::ivec emigration(const uint32& i, const uint32& j, const uint32& t,
                       const arma::cube& N_out, const arma::mat& D_mat,
-                      const arma::vec& Ntot,
-                      std::binomial_distribution<arma::sword>& binom_rng,
-                      pcg32& eng) {
+                      const arma::ivec& plant_days,
+                      nbRNG& nb_rng, pcg32& eng) {
 
     arma::ivec disp_out(N_out.n_rows, arma::fill::zeros);
 
@@ -119,16 +114,33 @@ arma::ivec emigration(const uint32& i,
 
     const arma::rowvec& D(D_mat.row(j));
 
-    // Basing proportion dispersed on the total # aphids, not just this line
-    double p = inv_logit(D(0) + D(1) * std::log(Ntot(i)));
-    arma::sword n = N_out(i,j,t);
-    binom_rng.param(std::binomial_distribution<arma::sword>::param_type(n, p));
+    // Basing Pr(dispersal > 0) on the # days past plant death:
+    const arma::sword& past_death(plant_days(i));
+    double p = inv_logit(D(0) + D(1) * past_death + D(2) * past_death * past_death);
+    // Sample ~ U(0,1), and if it's > p, then no dispersal occurs:
+    double u = runif_01(eng);
+    if (u > p) return disp_out;
 
-    arma::sword n_dispersed = binom_rng(eng);
-
-    for (uint32 d = 0; d < n_dispersed; d++) {
-        uint32 ind = runif_aabb(eng, 0, disp_out.n_elem - 1);
-        disp_out(ind)++;
+    // Else we have to sample from negative binomial:
+    // Calculate mu:
+    double mu_ = D(3) * N_out(i,j,t);
+    // Because we're splitting mu_ over the number of plants:
+    double np = static_cast<double>(N_out.n_rows);
+    mu_ /= np;
+    // Now for the theta parameter:
+    double theta_ = D(4) / np;
+    // Update inner Gamma distribution based on this:
+    nb_rng.set_gamma(theta_, mu_);
+    for (uint32 ii = 0; ii < disp_out.n_elem; ii++) {
+        if (ii == i) {
+            /*
+             No point in sampling this combination bc it's dispersal back to
+             the same plant, so summing immigrants and emigrants would cancel out anyway.
+             */
+            disp_out(ii) = 0;
+        } else {
+            disp_out(ii) = nb_rng.sample(eng);
+        }
     }
 
     return disp_out;
@@ -140,9 +152,8 @@ arma::ivec emigration(const uint32& i,
 void update_dispersal(arma::imat& emigrants, arma::imat& immigrants,
                       const uint32& t,
                       const arma::cube& N_out, const arma::mat& D_mat,
-                      const arma::vec& Ntot,
-                      std::binomial_distribution<arma::sword>& binom_rng,
-                      pcg32& eng) {
+                      const arma::ivec& plant_days,
+                      nbRNG& nb_rng, pcg32& eng) {
 
     immigrants.fill(0);
     uint32 n_lines = emigrants.n_cols;
@@ -151,7 +162,7 @@ void update_dispersal(arma::imat& emigrants, arma::imat& immigrants,
     for (uint32 j = 0; j < n_lines; j++) {
         for (uint32 i = 0; i < n_plants; i++) {
             // Emigrants of line j from plant i to all others:
-            arma::ivec e_ij = emigration(i, j, t, N_out, D_mat, Ntot, binom_rng, eng);
+            arma::ivec e_ij = emigration(i, j, t, N_out, D_mat, plant_days, nb_rng, eng);
             emigrants(i, j) = arma::accu(e_ij);
             immigrants.col(j) += e_ij;
         }
@@ -279,7 +290,7 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
     uint32 n_lines = N_0.n_cols;
 
     std::normal_distribution<double> normal_rng(0.0, 1.0);
-    std::binomial_distribution<arma::sword> binom_rng;
+    nbRNG nb_rng;
 
     // Fill with initial values:
     N_out.slice(0) = N_0;
@@ -306,9 +317,9 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
     for (uint32 t = 0; t < max_t; t++) {
 
         // Update Z and plant_days:
-        update_Z_pd_Ntot(Z, plant_days, Ntot, t, N_out, A);
+        update_Z_pd(Z, plant_days, t, N_out, A);
         // Generate numbers of dispersed aphids:
-        update_dispersal(emigrants, immigrants, t, N_out, D_mat, Ntot, binom_rng, eng);
+        update_dispersal(emigrants, immigrants, t, N_out, D_mat, plant_days, nb_rng, eng);
 
         // Start out new N based on previous time step
         N_out.slice(t+1) = N_out.slice(t);
@@ -320,23 +331,26 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
 
             for (uint32 j = 0; j < n_lines; j++) {
 
-                // Calculate the net influx of this aphid line from other plants.
-                const arma::sword& immigration(immigrants(i, j));
-                const arma::sword& emigration(emigrants(i, j));
-                double net_income = static_cast<double>(immigration - emigration);
+                // Dispersal of this aphid line to and from other plants.
+                double imm = immigrants(i, j);
+                double em = emigrants(i, j);
 
                 // If it's extinct and no one's coming in, make 0 and skip the rest:
-                if (extinct(i,j) == 1 && net_income <= 0) {
+                if (extinct(i,j) == 1 && (imm - em) <= 0.0) {
                     N_out(i,j,t+1) = 0;
                     continue;
                 }
                 // If it's extinct and immigrants are coming in, adjust extinct matrix:
-                if (extinct(i,j) == 1 && net_income > 0) extinct(i,j) = 0;
+                if (extinct(i,j) == 1 && (imm - em) > 0.0) {
+                    extinct(i,j) = 0;
+                }
 
                 /*
                 Add growth, density dependence, and process error.
-                If the plant is past plant-death age, then plant-death-induced
-                mortality replaces normal growth and density dependence.
+                If the plant is past plant-death age, then
+                 (1) plant-death-induced mortality replaces normal growth and
+                    density dependence and
+                 (2) immigrants experience this mortality as well.
                 */
                 if (plant_days[i] <= 0) {
                     N_out(i,j,t+1) *= std::exp(R[j] * (1 - Z[i]) +
@@ -345,10 +359,12 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
                     // (` - 1` below is to convert to C++ indices)
                     N_out(i,j,t+1) *= std::exp(log_morts(plant_days[i] - 1, j) +
                         normal_rng(eng) * process_error);
+                    imm *= std::exp(log_morts(plant_days[i] - 1, j));
+                    if (imm < 1) imm = 0;
                 }
 
                 // Add dispersal:
-                N_out(i,j,t+1) += net_income;
+                N_out(i,j,t+1) += (imm - em);
 
                 // Check for extinction:
                 if (N_out(i,j,t+1) < 1) {
@@ -457,7 +473,7 @@ std::vector<arma::cube> sim_cages_(const uint32& n_cages,
     if (D_mat.n_rows != n_lines) {
         err_msg += "ERROR: D_mat.n_rows != n_lines\n";
     }
-    if (D_mat.n_cols != 2) {
+    if (D_mat.n_cols != 5) {
         err_msg += "ERROR: D_mat.n_cols != 5\n";
     }
     if (plant_mort_0.n_elem != n_lines) {

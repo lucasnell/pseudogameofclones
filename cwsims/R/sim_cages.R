@@ -51,7 +51,7 @@ simplify_cage <- function(cage_array, rep, N_0_, max_t_) {
 #'
 #' @export
 #'
-sim_cages <- function(n_cages, N_0, max_t, R, A, D_df, process_error,
+sim_cages <- function(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error,
                       plant_mort_0, plant_mort_1,
                       plant_death_age_mean, plant_death_age_sd,
                       repl_times, repl_age,
@@ -60,13 +60,11 @@ sim_cages <- function(n_cages, N_0, max_t, R, A, D_df, process_error,
     # if (!identical(D_binom$binom$line, D_nb$pois$line)) {
     #     stop("\nline columns should be identical in both D_binom and D_nb.")
     # }
-    # # So I don't have to do this every iteration:
-    # D_nb$inter <- exp(D_nb$inter)
-    # # Combining D_binom and D_nb into one dispersal matrix:
-    # D_mat <- as.matrix(cbind(D_binom[,c("inter", "N1", "N2")],
-    #                          D_nb[,c("inter", "theta")]))
-
-    D_mat <- as.matrix(D_df[,c("inter", "X")])
+    # So I don't have to do this every iteration:
+    D_nb$b0 <- exp(D_nb$b0)
+    # Combining D_binom and D_nb into one dispersal matrix:
+    D_mat <- as.matrix(cbind(D_binom[,c("b0", "b1", "b2")],
+                             D_nb[,c("b0", "theta")]))
     colnames(D_mat) <- NULL
 
     sims <- sim_cages_(n_cages = n_cages,
