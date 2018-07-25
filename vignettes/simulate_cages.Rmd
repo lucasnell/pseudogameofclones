@@ -80,7 +80,7 @@ plant_mort_1 <- clonewars::plant_death$after_max_mort_coefs$date
 plant_death_age_mean <- clonewars::plant_death$until_max_summ$max_mean
 plant_death_age_sd <- clonewars::plant_death$until_max_summ$max_sd
 repl_times <- seq(4, max_t, 4) - 1
-repl_age <- 4
+repl_age <- 3
 n_cages <- 100
 n_cores <- parallel::detectCores() - 1
 ```
@@ -224,7 +224,7 @@ sim_by_cage %>%
     geom_point(size = 3) +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
     ylab("Number of times survived") +
-    xlab("Dispersal probability at plant death and N = 500") +
+    xlab("Expected dispersal at plant death and N = 500") +
     NULL
 
 sim_by_cage %>% 

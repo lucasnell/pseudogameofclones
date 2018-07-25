@@ -9,3 +9,4 @@ data-raw/*.rds
 under_constr/_test.*
 *.rda
 *.rds
+figs
