@@ -4,9 +4,9 @@
 \alias{sim_cages}
 \title{Simulate multiple cages and simplify output.}
 \usage{
-sim_cages(n_cages, N_0, max_t, R, A, D_Binom, D_Pois, process_error,
-  plant_mort_0, plant_mort_1, plant_death_age_mean, plant_death_age_sd,
-  repl_times, repl_age, n_cores = 1, show_progress = FALSE)
+sim_cages(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error, plant_mort_0,
+  plant_mort_1, plant_death_age_mean, plant_death_age_sd, repl_times, repl_age,
+  extinct_N, n_cores = 1, show_progress = FALSE)
 }
 \arguments{
 \item{n_cages}{Number of cages to simulate.}
@@ -19,13 +19,13 @@ sim_cages(n_cages, N_0, max_t, R, A, D_Binom, D_Pois, process_error,
 
 \item{A}{Density dependence for each line.}
 
-\item{D_Binom}{Data frame containing intercept and coefficient estimates for
+\item{D_binom}{Data frame containing intercept and coefficient estimates for
 binomial GLM of `<whether dispersal > 0> ~ N_t + N_t^2`.
 There should be one set of estimates for each line regardless of whether the model
 estimated separate values for each line.}
 
-\item{D_Pois}{Data frame containing intercept and overdispersion estimates for
-Poisson GLMM of `<# dispersed | dispersal occurs> ~ 1`.
+\item{D_nb}{Data frame containing intercept and overdispersion estimates for
+negative binomial GLM of `<# dispersed | dispersal occurs> ~ 1`.
 There should be one set of estimates for each line regardless of whether the model
 estimated separate values for each line.}
 

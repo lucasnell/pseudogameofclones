@@ -54,7 +54,7 @@ simplify_cage <- function(cage_array, rep, N_0_, max_t_) {
 sim_cages <- function(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error,
                       plant_mort_0, plant_mort_1,
                       plant_death_age_mean, plant_death_age_sd,
-                      repl_times, repl_age,
+                      repl_times, repl_age, extinct_N,
                       n_cores = 1, show_progress = FALSE) {
 
     # if (!identical(D_binom$binom$line, D_nb$pois$line)) {
@@ -80,6 +80,7 @@ sim_cages <- function(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error,
                        plant_death_age_sd = plant_death_age_sd,
                        repl_times = repl_times,
                        repl_age = repl_age,
+                       extinct_N = extinct_N,
                        n_cores = n_cores,
                        show_progress = show_progress)
 

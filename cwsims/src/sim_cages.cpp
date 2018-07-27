@@ -284,6 +284,7 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
               const std::vector<uint32>& repl_times,
               const sint32& repl_age,
               const arma::mat& log_morts,
+              const double& extinct_N,
               pcg32& eng, arma::cube& N_out) {
 
     uint32 n_plants = N_0.n_rows;
@@ -367,7 +368,7 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
                 N_out(i,j,t+1) += (imm - em);
 
                 // Check for extinction:
-                if (N_out(i,j,t+1) < 1) {
+                if (N_out(i,j,t+1) < extinct_N) {
                     N_out(i,j,t+1) = 0;
                     extinct(i, j) = 1;
                 }
@@ -447,6 +448,7 @@ std::vector<arma::cube> sim_cages_(const uint32& n_cages,
                                    const double& plant_death_age_sd,
                                    const std::vector<uint32>& repl_times,
                                    const sint32& repl_age,
+                                   const double& extinct_N,
                                    const uint32& n_cores,
                                    const bool& show_progress) {
 
@@ -522,7 +524,7 @@ std::vector<arma::cube> sim_cages_(const uint32& n_cages,
         arma::cube& rep_cube(reps_out[r]);
         sim_cage(N_0, max_t, R, A, D_mat, process_error,
                  plant_death_age_mean, plant_death_age_sd,
-                 repl_times, repl_age_, log_morts, eng, rep_cube);
+                 repl_times, repl_age_, log_morts, extinct_N, eng, rep_cube);
         p.increment();
     }
 

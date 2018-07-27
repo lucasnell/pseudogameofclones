@@ -81,6 +81,7 @@ plant_death_age_mean <- clonewars::plant_death$until_max_summ$max_mean
 plant_death_age_sd <- clonewars::plant_death$until_max_summ$max_sd
 repl_times <- seq(4, max_t, 4) - 1
 repl_age <- 3
+extinct_N <- 6
 n_cages <- 100
 n_cores <- parallel::detectCores() - 1
 ```
@@ -93,7 +94,7 @@ sim_df <- cwsims::sim_cages(n_cages, N_0[,lines], max_t, R[lines], A[lines],
                             D_binom[lines,], D_nb[lines,], process_error,
                             plant_mort_0[lines], plant_mort_1[lines],
                             plant_death_age_mean, plant_death_age_sd,
-                            repl_times, repl_age, n_cores) %>% 
+                            repl_times, repl_age, extinct_N, n_cores) %>% 
     mutate(X = log(N)) %>%
     identity()
 
@@ -276,8 +277,25 @@ end_Ns <- sim_by_cage %>%
     dplyr::select(line, rep, N) %>% 
     spread(line, N)
 
+end_survs <- sim_by_cage %>% 
+    filter(date == max_t) %>%
+    mutate(surv = ifelse(N > 0, 1, 0)) %>% 
+    dplyr::select(line, rep, surv) %>% 
+    spread(line, surv)
+
 end_Ns %>% 
     GGally::ggpairs(columns = 2:9)
+
+end_survs %>% 
+    GGally::ggpairs(columns = 2:9)
+
+
+for (i in 1:(n_lines-1)) {
+    for (j in (i+1):n_lines) {
+        cat(sprintf("%i %i: %.4g\n", i, j, cor(end_Ns[,i+1], end_Ns[,j+1])))
+    }
+}
+
 
 
 
