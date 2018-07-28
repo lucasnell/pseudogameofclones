@@ -36,7 +36,7 @@ Below is the model I'm simulating, for a given line and plant:
 $$
 \begin{align}
     N_{t+1} &= N_{t} ~ \text{e}^ {\rho + \varepsilon} + I - E \\
-    \varepsilon &\sim \text{N}(0,\sigma_p) \\
+    \varepsilon &\sim \text{N}(0,\sigma^2_p) \\
 \end{align}
 $$
 
@@ -67,6 +67,8 @@ $$
     
     m(t,\gamma) &= \text{logit}^{-1}\left(  \beta_{0} + \beta_{1} ~ ( t - \gamma )
         \right) \\
+        
+    \gamma &\sim \text{N}(\mu_\gamma, \sigma^2_\gamma)
     
 \end{align}
 $$
@@ -83,39 +85,64 @@ where...
 - $n_l$ is the number of aphid lines
 - $\beta_0$ and $\beta_1$ are the coefficients for the regression of the
   logit-transformed mortality rate on time since plant-death started
+- $\mu_\gamma$ and $\sigma_\gamma$ are the mean and standard deviation of the
+  distribution of the times at which plants begin to die
 
 
-To simulate immigration and emigration, at each time point I first create a 
-$n_l$ by $n_p$ matrix, $\mathbf{\lambda}$ (where $n_p$ is the number of plants) of 
-dispersal rates by plant and aphid line. I fill this matrix as follows:
 
-$$
-    \mathbf{\lambda}_{ij} = \text{e}^{\delta_{0j} + \delta_{1j} ~ \log(N_{ijt})}
-$$
-where $\delta_0$ and $\delta_1$ are the coefficients for the regression of the
-log-transformed dispersal rate on the number of aphids present on a plant.
-(Each line has its own estimates for $\delta_0$ and $\delta_1$, hence the $j$ subscript.)
-
-I then use $\mathbf{\lambda}$ to generate numbers of dispersed individuals 
-of line $i$ going from from plant $a$ to plant $b$ (where $a \ne b$):
+Dispersal is simulated using a combination of Bernoulli and negative binomial
+distributions.
+First, the probability that any aphids disperse at all is given by the following
+formula:
 
 $$
-    d_{ia \rightarrow b} \sim \text{Pois} \left( \frac{\mathbf{\lambda}_{ia}}{1 - n_p} \right)
+p = \text{logit}^{-1}(\delta_0 + \delta_1 ~ \eta_{it} + \delta_2 ~ \eta_{it}^2)
 $$
 
-I used these numbers to create two more $n_l$ by $n_p$ matrices,
+where...
+
+- $\eta$ is the number of days that plant $i$ is past death at time $t$
+- $\delta_0$, $\delta_1$, and $\delta_2$ are coefficients for the regression of
+  probability of dispersing > 0 aphids on days past plant death
+
+A Bernoulli trial is performed to determine whether to disperse any aphids.
+If this trial is a success, then a negative binomial distribution produces 
+the numbers of aphids of line $j$ that disperse from plant $i$
+to all other plants (for receiving plant $k$, $d_{(i \rightarrow k)jt}$):
+
+$$
+\begin{align}
+    p_{d(ijt)} &= \frac{\theta}{ \theta + \exp(\zeta_{0(j)}) ~ N_{ijt} } \\
+    d_{(i \rightarrow k)jt} &\sim \text{NB} ( \theta / n_p , ~ p_{d(ijt)} ) \\
+\end{align}
+$$
+
+where $\zeta_0$ and $\theta$ are estimated from a negative binomial GLM using
+`MASS::glm.nb`. The former has an estimate per line, while the latter has just one
+value for all lines.
+Note that in this parameterization of the negative binomial distribution, $\theta / n_p$
+is the number of successful trials and $p_d$ is the probability of success
+(i.e., dispersal).
+Note also that $d_{(i \rightarrow i)jt}$ is left at zero because dispersing back to
+the same plant causes no net change.
+
+
+I used these numbers to create two $n_l$ by $n_p$ matrices,
 one for the number of immigrants ($\mathbf{I}$) and another for emigrants
-($\mathbf{E}$):
+($\mathbf{E}$), which are filled as follows:
 
 $$
 \begin{align}
 
-    \mathbf{I}_{ij} &= \sum^{n_p}_{a \ne j}{d_{ia \rightarrow j}} \\
+    \mathbf{I}_{ij} &= \sum^{n_p}_{k=1}{d_{(k \rightarrow i)jt}} \\
     
-    \mathbf{E}_{ij} &= \sum^{n_p}_{b \ne j}{d_{ij \rightarrow b}} \\
+    \mathbf{E}_{ij} &= \sum^{n_p}_{k=1}{d_{(i \rightarrow k)jt}} \\
     
 \end{align}
 $$
+
+
+
 
 
 ## Plant replacement
@@ -126,6 +153,9 @@ Replaced plants are started at zero for all lines.
 
 ## Extinction
 
-Any time $N_{ij} < 1$, $N_{ij}$ is set to zero and listed as extinct.
+I set a threshold for extinction ($\omega$) that defaults to 1.
+Any time $N_{ij} < \omega$, $N_{ij}$ is set to zero and listed as extinct.
 $N_{ij}$ is ignored until an aphid of line $j$ immigrates to plant $i$.
+Increasing $\omega$ to $>1$ could be reasonable given that many---perhaps
+most---dispersers die.
 

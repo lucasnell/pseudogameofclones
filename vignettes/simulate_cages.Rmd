@@ -60,7 +60,7 @@ stan_fit <- read_rds("data-raw/stan_fit.rds")
 
 
 ```{r}
-n_plants <- 16
+n_plants <- 8
 n_lines <- 8
 N_0 <- matrix(rep(48/16, n_lines * n_plants), n_plants, n_lines)
 max_t <- 180
@@ -70,8 +70,6 @@ A <- apply(rstan::extract(stan_fit, "A", permuted = FALSE), 3, mean) %>%
     as.numeric()
 D_binom <- clonewars::disp_estimates$binom
 D_nb <- clonewars::disp_estimates$nb
-# Correcting for weirdness from WI-L4Ø due to only having one complete rep:
-D_nb[D_nb$line == "WI-L4Ø",-1] <- colMeans(D_nb[D_nb$line != "WI-L4Ø", -1])
 process_error <- apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE), 
                        3, mean) %>%
     as.numeric()

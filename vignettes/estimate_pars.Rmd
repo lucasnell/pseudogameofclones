@@ -103,7 +103,7 @@ str(model_data, give.attr = FALSE)
 ## Run model
 
 ```{r run_model, eval = FALSE}
-# # Takes ~ 7 min at adapt_delta = 0.9
+# # Takes ~ 30 sec at adapt_delta = 0.9
 # set.seed(65136)
 # stan_fit <- model_data %>%
 #     fit_lines(

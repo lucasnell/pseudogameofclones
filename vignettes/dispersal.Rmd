@@ -106,10 +106,10 @@ growth %>%
     {mutate(., pred = glm(disp_b ~ past_death + I(past_death^2), family = "binomial", 
                       data = growth) %>% predict(type = "response"))} %>% 
     ggplot(aes(x = past_death)) +
-    geom_point(aes(y = disp_b, color = rep), shape = 16, alpha = 0.5) +
+    geom_point(aes(y = disp_b, color = rep), shape = 16, alpha = 0.75) +
     geom_line(aes(y = pred), color = "black", size = 0.75) +
     facet_wrap(~ line) +
-    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    scale_color_brewer(palette = "Set3", guide = FALSE) +
     NULL
 
 growth %>%
@@ -118,10 +118,10 @@ growth %>%
                          data = filter(growth, dD > 0)) %>%
                predict(type = "response")) %>% 
     ggplot(aes(X, dD)) +
-    geom_point(aes(color = rep), shape = 16, alpha = 0.5) +
+    geom_point(aes(color = rep), shape = 16, alpha = 0.75) +
     geom_line(aes(y = pred), color = "black", size = 0.75) +
     facet_wrap(~ line) +
-    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    scale_color_brewer(palette = "Set3", guide = FALSE) +
     NULL
 ```
 
@@ -210,13 +210,13 @@ predict_disp <- function(N, past_death, aphid_line) {
 ```{r glmm_prediction_plot}
 growth %>% 
     ggplot(aes(N, dD, color = rep)) +
-    geom_point(alpha = 0.5, shape = 16) +
+    geom_point(alpha = 0.75, shape = 16) +
     geom_line(data = expand.grid(N = 1:1000,
                                  line = growth$line %>% unique() %>% sort(),
                                  past_death = c(-5, 0, 10, 20)) %>% 
                   mutate(dD = predict_disp(N, past_death, line)),
         size = 0.75, color = "black", aes(linetype = factor(past_death))) +
-    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    scale_color_brewer(palette = "Set3", guide = FALSE) +
     scale_linetype_manual(NULL, values = c("solid", "dashed", "dotdash", "1F")) +
     facet_wrap(~ line, nrow = 2) +
     scale_y_continuous("Dispersed aphids", trans = "log1p",
@@ -250,13 +250,14 @@ sim_disp <- function(N, past_death, aphid_line) {
 
 
 
-```{r}
+```{r dispersal_compare_plots}
 growth %>% 
     mutate(disp_ = sim_disp(N, past_death, line)) %>% 
     ggplot(aes(X, disp_, color = rep)) +
-    geom_point(alpha = 0.5, shape = 16) +
-    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    geom_point(alpha = 0.75, shape = 16) +
+    scale_color_brewer(palette = "Set3", guide = FALSE) +
     facet_wrap(~ line, nrow = 2) +
+    ggtitle("Simulated dispersal") +
     scale_y_continuous("Dispersed aphids", trans = "log1p",
                        breaks = c(0, 4^(0:3))) +
     scale_x_continuous("Total aphids") +
@@ -264,9 +265,10 @@ growth %>%
 # Other one to compare to:
 growth %>% 
     ggplot(aes(X, dD, color = rep)) +
-    geom_point(alpha = 0.5, shape = 16) +
-    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    geom_point(alpha = 0.75, shape = 16) +
+    scale_color_brewer(palette = "Set3", guide = FALSE) +
     facet_wrap(~ line, nrow = 2) +
+    ggtitle("Actual dispersal") +
     scale_y_continuous("Dispersed aphids", trans = "log1p",
                        breaks = c(0, 4^(0:3))) +
     scale_x_continuous("Total aphids") +

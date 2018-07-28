@@ -65,14 +65,6 @@ until_max <-
     summarize(days = max(date)) %>% 
     ungroup()
 
-# Original version:
-# until_max <- load_data(noNA = FALSE, filter_pars = NULL, remove_unfinished = TRUE) %>%
-#     mutate(rep = factor(rep)) %>% 
-#     group_by(line, rep) %>%
-#     filter(1:n() <= which(N == max(N))[1]) %>%
-#     summarize(days = max(date)) %>% 
-#     ungroup() %>%
-#     identity()
 
 until_max %>% 
     ggplot(aes(line, days, color = line)) +
