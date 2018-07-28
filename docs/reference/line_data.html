@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Convert a data frame of data to one to be used in `fit_lines`. — line_data • clonewars</title>
+<title>Convert a data frame of data to one to be used in <code>fit_lines</code>. — line_data • clonewars</title>
 
 <!-- jquery -->
 <script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha384-nrOSfDHtoPMzJHjVTdCopGqIqeYETSXhZDFyniQ8ZHcVy08QesyHcnOUpMpqnmWq" crossorigin="anonymous"></script>
@@ -30,9 +30,11 @@
 
 
 
-<meta property="og:title" content="Convert a data frame of data to one to be used in `fit_lines`. — line_data" />
+<meta property="og:title" content="Convert a data frame of data to one to be used in <code>fit_lines</code>. — line_data" />
 
-<meta property="og:description" content="Convert a data frame of data to one to be used in `fit_lines`." />
+<meta property="og:description" content="Convert a data frame of data to one to be used in fit_lines." />
+
+<meta property="og:image" content="/logo.png" />
 <meta name="twitter:card" content="summary" />
 
 
@@ -69,22 +71,26 @@
       <ul class="nav navbar-nav">
         <li>
   <a href="../index.html">
-    <span class="fa fa-home fa-lg"></span>
+    <span class=" "></span>
      
+    Home
   </a>
 </li>
 <li>
-  <a href="../reference/index.html">Reference</a>
+  <a href="../reference/index.html">Package functions</a>
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-    Articles
+    Technical details
      
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
-      <a href="../articles/choose_priors.html">Choose priors</a>
+      <a href="../articles/choose_priors.html">Choosing priors</a>
+    </li>
+    <li>
+      <a href="../articles/dispersal.html">Estimating dispersal</a>
     </li>
     <li>
       <a href="../articles/estimate_pars.html">Estimating aphid population parameters</a>
@@ -92,14 +98,35 @@
     <li>
       <a href="../articles/model_description.html">Model description</a>
     </li>
+    <li>
+      <a href="../articles/plant_death.html">Plant death</a>
+    </li>
+    <li>
+      <a href="../articles/simulate_cages.html">Simulating cages</a>
+    </li>
+    <li>
+      <a href="../articles/simulation_description.html">Simulation description</a>
+    </li>
   </ul>
 </li>
       </ul>
       
       <ul class="nav navbar-nav navbar-right">
         <li>
+  <a href="http://lucasnell.com">
+    <span class="fa fa-home fa-lg"></span>
+     
+  </a>
+</li>
+<li>
   <a href="https://github.com/lucasnell/aphid_repetition">
     <span class="fa fa-github fa-lg"></span>
+     
+  </a>
+</li>
+<li>
+  <a href="http://twitter.com/LucasANell">
+    <span class="fa fa-lg fa-twitter"></span>
      
   </a>
 </li>
@@ -115,14 +142,14 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>Convert a data frame of data to one to be used in `fit_lines`.</h1>
+    <h1>Convert a data frame of data to one to be used in <code>fit_lines</code>.</h1>
     <small class="dont-index">Source: <a href='https://github.com/lucasnell/aphid_repetition/blob/master/R/data_manip.R'><code>R/data_manip.R</code></a></small>
     <div class="hidden name"><code>line_data.Rd</code></div>
     </div>
 
     <div class="ref-description">
     
-    <p>Convert a data frame of data to one to be used in `fit_lines`.</p>
+    <p>Convert a data frame of data to one to be used in <code>fit_lines</code>.</p>
     
     </div>
 
@@ -156,10 +183,10 @@
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
     <p>A list containing (1) a matrix of log(N), where each time series has its own
-    column (named `X` in the output list) and (2) a vector of integers indicating
-    the aphid-line number for each time-series column in (named `L`).
-    Aphid line numbers come from converting the original factor column into
-    an integer. You can replicate the same integers by running `as.integer(line)`.</p>
+column (named <code>X</code> in the output list) and (2) a vector of integers indicating
+the aphid-line number for each time-series column in (named <code>L</code>).
+Aphid line numbers come from converting the original factor column into
+an integer. You can replicate the same integers by running <code>as.integer(line)</code>.</p>
     
 
   </div>

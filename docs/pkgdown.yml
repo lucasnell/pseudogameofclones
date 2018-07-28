@@ -3,6 +3,10 @@ pkgdown: 1.1.0
 pkgdown_sha: ~
 articles:
   choose_priors: choose_priors.html
+  dispersal: dispersal.html
   estimate_pars: estimate_pars.html
   model_description: model_description.html
+  plant_death: plant_death.html
+  simulate_cages: simulate_cages.html
+  simulation_description: simulation_description.html
 

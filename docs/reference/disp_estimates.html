@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>The 'aphidreps' package. — aphidreps-package • aphidreps</title>
+<title>Data to generate dispersal predictions for a given line and log(number of aphids). — disp_estimates • clonewars</title>
 
 <!-- jquery -->
 <script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha384-nrOSfDHtoPMzJHjVTdCopGqIqeYETSXhZDFyniQ8ZHcVy08QesyHcnOUpMpqnmWq" crossorigin="anonymous"></script>
@@ -30,9 +30,11 @@
 
 
 
-<meta property="og:title" content="The 'aphidreps' package. — aphidreps-package" />
+<meta property="og:title" content="Data to generate dispersal predictions for a given line and log(number of aphids). — disp_estimates" />
 
-<meta property="og:description" content="Analyses and simulations related to aphid repetition experiments." />
+<meta property="og:description" content="Data to generate dispersal predictions for a given line and log(number of aphids)." />
+
+<meta property="og:image" content="/logo.png" />
 <meta name="twitter:card" content="summary" />
 
 
@@ -60,7 +62,7 @@
         <span class="icon-bar"></span>
       </button>
       <span class="navbar-brand">
-        <a class="navbar-link" href="../index.html">aphidreps</a>
+        <a class="navbar-link" href="../index.html">clonewars</a>
         <span class="label label-default" data-toggle="tooltip" data-placement="bottom" title="Released package">0.0.0.9000</span>
       </span>
     </div>
@@ -69,25 +71,41 @@
       <ul class="nav navbar-nav">
         <li>
   <a href="../index.html">
-    <span class="fa fa-home fa-lg"></span>
+    <span class=" "></span>
      
+    Home
   </a>
 </li>
 <li>
-  <a href="../reference/index.html">Reference</a>
+  <a href="../reference/index.html">Package functions</a>
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-    Articles
+    Technical details
      
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
-      <a href="../articles/choose_priors.html">Choose priors</a>
+      <a href="../articles/choose_priors.html">Choosing priors</a>
+    </li>
+    <li>
+      <a href="../articles/dispersal.html">Estimating dispersal</a>
     </li>
     <li>
       <a href="../articles/estimate_pars.html">Estimating aphid population parameters</a>
+    </li>
+    <li>
+      <a href="../articles/model_description.html">Model description</a>
+    </li>
+    <li>
+      <a href="../articles/plant_death.html">Plant death</a>
+    </li>
+    <li>
+      <a href="../articles/simulate_cages.html">Simulating cages</a>
+    </li>
+    <li>
+      <a href="../articles/simulation_description.html">Simulation description</a>
     </li>
   </ul>
 </li>
@@ -95,8 +113,20 @@
       
       <ul class="nav navbar-nav navbar-right">
         <li>
+  <a href="http://lucasnell.com">
+    <span class="fa fa-home fa-lg"></span>
+     
+  </a>
+</li>
+<li>
   <a href="https://github.com/lucasnell/aphid_repetition">
     <span class="fa fa-github fa-lg"></span>
+     
+  </a>
+</li>
+<li>
+  <a href="http://twitter.com/LucasANell">
+    <span class="fa fa-lg fa-twitter"></span>
      
   </a>
 </li>
@@ -112,30 +142,52 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>The 'aphidreps' package.</h1>
-    <small class="dont-index">Source: <a href='https://github.com/lucasnell/aphid_repetition/blob/master/R/aphidreps-package.R'><code>R/aphidreps-package.R</code></a></small>
-    <div class="hidden name"><code>aphidreps-package.Rd</code></div>
+    <h1>Data to generate dispersal predictions for a given line and log(number of aphids).</h1>
+    <small class="dont-index">Source: <a href='https://github.com/lucasnell/aphid_repetition/blob/master/R/data.R'><code>R/data.R</code></a></small>
+    <div class="hidden name"><code>disp_estimates.Rd</code></div>
     </div>
 
     <div class="ref-description">
     
-    <p>Analyses and simulations related to aphid repetition experiments.</p>
+    <p>Data to generate dispersal predictions for a given line and log(number of aphids).</p>
     
     </div>
 
+    <pre class="usage"><span class='no'>disp_estimates</span></pre>
         
-    <h2 class="hasAnchor" id="references"><a class="anchor" href="#references"></a>References</h2>
+    <h2 class="hasAnchor" id="format"><a class="anchor" href="#format"></a>Format</h2>
 
-    <p>Stan Development Team (2018). RStan: the R interface to Stan. R package version 2.17.3. http://mc-stan.org</p>
+    <p>An 8 x 3 data frame with columns for intercept (<code>inter</code>) and slope (<code>slope</code>)
+of the Poisson GLM of <code>dispersal ~ log(N)</code> for each aphid line.
+(It was actually done using a GLMM, but for purposes of prediction, you can think
+of it as separate GLMs.)</p>
     
 
+    <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
+    <pre class="examples"><div class='input'>The following function would make predictions:
+```
+predict_disp <- function(X, aphid_line) {
+    disp_estimates_ <- clonewars::disp_estimates
+    m <- map_dbl(aphid_line, ~ filter(disp_estimates_, line == .x)[["slope"]])
+    b <- map_dbl(aphid_line, ~ filter(disp_estimates_, line == .x)[["inter"]])
+    y <- exp(m * X + b)
+    return(y)
+}
+```
+
+
+</div><div class='output co'>#&gt; <span class='error'>Error: &lt;text&gt;:1:5: unexpected symbol</span>
+#&gt; <span class='error'>1: The following</span>
+#&gt; <span class='error'>        ^</span></div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
     <h2>Contents</h2>
     <ul class="nav nav-pills nav-stacked">
       
-      <li><a href="#references">References</a></li>
-          </ul>
+      <li><a href="#format">Format</a></li>
+      
+      <li><a href="#examples">Examples</a></li>
+    </ul>
 
   </div>
 </div>

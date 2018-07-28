@@ -33,6 +33,8 @@
 <meta property="og:title" content="Make prediction data frame from model output and the original data frame. — make_pred_df" />
 
 <meta property="og:description" content="Make prediction data frame from model output and the original data frame." />
+
+<meta property="og:image" content="/logo.png" />
 <meta name="twitter:card" content="summary" />
 
 
@@ -69,22 +71,26 @@
       <ul class="nav navbar-nav">
         <li>
   <a href="../index.html">
-    <span class="fa fa-home fa-lg"></span>
+    <span class=" "></span>
      
+    Home
   </a>
 </li>
 <li>
-  <a href="../reference/index.html">Reference</a>
+  <a href="../reference/index.html">Package functions</a>
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-    Articles
+    Technical details
      
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
-      <a href="../articles/choose_priors.html">Choose priors</a>
+      <a href="../articles/choose_priors.html">Choosing priors</a>
+    </li>
+    <li>
+      <a href="../articles/dispersal.html">Estimating dispersal</a>
     </li>
     <li>
       <a href="../articles/estimate_pars.html">Estimating aphid population parameters</a>
@@ -92,14 +98,35 @@
     <li>
       <a href="../articles/model_description.html">Model description</a>
     </li>
+    <li>
+      <a href="../articles/plant_death.html">Plant death</a>
+    </li>
+    <li>
+      <a href="../articles/simulate_cages.html">Simulating cages</a>
+    </li>
+    <li>
+      <a href="../articles/simulation_description.html">Simulation description</a>
+    </li>
   </ul>
 </li>
       </ul>
       
       <ul class="nav navbar-nav navbar-right">
         <li>
+  <a href="http://lucasnell.com">
+    <span class="fa fa-home fa-lg"></span>
+     
+  </a>
+</li>
+<li>
   <a href="https://github.com/lucasnell/aphid_repetition">
     <span class="fa fa-github fa-lg"></span>
+     
+  </a>
+</li>
+<li>
+  <a href="http://twitter.com/LucasANell">
+    <span class="fa fa-lg fa-twitter"></span>
      
   </a>
 </li>
@@ -133,7 +160,7 @@
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
       <th>stan_fit</th>
-      <td><p>The `stanfit` object containing the model fit.</p></td>
+      <td><p>The <code>stanfit</code> object containing the model fit.</p></td>
     </tr>
     <tr>
       <th>orig_data</th>
@@ -141,12 +168,12 @@
     </tr>
     <tr>
       <th>line</th>
-      <td><p>An optional parameter specifying the name of the column in `orig_data`
+      <td><p>An optional parameter specifying the name of the column in <code>orig_data</code>
 that contains info on the aphid line.</p></td>
     </tr>
     <tr>
       <th>rep</th>
-      <td><p>An optional parameter specifying the name of the column in `orig_data`
+      <td><p>An optional parameter specifying the name of the column in <code>orig_data</code>
 that contains info on the rep within each aphid line.</p></td>
     </tr>
     </table>

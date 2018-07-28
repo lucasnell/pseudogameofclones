@@ -33,6 +33,8 @@
 <meta property="og:title" content="Load data that won't be used for the actual analysis, to develop priors. — load_prior_data" />
 
 <meta property="og:description" content="Load data that won't be used for the actual analysis, to develop priors." />
+
+<meta property="og:image" content="/logo.png" />
 <meta name="twitter:card" content="summary" />
 
 
@@ -69,22 +71,26 @@
       <ul class="nav navbar-nav">
         <li>
   <a href="../index.html">
-    <span class="fa fa-home fa-lg"></span>
+    <span class=" "></span>
      
+    Home
   </a>
 </li>
 <li>
-  <a href="../reference/index.html">Reference</a>
+  <a href="../reference/index.html">Package functions</a>
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-    Articles
+    Technical details
      
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
-      <a href="../articles/choose_priors.html">Choose priors</a>
+      <a href="../articles/choose_priors.html">Choosing priors</a>
+    </li>
+    <li>
+      <a href="../articles/dispersal.html">Estimating dispersal</a>
     </li>
     <li>
       <a href="../articles/estimate_pars.html">Estimating aphid population parameters</a>
@@ -92,14 +98,35 @@
     <li>
       <a href="../articles/model_description.html">Model description</a>
     </li>
+    <li>
+      <a href="../articles/plant_death.html">Plant death</a>
+    </li>
+    <li>
+      <a href="../articles/simulate_cages.html">Simulating cages</a>
+    </li>
+    <li>
+      <a href="../articles/simulation_description.html">Simulation description</a>
+    </li>
   </ul>
 </li>
       </ul>
       
       <ul class="nav navbar-nav navbar-right">
         <li>
+  <a href="http://lucasnell.com">
+    <span class="fa fa-home fa-lg"></span>
+     
+  </a>
+</li>
+<li>
   <a href="https://github.com/lucasnell/aphid_repetition">
     <span class="fa fa-github fa-lg"></span>
+     
+  </a>
+</li>
+<li>
+  <a href="http://twitter.com/LucasANell">
+    <span class="fa fa-lg fa-twitter"></span>
      
   </a>
 </li>
@@ -126,22 +153,22 @@
     
     </div>
 
-    <pre class="usage"><span class='fu'>load_prior_data</span>(<span class='no'>file</span>, <span class='kw'>filter_pars</span> <span class='kw'>=</span> <span class='fu'>list</span>(<span class='kw'>begin</span> <span class='kw'>=</span> <span class='fl'>0.5</span>, <span class='kw'>end</span> <span class='kw'>=</span> <span class='fl'>0.9</span>))</pre>
+    <pre class="usage"><span class='fu'>load_prior_data</span>(<span class='kw'>filter_pars</span> <span class='kw'>=</span> <span class='fu'>list</span>(<span class='kw'>start</span> <span class='kw'>=</span> <span class='fl'>0.5</span>, <span class='kw'>end</span> <span class='kw'>=</span> <span class='fl'>0.9</span>), <span class='kw'>file</span> <span class='kw'>=</span> <span class='fl'>NA</span>)</pre>
     
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
+      <th>filter_pars</th>
+      <td><p>A list with the names <code>"start"</code> and <code>"end"</code>, containing single
+numbers with threshold for filtering the beginning and ending of time series,
+respectively. Set to <code>NULL</code> to avoid filtering entirely.
+Defaults to <code>list(start = 0.5, end = 1.0)</code>.</p></td>
+    </tr>
+    <tr>
       <th>file</th>
       <td><p>A filename to read from. If left empty, this will read from the
 default path on your DropBox folder.</p></td>
-    </tr>
-    <tr>
-      <th>filter_pars</th>
-      <td><p>A list with the names `"begin"` and `"end"`, containing single
-numbers with threshold for filtering the beginning and ending of time series,
-respectively. Set to `NULL` to avoid filtering entirely.
-Defaults to `list(begin = 0.5, end = 1.0)`.</p></td>
     </tr>
     </table>
     

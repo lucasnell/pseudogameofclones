@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Function reference • clonewars</title>
+<title>Information for simulating plant death. — plant_death • clonewars</title>
 
 <!-- jquery -->
 <script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha384-nrOSfDHtoPMzJHjVTdCopGqIqeYETSXhZDFyniQ8ZHcVy08QesyHcnOUpMpqnmWq" crossorigin="anonymous"></script>
@@ -30,7 +30,9 @@
 
 
 
-<meta property="og:title" content="Function reference" />
+<meta property="og:title" content="Information for simulating plant death. — plant_death" />
+
+<meta property="og:description" content="Information for simulating plant death." />
 
 <meta property="og:image" content="/logo.png" />
 <meta name="twitter:card" content="summary" />
@@ -49,7 +51,7 @@
   </head>
 
   <body>
-    <div class="container template-reference-index">
+    <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
@@ -138,120 +140,39 @@
       </header>
 
 <div class="row">
-  <div class="contents col-md-9">
+  <div class="col-md-9 contents">
     <div class="page-header">
-      <h1>Reference</h1>
+    <h1>Information for simulating plant death.</h1>
+    <small class="dont-index">Source: <a href='https://github.com/lucasnell/aphid_repetition/blob/master/R/data.R'><code>R/data.R</code></a></small>
+    <div class="hidden name"><code>plant_death.Rd</code></div>
     </div>
 
-    <table class="ref-index">
+    <div class="ref-description">
+    
+    <p>Information for simulating plant death.</p>
+    
+    </div>
 
-    <colgroup>
-      
-      <col class="alias" />
-      <col class="title" />
-    </colgroup>
+    <pre class="usage"><span class='no'>plant_death</span></pre>
+        
+    <h2 class="hasAnchor" id="format"><a class="anchor" href="#format"></a>Format</h2>
 
-    <tbody>
-      <tr>
-        <th colspan="2">
-          <h2 id="section-all-functions" class="hasAnchor"><a href="#section-all-functions" class="anchor"></a>All functions</h2>
-          <p class="section-desc"></p>
-        </th>
-      </tr>
-      <tr>
-        
-        <td>
-          <p><code><a href="clonewars-package.html">clonewars-package</a></code> </p>
-        </td>
-        <td><p>The 'clonewars' package.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="compare_priors.html">compare_priors()</a></code> </p>
-        </td>
-        <td><p>Visually compare normal, student_t, cauchy, laplace, and product_normal.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="disp_estimates.html">disp_estimates</a></code> </p>
-        </td>
-        <td><p>Data to generate dispersal predictions for a given line and log(number of aphids).</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="fit_lines.html">fit_lines()</a></code> </p>
-        </td>
-        <td><p>Fit multiple time series for multiple aphid lines.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="impute.html">impute()</a></code> </p>
-        </td>
-        <td><p>Impute missing data.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="leslie.html">leslie</a></code> </p>
-        </td>
-        <td><p>Leslie matrices for fast and slow aphid populations.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="line_data.html">line_data()</a></code> </p>
-        </td>
-        <td><p>Convert a data frame of data to one to be used in <code>fit_lines</code>.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="load_data.html">load_data()</a></code> </p>
-        </td>
-        <td><p>Load aphid growth data.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="load_prior_data.html">load_prior_data()</a></code> </p>
-        </td>
-        <td><p>Load data that won't be used for the actual analysis, to develop priors.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="load_pz_data.html">load_pz_data()</a></code> </p>
-        </td>
-        <td><p>Load data from PZ counts that were almost finished.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="make_pred_df.html">make_pred_df()</a></code> </p>
-        </td>
-        <td><p>Make prediction data frame from model output and the original data frame.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="plant_death.html">plant_death</a></code> </p>
-        </td>
-        <td><p>Information for simulating plant death.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="sim_cages.html">sim_cages()</a></code> </p>
-        </td>
-        <td><p>Simulate cages with the same starting conditions.</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="sim_lines.html">sim_lines()</a></code> </p>
-        </td>
-        <td><p>Simulate log-transformed counts of aphid populations for one or more lines.</p></td>
-      </tr>
-    </tbody>
-    </table>
+    <p>A list with two fields, each containing a single number:</p><ul>
+<li><p><code>days_to_max</code>: An integer specifying the number of days after which the plant
+begins to die.</p></li>
+<li><p><code>after_max_mortality</code>: The per-day mortality to add to the aphid populations on
+a plant after the plant begins to die.</p></li>
+</ul>
+    
+
   </div>
-
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
     <h2>Contents</h2>
     <ul class="nav nav-pills nav-stacked">
-      <li><a href="#section-all-functions">All functions</a></li>
-    </ul>
+      
+      <li><a href="#format">Format</a></li>
+          </ul>
+
   </div>
 </div>
 
