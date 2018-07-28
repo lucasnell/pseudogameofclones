@@ -27,6 +27,7 @@ if (!isTRUE(getOption('knitr.in.progress'))) source(".Rprofile")
 ```
 
 ```{r library_pkgs, warning=FALSE, echo=TRUE}
+set.seed(6514651)
 suppressPackageStartupMessages({
     library(MASS)
     library(clonewars)
