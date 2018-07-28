@@ -103,13 +103,17 @@ str(model_data, give.attr = FALSE)
 ## Run model
 
 ```{r run_model, eval = FALSE}
-# # Takes ~ 30 sec at adapt_delta = 0.9
-# set.seed(65136)
-# stan_fit <- model_data %>%
-#     fit_lines(
-#         control = list(adapt_delta = 0.9)
-#     )
-# write_rds(stan_fit, "data-raw/stan_fit.rds")
+# Takes ~ 30 sec at adapt_delta = 0.9
+set.seed(65136)
+stan_fit <- model_data %>%
+    fit_lines(
+        control = list(adapt_delta = 0.9)
+    )
+```
+```{r write_model, eval = FALSE, echo = FALSE}
+write_rds(stan_fit, "data-raw/stan_fit.rds")
+```
+```{r read_model, eval = TRUE, echo = FALSE}
 stan_fit <- read_rds("data-raw/stan_fit.rds")
 ```
 

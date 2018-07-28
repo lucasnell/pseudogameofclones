@@ -1,10 +1,10 @@
 ---
-title: "Simulate cages"
+title: "Simulating cages"
 author: "Lucas A. Nell"
 date: "2018-07-03"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Simulate cages}
+  %\VignetteIndexEntry{Simulating cages}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 

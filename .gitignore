@@ -10,3 +10,4 @@ under_constr/_test.*
 *.rda
 *.rds
 figs
+*.ai

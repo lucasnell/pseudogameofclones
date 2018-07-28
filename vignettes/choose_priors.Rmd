@@ -1,10 +1,10 @@
 ---
-title: "Choose priors"
+title: "Choosing priors"
 author: "Lucas A. Nell"
 date: "2018-07-04"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Choose priors}
+  %\VignetteIndexEntry{Choosing priors}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 editor_options: 
