@@ -40,30 +40,20 @@ reps <- growth %>%
 reps <- c(reps, reps[1:3])
 # reps <- reps[1]
 
-example_ts <- lapply(reps,
-       function(r) {
-           growth %>%
-               filter(line == "WI-2016-593", rep == r) %>%
-               dplyr::select(line, rep, date, N, dD) %>%
-               ggplot(aes(date)) +
-               geom_line(aes(y = N), size = 1.5, color = palette$default_primary) +
-               geom_line(aes(y = dD * 10), size = 1.5, color = palette$secondary_text) +
-               xlab(NULL) +
-               scale_y_continuous(NULL, limits = c(0, 740),
-                                  sec.axis = sec_axis(~ . / 10,
-                                                      name = NULL))
-})
 
 
-example_ts[1:7]
+example_ts <- growth %>%
+    filter(line == "WI-2016-593") %>%
+    dplyr::select(line, rep, date, pN, dD) %>%
+    ggplot(aes(date, group = rep)) +
+    geom_line(aes(y = pN), alpha = 0.5, size = 1.5, color = palette$default_primary) +
+    geom_line(aes(y = dD * 10), alpha = 0.75, size = 1.5, color = palette$secondary_text) +
+    xlab(NULL)
 
 
 # for (i in 1:length(example_ts)) {
-for (i in 1:1) {
-    fn <- sprintf("figs/growth_ts_%02i.pdf", i)
-    ggsave(filename = fn, plot = example_ts[[i]],
-           width = 8, height = 8, units = "cm", bg = "white")
-}
+ggsave(filename = "figs/growth_ts.pdf", plot = example_ts,
+       width = 8, height = 8, units = "cm", bg = "white", useDingbats = FALSE)
 
 
 
