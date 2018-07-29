@@ -125,12 +125,10 @@
 <h1 class="hasAnchor">
 <a href="#model-description" class="anchor"></a>Model description</h1>
 <p>Below is the model I’m simulating, for a given line and plant:</p>
-<p><span class="math display">\[
-\begin{align}
+<span class="math display">\[\begin{align}
     N_{t+1} &amp;= N_{t} ~ \text{e}^ {\rho + \varepsilon} + I - E \\
     \varepsilon &amp;\sim \text{N}(0,\sigma^2_p) \\
-\end{align}
-\]</span></p>
+\end{align}\]</span>
 <p>where…</p>
 <ul>
 <li>
@@ -138,7 +136,7 @@
 <li>
 <span class="math inline">\(N\)</span> is aphid counts</li>
 <li>
-<span class="math inline">\(rho\)</span> is the overall growth rate</li>
+<span class="math inline">\(\rho\)</span> is the overall growth rate</li>
 <li>
 <span class="math inline">\(\varepsilon\)</span> is process error</li>
 <li>
@@ -149,7 +147,7 @@
 <span class="math inline">\(\sigma_p\)</span> is the standard deviation of the process error</li>
 </ul>
 <p>The growth rate is determined by whether or not the plant is currently dying, by population growth rate for a given line, and by the abundances and density dependences of all lines on the focal plant:</p>
-<p>$$ <span class="math display">\[\begin{align}
+<span class="math display">\[\begin{align}
     \rho_{ijt} &amp;=
         \begin{cases}
             r_j \left( 1 - Z_{it} \right), &amp; \text{if}\ t &lt; \gamma \\
@@ -163,7 +161,7 @@
         
     \gamma &amp;\sim \text{N}(\mu_\gamma, \sigma^2_\gamma)
     
-\end{align}\]</span> $$</p>
+\end{align}\]</span>
 <p>where…</p>
 <ul>
 <li>
@@ -198,21 +196,19 @@ p = \text{logit}^{-1}(\delta_0 + \delta_1 ~ \eta_{it} + \delta_2 ~ \eta_{it}^2)
 <span class="math inline">\(\delta_0\)</span>, <span class="math inline">\(\delta_1\)</span>, and <span class="math inline">\(\delta_2\)</span> are coefficients for the regression of probability of dispersing &gt; 0 aphids on days past plant death</li>
 </ul>
 <p>A Bernoulli trial is performed to determine whether to disperse any aphids. If this trial is a success, then a negative binomial distribution produces the numbers of aphids of line <span class="math inline">\(j\)</span> that disperse from plant <span class="math inline">\(i\)</span> to all other plants (for receiving plant <span class="math inline">\(k\)</span>, <span class="math inline">\(d_{(i \rightarrow k)jt}\)</span>):</p>
-<p><span class="math display">\[
-\begin{align}
+<span class="math display">\[\begin{align}
     p_{d(ijt)} &amp;= \frac{\theta}{ \theta + \exp(\zeta_{0(j)}) ~ N_{ijt} } \\
     d_{(i \rightarrow k)jt} &amp;\sim \text{NB} ( \theta / n_p , ~ p_{d(ijt)} ) \\
-\end{align}
-\]</span></p>
+\end{align}\]</span>
 <p>where <span class="math inline">\(\zeta_0\)</span> and <span class="math inline">\(\theta\)</span> are estimated from a negative binomial GLM using <code><a href="http://www.rdocumentation.org/packages/MASS/topics/glm.nb">MASS::glm.nb</a></code>. The former has an estimate per line, while the latter has just one value for all lines. Note that in this parameterization of the negative binomial distribution, <span class="math inline">\(\theta / n_p\)</span> is the number of successful trials and <span class="math inline">\(p_d\)</span> is the probability of success (i.e., dispersal). Note also that <span class="math inline">\(d_{(i \rightarrow i)jt}\)</span> is left at zero because dispersing back to the same plant causes no net change.</p>
 <p>I used these numbers to create two <span class="math inline">\(n_l\)</span> by <span class="math inline">\(n_p\)</span> matrices, one for the number of immigrants (<span class="math inline">\(\mathbf{I}\)</span>) and another for emigrants (<span class="math inline">\(\mathbf{E}\)</span>), which are filled as follows:</p>
-<p>$$ <span class="math display">\[\begin{align}
+<span class="math display">\[\begin{align}
 
     \mathbf{I}_{ij} &amp;= \sum^{n_p}_{k=1}{d_{(k \rightarrow i)jt}} \\
     
     \mathbf{E}_{ij} &amp;= \sum^{n_p}_{k=1}{d_{(i \rightarrow k)jt}} \\
     
-\end{align}\]</span> $$</p>
+\end{align}\]</span>
 <div id="plant-replacement" class="section level2">
 <h2 class="hasAnchor">
 <a href="#plant-replacement" class="anchor"></a>Plant replacement</h2>

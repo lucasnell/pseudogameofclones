@@ -33,18 +33,18 @@ This document outlines the structure of the simulations.
 
 Below is the model I'm simulating, for a given line and plant:
 
-$$
+
 \begin{align}
     N_{t+1} &= N_{t} ~ \text{e}^ {\rho + \varepsilon} + I - E \\
     \varepsilon &\sim \text{N}(0,\sigma^2_p) \\
 \end{align}
-$$
+
 
 where... 
 
 - $t$ indexes across time
 - $N$ is aphid counts
-- $rho$ is the overall growth rate
+- $\rho$ is the overall growth rate
 - $\varepsilon$ is process error
 - $I$ is the number of immigrants
 - $E$ is the number of emigrants
@@ -55,7 +55,7 @@ The growth rate is determined by whether or not the plant is currently dying,
 by population growth rate for a given line, and by the abundances and density dependences
 of all lines on the focal plant:
 
-$$
+
 \begin{align}
     \rho_{ijt} &=
         \begin{cases}
@@ -71,7 +71,7 @@ $$
     \gamma &\sim \text{N}(\mu_\gamma, \sigma^2_\gamma)
     
 \end{align}
-$$
+
 
 where...
 
@@ -110,12 +110,12 @@ If this trial is a success, then a negative binomial distribution produces
 the numbers of aphids of line $j$ that disperse from plant $i$
 to all other plants (for receiving plant $k$, $d_{(i \rightarrow k)jt}$):
 
-$$
+
 \begin{align}
     p_{d(ijt)} &= \frac{\theta}{ \theta + \exp(\zeta_{0(j)}) ~ N_{ijt} } \\
     d_{(i \rightarrow k)jt} &\sim \text{NB} ( \theta / n_p , ~ p_{d(ijt)} ) \\
 \end{align}
-$$
+
 
 where $\zeta_0$ and $\theta$ are estimated from a negative binomial GLM using
 `MASS::glm.nb`. The former has an estimate per line, while the latter has just one
@@ -131,7 +131,7 @@ I used these numbers to create two $n_l$ by $n_p$ matrices,
 one for the number of immigrants ($\mathbf{I}$) and another for emigrants
 ($\mathbf{E}$), which are filled as follows:
 
-$$
+
 \begin{align}
 
     \mathbf{I}_{ij} &= \sum^{n_p}_{k=1}{d_{(k \rightarrow i)jt}} \\
@@ -139,7 +139,7 @@ $$
     \mathbf{E}_{ij} &= \sum^{n_p}_{k=1}{d_{(i \rightarrow k)jt}} \\
     
 \end{align}
-$$
+
 
 
 

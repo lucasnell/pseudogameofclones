@@ -25,7 +25,8 @@ knitr::opts_chunk$set(
 
 
 
-This document outlines the structure of the model and what priors are required.
+This document outlines the structure of the model used to estimate population-growth
+parameters and what priors are required.
 
 
 
