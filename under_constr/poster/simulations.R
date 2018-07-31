@@ -40,7 +40,7 @@ stan_fit <- read_rds("data-raw/stan_fit.rds")
 
 n_plants <- 8
 n_lines <- 8
-N_0 <- matrix(rep(48/16, n_lines * n_plants), n_plants, n_lines)
+N_0 <- matrix(rep(6, n_lines * n_plants), n_plants, n_lines)
 max_t <- 180
 R <- apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, mean) %>%
     as.numeric()
@@ -75,41 +75,37 @@ pw_sims <- function(line1_, line2_) {
                                 D_binom[lines_,], D_nb[lines_,], process_error,
                                 plant_mort_0[lines_], plant_mort_1[lines_],
                                 plant_death_age_mean, plant_death_age_sd,
-                                repl_times, repl_age, extinct_N, n_cores) %>%
+                                repl_times, repl_age, extinct_N, n_cores,
+                                by_cage = TRUE) %>%
         mutate(pair = sprintf("%i_%i", line1_, line2_), X = log(N),
                line = map_int(line, ~ lines_[.x]))
     return(sim_df)
 }
 
-
+# # Takes ~3 min
 # set.seed(654651985L)
-# sim_df <- map_dfr(pw_combs, ~ pw_sims(.x[1], .x[2]))
-# readr::write_rds(sim_df, path = "data-raw/pair_sims.rds")
-# sim_df <- readr::read_rds("data-raw/pair_sims.rds")
-#
-# sim_by_cage <- sim_df %>%
+# pair_sims <- map_dfr(pw_combs, ~ pw_sims(.x[1], .x[2]))
+# pair_sims <- pair_sims %>%
 #     mutate(line = factor(line,
 #                          levels = seq_along(levels(growth$line)),
 #                          labels = levels(growth$line)),
 #            rep = factor(rep),
 #            pair = factor(pair)) %>%
-#     group_by(pair, rep, line, date) %>%
-#     summarize(N = sum(N)) %>%
 #     arrange(pair, rep, date, line) %>%
-#     group_by(pair, rep, date) %>%
-#     mutate(prop = N / sum(N),
-#            prop_end = cumsum(prop),
-#            prop_start = lag(prop_end, default = 0)) %>%
-#     ungroup() %>%
-#     mutate(X = log(N))
-# readr::write_rds(sim_by_cage, path = "data-raw/pair_sims_by_cage.rds")
+#     # group_by(pair, rep, date) %>%
+#     # mutate(prop = N / sum(N),
+#     #        prop_end = cumsum(prop),
+#     #        prop_start = lag(prop_end, default = 0)) %>%
+#     # ungroup() %>%
+#     identity()
+# readr::write_rds(pair_sims, path = "data-raw/pair_sims.rds")
 
-sim_by_cage <- readr::read_rds("data-raw/pair_sims_by_cage.rds")
+pair_sims <- readr::read_rds("data-raw/pair_sims.rds")
 
 
 {
     # This should have zero rows bc having total extinction makes no sense:
-    sim_by_cage %>%
+    pair_sims %>%
         filter(date == max_t) %>%
         group_by(pair, rep) %>%
         summarize(N = sum(N)) %>%
@@ -119,7 +115,7 @@ sim_by_cage <- readr::read_rds("data-raw/pair_sims_by_cage.rds")
         `==`(0) %>%
         print()
     # This should also have zero rows bc it means aphids spontaneously appeared
-    sim_by_cage %>%
+    pair_sims %>%
         group_by(pair, rep, line) %>%
         filter(N == 0, dplyr::lead(N) > 0) %>%
         ungroup() %>%
@@ -129,86 +125,15 @@ sim_by_cage <- readr::read_rds("data-raw/pair_sims_by_cage.rds")
 }
 
 
-
-survs <- sim_by_cage %>%
-    filter(date == max_t) %>%
-    group_by(pair, line) %>%
-    summarize(n = mean(N > 0)) %>%
-    ungroup()
-
-# Rows are focal, columns are opponents
-surv_mat <- matrix(0, 8, 8)
-smf <- survs %>%
-    group_by(pair) %>%
-    mutate(i = as.integer(line),
-           j = as.integer(rev(line))) %>%
-    ungroup()
-for (k in 1:length(pw_combs)) {
-    i_ <- pw_combs[[k]][1]
-    j_ <- pw_combs[[k]][2]
-    surv_mat[i_, j_] <- smf %>% filter(i == i_, j == j_) %>% .[["n"]]
-    surv_mat[j_, i_] <- smf %>% filter(i == j_, j == i_) %>% .[["n"]]
-}
-
-surv_mat
-# Rows are focal, columns are opponents
-line_mat <- matrix(NA_character_, 8, 8)
-for (i in 1:n_lines) line_mat[i,] <- levels(growth$line)[i]
-
-# Differences in survivals
-diff_survs <- surv_mat - t(surv_mat)
-
-# Now sort line_mat by surv_mat:
-for (i in 1:n_lines) {
-    inds <- sort(diff_survs[,i], index.return = TRUE, decreasing = TRUE)$ix
-    line_mat[,i] <- line_mat[inds,i]
-}
-
-
-pair_df <- survs %>%
-    group_by(pair) %>%
-    mutate(line2 = rev(line), diff = n - rev(n)) %>%
-    ungroup() %>%
-    select(line1 = line, line2, diff)
-
-
-pair_df %>%
-    arrange(line1) %>%
-    mutate(diff = case_when(
-        diff < 0  ~ 0,
-        diff > 0 ~ 1,
-        TRUE ~ 2
-    ) %>% factor(levels = 0:2, labels = c("lose", "win", "draw"))) %>%
-    mutate(line1 = factor(paste(line1), levels = rev(levels(line1)))) %>%
-    ggplot(aes(line2, line1)) +
-    geom_point(aes(color = diff), size = 8) +
-    scale_color_manual(values = c("red", "blue", "black")) +
-    xlab("Opponent line") +
-    ylab("Focal line")
-
-
-
-
-pair_ranks <- expand.grid(opponent = 1:n_lines, line = 1:n_lines) %>%
-    tbl_df() %>%
-    arrange(opponent, line) %>%
-    group_by(opponent) %>%
-    # Descending rank:
-    mutate(rank = rank(-diff_survs[,opponent[1]])) %>%
-    ungroup() %>%
-    mutate(opponent = factor(opponent, levels = 1:n_lines, labels = levels(growth$line)),
-           line = factor(line, levels = 1:n_lines, labels = levels(growth$line)))
-
-
-pair_ranksN <- sim_by_cage %>%
+pair_ranks <- pair_sims %>%
     group_by(pair, line) %>%
     summarize(N = mean(N)) %>%
     group_by(pair) %>%
     mutate(opponent = rev(line), diff = (N - rev(N)) / N) %>%
     ungroup() %>%
     select(opponent, line, N, diff) %>%
-    add_row(opponent = sim_by_cage$line %>% unique() %>% sort(),
-            line = sim_by_cage$line %>% unique() %>% sort(),
+    add_row(opponent = pair_sims$line %>% unique() %>% sort(),
+            line = pair_sims$line %>% unique() %>% sort(),
             N = NA, diff = 0) %>%
     arrange(opponent, line) %>%
     group_by(opponent) %>%
@@ -218,97 +143,110 @@ pair_ranksN <- sim_by_cage %>%
 
 
 
-# # Dealing with tied ranks:
-# pair_ranks$rank[pair_ranks$rank %% 1 != 0] <- pair_ranks %>%
-#     filter(rank %% 1 != 0) %>%
-#     .[["rank"]] %>%
-#     `+`(rep(c(1, -1) * 0.25, 3))
+
+# ================================================================================
+# ================================================================================
+
+# Pooled simulations
+
+# ================================================================================
+# ================================================================================
+
+# All combinations of pools from 2 to 8
+pools <- map(2:n_lines, ~ combn(1:n_lines, .x) %>%
+        t() %>%
+        split(1:nrow(.)) %>%
+        set_names(NULL)) %>%
+    flatten()
+
+# Running longer to try to find patterns
+pool_max_t <- 2000
+pool_n_cages <- 100
+pool_repl_times <- seq(4, pool_max_t, 4) - 1
+
+# Function to do simulations with pools of varying combinations:
+pool_sim_fun <- function(lines_) {
+    sim_df <- cwsims::sim_cages(pool_n_cages, N_0[,lines_], pool_max_t, R[lines_], A[lines_],
+                                D_binom[lines_,], D_nb[lines_,], process_error,
+                                plant_mort_0[lines_], plant_mort_1[lines_],
+                                plant_death_age_mean, plant_death_age_sd,
+                                pool_repl_times, repl_age, extinct_N, n_cores,
+                                by_cage = TRUE) %>%
+        mutate(pool = paste(lines_, collapse = ""),
+               X = log(N),
+               line = map_int(line, ~ lines_[.x]))
+    return(sim_df)
+}
+
+# # Takes ~10 min
+# set.seed(549489)
+# pool_sims <- map_dfr(pools, pool_sim_fun)
+# readr::write_rds(pool_sims, path = "data-raw/pool_sims.rds")
+# pool_sims <- readr::read_rds("data-raw/pool_sims.rds")
 #
-# pair_ranks %>%
-#     ggplot(aes(opponent, rank)) +
-#     geom_text(aes(label = line))
+# pool_sims <- pool_sims %>%
+#     group_by(pool, rep, line) %>%
+#     summarize(N = mean(N)) %>%
+#     ungroup()
+# readr::write_rds(pool_sims, path = "data-raw/pool_sim_mean.rds")
+
+pool_sims <- readr::read_rds("data-raw/pool_sim_mean.rds")
 
 
-
-
-
-
-# library(igraph)
-# graph <- graph_from_adjacency_matrix(adjmatrix = surv_mat, diag = FALSE)
-# transitivity(graph)
-
-lines_ <- 1:n_lines
-set.seed(549489)
-pool_sims <- cwsims::sim_cages(n_cages, N_0[,lines_], max_t, R[lines_], A[lines_],
-                               D_binom[lines_,], D_nb[lines_,], process_error,
-                               plant_mort_0[lines_], plant_mort_1[lines_],
-                               plant_death_age_mean, plant_death_age_sd,
-                               repl_times, repl_age, extinct_N, n_cores) %>%
-    mutate(X = log(N))
-
-pool_by_cage <- pool_sims %>%
+pool_sims <- pool_sims %>%
     mutate(line = factor(line,
                          levels = seq_along(levels(growth$line)),
                          labels = levels(growth$line)),
-           rep = factor(rep)) %>%
-    group_by(rep, line, date) %>%
-    summarize(N = sum(N)) %>%
-    arrange(rep, date, line) %>%
-    group_by(rep, date) %>%
-    mutate(prop = N / sum(N),
-           prop_end = cumsum(prop),
-           prop_start = lag(prop_end, default = 0)) %>%
-    ungroup() %>%
-    mutate(X = log(N))
+           rep = factor(rep),
+           pool_size = nchar(pool),
+           pool = factor(pool, levels = map_chr(pools, ~ paste(.x, collapse = "")))) %>%
+    identity()
+
+# {
+#     # This should have zero rows bc having total extinction makes no sense:
+#     pool_sims %>%
+#         filter(date == pool_max_t) %>%
+#         group_by(pool, rep) %>%
+#         summarize(N = sum(N)) %>%
+#         ungroup() %>%
+#         filter(N == 0) %>%
+#         nrow() %>%
+#         `==`(0) %>%
+#         print()
+#     # This should also have zero rows bc it means aphids spontaneously appeared
+#     pool_sims %>%
+#         group_by(pool, rep, line) %>%
+#         filter(N == 0, dplyr::lead(N) > 0) %>%
+#         ungroup() %>%
+#         nrow() %>%
+#         `==`(0) %>%
+#         print()
+# }
 
 
-# pool_ranksN <-
 
-pool_ranks <- pool_by_cage %>%
+
+pool_ranks <- pool_sims %>%
+    filter(pool == "12345678") %>%
     group_by(line) %>%
     summarize(N = mean(N)) %>%
     ungroup() %>%
     # Descending rank by mean N:
-    mutate(N = rank(-N)) %>%
-    # Same but by survival:
-    mutate(surv = pool_by_cage %>%
-               filter(date == max_t) %>%
-               group_by(line) %>%
-               summarize(n = mean(N > 0)) %>%
-               ungroup() %>%
-               .[["n"]] %>%
-               {rank(-1 * .)}) %>%
-    gather("method", "rank", N:surv)
+    mutate(rank = rank(-N))
 
 
-pool_ranks
+
+
+# rank_plot <-
 pair_ranks %>%
-    group_by(line) %>%
-    summarize(rank = mean(rank)) %>%
-    .[["rank"]] %>%
-    `*`(-1) %>%
-    rank()
-survs %>%
-    group_by(line) %>%
-    summarize(n = mean(n)) %>%
-    .[["n"]] %>%
-    `*`(-1) %>%
-    rank()
-
-
-
-
-rank_plot <- pair_ranks %>%
     ggplot(aes(rank, as.integer(opponent))) +
     geom_vline(xintercept = c(1, 8), linetype = 1, size = 0.5) +
     geom_hline(yintercept = 1:8, linetype = 3, size = 0.25) +
-    geom_vline(data = pool_ranks %>% filter(method == "N"), aes(xintercept = rank),
+    geom_vline(data = pool_ranks, aes(xintercept = rank),
                size = 2, linetype = 1, color = palette$default_primary) +
-    # geom_path(aes(color = line), size = 1) +
-    # geom_point(aes(color = line), size = 3) +
-    geom_path(data = pair_ranksN, aes(color = line), size = 1, linetype = 1,
+    geom_path(aes(color = line), size = 1, linetype = 1,
                color = palette$accent) +
-    geom_point(data = pair_ranksN, aes(color = line), size = 3, shape = 16,
+    geom_point(aes(color = line), size = 3, shape = 16,
                color = palette$accent) +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
     scale_linetype_manual(values = c(1, 3), guide = FALSE) +
@@ -321,67 +259,158 @@ rank_plot <- pair_ranks %>%
     theme(axis.line.y.left = element_blank(), axis.ticks.y = element_blank(),
           axis.title = element_blank(),
           axis.text = element_blank(),
-          strip.text = element_blank(),
+          # strip.text = element_blank(),
           panel.spacing.y = unit(2, "cm")) +
     NULL
 
 
 
-ggsave(filename = "figs/line_ranks.pdf", plot = rank_plot,
-       width = 20, height = 10, units = "cm", bg = "white", useDingbats = FALSE)
+# ggsave(filename = "figs/line_ranks.pdf", plot = rank_plot,
+#        width = 20, height = 10, units = "cm", bg = "white", useDingbats = FALSE)
 
 
 
-surv_plot <- pool_by_cage %>%
-    filter(date == max_t) %>%
-    group_by(line) %>%
-    summarize(n = mean(N > 0)) %>%
-    ggplot(aes(line, color = line)) +
-    geom_linerange(aes(ymin = 0, ymax = n), size = 1, color = palette$dark_primary) +
-    geom_point(aes(y = n), size = 6, color = palette$accent) +
-    # scale_color_brewer(palette = "Dark2", guide = FALSE) +
-    scale_y_continuous("Proportion of times survived",
-                       limits = c(0, 0.5), breaks = seq(0, 1, 0.25)) +
+# meanN_plot <-
+pool_sims %>%
+    group_by(pool, line) %>%
+    summarize(n = mean(N), pool_size = pool_size[1]) %>%
+    ungroup() %>%
+    ggplot(aes(as.integer(line), n)) +
+    geom_line(aes(color = factor(pool_size), group = pool), size = 1, alpha = 0.25) +
+    # geom_point(aes(color = factor(pool_size)), size = 3, shape = 1,
+    #            position = position_jitter(height = 0, width = 0.25)) +
+    # stat_summary(aes(color = factor(pool_size)), geom = "line",
+    #              # size = 6, shape = 16, alpha = 0.75,
+    #              size = 2,
+    #              fun.y = mean) +
+    scale_y_continuous("mean(N)", breaks = 1:n_lines, labels = levels(pool_sims$line)) +
     xlab(NULL) +
-    coord_flip() +
+    scale_color_brewer(palette = "Dark2") +
+    facet_wrap(~ factor(pool_size), scales = "free_y") +
     theme(axis.ticks.y = element_blank(),
-          axis.title = element_blank(),
+          # axis.title = element_blank(),
           axis.text = element_blank(),
-          strip.text = element_blank(),
-          panel.spacing.y = unit(2, "cm")) +
+          # strip.text = element_blank(),
+          NULL
+          ) +
     NULL
 
-# pool_by_cage %>%
-#     group_by(line, rep) %>%
+
+
+
+
+# ggsave(filename = "figs/line_survs.pdf", plot = surv_plot,
+#        width = 20, height = 8, units = "cm", bg = "white", useDingbats = FALSE)
+
+
+
+
+
+# ================================================================================
+# ================================================================================
+
+# Cluster analysis
+
+# ================================================================================
+# ================================================================================
+
+
+library(ape)
+
+# # Rows are focal, columns are opponents
+# pairs_mat <- pair_sims %>%
+#     group_by(pair, line) %>%
 #     summarize(N = mean(N)) %>%
-#     # group_by(line) %>%
-#     # summarize(n = mean(N), lower = quantile(N, 0.025), upper = quantile(N, 0.975)) %>%
-#     ggplot(aes(line, color = line)) +
-#     # geom_linerange(aes(ymin = lower, ymax = upper), size = 0.5) +
-#     # geom_point(aes(y = n), size = 3) +
-#     geom_point(aes(y = N), alpha = 0.1,
-#                position = position_jitter(height = 0, width = 0.25)) +
-#     stat_summary(aes(y = N), geom = "point", fun.y = mean, size = 4, color = "black") +
-#     scale_color_brewer(palette = "Dark2", guide = FALSE) +
-#     scale_y_continuous("Mean N over all reps", trans = "log") +
-#     xlab(NULL) +
-#     coord_flip() +
-#     NULL
-#
-#
-# pool_by_cage %>%
-#     ggplot(aes(date, prop, color = line)) +
-#     # ggplot(aes(date, gtools::logit(prop), group = rep, color = line)) +
-#     geom_line(aes(group = rep), alpha = 0.1) +
-#     facet_wrap(~ line, ncol = 4) +
-#     # geom_smooth(method = "loess", se = FALSE, span = 0.4, color = "black", linetype = 2) +
-#     # stat_summary(geom = "line", fun.y = mean, color = "black", size = 0.5) +
-#     scale_color_brewer(palette = "Dark2", guide = FALSE) +
-#     ylab("Relative abundance") +
-#     xlab("Day") +
-#     NULL
+#     group_by(pair) %>%
+#     mutate(opponent = rev(line), diff = (N - rev(N)) / N) %>%
+#     ungroup() %>%
+#     select(opponent, line, N, diff) %>%
+#     add_row(opponent = pair_sims$line %>% unique() %>% sort(),
+#             line = pair_sims$line %>% unique() %>% sort(),
+#             N = NA, diff = 0) %>%
+#     arrange(opponent, line) %>%
+#     .[["diff"]] %>%
+#     {matrix(., n_lines)}
 
 
-ggsave(filename = "figs/line_survs.pdf", plot = surv_plot,
-       width = 20, height = 8, units = "cm", bg = "white", useDingbats = FALSE)
+
+
+library(stringr)
+
+pool_mats <- pool_sims %>%
+    arrange(pool_size) %>%
+    split(.$pool_size) %>%
+    map(function(df_) {
+
+        pool_size_ <- df_$pool_size[1]
+
+        df__ <- df_ %>%
+            dplyr::select(-pool_size) %>%
+            mutate(line = as.integer(line) %>% paste(),
+                   pool = paste(pool),
+                   others = str_remove_all(pool, line)) %>%
+            arrange(pool, rep, line)
+
+        others_ <- combn(n_lines, pool_size_ - 1) %>%
+            t() %>%
+            split(1:nrow(.)) %>%
+            set_names(NULL) %>%
+            map(paste)
+
+        na_rows__ <- expand.grid(N = NA_real_,
+                                 rep = factor(1, levels = levels(df__$rep)),
+                                 line = df__$line %>% unique() %>% sort(),
+                                 pool = sort(unique(df__$pool)),
+                                 stringsAsFactors = FALSE) %>%
+            tbl_df() %>%
+            mutate(others = map2(pool, line,
+                                function(pp, ll) {
+                                    if (str_detect(pp, ll)) {
+                                        lgl <- map_lgl(others_,
+                                                       ~ any(str_detect(ll, .x)))
+                                    } else {
+                                        lgl <- map_lgl(others_,
+                                                       ~ all(str_detect(pp, .x)))
+                                    }
+                                    strs <- others_[lgl]
+                                    map_chr(strs, ~ str_c(.x, collapse = ""))
+                                })) %>%
+            unnest()
+
+        M <- bind_rows(df__, na_rows__) %>%
+            arrange(line, others, rep) %>%
+            group_by(line, others) %>%
+            summarize(N = mean(N, na.rm = TRUE)) %>%
+            ungroup() %>%
+            mutate(N = ifelse(is.nan(N), NA, N)) %>%
+            spread(others, N) %>%
+            .[, -1] %>%
+            as.matrix()
+
+        if (pool_size_ == df_$line %>% levels() %>% length()) M <- cbind(M[!is.na(M)])
+
+        rownames(M) <- letters[as.integer(unique(df_$line))]
+
+        return(M)
+    })
+
+
+# euclidean distances:
+pool_ds <- map(pool_mats, dist)
+
+# complete linkage method for hierarchical clustering:
+pool_hc <- map(pool_ds, hclust)
+
+par(mfrow = c(2, 4))
+for (i in 1:7) {
+    pool_hc[[i]] %>%
+        ape::as.phylo() %>%
+        plot(
+            type = "unrooted",
+            main = i+1,
+            cex = 1.5,
+            rotate.tree = 0
+        )
+}; plot.new()
+
 
