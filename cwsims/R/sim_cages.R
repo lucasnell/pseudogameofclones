@@ -5,18 +5,22 @@
 #'
 #' @noRd
 #'
-simplify_cage <- function(cage_array, rep, N_0_, max_t_) {
+simplify_cage <- function(cage_array, rep, N_0_, max_t_, by_cage_) {
     # Dimensions: n_plants, n_lines, n_times
     dims_ <- c(nrow(N_0_), ncol(N_0_), max_t_ + 1)
+    # If this is true, then it's been aggregated by cage, so n_plants is effectively 1
+    if (by_cage_) dims_[1] <- 1
     date_ = rep(1:dims_[3] - 1L, each = prod(dims_[1:2]))
     plant_ = rep(1:dims_[1], prod(dims_[2:3]))
     line_ = rep(1:dims_[2], each = dims_[1]) %>% rep(dims_[3])
-    data_frame(plant = plant_,
+    out_df <- data_frame(plant = plant_,
                line = line_,
                date = date_,
                N = as.numeric(cage_array),
                rep = rep) %>%
         arrange(rep, plant, line, date)
+    if (by_cage_) out_df <- out_df %>% dplyr::select(-plant)
+    return(out_df)
 }
 
 
@@ -55,7 +59,8 @@ sim_cages <- function(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error,
                       plant_mort_0, plant_mort_1,
                       plant_death_age_mean, plant_death_age_sd,
                       repl_times, repl_age, extinct_N,
-                      n_cores = 1, show_progress = FALSE) {
+                      n_cores = 1, by_cage = FALSE,
+                      show_progress = FALSE) {
 
     # if (!identical(D_binom$binom$line, D_nb$pois$line)) {
     #     stop("\nline columns should be identical in both D_binom and D_nb.")
@@ -82,9 +87,10 @@ sim_cages <- function(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error,
                        repl_age = repl_age,
                        extinct_N = extinct_N,
                        n_cores = n_cores,
+                       by_cage = by_cage,
                        show_progress = show_progress)
 
-    sims <- map2_dfr(sims, 1:length(sims), ~ simplify_cage(.x, .y, N_0, max_t))
+    sims <- map2_dfr(sims, 1:length(sims), ~ simplify_cage(.x, .y, N_0, max_t, by_cage))
 
     return(sims)
 }

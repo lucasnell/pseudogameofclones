@@ -285,6 +285,7 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
               const sint32& repl_age,
               const arma::mat& log_morts,
               const double& extinct_N,
+              const bool& by_cage,
               pcg32& eng, arma::cube& N_out) {
 
     uint32 n_plants = N_0.n_rows;
@@ -307,6 +308,7 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
     }
     // Index to keep track of position in `repl_times`
     uint32 repl_ind = 0;
+    if (repl_times.front() == 0) repl_ind++;
     // Matrices keeping track of numbers of dispersed aphids:
     arma::imat emigrants(n_plants, n_lines);
     arma::imat immigrants(n_plants, n_lines);
@@ -385,12 +387,24 @@ void sim_cage(const arma::mat& N_0, const uint32& max_t,
         // To make sure this doesn't past bounds:
         if (repl_ind >= repl_times.size()) continue;
         // Now check:
-        if (t == repl_times[repl_ind]) {
+        if ((t+1) == repl_times[repl_ind]) {
             replace_plants(repl_ind, plant_days, N_out, extinct, normal_rng, eng, t,
                            repl_age, plant_death_age_mean, plant_death_age_sd);
         }
 
 
+    }
+
+    // Condense by cage if requested:
+    if (by_cage) {
+        for (uint32 j = 0; j < n_lines; j++) {
+            for (uint32 t = 0; t <= max_t; t++) {
+                double cage_sum = arma::accu(N_out(arma::span(), arma::span(j),
+                                                   arma::span(t)));
+                N_out(0, j, t) = cage_sum;
+            }
+        }
+        N_out.resize(1, n_lines, max_t + 1);
     }
 
     return;
@@ -450,6 +464,7 @@ std::vector<arma::cube> sim_cages_(const uint32& n_cages,
                                    const sint32& repl_age,
                                    const double& extinct_N,
                                    const uint32& n_cores,
+                                   const bool& by_cage,
                                    const bool& show_progress) {
 
 
@@ -524,13 +539,14 @@ std::vector<arma::cube> sim_cages_(const uint32& n_cages,
         arma::cube& rep_cube(reps_out[r]);
         sim_cage(N_0, max_t, R, A, D_mat, process_error,
                  plant_death_age_mean, plant_death_age_sd,
-                 repl_times, repl_age_, log_morts, extinct_N, eng, rep_cube);
+                 repl_times, repl_age_, log_morts, extinct_N, by_cage, eng, rep_cube);
         p.increment();
     }
 
 #ifdef _OPENMP
 }
 #endif
+
 
     return reps_out;
 
