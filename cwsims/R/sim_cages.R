@@ -59,7 +59,9 @@ sim_cages <- function(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error,
                       plant_mort_0, plant_mort_1,
                       plant_death_age_mean, plant_death_age_sd,
                       repl_times, repl_age, extinct_N,
-                      n_cores = 1, by_cage = FALSE,
+                      n_cores = 1,
+                      by_cage = FALSE,
+                      condense = TRUE,
                       show_progress = FALSE) {
 
     # if (!identical(D_binom$binom$line, D_nb$pois$line)) {
@@ -90,7 +92,15 @@ sim_cages <- function(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error,
                        by_cage = by_cage,
                        show_progress = show_progress)
 
-    sims <- map2_dfr(sims, 1:length(sims), ~ simplify_cage(.x, .y, N_0, max_t, by_cage))
+    # If doing many simulations, you can create data frames with too many rows,
+    # that exceed R's limitations
+    if (condense) {
+        sims <- map2_dfr(sims, 1:length(sims),
+                         ~ simplify_cage(.x, .y, N_0, max_t, by_cage))
+    } else {
+        sims <- map2(sims, 1:length(sims),
+                     ~ simplify_cage(.x, .y, N_0, max_t, by_cage))
+    }
 
     return(sims)
 }

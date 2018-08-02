@@ -6,7 +6,8 @@
 \usage{
 sim_cages(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error, plant_mort_0,
   plant_mort_1, plant_death_age_mean, plant_death_age_sd, repl_times, repl_age,
-  extinct_N, n_cores = 1, show_progress = FALSE)
+  extinct_N, n_cores = 1, by_cage = FALSE, condense = TRUE,
+  show_progress = FALSE)
 }
 \arguments{
 \item{n_cages}{Number of cages to simulate.}
