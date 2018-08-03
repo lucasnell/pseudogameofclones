@@ -34,9 +34,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// grouped_mean
+arma::mat grouped_mean(SEXP pBigMat, arma::uvec group_cols, arma::uword summ_col, const bool& zeros);
+RcppExport SEXP _cwsims_grouped_mean(SEXP pBigMatSEXP, SEXP group_colsSEXP, SEXP summ_colSEXP, SEXP zerosSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type pBigMat(pBigMatSEXP);
+    Rcpp::traits::input_parameter< arma::uvec >::type group_cols(group_colsSEXP);
+    Rcpp::traits::input_parameter< arma::uword >::type summ_col(summ_colSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type zeros(zerosSEXP);
+    rcpp_result_gen = Rcpp::wrap(grouped_mean(pBigMat, group_cols, summ_col, zeros));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_cwsims_sim_cages_", (DL_FUNC) &_cwsims_sim_cages_, 17},
+    {"_cwsims_grouped_mean", (DL_FUNC) &_cwsims_grouped_mean, 4},
     {NULL, NULL, 0}
 };
 
