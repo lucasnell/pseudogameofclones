@@ -131,22 +131,6 @@ with(sim_env, {
 # }; # rm(i, j, simi)
 
 
-# ----------
-# Old version:
-# ----------
-# # Takes ~6.5 min
-# set.seed(549489)
-# pool_sims <- map(1:length(sim_env$pools), sim_env$sim)
-# readr::write_rds(pool_sims,
-#                  path = "data-raw/pool_sims.rds",
-#                  compress = "gz")
-# # Takes ~1.75 min
-# pool_sims <- readr::read_rds("data-raw/pool_sims.rds")
-#
-#
-# ----------
-# New version:
-# ----------
 # pb <- progress::progress_bar$new(
 #     format = "  writing [:bar] :percent in :elapsed",
 #     total = sum(map_int(pool_sims, length)),
@@ -193,8 +177,19 @@ with(sim_env, {
 # Takes ~0.008757114 sec
 desc <- dget("/Volumes/750gb/__clonewars/sims.desc")
 pool_sims <- attach.big.matrix(desc)
-head(pool_sims)
-rm(pool_sims)
+head(pool_sims, 20)
+nrow(pool_sims)
+
+
+# t0 <- Sys.time()
+# by_cage <- cwsims:::grouped_mean(pool_sims@address, group_cols = c(5, 6, 2))
+# Sys.time() - t0; rm(t0)
+
+
+
+# mean total (i.e., among all lines) N on plants
+# mean time a plant is empty
+
 
 
 
