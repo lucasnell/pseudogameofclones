@@ -189,6 +189,12 @@ Rcpp::sourceCpp("under_constr/_summarize_bigmatrix.cpp")
 #                 n_plants = sim_env$n_plants,
 #                 max_t = sim_env$max_t)
 #
+# # Takes ~0.25 sec
+# save_group_tree(group_tree, filename = "/Volumes/750gb/__clonewars/sim_tree.cereal")
+
+# Takes ~0.5 sec
+group_tree <- load_group_tree(filename = "/Volumes/750gb/__clonewars/sim_tree.cereal")
+
 pool_sims[2000:2005,]
 
 pool_sims[(100 * 2001 * 8 * 8):(100 * 2001 * 8 * 8 + 5),]
