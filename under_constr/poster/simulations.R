@@ -180,6 +180,21 @@ pool_sims <- attach.big.matrix(desc)
 head(pool_sims, 20)
 nrow(pool_sims)
 
+Rcpp::sourceCpp("under_constr/_summarize_bigmatrix.cpp")
+
+# # Takes ~ 10 min
+# group_tree <- make_group_tree(pool_sims@address,
+#                 pool_sizes = sapply(sim_env$pools, length),
+#                 n_reps = sim_env$n_cages,
+#                 n_plants = sim_env$n_plants,
+#                 max_t = sim_env$max_t)
+#
+pool_sims[2000:2005,]
+
+pool_sims[(100 * 2001 * 8 * 8):(100 * 2001 * 8 * 8 + 5),]
+pool_sims[({100 * 2001 * 8 * 8} + 1):({100 * 2001 * 8 * 8} + {2001 + 5}),] %>% tail()
+
+
 
 # t0 <- Sys.time()
 # by_cage <- cwsims:::grouped_mean(pool_sims@address, group_cols = c(5, 6, 2))
