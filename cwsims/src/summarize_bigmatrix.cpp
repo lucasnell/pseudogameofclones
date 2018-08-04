@@ -16,6 +16,9 @@ using namespace Rcpp;
 // The following header file provides the definitions for the BigMatrix object
 #include <bigmemory/BigMatrix.h>
 
+#include <progress.hpp>  // for the progress bar
+
+
 // /*
 //  Bigmemory now accesses Boost headers from the BH package,
 //  we need to make sure we do so as well in this Rcpp::depends comment.
@@ -24,7 +27,7 @@ using namespace Rcpp;
 //  us 'long long' types.
 //  */
 //
-// // [[Rcpp::plugins(cpp11)]]
+// [[Rcpp::plugins(cpp11)]]
 
 
 
@@ -128,39 +131,39 @@ public:
 
 
 
-//' Mean by groups of columns
+//' Mean by groups of columns of simulated aphid abundances.
+//'
+//' Note: It assumes the input matrix has the following columns (in order):
+//' plant, line, date, N, pool, and rep.
+//' It also assumes that the matrix is ordered by pool, rep, plant, line, then date.
 //'
 //'
 //' @param pBigMat `big.matrix` object pointer (the `@address` slot!).
 //' @param group_cols Vector of columns along which means will be calculated.
-//' @param summ_col Column to summarize.
 //' @param zeros Boolean for whether to compute the proportion of zeros rather than
 //'     the mean. Defaults to `FALSE`.
 //'
 //' @export
 //'
 // [[Rcpp::export]]
-arma::mat grouped_mean(SEXP pBigMat, arma::uvec group_cols, arma::uword summ_col = 4,
-                       const bool& zeros = false) {
+arma::mat grouped_mean(SEXP pBigMat, const bool& by_plant, const bool& by_date,
+                       const bool& zeros = false,
+                       const bool& show_progress = true) {
 
     // First we tell Rcpp that the object we've been given is an external
     // pointer.
     XPtr<BigMatrix> xpMat(pBigMat);
 
-    // Number of cols to group by
-    arma::uword n_group_cols = group_cols.n_elem;
-
-    // First we should make sure that none of the requested columns are
-    // outside of the provided matrix. If we let the code access an area
-    // of memory it shouldn't, bad things will happen!
-    summ_col--;
-    for (arma::uword i = 0; i < n_group_cols; i++) {
-        group_cols[i]--;
-        if (group_cols[i] == summ_col) stop("Cannot group by summ_col column");
-        if (group_cols[i] >= xpMat->ncol()) {
-            stop("Some of requested columns are outside of the matrix!");
-        }
+    // The 4th column should be N
+    arma::uword summ_col = 3;
+    std::vector<arma::uword> group_cols_ = {4, 5};
+    if (by_plant) group_cols_.push_back(0);
+    group_cols_.push_back(1);
+    if (by_date) group_cols_.push_back(2);
+    if (group_cols_.size() == (xpMat->ncol() - 1)) {
+        stop("You're not actually summarizing anything.");
     }
+    arma::uvec group_cols(group_cols_);
 
     // The actual data for the matrix is stored in the matrix() field.
     // This is just a pointer to an array, which is laid out in memory in
@@ -180,11 +183,18 @@ arma::mat grouped_mean(SEXP pBigMat, arma::uvec group_cols, arma::uword summ_col
     const arma::Mat<double> M((double *)xpMat->matrix(), xpMat->nrow(), xpMat->ncol(),
                               false);
 
+    if (M.n_rows == 0) stop("empty matrix");
+
     MeanObj means;
 
-    for (arma::uword i = 0; i < M.n_rows; i++) {
+    arma::uword n_ticks = M.n_rows / 1000;
+    Progress p(n_ticks, show_progress);
+
+    means.add_row(M.row(0), group_cols, summ_col, zeros);
+    for (arma::uword i = 1; i < M.n_rows; i++) {
         Rcpp::checkUserInterrupt();
         means.add_row(M.row(i), group_cols, summ_col, zeros);
+        if (i % 1000 == 0) p.increment();
     }
 
     arma::mat out_matrix;

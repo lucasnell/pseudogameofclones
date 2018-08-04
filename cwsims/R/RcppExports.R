@@ -47,18 +47,21 @@ sim_cages_ <- function(n_cages, N_0, max_t, R, A, D_mat, process_error, plant_mo
     .Call(`_cwsims_sim_cages_`, n_cages, N_0, max_t, R, A, D_mat, process_error, plant_mort_0, plant_mort_1, plant_death_age_mean, plant_death_age_sd, repl_times, repl_age, extinct_N, n_cores, by_cage, show_progress)
 }
 
-#' Mean by groups of columns
+#' Mean by groups of columns of simulated aphid abundances.
+#'
+#' Note: It assumes the input matrix has the following columns (in order):
+#' plant, line, date, N, pool, and rep.
+#' It also assumes that the matrix is ordered by pool, rep, plant, line, then date.
 #'
 #'
 #' @param pBigMat `big.matrix` object pointer (the `@address` slot!).
 #' @param group_cols Vector of columns along which means will be calculated.
-#' @param summ_col Column to summarize.
 #' @param zeros Boolean for whether to compute the proportion of zeros rather than
 #'     the mean. Defaults to `FALSE`.
 #'
 #' @export
 #'
-grouped_mean <- function(pBigMat, group_cols, summ_col = 4L, zeros = FALSE) {
-    .Call(`_cwsims_grouped_mean`, pBigMat, group_cols, summ_col, zeros)
+grouped_mean <- function(pBigMat, by_plant, by_date, zeros = FALSE, show_progress = TRUE) {
+    .Call(`_cwsims_grouped_mean`, pBigMat, by_plant, by_date, zeros, show_progress)
 }
 
