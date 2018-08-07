@@ -89,8 +89,8 @@ with(sim_env, {
                                     n_cores = n_cores,
                                     by_cage = FALSE,
                                     show_progress = FALSE)
+        dims_ <- c(n_plants, length(lines_), max_t + 1)
         for (j in 1:length(simi)) {
-            dims_ <- c(n_plants, length(lines_), max_t + 1)
             date_ = rep(1:dims_[3] - 1L, each = prod(dims_[1:2]))
             plant_ = rep(1:dims_[1], prod(dims_[2:3]))
             line_ = rep(1:dims_[2], each = dims_[1]) %>% rep(dims_[3])
@@ -100,13 +100,12 @@ with(sim_env, {
                                  N = round(simi[[j]], 4),
                                  pool = paste(lines_, collapse = ""),
                                  rep = j) %>%
-                arrange(rep, plant, line, date) %>%
+                arrange(rep, line, plant, date) %>%
                 mutate(line = map_int(line, ~ lines_[.x]))
         }
         return(simi)
     }
-})
-
+}); rm(stan_fit)
 
 
 # pb <- progress::progress_bar$new(
@@ -128,60 +127,30 @@ with(sim_env, {
 #         pb$tick()
 #     }
 #
-# }; # rm(i, j, simi)
-
-
-# pb <- progress::progress_bar$new(
-#     format = "  writing [:bar] :percent in :elapsed",
-#     total = sum(map_int(pool_sims, length)),
-#     clear = FALSE, width = options("width")$width)
+# }; rm(i, j, simi)
 #
-# # n_plants, n_lines, n_times
-# dims_ <- with(sim_env, c(n_plants, n_lines, max_t+1))
-# for (i in 1:length(pool_sims)) {
+# gc()
 #
-#     # Should be same dims for all in this pool:
-#     pool_ <- paste(sim_env$pools[[i]], collapse = "")
-#     dims_[2] <- nchar(pool_)
-#
-#     for (j in 1:length(pool_sims[[i]])) {
-#         date_ = rep(1:dims_[3] - 1L, each = prod(dims_[1:2]))
-#         plant_ = rep(1:dims_[1], prod(dims_[2:3]))
-#         line_ = rep(1:dims_[2], each = dims_[1]) %>% rep(dims_[3])
-#         out_df <- data_frame(plant = plant_,
-#                              line = line_,
-#                              date = date_,
-#                              N = round(as.numeric(pool_sims[[i]][[j]]), 4),
-#                              pool = pool_,
-#                              rep = j) %>%
-#             arrange(rep, plant, line, date) %>%
-#             mutate(line = map_int(line, ~ sim_env$pools[[i]][.x]))
-#
-#         readr::write_csv(out_df, path = "data-raw/pool_sims.csv", append = TRUE,
-#                          col_names = (i == 1 & j == 1))
-#
-#         pb$tick()
-#     }
-# }; # rm(dims_, pool_, out_df, date_, plant_, line_, i, j)
-
-# plant,line,date,N,pool,rep
-# Takes ~ 2 hrs
-# t0 <- Sys.time()
+# # plant,line,date,N,pool,rep
+# # Takes ~ 2 hrs
+# cat(sprintf("Started at %s\n", Sys.time()))
 # pool_sims <- read.big.matrix("/Volumes/750gb/__clonewars/pool_sims.csv",
 #     header = TRUE, type = "double", shared = TRUE,
 #     backingfile = "sims.bin",
 #     backingpath = "/Volumes/750gb/__clonewars",
 #     descriptor = "sims.desc")
-# Sys.time() - t0; rm(t0)
 
-# Takes ~0.008757114 sec
-desc <- dget("/Volumes/750gb/__clonewars/sims.desc")
-pool_sims <- attach.big.matrix(desc)
-head(pool_sims, 20)
-nrow(pool_sims)
 
-Rcpp::sourceCpp("under_constr/_summarize_bigmatrix.cpp")
 
+
+# # Takes ~0.008757114 sec
+# desc <- dget("/Volumes/750gb/__clonewars/sims.desc")
+# pool_sims <- attach.big.matrix(desc)
+# head(pool_sims, 20)
+# nrow(pool_sims)
+#
+# Rcpp::sourceCpp("under_constr/_summarize_bigmatrix.cpp")
+#
 # # Takes ~ 10 min
 # group_tree <- make_group_tree(pool_sims@address,
 #                 pool_sizes = sapply(sim_env$pools, length),
@@ -190,21 +159,38 @@ Rcpp::sourceCpp("under_constr/_summarize_bigmatrix.cpp")
 #                 max_t = sim_env$max_t)
 #
 # # Takes ~0.25 sec
-# save_group_tree(group_tree, filename = "/Volumes/750gb/__clonewars/sim_tree.cereal")
-
-# Takes ~0.5 sec
-group_tree <- load_group_tree(filename = "/Volumes/750gb/__clonewars/sim_tree.cereal")
-
-pool_sims[2000:2005,]
-
-pool_sims[(100 * 2001 * 8 * 8):(100 * 2001 * 8 * 8 + 5),]
-pool_sims[({100 * 2001 * 8 * 8} + 1):({100 * 2001 * 8 * 8} + {2001 + 5}),] %>% tail()
-
-
-
-# t0 <- Sys.time()
-# by_cage <- cwsims:::grouped_mean(pool_sims@address, group_cols = c(5, 6, 2))
-# Sys.time() - t0; rm(t0)
+# save_group_tree(group_tree, filename = "/Volumes/750gb/__clonewars/sims_group_tree.cereal")
+#
+# # Takes ~0.5 sec
+# group_tree <- load_group_tree(filename = "/Volumes/750gb/__clonewars/sims_group_tree.cereal")
+#
+#
+# # Each below takes ~3.5 min
+# by_plant_mean <- grouped_mean_tree(pool_sims@address,
+#                                    group_tree,
+#                                    by_plant = TRUE,
+#                                    by_date = FALSE)
+# readr::write_rds(by_plant_mean, "data-raw/by_plant_mean.rds")
+#
+# by_plant_zeros <- grouped_mean_tree(pool_sims@address,
+#                                     group_tree,
+#                                     by_plant = TRUE,
+#                                     by_date = FALSE,
+#                                     zeros = TRUE)
+# readr::write_rds(by_plant_zeros, "data-raw/by_plant_zeros.rds")
+#
+# by_cage_mean <- grouped_mean_tree(pool_sims@address,
+#                                   group_tree,
+#                                   by_plant = FALSE,
+#                                   by_date = TRUE)
+# readr::write_rds(by_cage_mean, "data-raw/by_cage_mean.rds")
+#
+# by_cage_zeros <- grouped_mean_tree(pool_sims@address,
+#                                    group_tree,
+#                                    by_plant = FALSE,
+#                                    by_date = TRUE,
+#                                    zeros = TRUE)
+# readr::write_rds(by_cage_zeros, "data-raw/by_cage_zeros.rds")
 
 
 
