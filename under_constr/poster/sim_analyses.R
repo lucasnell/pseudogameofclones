@@ -2,7 +2,22 @@
 
 
 source("under_constr/poster/_preamble.R")
-source("under_constr/poster/simulations.R")
+
+pool_sims_N <- readr::read_rds("data-raw/pool_sims_N.rds")
+pool_sims_Z <- readr::read_rds("data-raw/pool_sims_Z.rds")
+pool_sims <- readr::read_rds("data-raw/pool_sims_N_by_linerep.rds")
+
+pool_sims_N <- pool_sims_N %>%
+    mutate(pool_size = as.integer(floor(log10(pool)) + 1L))
+pool_sims_Z <- pool_sims_Z %>%
+    mutate(pool_size = as.integer(floor(log10(pool)) + 1L))
+pool_sims <- pool_sims %>%
+    mutate(pool_size = as.integer(floor(log10(pool)) + 1L))
+
+
+sim_env <- readr::read_rds("data-raw/sim_env.rds")
+
+
 
 suppressPackageStartupMessages({
     library(ape)
@@ -20,37 +35,7 @@ ggplot2::theme_set(
 
 
 
-set.seed(549489)
-for (i in 1:length(sim_env$pools)) {
 
-    simi <- sim_env$sim(i) %>%
-        map(~ )
-
-    for (j in 1:length(simi)) {
-        readr::write_csv(simi[[j]], path = "data-raw/big/pool_sims.csv",
-                         append = !(i == 1 & j == 1),
-                         col_names = (i == 1 & j == 1))
-        pb$tick()
-    }
-
-}; rm(i, j, simi)
-
-sims_bydate <- sims_bydate %>%
-    mutate(pool_size = as.integer(floor(log10(pool)) + 1L))
-sims_byplant <- sims_byplant %>%
-    mutate(pool_size = as.integer(floor(log10(pool)) + 1L))
-
-n_lines <- sims_byplant$line %>% unique() %>% length()
-n_plants <- sims_byplant$plant %>% unique() %>% length()
-
-sims_byline <- sims_bydate %>%
-    group_by(pool, rep, line, pool_size) %>%
-    summarize(N = mean(N), Z = mean(Z)) %>%
-    ungroup()
-# sims_byline <- sims_byplant %>%
-#     group_by(pool, rep, line, pool_size) %>%
-#     summarize(N = mean(N), Z = mean(Z)) %>%
-#     ungroup()
 
 growth <-
     load_data(impute_fxn = impute, filter_pars = NULL) %>%
@@ -71,11 +56,11 @@ growth <-
            dD = ifelse(dD < 0, 0, dD)) %>%
     ungroup()
 
+n_lines <- growth$line %>% levels() %>% length()
+n_plants <- sim_env$n_plants
 
 
-
-
-pair_ranks <- sims_byline %>%
+pair_ranks <- pool_sims %>%
     filter(pool_size == 2) %>%
     group_by(pool, line) %>%
     summarize(N = mean(N)) %>%
@@ -105,7 +90,7 @@ pair_ranks <- sims_byline %>%
 
 
 
-pool_ranks <- sims_byline %>%
+pool_ranks <- pool_sims %>%
     filter(pool_size == 8) %>%
     group_by(pool, rep) %>%
     mutate(N = N / sum(N),
@@ -117,11 +102,12 @@ pool_ranks <- sims_byline %>%
     # ungroup() %>%
     # # Descending rank by mean N:
     # mutate(rank = rank(-N)) %>%
+    mutate(line = factor(line, levels = 1:n_lines, labels = levels(growth$line))) %>%
     identity()
 
 
 pool_ranks %>%
-    ggplot(aes(line, rank, color = line)) +
+    ggplot(aes(line, rank, color = factor(line))) +
     geom_point(alpha = 0.5, shape = 1,
                position = position_jitter(width = 0.25, height = 0.1)) +
     scale_color_brewer(palette = "Dark2", guide = FALSE)
@@ -129,7 +115,7 @@ pool_ranks %>%
 
 
 
-pair_ranks <- sims_byline %>%
+pair_ranks <- pool_sims %>%
     filter(pool_size == 2) %>%
     dplyr::select(-pool_size) %>%
     mutate(line = as.integer(line),
@@ -149,7 +135,7 @@ pair_ranks <- sims_byline %>%
     # Descending rank:
     mutate(rank = rank(-N)) %>%
     ungroup() %>%
-    mutate(line = factor(line, levels = 1:n_lines, labels = levels(pool_ranks$line))) %>%
+    mutate(line = factor(line, levels = 1:n_lines, labels = levels(growth$line))) %>%
     identity()
 
 
@@ -193,14 +179,14 @@ pair_ranks %>%
 
 
 # meanN_plot <-
-sims_byline %>%
+pool_sims %>%
     mutate(pool_size = factor(pool_size)) %>%
     filter(pool_size != 1) %>%
     group_by(pool_size, pool, line) %>%
     summarize(n = mean(N)) %>%
     ungroup() %>%
     ggplot(aes(as.integer(line), n)) +
-    geom_point(data = sims_byline %>%
+    geom_point(data = pool_sims %>%
                    mutate(pool_size = factor(pool_size)) %>%
                    filter(pool_size == 1) %>%
                    group_by(pool_size, pool, line) %>%
@@ -214,7 +200,7 @@ sims_byline %>%
     #              # size = 6, shape = 16, alpha = 0.75,
     #              size = 2,
     #              fun.y = mean) +
-    scale_y_continuous("mean(N)", breaks = 1:n_lines, labels = levels(sims_byline$line)) +
+    scale_y_continuous("mean(N)", breaks = 1:n_lines, labels = levels(pool_sims$line)) +
     xlab("Aphid line") +
     scale_color_brewer(palette = "Dark2") +
     facet_wrap(~ pool_size, scales = "free_y", nrow = 2) +
@@ -248,7 +234,7 @@ sims_byline %>%
 
 
 
-pool_mats <- sims_byline %>%
+pool_mats <- pool_sims %>%
     arrange(pool_size) %>%
     split(.$pool_size) %>%
     map(function(df_) {
@@ -360,20 +346,9 @@ pw_combs <- combn(1:n_lines, 2) %>%
     split(1:nrow(.)) %>%
     set_names(NULL)
 
-sims_byline <- test_df2 %>%
-    group_by(pool_size, pool, rep, line) %>%
-    summarize(N = mean(N)) %>%
-    ungroup() %>%
-    mutate(line = factor(line, levels = 1:n_lines,
-                         labels = clonewars::load_data() %>% .[["line"]] %>% levels()))
-
-# ss = 3
-# cc = pw_combs[[1]]
-# rm(ss, cc, df_)
-
 conf_list <- map(2:n_lines, function(ss) {
 
-    df_ <- sims_byline %>%
+    df_ <- pool_sims %>%
         filter(pool_size == ss) %>%
         dplyr::select(-pool_size) %>%
         mutate(line = as.integer(line) %>% paste(),
@@ -406,11 +381,11 @@ conf_mats <- map(conf_list, as.conflictmat, weighted = TRUE)
 dom_probs <- map(conf_mats, conductance, maxLength = 2)
 
 
-# Takes ~3 min
-set.seed(6328321)
-s_ranks <- map(dom_probs, ~ simRankOrder(.x$p.hat))
+# # Takes ~3 min
+# set.seed(6328321)
+# s_ranks <- map(dom_probs, ~ simRankOrder(.x$p.hat))
 # readr::write_rds(s_ranks, "data-raw/s_ranks.rds")
-# s_ranks <- readr::read_rds("data-raw/s_ranks.rds")
+s_ranks <- readr::read_rds("data-raw/s_ranks.rds")
 
 
 
@@ -426,7 +401,7 @@ rank_df <- map_dfr(1:length(s_ranks),
            ranking = factor(ranking, levels = n_lines:1),
            surv = map_dbl(line,
                           function(i) {
-                              i_ <- levels(sims_byline$line)[as.integer(i)]
+                              i_ <- levels(growth$line)[as.integer(i)]
                               ind <- disp_estimates$binom$line == i_
                               stopifnot(sum(ind) == 1)
                               pd <- 2
@@ -436,7 +411,7 @@ rank_df <- map_dfr(1:length(s_ranks),
                           }),
            disp = map_dbl(line,
                           function(i) {
-                              i_ <- levels(sims_byline$line)[as.integer(i)]
+                              i_ <- levels(growth$line)[as.integer(i)]
                               ind <- disp_estimates$binom$line == i_
                               stopifnot(sum(ind) == 1)
                               xmat <- as.matrix(disp_estimates$binom[ind, -1])
@@ -541,6 +516,37 @@ rank_df %>%
 
 
 
+pool_sims_Z %>%
+    group_by(pool_size, pool, rep) %>%
+    summarize(Z = mean(Z)) %>%
+    ungroup() %>%
+    ggplot(aes(pool_size, Z)) +
+    geom_point(alpha = 0.25, shape = 1, aes(color = factor(pool_size)),
+               position = position_jitter(width = 0.25, height = 0)) +
+    stat_summary(fun.y = mean, geom = "point", size = 5) +
+    scale_color_brewer(palette = "RdYlBu", guide = FALSE) +
+    ylab("Mean proportion of empty time") +
+    xlab("Pool size")
+
+
+# Mean total number of aphids per plant:
+pool_sims_N_pp <- pool_sims_N %>%
+    group_by(pool_size, pool, rep) %>%
+    summarize(N = sum(N)) %>%
+    ungroup()
+
+pool_sims_N_pp <- pool_sims_N_pp %>%
+    mutate(N = N / {n_plants * (sim_env$max_t + 1)})
+
+
+pool_sims_N_pp %>%
+    ggplot(aes(pool_size, N)) +
+    geom_point(alpha = 0.25, shape = 1, aes(color = factor(pool_size)),
+               position = position_jitter(width = 0.25, height = 0)) +
+    stat_summary(fun.y = mean, geom = "point", size = 5) +
+    scale_color_brewer(palette = "RdYlBu", guide = FALSE) +
+    ylab("Mean # aphids per plant") +
+    xlab("Pool size")
 
 
 
@@ -548,6 +554,10 @@ rank_df %>%
 # =======================================================================================
 # =======================================================================================
 # =======================================================================================
+# =======================================================================================
+
+# Plot of certainty in dominance rankings (not necessary for poster)
+
 # =======================================================================================
 # =======================================================================================
 # =======================================================================================
