@@ -69,6 +69,7 @@ with(sim_env, {
     D_mat <- as.matrix(cbind(D_binom[,c("b0", "b1", "b2")],
                              D_nb[,c("b0", "theta")]))
     colnames(D_mat) <- NULL
+    D_mat[,4] <- exp(D_mat[,4])
 
     sim <- function(i) {
         lines_ <- pools[[i]]
@@ -121,7 +122,7 @@ with(sim_env, {
 #     simi <- sim_env$sim(i)
 #
 #     for (j in 1:length(simi)) {
-#         readr::write_csv(simi[[j]], path = "/Volumes/750gb/__clonewars/pool_sims.csv",
+#         readr::write_csv(simi[[j]], path = "data-raw/big/pool_sims.csv",
 #                          append = !(i == 1 & j == 1),
 #                          col_names = (i == 1 & j == 1))
 #         pb$tick()
@@ -134,111 +135,104 @@ with(sim_env, {
 # # plant,line,date,N,pool,rep
 # # Takes ~ 2 hrs
 # cat(sprintf("Started at %s\n", Sys.time()))
-# pool_sims <- read.big.matrix("/Volumes/750gb/__clonewars/pool_sims.csv",
+# pool_sims <- read.big.matrix("data-raw/big/pool_sims.csv",
 #     header = TRUE, type = "double", shared = TRUE,
 #     backingfile = "sims.bin",
-#     backingpath = "/Volumes/750gb/__clonewars",
+#     backingpath = "data-raw/big",
 #     descriptor = "sims.desc")
 
 
 
 
 # # Takes ~0.008757114 sec
-# desc <- dget("/Volumes/750gb/__clonewars/sims.desc")
+# desc <- dget("data-raw/big/sims.desc")
 # pool_sims <- attach.big.matrix(desc)
 # head(pool_sims, 20)
 # nrow(pool_sims)
 #
-# Rcpp::sourceCpp("under_constr/_summarize_bigmatrix.cpp")
 #
 # # Takes ~ 10 min
-# group_tree <- make_group_tree(pool_sims@address,
+# group_tree <- cwsims:::make_group_tree(pool_sims@address,
 #                 pool_sizes = sapply(sim_env$pools, length),
 #                 n_reps = sim_env$n_cages,
 #                 n_plants = sim_env$n_plants,
 #                 max_t = sim_env$max_t)
 #
 # # Takes ~0.25 sec
-# save_group_tree(group_tree, filename = "/Volumes/750gb/__clonewars/sims_group_tree.cereal")
+# cwsims:::save_group_tree(group_tree, filename = "data-raw/big/sims_group_tree.cereal")
 #
 # # Takes ~0.5 sec
-# group_tree <- load_group_tree(filename = "/Volumes/750gb/__clonewars/sims_group_tree.cereal")
+# group_tree <- cwsims:::load_group_tree(filename = "data-raw/big/sims_group_tree.cereal")
 #
 #
 # # Each below takes ~3.5 min
-# by_plant_mean <- grouped_mean_tree(pool_sims@address,
+# by_plant_mean <- cwsims:::grouped_mean(pool_sims@address,
 #                                    group_tree,
 #                                    by_plant = TRUE,
 #                                    by_date = FALSE)
-# readr::write_rds(by_plant_mean, "data-raw/by_plant_mean.rds")
+# readr::write_rds(by_plant_mean, "data-raw/big/by_plant_mean.rds")
 #
-# by_plant_zeros <- grouped_mean_tree(pool_sims@address,
+# by_plant_zeros <- cwsims:::grouped_mean(pool_sims@address,
 #                                     group_tree,
 #                                     by_plant = TRUE,
 #                                     by_date = FALSE,
 #                                     zeros = TRUE)
-# readr::write_rds(by_plant_zeros, "data-raw/by_plant_zeros.rds")
+# readr::write_rds(by_plant_zeros, "data-raw/big/by_plant_zeros.rds")
 #
-# by_cage_mean <- grouped_mean_tree(pool_sims@address,
+# by_cage_mean <- cwsims:::grouped_mean(pool_sims@address,
 #                                   group_tree,
 #                                   by_plant = FALSE,
 #                                   by_date = TRUE)
-# readr::write_rds(by_cage_mean, "data-raw/by_cage_mean.rds")
+# readr::write_rds(by_cage_mean, "data-raw/big/by_cage_mean.rds")
 #
-# by_cage_zeros <- grouped_mean_tree(pool_sims@address,
+# by_cage_zeros <- cwsims:::grouped_mean(pool_sims@address,
 #                                    group_tree,
 #                                    by_plant = FALSE,
 #                                    by_date = TRUE,
 #                                    zeros = TRUE)
-# readr::write_rds(by_cage_zeros, "data-raw/by_cage_zeros.rds")
+# readr::write_rds(by_cage_zeros, "data-raw/big/by_cage_zeros.rds")
 
+
+#
+# sims_bydate <- readr::read_rds("data-raw/big/by_cage_mean.rds")
+# sims_bydate <- as_data_frame(sims_bydate)
+# colnames(sims_bydate) <- c("pool", "rep", "line", "date", "N")
+#
+# for (i in c("pool", "rep", "line", "date")) {
+#     sims_bydate[[i]] <- as.integer(sims_bydate[[i]])
+#     print(i)
+# }; rm(i)
+#
+# zeros <- readr::read_rds("data-raw/big/by_cage_zeros.rds")
+# zeros <- zeros[,5]
+#
+# sims_bydate$Z <- zeros
+# rm(zeros); invisible(gc())
+#
+# sims_bydate <- mutate(sims_bydate, line = factor(line, levels = 1:8,
+#                                                  labels = clonewars::load_data() %>%
+#                                                      .[["line"]] %>%
+#                                                      levels()))
+#
+# readr::write_rds(sims_bydate, path = "data-raw/big/sims_bydate.rds")
+# rm(sims_bydate); invisible(gc())
+#
+# sims_byplant <- readr::read_rds("data-raw/big/by_plant_mean.rds") %>%
+#     as_data_frame() %>%
+#     set_names(c("pool", "rep", "line", "plant", "N")) %>%
+#     mutate(Z = {readr::read_rds("data-raw/big/by_plant_zeros.rds")}[,5],
+#            line = factor(line, levels = 1:8,
+#                          labels = clonewars::load_data() %>%
+#                              .[["line"]] %>%
+#                              levels())) %>%
+#     mutate_at(vars(pool, rep, plant), funs(as.integer))
+#
+# readr::write_rds(sims_byplant, path = "data-raw/big/sims_byplant.rds")
+
+sims_bydate <- readr::read_rds("data-raw/big/sims_bydate.rds")
+sims_byplant <- readr::read_rds("data-raw/big/sims_byplant.rds")
 
 
 # mean total (i.e., among all lines) N on plants
 # mean time a plant is empty
-
-
-
-
-# pool_sims <- pool_sims %>%
-#     group_by(pool, rep, line) %>%
-#     summarize(N = mean(N)) %>%
-#     ungroup()
-# readr::write_rds(pool_sims, path = "data-raw/pool_sim_mean_no_error.rds")
-
-
-# pool_sims <- readr::read_rds("data-raw/pool_sim_mean.rds")
-# pool_sims <- readr::read_rds("data-raw/pool_sim_mean_no_error.rds")
-
-
-# pool_sims <- pool_sims %>%
-#     mutate(line = factor(line,
-#                          levels = seq_along(levels(growth$line)),
-#                          labels = levels(growth$line)),
-#            rep = factor(rep),
-#            pool_size = nchar(pool),
-#            pool = factor(pool, levels = map_chr(pools, ~ paste(.x, collapse = "")))) %>%
-#     identity()
-
-# {
-#     # This should have zero rows bc having total extinction makes no sense:
-#     pool_sims %>%
-#         filter(date == pool_max_t) %>%
-#         group_by(pool, rep) %>%
-#         summarize(N = sum(N)) %>%
-#         ungroup() %>%
-#         filter(N == 0) %>%
-#         nrow() %>%
-#         `==`(0) %>%
-#         print()
-#     # This should also have zero rows bc it means aphids spontaneously appeared
-#     pool_sims %>%
-#         group_by(pool, rep, line) %>%
-#         filter(N == 0, dplyr::lead(N) > 0) %>%
-#         ungroup() %>%
-#         nrow() %>%
-#         `==`(0) %>%
-#         print()
-# }
-
 

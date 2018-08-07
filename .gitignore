@@ -11,3 +11,5 @@ under_constr/_test.*
 *.rds
 figs
 *.ai
+
+data-raw/big

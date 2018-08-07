@@ -18,7 +18,7 @@ simplify_cage <- function(cage_array, rep, N_0_, max_t_, by_cage_) {
                date = date_,
                N = as.numeric(cage_array),
                rep = rep) %>%
-        arrange(rep, plant, line, date)
+        arrange(rep, line, plant, date)
     if (by_cage_) out_df <- out_df %>% dplyr::select(-plant)
     return(out_df)
 }
