@@ -47,23 +47,3 @@ sim_cages_ <- function(n_cages, N_0, max_t, R, A, D_mat, process_error, plant_mo
     .Call(`_cwsims_sim_cages_`, n_cages, N_0, max_t, R, A, D_mat, process_error, plant_mort_0, plant_mort_1, plant_death_age_mean, plant_death_age_sd, repl_times, repl_age, extinct_N, n_cores, by_cage, show_progress)
 }
 
-make_group_tree <- function(pBigMat, pool_sizes, n_reps, n_plants, max_t) {
-    .Call(`_cwsims_make_group_tree`, pBigMat, pool_sizes, n_reps, n_plants, max_t)
-}
-
-save_group_tree <- function(pTree, filename) {
-    .Call(`_cwsims_save_group_tree`, pTree, filename)
-}
-
-load_group_tree <- function(filename) {
-    .Call(`_cwsims_load_group_tree`, filename)
-}
-
-view_tree_values <- function(pTree, level) {
-    .Call(`_cwsims_view_tree_values`, pTree, level)
-}
-
-grouped_mean <- function(pBigMat, pTree, by_plant, by_date, zeros = FALSE, show_progress = TRUE) {
-    .Call(`_cwsims_grouped_mean`, pBigMat, pTree, by_plant, by_date, zeros, show_progress)
-}
-

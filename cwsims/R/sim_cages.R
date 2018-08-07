@@ -64,9 +64,9 @@ sim_cages <- function(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error,
                       condense = TRUE,
                       show_progress = FALSE) {
 
-    # if (!identical(D_binom$binom$line, D_nb$pois$line)) {
-    #     stop("\nline columns should be identical in both D_binom and D_nb.")
-    # }
+    if (!identical(D_binom$line, D_nb$line)) {
+        stop("\nline columns should be identical in both D_binom and D_nb.")
+    }
     # So I don't have to do this every iteration:
     D_nb$b0 <- exp(D_nb$b0)
     # Combining D_binom and D_nb into one dispersal matrix:
