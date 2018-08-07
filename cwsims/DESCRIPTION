@@ -21,6 +21,7 @@ LinkingTo:
     RcppArmadillo,
     RcppProgress,
     BH,
-    bigmemory
+    bigmemory,
+    Rcereal
 SystemRequirements: C++11
 RoxygenNote: 6.0.1

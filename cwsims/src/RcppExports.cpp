@@ -34,25 +34,80 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// grouped_mean
-arma::mat grouped_mean(SEXP pBigMat, const bool& by_plant, const bool& by_date, const bool& zeros, const bool& show_progress);
-RcppExport SEXP _cwsims_grouped_mean(SEXP pBigMatSEXP, SEXP by_plantSEXP, SEXP by_dateSEXP, SEXP zerosSEXP, SEXP show_progressSEXP) {
+// make_group_tree
+SEXP make_group_tree(SEXP pBigMat, const std::vector<uint32>& pool_sizes, const uint32& n_reps, const uint32& n_plants, const uint32& max_t);
+RcppExport SEXP _cwsims_make_group_tree(SEXP pBigMatSEXP, SEXP pool_sizesSEXP, SEXP n_repsSEXP, SEXP n_plantsSEXP, SEXP max_tSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type pBigMat(pBigMatSEXP);
+    Rcpp::traits::input_parameter< const std::vector<uint32>& >::type pool_sizes(pool_sizesSEXP);
+    Rcpp::traits::input_parameter< const uint32& >::type n_reps(n_repsSEXP);
+    Rcpp::traits::input_parameter< const uint32& >::type n_plants(n_plantsSEXP);
+    Rcpp::traits::input_parameter< const uint32& >::type max_t(max_tSEXP);
+    rcpp_result_gen = Rcpp::wrap(make_group_tree(pBigMat, pool_sizes, n_reps, n_plants, max_t));
+    return rcpp_result_gen;
+END_RCPP
+}
+// save_group_tree
+int save_group_tree(SEXP pTree, const std::string& filename);
+RcppExport SEXP _cwsims_save_group_tree(SEXP pTreeSEXP, SEXP filenameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type pTree(pTreeSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type filename(filenameSEXP);
+    rcpp_result_gen = Rcpp::wrap(save_group_tree(pTree, filename));
+    return rcpp_result_gen;
+END_RCPP
+}
+// load_group_tree
+SEXP load_group_tree(const std::string& filename);
+RcppExport SEXP _cwsims_load_group_tree(SEXP filenameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type filename(filenameSEXP);
+    rcpp_result_gen = Rcpp::wrap(load_group_tree(filename));
+    return rcpp_result_gen;
+END_RCPP
+}
+// view_tree_values
+std::vector<double> view_tree_values(SEXP pTree, const std::string& level);
+RcppExport SEXP _cwsims_view_tree_values(SEXP pTreeSEXP, SEXP levelSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type pTree(pTreeSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type level(levelSEXP);
+    rcpp_result_gen = Rcpp::wrap(view_tree_values(pTree, level));
+    return rcpp_result_gen;
+END_RCPP
+}
+// grouped_mean
+arma::mat grouped_mean(SEXP pBigMat, SEXP pTree, const bool& by_plant, const bool& by_date, const bool& zeros, const bool& show_progress);
+RcppExport SEXP _cwsims_grouped_mean(SEXP pBigMatSEXP, SEXP pTreeSEXP, SEXP by_plantSEXP, SEXP by_dateSEXP, SEXP zerosSEXP, SEXP show_progressSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type pBigMat(pBigMatSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type pTree(pTreeSEXP);
     Rcpp::traits::input_parameter< const bool& >::type by_plant(by_plantSEXP);
     Rcpp::traits::input_parameter< const bool& >::type by_date(by_dateSEXP);
     Rcpp::traits::input_parameter< const bool& >::type zeros(zerosSEXP);
     Rcpp::traits::input_parameter< const bool& >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(grouped_mean(pBigMat, by_plant, by_date, zeros, show_progress));
+    rcpp_result_gen = Rcpp::wrap(grouped_mean(pBigMat, pTree, by_plant, by_date, zeros, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_cwsims_sim_cages_", (DL_FUNC) &_cwsims_sim_cages_, 17},
-    {"_cwsims_grouped_mean", (DL_FUNC) &_cwsims_grouped_mean, 5},
+    {"_cwsims_make_group_tree", (DL_FUNC) &_cwsims_make_group_tree, 5},
+    {"_cwsims_save_group_tree", (DL_FUNC) &_cwsims_save_group_tree, 2},
+    {"_cwsims_load_group_tree", (DL_FUNC) &_cwsims_load_group_tree, 1},
+    {"_cwsims_view_tree_values", (DL_FUNC) &_cwsims_view_tree_values, 2},
+    {"_cwsims_grouped_mean", (DL_FUNC) &_cwsims_grouped_mean, 6},
     {NULL, NULL, 0}
 };
 
