@@ -146,9 +146,8 @@ SEXP make_group_tree(SEXP pBigMat,
     XPtr<BigMatrix> xpMat(pBigMat);
     uint32 type = xpMat->matrix_type();
     if (type != 8) stop("Input matrix is not of type double");
-    const arma::Mat<double> M((double *)xpMat->matrix(), xpMat->nrow(), xpMat->ncol(),
-                              false);
-    if (M.n_rows == 0) stop("empty matrix");
+    if (xpMat->nrow() == 0) stop("empty matrix");
+    MatrixAccessor<double> M(*xpMat);
 
     uint32 n_pools = pool_sizes.size();
 
@@ -167,7 +166,7 @@ SEXP make_group_tree(SEXP pBigMat,
         const uint32& n_lines(pool_sizes[i]);
 
         Pool& pool(tree[i]);
-        pool.value = M(M_ind, 4);
+        pool.value = M[4][M_ind];
         pool.begin = M_ind;
         pool.n_rows = n_reps * n_lines * n_plants * n_dates;
         pool.inner.resize(n_reps);
@@ -175,7 +174,7 @@ SEXP make_group_tree(SEXP pBigMat,
         for (uint32 j = 0; j < n_reps; j++) {
 
             Rep& rep(pool[j]);
-            rep.value = M(M_ind, 5);
+            rep.value = M[5][M_ind];
             rep.begin = M_ind;
             rep.n_rows = n_lines * n_plants * n_dates;
             rep.inner.resize(n_lines);
@@ -183,7 +182,7 @@ SEXP make_group_tree(SEXP pBigMat,
             for (uint32 k = 0; k < n_lines; k++) {
 
                 Line& line(rep[k]);
-                line.value = M(M_ind, 1);
+                line.value = M[1][M_ind];
                 line.begin = M_ind;
                 line.n_rows = n_plants * n_dates;
                 line.inner.resize(n_plants);
@@ -191,7 +190,7 @@ SEXP make_group_tree(SEXP pBigMat,
                 for (uint32 l = 0; l < n_plants; l++) {
 
                     Plant& plant(line[l]);
-                    plant.value = M(M_ind, 0);
+                    plant.value = M[0][M_ind];
                     plant.begin = M_ind;
                     plant.n_rows = n_dates;
 
@@ -281,33 +280,37 @@ std::vector<double> view_tree_values(SEXP pTree, const std::string& level) {
  =====================================================================================
  */
 
-double sum_M(const arma::mat& M, const uint32& begin, const uint32& n_rows,
+double sum_M(MatrixAccessor<double>& M, const uint32& begin, const uint32& n_rows,
              const uint32& summ_col) {
-    return arma::accu(M(arma::span(begin, begin + n_rows - 1), arma::span(summ_col)));
+    double sum_ = 0;
+    for (uint32 i = 0; i < n_rows; i++) {
+        sum_ += M[summ_col][begin + i];
+    }
+    return sum_;
 }
-double zeros_M(const arma::mat& M, const uint32& begin, const uint32& n_rows,
+double zeros_M(MatrixAccessor<double>& M, const uint32& begin, const uint32& n_rows,
                const uint32& summ_col) {
     double n_zeros = 0;
-    for (uint32 j = begin; j < begin + n_rows; j++) {
-        if (M(j, summ_col) == 0) n_zeros++;
+    for (uint32 j = 0; j < n_rows; j++) {
+        if (M[summ_col][begin + j] == 0) n_zeros++;
     }
     return n_zeros;
 }
 
 
-double sum_M_by_date(const arma::mat& M, const uint32& j,
+double sum_M_by_date(MatrixAccessor<double>& M, const uint32& j,
                      const uint32& summ_col, const Line& line) {
     double sum_ = 0;
     for (const Plant& plant : line.inner) {
-        sum_ += M(plant.begin + j, summ_col);
+        sum_ += M[summ_col][plant.begin + j];
     }
     return sum_;
 }
-double zeros_M_by_date(const arma::mat& M, const uint32& j,
+double zeros_M_by_date(MatrixAccessor<double>& M, const uint32& j,
                        const uint32& summ_col, const Line& line) {
     double n_zeros = 0;
     for (const Plant& plant : line.inner) {
-        if (M(plant.begin + j, summ_col) == 0) n_zeros++;
+        if (M[summ_col][plant.begin + j] == 0) n_zeros++;
     }
     return n_zeros;
 }
@@ -326,11 +329,11 @@ arma::mat grouped_mean(SEXP pBigMat,
     if (by_plant && by_date) stop("You're not actually summarizing anything.");
 
     XPtr<BigMatrix> xpMat(pBigMat);
+    if (xpMat->nrow() == 0 || xpMat->ncol() == 0) stop("empty matrix");
     uint32 type = xpMat->matrix_type();
     if (type != 8) stop("Input matrix is not of type double");
-    const arma::Mat<double> M((double *)xpMat->matrix(), xpMat->nrow(), xpMat->ncol(),
-                              false);
-    if (M.n_rows == 0) stop("empty matrix");
+    MatrixAccessor<double> M(*xpMat);
+
 
     XPtr<GroupTree> tree_ptr(pTree);
     GroupTree& tree(*tree_ptr);
@@ -373,7 +376,7 @@ arma::mat grouped_mean(SEXP pBigMat,
 
     if (!by_plant && !by_date) {
 
-        std::function<double(const arma::mat&,
+        std::function<double(MatrixAccessor<double>&,
                              const uint32&,
                              const uint32&,
                              const uint32&)> sumf;
@@ -401,7 +404,7 @@ arma::mat grouped_mean(SEXP pBigMat,
 
     } else if (by_plant && !by_date) {
 
-        std::function<double(const arma::mat&,
+        std::function<double(MatrixAccessor<double>&,
                              const uint32&,
                              const uint32&,
                              const uint32&)> sumf;
@@ -432,7 +435,7 @@ arma::mat grouped_mean(SEXP pBigMat,
 
     } else if (!by_plant && by_date) {
 
-        std::function<double(const arma::mat&,
+        std::function<double(MatrixAccessor<double>&,
                              const uint32&,
                              const uint32&,
                              const Line&)> sumf;
