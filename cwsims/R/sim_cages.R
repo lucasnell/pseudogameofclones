@@ -30,7 +30,7 @@
 #'
 #' @export
 #'
-sim_cages <- function(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error,
+sim_cages <- function(n_cages, N_0, max_t, R, A, D_vec, process_error,
                       plant_mort_0, plant_mort_1,
                       plant_death_age_mean, plant_death_age_sd,
                       repl_times, repl_age, extinct_N,
@@ -38,15 +38,8 @@ sim_cages <- function(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error,
                       show_progress = FALSE,
                       line_names = NULL) {
 
-    if (!identical(D_binom$line, D_nb$line)) {
-        stop("\nline columns should be identical in both D_binom and D_nb.")
-    }
-    # So I don't have to do this every iteration:
-    D_nb$b0 <- exp(D_nb$b0)
-    # Combining D_binom and D_nb into one dispersal matrix:
-    D_mat <- as.matrix(cbind(D_binom[,c("b0", "b1", "b2")],
-                             D_nb[,c("b0", "theta")]))
-    colnames(D_mat) <- NULL
+    D_vec <- cbind(D_vec)
+    D_vec <- exp(D_vec)
 
     if (is.null(line_names)) line_names <- 1:length(R)
 
@@ -55,7 +48,7 @@ sim_cages <- function(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error,
                        max_t = max_t,
                        R = R,
                        A = A,
-                       D_mat,
+                       D_vec,
                        process_error = process_error,
                        plant_mort_0 = plant_mort_0,
                        plant_mort_1 = plant_mort_1,
@@ -75,12 +68,24 @@ sim_cages <- function(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error,
                 mutate(date = 1:nrow(sims$N)) %>%
                 gather("line", "N", -date) %>%
                 mutate(line = as.integer(gsub("V", "", line)),
-                       pool = paste(line_names, collapse = ""),
+                       pool = as.integer(paste(line_names, collapse = "")),
+                       pool_size = as.integer(floor(log10(pool)) + 1L),
                        rep = j) %>%
                 mutate(line = line_names[line]) %>%
                 arrange(rep, line, date) %>%
                 dplyr::select(pool, rep, line, date, N)
         })
+
+    sims$X <- sims$X %>%
+        t() %>%
+        as_data_frame() %>%
+        mutate(rep = 1:ncol(sims$X)) %>%
+        gather("plant", "X", -rep) %>%
+        mutate(plant = as.integer(gsub("V", "", plant)),
+               pool = as.integer(paste(line_names, collapse = "")),
+               pool_size = as.integer(floor(log10(pool)) + 1L)) %>%
+        arrange(rep, plant) %>%
+        dplyr::select(pool, rep, plant, X)
 
     sims$Z <- sims$Z %>%
         t() %>%
@@ -88,7 +93,8 @@ sim_cages <- function(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error,
         mutate(rep = 1:ncol(sims$Z)) %>%
         gather("plant", "Z", -rep) %>%
         mutate(plant = as.integer(gsub("V", "", plant)),
-               pool = paste(line_names, collapse = "")) %>%
+               pool = as.integer(paste(line_names, collapse = "")),
+               pool_size = as.integer(floor(log10(pool)) + 1L)) %>%
         arrange(rep, plant) %>%
         dplyr::select(pool, rep, plant, Z)
 

@@ -49,54 +49,13 @@ inline sint32 sample_plant_days(const double& days_mean,
 void update_Z_pd(arma::vec& Z, arma::ivec& plant_days,
                  const arma::mat& Nt,
                  const arma::rowvec& A) {
-    for (uint32 i = 0; i < Nt.n_rows; i++) {
-        Z(i) = 0;
-        // Update # plant days PAST death for time t+1:
-        plant_days(i)++;
-        for (uint32 j = 0; j < Nt.n_cols; j++) {
-            Z(i) += (A(j) * Nt(i,j));
-        }
-    }
+    // Update # plant days PAST death for time t+1:
+    plant_days++;
+    // Sum by row (i.e., by plant):
+    Z = arma::sum(Nt, 1);
     return;
 }
 
-
-
-
-
-
-// Negative binomial simulator (I can't get the STL one working)
-class nbRNG {
-    std::poisson_distribution<arma::sword> poisson_rng;
-    std::gamma_distribution<double> gamma_rng;
-
-
-public:
-
-    nbRNG() : poisson_rng(1.0), gamma_rng(1.0, 1.0) {};
-
-    // Set Gamma distribution based on input theta and mu parameters
-    void set_gamma(const double& theta, const double& mu) {
-
-        double p = theta / (theta + mu);
-        double g_shape = theta;
-        double g_scale = (1 - p) / p;
-
-        gamma_rng.param(
-            std::gamma_distribution<double>::param_type(g_shape, g_scale));
-
-        return;
-    }
-
-    // This is for after the gamma distribution has been set.
-    arma::sword sample(pcg32& eng) {
-        double lambda_ = gamma_rng(eng);
-        poisson_rng.param(
-            std::poisson_distribution<arma::sword>::param_type(lambda_));
-        return poisson_rng(eng);
-    }
-
-};
 
 
 
@@ -107,33 +66,23 @@ public:
  Emigration of one line from one plant to all other plants:
  */
 arma::ivec emigration(const uint32& i, const uint32& j,
-                      const arma::mat& Nt, const arma::mat& D_mat,
+                      const arma::mat& Nt, const arma::mat& D_vec,
                       const arma::ivec& plant_days,
-                      nbRNG& nb_rng, pcg32& eng) {
+                      std::poisson_distribution<arma::sword>& poisson_rng, pcg32& eng) {
 
     arma::ivec disp_out(Nt.n_rows, arma::fill::zeros);
 
     if (Nt(i, j) == 0) return disp_out;
 
-    const arma::rowvec& D(D_mat.row(j));
-
-    // Basing Pr(dispersal > 0) on the # days past plant death:
-    const arma::sword& past_death(plant_days(i));
-    double p = inv_logit(D(0) + D(1) * past_death + D(2) * past_death * past_death);
-    // Sample ~ U(0,1), and if it's > p, then no dispersal occurs:
-    double u = runif_01(eng);
-    if (u > p) return disp_out;
-
-    // Else we have to sample from negative binomial:
-    // Calculate mu:
-    double mu_ = D(3) * Nt(i,j);
+    // Else we have to sample from Poisson:
+    // Calculate lambda:
+    double lambda_ = D_vec(j) * Nt(i,j);
     // Because we're splitting mu_ over the number of plants:
     double np = static_cast<double>(Nt.n_rows);
-    mu_ /= np;
-    // Now for the theta parameter:
-    double theta_ = D(4) / np;
-    // Update inner Gamma distribution based on this:
-    nb_rng.set_gamma(theta_, mu_);
+    lambda_ /= np;
+    // Update Poisson distribution based on this:
+    poisson_rng.param(
+        std::poisson_distribution<arma::sword>::param_type(lambda_));
     for (uint32 ii = 0; ii < disp_out.n_elem; ii++) {
         if (ii == i) {
             /*
@@ -142,7 +91,25 @@ arma::ivec emigration(const uint32& i, const uint32& j,
              */
             disp_out(ii) = 0;
         } else {
-            disp_out(ii) = nb_rng.sample(eng);
+            disp_out(ii) = poisson_rng(eng);
+        }
+    }
+    // Making absolutely sure that dispersal never exceeds the number possible:
+    double total_emigrants = arma::accu(disp_out);
+    if (total_emigrants > Nt(i,j)) {
+        double extras = total_emigrants - Nt(i,j);
+        std::vector<uint32> extra_inds;
+        extra_inds.reserve(Nt.n_rows);
+        for (uint32 ii = 0; ii < Nt.n_rows; ii++) {
+            if (disp_out(ii) > 0) extra_inds.push_back(ii);
+        }
+        while (extras > 0) {
+            uint32 rnd = runif_01(eng) * extra_inds.size();
+            disp_out(extra_inds[rnd])--;
+            if (disp_out(extra_inds[rnd]) == 0) {
+                extra_inds.erase(extra_inds.begin() + rnd);
+            }
+            extras--;
         }
     }
 
@@ -154,9 +121,9 @@ arma::ivec emigration(const uint32& i, const uint32& j,
  Update dispersal
  */
 void update_dispersal(arma::imat& emigrants, arma::imat& immigrants,
-                      const arma::mat& Nt, const arma::mat& D_mat,
+                      const arma::mat& Nt, const arma::mat& D_vec,
                       const arma::ivec& plant_days,
-                      nbRNG& nb_rng, pcg32& eng) {
+                      std::poisson_distribution<arma::sword>& poisson_rng, pcg32& eng) {
 
     immigrants.fill(0);
     uint32 n_lines = emigrants.n_cols;
@@ -165,7 +132,7 @@ void update_dispersal(arma::imat& emigrants, arma::imat& immigrants,
     for (uint32 j = 0; j < n_lines; j++) {
         for (uint32 i = 0; i < n_plants; i++) {
             // Emigrants of line j from plant i to all others:
-            arma::ivec e_ij = emigration(i, j, Nt, D_mat, plant_days, nb_rng, eng);
+            arma::ivec e_ij = emigration(i, j, Nt, D_vec, plant_days, poisson_rng, eng);
             emigrants(i, j) = arma::accu(e_ij);
             immigrants.col(j) += e_ij;
         }
@@ -175,13 +142,6 @@ void update_dispersal(arma::imat& emigrants, arma::imat& immigrants,
 
 }
 
-
-
-
-/*
- Originally N_out was arma::cube(n_plants, n_lines, max_t+1)
-Nt and Nt1 are arma::mat(n_plants, n_lines)
-*/
 
 
 //' Replace plants
@@ -285,6 +245,7 @@ void replace_plants(uint32& repl_ind,
  */
 void summarize_output(const arma::mat& Nt1,
                       arma::cube& N_bycage,
+                      arma::mat& logN_byplant,
                       arma::mat& zero_byplant,
                       const uint32& r,
                       const uint32& t) {
@@ -294,6 +255,7 @@ void summarize_output(const arma::mat& Nt1,
     arma::vec plant_sums = arma::sum(Nt1, 1);  // sum all lines for each plant
     for (uint32 i = 0; i < Nt1.n_rows; i++) {
         if (plant_sums(i) == 0) zero_byplant(i, r)++;
+        logN_byplant(i, r) += std::log(plant_sums(i) + 1);
     }
     return;
 }
@@ -310,7 +272,7 @@ void summarize_output(const arma::mat& Nt1,
 void sim_cage(const arma::mat& N_0,
               const arma::rowvec& R,
               const arma::rowvec& A,
-              const arma::mat& D_mat,
+              const arma::vec& D_vec,
               const double& process_error,
               const double& plant_death_age_mean,
               const double& plant_death_age_sd,
@@ -320,6 +282,7 @@ void sim_cage(const arma::mat& N_0,
               const double& extinct_N,
               pcg32& eng,
               arma::cube& N_bycage,
+              arma::mat& logN_byplant,
               arma::mat& zero_byplant,
               const uint32& r) {
 
@@ -328,7 +291,7 @@ void sim_cage(const arma::mat& N_0,
     uint32 max_t = N_bycage.n_rows - 1;
 
     std::normal_distribution<double> normal_rng(0.0, 1.0);
-    nbRNG nb_rng;
+    std::poisson_distribution<arma::sword> poisson_rng(1.0);
 
     // N at time t:
     arma::mat Nt = N_0;
@@ -351,8 +314,6 @@ void sim_cage(const arma::mat& N_0,
     arma::imat emigrants(n_plants, n_lines);
     arma::imat immigrants(n_plants, n_lines);
     // Summed total aphids per plant
-    arma::vec Ntot(n_plants);
-    // Summed density dependences * N_t among all lines for each plant
     arma::vec Z(n_plants);
 
     for (uint32 t = 0; t < max_t; t++) {
@@ -360,7 +321,7 @@ void sim_cage(const arma::mat& N_0,
         // Update Z and plant_days:
         update_Z_pd(Z, plant_days, Nt, A);
         // Generate numbers of dispersed aphids:
-        update_dispersal(emigrants, immigrants, Nt, D_mat, plant_days, nb_rng, eng);
+        update_dispersal(emigrants, immigrants, Nt, D_vec, plant_days, poisson_rng, eng);
 
         /*
          Go back through to simulate at time t+1
@@ -391,7 +352,7 @@ void sim_cage(const arma::mat& N_0,
                  (2) immigrants experience this mortality as well.
                 */
                 if (plant_days[i] <= 0) {
-                    Nt1(i,j) *= std::exp(R[j] * (1 - Z[i]) +
+                    Nt1(i,j) *= std::exp(R[j] * (1 - A[j] * Z[i]) +
                         normal_rng(eng) * process_error);
                 } else {
                     // (` - 1` below is to convert to C++ indices)
@@ -420,15 +381,16 @@ void sim_cage(const arma::mat& N_0,
          plants to others
         */
         // To make sure this doesn't past bounds:
-        if (repl_ind >= repl_times.size()) continue;
-        // Now check:
-        if ((t+1) == repl_times[repl_ind]) {
-            replace_plants(repl_ind, plant_days, Nt1, extinct, normal_rng, eng,
-                           repl_age, plant_death_age_mean, plant_death_age_sd);
+        if (repl_ind < repl_times.size()) {
+            // Now check:
+            if ((t+1) == repl_times[repl_ind]) {
+                replace_plants(repl_ind, plant_days, Nt1, extinct, normal_rng, eng,
+                               repl_age, plant_death_age_mean, plant_death_age_sd);
+            }
         }
 
         // Summarize output:
-        summarize_output(Nt1, N_bycage, zero_byplant, r, t);
+        summarize_output(Nt1, N_bycage, logN_byplant, zero_byplant, r, t);
 
         // Iterate for time t next round
         // This also means I don't have to set Nt1 = Nt at the beginning of each round
@@ -483,7 +445,7 @@ List sim_cages_(const uint32& n_cages,
                 const uint32& max_t,
                 const arma::rowvec& R,
                 const arma::rowvec& A,
-                const arma::mat& D_mat,
+                const arma::vec& D_vec,
                 const double& process_error,
                 const arma::rowvec& plant_mort_0,
                 const arma::rowvec& plant_mort_1,
@@ -515,11 +477,8 @@ List sim_cages_(const uint32& n_cages,
     if (A.n_elem != n_lines) {
         err_msg += "ERROR: A.n_elem != n_lines\n";
     }
-    if (D_mat.n_rows != n_lines) {
-        err_msg += "ERROR: D_mat.n_rows != n_lines\n";
-    }
-    if (D_mat.n_cols != 5) {
-        err_msg += "ERROR: D_mat.n_cols != 5\n";
+    if (D_vec.n_elem != n_lines) {
+        err_msg += "ERROR: D_vec.n_elem != n_lines\n";
     }
     if (plant_mort_0.n_elem != n_lines) {
         err_msg += "ERROR: plant_mort_0.n_elem != n_lines\n";
@@ -544,6 +503,8 @@ List sim_cages_(const uint32& n_cages,
      */
     // Total N for each line across all plants:
     arma::cube N_bycage(max_t+1, n_lines, n_cages);
+    // Mean log(N) for each plant across all lines and all plants:
+    arma::mat logN_byplant(n_plants, n_cages, arma::fill::zeros);
     // Mean proportion of zeros for each plant across all lines and all plants:
     arma::mat zero_byplant(n_plants, n_cages, arma::fill::zeros);
 
@@ -572,10 +533,10 @@ List sim_cages_(const uint32& n_cages,
     for (uint32 r = 0; r < n_cages; r++) {
         if (p.is_aborted()) continue;
         N_bycage(arma::span(0), arma::span(), arma::span(r)) = arma::sum(N_0, 0);
-        sim_cage(N_0, R, A, D_mat, process_error,
+        sim_cage(N_0, R, A, D_vec, process_error,
                  plant_death_age_mean, plant_death_age_sd,
                  repl_times, repl_age_, log_morts, extinct_N, eng,
-                 N_bycage, zero_byplant, r);
+                 N_bycage, logN_byplant, zero_byplant, r);
         p.increment();
     }
 
@@ -583,9 +544,11 @@ List sim_cages_(const uint32& n_cages,
 }
 #endif
 
+    logN_byplant /= static_cast<double>(max_t);
     zero_byplant /= static_cast<double>(max_t);
 
     List out = List::create(_["N"] = wrap(N_bycage),
+                            _["X"] = wrap(logN_byplant),
                             _["Z"] = wrap(zero_byplant));
 
     return out;
