@@ -66,7 +66,8 @@ growth <- load_data(filter_pars = NULL,
     group_by(line, rep) %>% 
     arrange(date) %>% 
     mutate(disp = ifelse(is.na(disp), 0, disp),
-           N = round(impute(N)),
+           X = impute(X),
+           N = round(exp(X)),
            X = log(N),
            pN = N - disp,  # numbers of aphids on plant
            dD = disp - lag(disp, default = 0), # number of new dispersed aphids
@@ -100,27 +101,13 @@ Below, colors represent different reps.
 
 
 ```{r disp_N_plot, warning=FALSE}
-growth %>%
-    # group_by(line, rep) %>%
-    # mutate(past_death = past_death / max(past_death)) %>%
-    # ungroup() %>%
-    {mutate(., pred = glm(disp_b ~ past_death + I(past_death^2), family = "binomial", 
-                      data = growth) %>% predict(type = "response"))} %>% 
-    ggplot(aes(x = past_death)) +
-    geom_point(aes(y = disp_b, color = rep), shape = 16, alpha = 0.75) +
-    geom_line(aes(y = pred), color = "black", size = 0.75) +
-    facet_wrap(~ line) +
-    scale_color_brewer(palette = "Set3", guide = FALSE) +
-    NULL
 
 growth %>%
-    filter(dD > 0) %>% 
-    mutate(pred = glm.nb(dD ~ (0 + line) + offset(X),
-                         data = filter(growth, dD > 0)) %>%
-               predict(type = "response")) %>% 
-    ggplot(aes(X, dD)) +
-    geom_point(aes(color = rep), shape = 16, alpha = 0.75) +
-    geom_line(aes(y = pred), color = "black", size = 0.75) +
+    {mutate(., pred = glm(dD ~ line + offset(X), family = "poisson", 
+                      data = growth) %>% predict(type = "response"))} %>% 
+    ggplot(aes(N)) +
+    geom_point(aes(y = dD, color = rep), shape = 16, alpha = 0.75) +
+    geom_line(aes(y = pred), color = "black", shape = 1, alpha = 0.75) +
     facet_wrap(~ line) +
     scale_color_brewer(palette = "Set3", guide = FALSE) +
     NULL
@@ -129,58 +116,27 @@ growth %>%
 
 ## Fitting GLMs
 
-Fitting a binomial GLM of `<Pr(new dispersed > 0)> ~ N + N^2`,
-and a negative binomial GLM of
-`<# new dispersed | new dispersed > 0)> ~ line + offset(log(N))`.
+Fitting a Poisson GLM of `<# new dispersed> ~ line + offset(log(N))`.
 
 
 ```{r fit_glmm, warning=FALSE}
-disp_binom <- glm(disp_b ~ past_death + I(past_death^2), family = "binomial",
-                  data = growth)
-disp_nb <- glm.nb(dD ~ (0 + line) + offset(X),
-                  data = filter(growth, dD > 0))
+disp_pois <- glm(dD ~ 0 + line + offset(X), family = "poisson", data = growth)
 ```
-
-Theta estimate for the negative binomial regression:
-
-```{r make_disp_od}
-disp_nb$theta
-```
-
 
 Estimates for each line:
 
 
 ```{r make_disp_mod_df, echo = FALSE}
-disp_estimates <-
-    list(
-        binom = disp_binom %>%
-            coef() %>% 
-            set_names(c("b0", "b1", "b2")) %>% 
-            map(~ rep(.x, growth$line %>% levels() %>% length())) %>% 
-            do.call(what = cbind) %>% 
-            as.data.frame() %>%
-            mutate(line = growth$line %>% levels()) %>% 
-            dplyr::select(line, everything()),
-        nb = disp_nb %>% 
-            coef() %>% 
-            cbind() %>% 
-            as.data.frame() %>% 
-            set_names("b0") %>% 
-            as.data.frame() %>% 
-            rownames_to_column("line") %>% 
-            mutate(line = gsub("line", "", line)) %>% 
-            mutate(theta = disp_nb$theta)
-    )
-if (!identical(disp_estimates$binom$line, disp_estimates$nb$line)) {
-    stop("line columns should be identical in both parts of disp_estimates list.")
-}
-
+disp_estimates <- disp_pois %>% 
+    coef() %>% 
+    cbind() %>% 
+    as.data.frame() %>% 
+    set_names("b0") %>% 
+    rownames_to_column("line") %>% 
+    mutate(line = gsub("line", "", line))
 disp_estimates %>% 
     knitr::kable(
-        digits = 3,
-        caption = paste("Model estimates for the binomial GLM (top) and",
-                        "Negative binomial GLM (bottom), for each line.")
+        digits = 3
         )
 ```
 
@@ -191,17 +147,11 @@ Code to make predictions from both models based on a vector of `N` and aphid lin
 names:
 
 ```{r prediction_fxn}
-predict_disp <- function(N, past_death, aphid_line) {
-    inds <- map_int(aphid_line, ~ which(disp_estimates$binom$line == .x))
-    # Binomial estimate (Pr(dispersal > 0)):
-    b0 <- disp_estimates$binom$b0[inds]
-    b1 <- disp_estimates$binom$b1[inds]
-    b2 <- disp_estimates$binom$b2[inds]
-    pr_disp <- inv_logit(b0 + b1 * past_death + b2 * past_death^2)
-    # Negative binomial estimate (# dispersed | dispersal occurs):
-    b0 <- disp_estimates$nb$b0[inds]
-    n_disp <- exp(b0) * N
-    return(pr_disp * n_disp)
+predict_disp <- function(N, aphid_line) {
+    inds <- map_int(aphid_line, ~ which(disp_estimates$line == .x))
+    b0 <- disp_estimates$b0[inds]
+    lambda_ <- exp(b0) * N
+    return(lambda_)
 }
 ```
 
@@ -213,12 +163,10 @@ growth %>%
     ggplot(aes(N, dD, color = rep)) +
     geom_point(alpha = 0.75, shape = 16) +
     geom_line(data = expand.grid(N = 1:1000,
-                                 line = growth$line %>% unique() %>% sort(),
-                                 past_death = c(-5, 0, 10, 20)) %>% 
-                  mutate(dD = predict_disp(N, past_death, line)),
-        size = 0.75, color = "black", aes(linetype = factor(past_death))) +
+                                 line = growth$line %>% unique() %>% sort()) %>% 
+                  mutate(dD = predict_disp(N, line)),
+        size = 0.75, color = "black") +
     scale_color_brewer(palette = "Set3", guide = FALSE) +
-    scale_linetype_manual(NULL, values = c("solid", "dashed", "dotdash", "1F")) +
     facet_wrap(~ line, nrow = 2) +
     scale_y_continuous("Dispersed aphids", trans = "log1p",
                        breaks = c(0, 4^(0:3))) +
@@ -230,22 +178,14 @@ growth %>%
 ## Testing simulation
 
 ```{r sim_disp}
-sim_disp <- function(N, past_death, aphid_line) {
-    inds <- map_int(aphid_line, ~ which(disp_estimates$binom$line == .x))
-    # Binomial estimate (Pr(dispersal > 0)):
-    b0 <- disp_estimates$binom$b0[inds]
-    b1 <- disp_estimates$binom$b1[inds]
-    b2 <- disp_estimates$binom$b2[inds]
-    pr_disp <- inv_logit(b0 + b1 * past_death + b2 * past_death^2)
-    # Negative binomial estimate (# dispersed | dispersal occurs):
-    b0 <- disp_estimates$nb$b0[inds]
-    n_disp <- exp(b0) * N
-    theta <- disp_estimates$nb$theta[inds]
+sim_disp <- function(N, aphid_line) {
+    inds <- map_int(aphid_line, ~ which(disp_estimates$line == .x))
+    b0 <- disp_estimates$b0[inds]
+    lambda_ <- exp(b0) * N
     # Generate random numbers:
     n <- length(N)
-    binom_rnd <- rbinom(n, 1, pr_disp)
-    nb_rnd <- rnbinom(n, size = theta, mu = n_disp)
-    return(binom_rnd * nb_rnd)
+    pois_rnd <- rpois(n, lambda = lambda_)
+    return(pois_rnd)
 }
 ```
 
@@ -253,7 +193,7 @@ sim_disp <- function(N, past_death, aphid_line) {
 
 ```{r dispersal_compare_plots}
 growth %>% 
-    mutate(disp_ = sim_disp(N, past_death, line)) %>% 
+    mutate(disp_ = sim_disp(N, line)) %>% 
     ggplot(aes(X, disp_, color = rep)) +
     geom_point(alpha = 0.75, shape = 16) +
     scale_color_brewer(palette = "Set3", guide = FALSE) +
@@ -276,7 +216,7 @@ growth %>%
     NULL
 
 
-sim_accuracy <- map(1:100, ~ sim_disp(growth$N, growth$past_death, growth$line)) %>% 
+sim_accuracy <- map(1:100, ~ sim_disp(growth$N, growth$line)) %>% 
     map_dfr(~ data_frame(mu = mean(.x), sig = sd(.x))) %>% 
     gather("par", "value", factor_key = TRUE)
     

@@ -68,7 +68,7 @@ until_max <-
 
 until_max %>% 
     ggplot(aes(line, days, color = line)) +
-    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    scale_color_brewer(palette = "Set3", guide = FALSE) +
     geom_point()
 
 until_max %>% 
@@ -104,7 +104,7 @@ Exploring data (not evaluated):
 after_max %>%
     ggplot(aes(date, N_ratio)) +
     geom_line(aes(color = rep)) +
-    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    scale_color_brewer(palette = "Set3", guide = FALSE) +
     facet_wrap(~ line, nrow = 2) +
     NULL
 
@@ -114,11 +114,11 @@ after_max %>%
     ggplot(aes(date, logit(N_ratio))) +
     # ggplot(aes(date, N_ratio_)) +
     # geom_point(aes(color = line)) +
-    geom_line(aes(color = line, linetype = rep), alpha = 0.5) +
+    geom_line(aes(color = line, linetype = rep), alpha = 0.6) +
     stat_summary(fun.y = mean, geom = "point", size = 4, shape = 1) +
     stat_smooth(method = "lm", se = FALSE) +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
-        scale_linetype_manual(guide = FALSE, values = 1:7) +
+    scale_linetype_manual(guide = FALSE, values = 1:9) +
     NULL
 
 
@@ -129,7 +129,7 @@ after_max %>%
     stat_summary(fun.y = mean, geom = "point", size = 4, shape = 1) +
     stat_smooth(method = "lm", se = FALSE) +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
-    scale_linetype_manual(guide = FALSE, values = 1:7) +
+    scale_linetype_manual(guide = FALSE, values = 1:9) +
     NULL
 
 after_max %>%
@@ -142,7 +142,7 @@ after_max %>%
 
 ```{r after_max_model}
 # AIC is lower than for other combos of date and line
-after_max_mod <- after_max %>% 
+after_max_mod <- after_max %>%
     # # Removing rows with negative numbers dead.
     # filter(N_dead >= 0) %>% 
     # Rounding values of N and N_dead when N was imputed:
@@ -151,9 +151,9 @@ after_max_mod <- after_max %>%
     # negative amount was in N_dead to N
     mutate(N = ifelse(N_dead < 1, N - N_dead, N),
            N_dead = ifelse(N_dead < 1, 0, N_dead)) %>%
-    {glmer(cbind(N, N_dead) ~ date + (date | line), family = "binomial", data = .)}
+    {glm(cbind(N, N_dead) ~ 0 + date * line, family = "binomial", data = .)}
 after_max_mod %>% 
-    summary()
+    AIC()
 
 
 after_max %>% 
@@ -172,22 +172,18 @@ after_max %>%
 ```{r after_max_coefs}
 # Each line's coefficients, with an added row for WI-L4Ø that's just the mean:
 after_max_coefs <- after_max_mod %>%
-    ranef() %>% 
-    .[["line"]] %>% 
-    `+`(
-        after_max_mod %>%
-            fixef() %>% 
-            rep(each = after_max_mod@flist %>% .[["line"]] %>% 
-                    levels() %>% length()) %>% 
-            matrix(ncol = after_max_mod@cnms %>% .[["line"]] %>%
-                       length())
-    ) %>% 
-    set_names(c("inter", "date")) %>% 
-    rownames_to_column("line") %>% 
-    add_row(line = "WI-L4Ø", inter = mean(.$inter), date = mean(.$date)) %>% 
-    # Ordering the same as all other data frames:
-    mutate(line = factor(line, levels = levels(until_max$line))) %>% 
-    arrange(line)
+    coef() %>% 
+    {
+        .. <- cbind(
+            .[grepl("^date", names(.))],
+            .[!grepl("^date", names(.))]
+        )
+        rownames(..) <- gsub("line", "", names(.)[!grepl("^date", names(.))])
+        ..
+    } %>% 
+    as.data.frame() %>% 
+    set_names(c("b0", "b1")) %>%
+    rownames_to_column("line")
 after_max_coefs %>%
     knitr::kable()
 ```
