@@ -15,12 +15,13 @@ suppressPackageStartupMessages({
 
 
 
-stan_fit <- read_rds("data-raw/stan_fit.rds")
 
 sim_env <- new.env()
 
 
 with(sim_env, {
+
+    stan_fit <- read_rds("data-raw/stan_fit.rds")
 
     line_names <-
         clonewars::load_data() %>%
@@ -34,13 +35,12 @@ with(sim_env, {
         as.numeric()
     A <- apply(rstan::extract(stan_fit, "A", permuted = FALSE), 3, mean) %>%
         as.numeric()
-    D_binom <- clonewars::disp_estimates$binom
-    D_nb <- clonewars::disp_estimates$nb
+    D_vec <- clonewars::disp_estimates$b0
     process_error <- apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE),
                            3, mean) %>%
         as.numeric()
-    plant_mort_0 <- clonewars::plant_death$after_max_mort_coefs$inter
-    plant_mort_1 <- clonewars::plant_death$after_max_mort_coefs$date
+    plant_mort_0 <- clonewars::plant_death$after_max_mort_coefs$b0
+    plant_mort_1 <- clonewars::plant_death$after_max_mort_coefs$b1
     plant_death_age_mean <- clonewars::plant_death$until_max_summ$max_mean
     plant_death_age_sd <- clonewars::plant_death$until_max_summ$max_sd
     repl_times <- seq(4, max_t, 4) - 1
@@ -64,12 +64,6 @@ with(sim_env, {
     # Also want to remove process error to see patterns more easily
     process_error <- 0
 
-    # Creating objects to use C++ function directly
-    D_mat <- as.matrix(cbind(D_binom[,c("b0", "b1", "b2")],
-                             D_nb[,c("b0", "theta")]))
-    colnames(D_mat) <- NULL
-    D_mat[,4] <- exp(D_mat[,4])
-
     sim <- function(i) {
         lines_ <- pools[[i]]
         simi <- cwsims:::sim_cages(n_cages = n_cages,
@@ -77,8 +71,7 @@ with(sim_env, {
                                     max_t = max_t,
                                     R = R[lines_],
                                     A = A[lines_],
-                                    D_binom = D_binom[lines_,, drop = FALSE],
-                                    D_nb = D_nb[lines_,, drop = FALSE],
+                                    D_vec = D_vec[lines_],
                                     process_error = process_error,
                                     plant_mort_0 = plant_mort_0[lines_],
                                     plant_mort_1 = plant_mort_1[lines_],
@@ -92,11 +85,12 @@ with(sim_env, {
 
         return(simi)
     }
-}); rm(stan_fit)
 
+    rm(stan_fit)
 
 readr::write_rds(sim_env, "data-raw/sim_env.rds")
 
+})
 
 library(progress)
 
@@ -108,6 +102,7 @@ pb <- progress_bar$new(
 
 # Takes ~11 min
 pool_sims_N <- rep(list(NA), length(sim_env$pools))
+pool_sims_X <- rep(list(NA), length(sim_env$pools))
 pool_sims_Z <- rep(list(NA), length(sim_env$pools))
 set.seed(549489)
 for (i in 1:length(sim_env$pools)) {
@@ -116,6 +111,7 @@ for (i in 1:length(sim_env$pools)) {
     sims_ <- sim_env$sim(i)
 
     pool_sims_N[[i]] <- sims_$N
+    pool_sims_X[[i]] <- sims_$X
     pool_sims_Z[[i]] <- sims_$Z
 
     pb$tick(n_)
@@ -123,7 +119,10 @@ for (i in 1:length(sim_env$pools)) {
 }; rm(i, n_, sims_)
 
 
+# Takes ~30 sec
 pool_sims_N <- bind_rows(pool_sims_N)
+invisible(gc())
+pool_sims_X <- bind_rows(pool_sims_X)
 invisible(gc())
 pool_sims_Z <- bind_rows(pool_sims_Z)
 invisible(gc())
@@ -133,11 +132,17 @@ pool_sims_N <- pool_sims_N %>%
 pool_sims_Z <- pool_sims_Z %>%
     mutate(pool = as.integer(pool))
 
+# readr::write_rds(pool_sims_N, "data-raw/pool_sims_N.rds")
+# readr::write_rds(pool_sims_X, "data-raw/pool_sims_X.rds")
+# readr::write_rds(pool_sims_Z, "data-raw/pool_sims_Z.rds")
 
 
+# Takes ~30 sec
 readr::write_rds(pool_sims_N, "data-raw/pool_sims_N.rds")
+readr::write_rds(pool_sims_X, "data-raw/pool_sims_X.rds")
 readr::write_rds(pool_sims_Z, "data-raw/pool_sims_Z.rds")
 
+# Takes ~20 sec
 pool_sims_N <- pool_sims_N %>%
     group_by(pool, rep, line) %>%
     summarize(N = mean(N)) %>%

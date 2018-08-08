@@ -4,10 +4,13 @@
 source("under_constr/poster/_preamble.R")
 
 pool_sims_N <- readr::read_rds("data-raw/pool_sims_N.rds")
+pool_sims_X <- readr::read_rds("data-raw/pool_sims_X.rds")
 pool_sims_Z <- readr::read_rds("data-raw/pool_sims_Z.rds")
 pool_sims <- readr::read_rds("data-raw/pool_sims_N_by_linerep.rds")
 
-pool_sims_N <- pool_sims_N %>%
+# pool_sims_N <- pool_sims_N %>%
+#     mutate(pool_size = as.integer(floor(log10(pool)) + 1L))
+pool_sims_X <- pool_sims_X %>%
     mutate(pool_size = as.integer(floor(log10(pool)) + 1L))
 pool_sims_Z <- pool_sims_Z %>%
     mutate(pool_size = as.integer(floor(log10(pool)) + 1L))
@@ -59,23 +62,6 @@ growth <-
 n_lines <- growth$line %>% levels() %>% length()
 n_plants <- sim_env$n_plants
 
-
-pair_ranks <- pool_sims %>%
-    filter(pool_size == 2) %>%
-    group_by(pool, line) %>%
-    summarize(N = mean(N)) %>%
-    group_by(pool) %>%
-    mutate(opponent = rev(line), diff = (N - rev(N)) / N) %>%
-    ungroup() %>%
-    select(opponent, line, N, diff) %>%
-    add_row(opponent = growth$line %>% unique() %>% sort(),
-            line = growth$line %>% unique() %>% sort(),
-            N = NA, diff = 0) %>%
-    arrange(opponent, line) %>%
-    group_by(opponent) %>%
-    # Descending rank:
-    mutate(rank = rank(-diff)) %>%
-    ungroup()
 
 
 
@@ -288,7 +274,7 @@ pool_mats <- pool_sims %>%
             .[, -1] %>%
             as.matrix()
 
-        if (pool_size_ == df_$line %>% levels() %>% length()) M <- cbind(M[!is.na(M)])
+        if (pool_size_ == sim_env$n_lines) M <- cbind(M[!is.na(M)])
 
         rownames(M) <- letters[as.integer(unique(df_$line))]
 
@@ -381,11 +367,11 @@ conf_mats <- map(conf_list, as.conflictmat, weighted = TRUE)
 dom_probs <- map(conf_mats, conductance, maxLength = 2)
 
 
-# # Takes ~3 min
-# set.seed(6328321)
-# s_ranks <- map(dom_probs, ~ simRankOrder(.x$p.hat))
+# Takes ~3 min
+set.seed(6328321)
+s_ranks <- map(dom_probs, ~ simRankOrder(.x$p.hat))
 # readr::write_rds(s_ranks, "data-raw/s_ranks.rds")
-s_ranks <- readr::read_rds("data-raw/s_ranks.rds")
+# s_ranks <- readr::read_rds("data-raw/s_ranks.rds")
 
 
 
@@ -402,23 +388,20 @@ rank_df <- map_dfr(1:length(s_ranks),
            surv = map_dbl(line,
                           function(i) {
                               i_ <- levels(growth$line)[as.integer(i)]
-                              ind <- disp_estimates$binom$line == i_
+                              ind <- disp_estimates$line == i_
                               stopifnot(sum(ind) == 1)
                               pd <- 2
                               gtools::inv.logit(
-                                  plant_death$after_max_mort_coefs$inter[ind] +
-                                      plant_death$after_max_mort_coefs$date[ind] * pd)
+                                  plant_death$after_max_mort_coefs$b0[ind] +
+                                      plant_death$after_max_mort_coefs$b1[ind] * pd)
                           }),
            disp = map_dbl(line,
                           function(i) {
                               i_ <- levels(growth$line)[as.integer(i)]
-                              ind <- disp_estimates$binom$line == i_
+                              ind <- disp_estimates$line == i_
                               stopifnot(sum(ind) == 1)
-                              xmat <- as.matrix(disp_estimates$binom[ind, -1])
-                              # Days past plant death:
-                              pd <- 0
-                              gtools::inv.logit(xmat %*% rbind(1, pd, pd^2)) *
-                                  exp(disp_estimates$nb$b0[ind]) * 500
+                              b0 <- exp(disp_estimates$b0[ind])
+                              return(b0 * 500)
                           }),
            R = map_dbl(line, ~ sim_env$R[as.integer(.x)]),
            A = map_dbl(line, ~ sim_env$A[as.integer(.x)]))
@@ -529,23 +512,16 @@ pool_sims_Z %>%
     xlab("Pool size")
 
 
-# Mean total number of aphids per plant:
-pool_sims_N_pp <- pool_sims_N %>%
+pool_sims_X %>%
     group_by(pool_size, pool, rep) %>%
-    summarize(N = sum(N)) %>%
-    ungroup()
-
-pool_sims_N_pp <- pool_sims_N_pp %>%
-    mutate(N = N / {n_plants * (sim_env$max_t + 1)})
-
-
-pool_sims_N_pp %>%
-    ggplot(aes(pool_size, N)) +
+    summarize(X = mean(X)) %>%
+    ungroup() %>%
+    ggplot(aes(pool_size, X)) +
     geom_point(alpha = 0.25, shape = 1, aes(color = factor(pool_size)),
                position = position_jitter(width = 0.25, height = 0)) +
     stat_summary(fun.y = mean, geom = "point", size = 5) +
     scale_color_brewer(palette = "RdYlBu", guide = FALSE) +
-    ylab("Mean # aphids per plant") +
+    ylab("Mean log1p(# aphids)") +
     xlab("Pool size")
 
 
