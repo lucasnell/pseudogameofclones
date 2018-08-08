@@ -3,7 +3,43 @@
 
 source("under_constr/poster/_preamble.R")
 
-pool_sims_N <- readr::read_rds("data-raw/pool_sims_N.rds")
+pool_sims <- pool_sims_N # readr::read_rds("data-raw/pool_sims_N.rds")
+
+survs <- pool_sims %>%
+    filter(date == max(date)) %>%
+    group_by(rep, line) %>%
+    summarize(s = ifelse(N == 0, 0L, 1L)) %>%
+    ungroup() %>%
+    spread(line, s) %>%
+    dplyr::select(-rep) %>%
+    as.matrix()
+
+cor(survs)
+
+#
+
+
+
+
+
+
+# ======================================================================================
+# ======================================================================================
+# ======================================================================================
+# ======================================================================================
+# ======================================================================================
+# ======================================================================================
+# ======================================================================================
+# ======================================================================================
+# ======================================================================================
+
+# # Mean total number of aphids per plant:
+# pool_sims_N_pp <- readr::read_rds("data-raw/pool_sims_N.rds") %>%
+#     group_by(pool, rep) %>%
+#     summarize(N = sum(N)) %>%
+#     ungroup() %>%
+#     mutate(pool_size = as.integer(floor(log10(pool)) + 1L))
+
 pool_sims_X <- readr::read_rds("data-raw/pool_sims_X.rds")
 pool_sims_Z <- readr::read_rds("data-raw/pool_sims_Z.rds")
 pool_sims <- readr::read_rds("data-raw/pool_sims_N_by_linerep.rds")
@@ -36,14 +72,10 @@ ggplot2::theme_set(
               strip.text = element_text())
 )
 
-
-
-
-
 growth <-
     load_data(impute_fxn = impute, filter_pars = NULL) %>%
     mutate(line = paste(line)) %>%
-    bind_rows(clonewars:::load_pz_data(impute_fxn = impute, filter_pars = NULL)) %>%
+    # bind_rows(clonewars:::load_pz_data(impute_fxn = impute, filter_pars = NULL)) %>%
     mutate_at(vars(line, rep), funs(factor)) %>%
     # Now filter out early part of each time series, before N > 6
     # N <= 6 is when the stochasticity associated with only starting with 2 adults
@@ -217,6 +249,11 @@ pool_sims %>%
 # ================================================================================
 # ================================================================================
 
+
+df_ <- pool_sims %>%
+    arrange(pool_size) %>%
+    split(.$pool_size) %>%
+    .[[8]]
 
 
 
@@ -418,7 +455,6 @@ rank_df %>%
     scale_x_continuous("Pool size", breaks = 2:n_lines) +
     scale_y_continuous("Ranking", breaks = 1:n_lines, labels = n_lines:1) +
     NULL
-
 
 
 

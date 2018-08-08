@@ -29,7 +29,7 @@ with(sim_env, {
         levels()
     n_plants <- 8
     n_lines <- 8
-    N_0 <- matrix(rep(6, n_lines * n_plants), n_plants, n_lines)
+    N_0 <- matrix(rep(3, n_lines * n_plants), n_plants, n_lines)
     max_t <- 180
     R <- apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, mean) %>%
         as.numeric()
@@ -45,27 +45,28 @@ with(sim_env, {
     plant_death_age_sd <- clonewars::plant_death$until_max_summ$max_sd
     repl_times <- seq(4, max_t, 4) - 1
     repl_age <- 3
-    extinct_N <- 6
+    extinct_N <- 2
     n_cages <- 1000
     n_cores <- parallel::detectCores() - 1
 
-    # All combinations of pools from 1 to 8
-    pools <- map(1:sim_env$n_lines, ~ combn(1:n_lines, .x) %>%
-                     t() %>%
-                     split(1:nrow(.)) %>%
-                     set_names(NULL)) %>%
-        flatten()
+    # # All combinations of pools from 1 to 8
+    # pools <- map(1:sim_env$n_lines, ~ combn(1:n_lines, .x) %>%
+    #                  t() %>%
+    #                  split(1:nrow(.)) %>%
+    #                  set_names(NULL)) %>%
+    #     flatten()
 
     # Running longer to try to find patterns
     max_t <- 2000
     n_cages <- 100
     repl_times <- seq(4, max_t, 4) - 1
 
-    # Also want to remove process error to see patterns more easily
-    process_error <- 0
+    # # Also want to remove process error to see patterns more easily
+    # process_error <- 0
 
     sim <- function(i) {
-        lines_ <- pools[[i]]
+        # lines_ <- pools[[i]]
+        lines_ <- 1:n_lines
         simi <- cwsims:::sim_cages(n_cages = n_cages,
                                     N_0 = N_0[,lines_, drop = FALSE],
                                     max_t = max_t,
@@ -88,66 +89,31 @@ with(sim_env, {
 
     rm(stan_fit)
 
-readr::write_rds(sim_env, "data-raw/sim_env.rds")
-
 })
 
-library(progress)
 
-pb <- progress_bar$new(
-    format = "  simulating [:bar] :percent in :elapsed",
-    total = with(sim_env, sum(sapply(pools, length))),
-    clear = FALSE, width = options("width")$width)
+readr::write_rds(sim_env, "data-raw/sim_env.rds")
 
 
-# Takes ~11 min
-pool_sims_N <- rep(list(NA), length(sim_env$pools))
-pool_sims_X <- rep(list(NA), length(sim_env$pools))
-pool_sims_Z <- rep(list(NA), length(sim_env$pools))
+# Takes ~3 sec
 set.seed(549489)
-for (i in 1:length(sim_env$pools)) {
-
-    n_ <- length(sim_env$pools[[i]])
-    sims_ <- sim_env$sim(i)
-
-    pool_sims_N[[i]] <- sims_$N
-    pool_sims_X[[i]] <- sims_$X
-    pool_sims_Z[[i]] <- sims_$Z
-
-    pb$tick(n_)
-
-}; rm(i, n_, sims_)
-
-
-# Takes ~30 sec
-pool_sims_N <- bind_rows(pool_sims_N)
-invisible(gc())
-pool_sims_X <- bind_rows(pool_sims_X)
-invisible(gc())
-pool_sims_Z <- bind_rows(pool_sims_Z)
-invisible(gc())
+sims_ <- sim_env$sim(1)
+pool_sims_N <- sims_$N
+pool_sims_X <- sims_$X
+pool_sims_Z <- sims_$Z
+rm(sims_)
 
 pool_sims_N <- pool_sims_N %>%
-    mutate(pool = as.integer(pool))
+    dplyr::select(-pool)
+pool_sims_X <- pool_sims_X %>%
+    dplyr::select(-pool)
 pool_sims_Z <- pool_sims_Z %>%
-    mutate(pool = as.integer(pool))
+    dplyr::select(-pool)
 
 # readr::write_rds(pool_sims_N, "data-raw/pool_sims_N.rds")
 # readr::write_rds(pool_sims_X, "data-raw/pool_sims_X.rds")
 # readr::write_rds(pool_sims_Z, "data-raw/pool_sims_Z.rds")
 
-
-# Takes ~30 sec
-readr::write_rds(pool_sims_N, "data-raw/pool_sims_N.rds")
-readr::write_rds(pool_sims_X, "data-raw/pool_sims_X.rds")
-readr::write_rds(pool_sims_Z, "data-raw/pool_sims_Z.rds")
-
-# Takes ~20 sec
-pool_sims_N <- pool_sims_N %>%
-    group_by(pool, rep, line) %>%
-    summarize(N = mean(N)) %>%
-    ungroup()
-readr::write_rds(pool_sims_N, "data-raw/pool_sims_N_by_linerep.rds")
 
 
 
