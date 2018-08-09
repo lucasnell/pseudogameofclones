@@ -24,3 +24,31 @@ system:
 
 To answer these questions, we’re combining detailed population assays
 (growth, dispersal, etc.), computer simulations, and experiments.
+
+## Assay description
+
+The current data are from assays where we started two adults of the same
+line on a fava bean plant that’s been cut down to 3 sets of leaves. We
+then counted adult and juvenile aphids on the plant every day, keeping
+track of where on the plant the aphids were and if they were not on the
+plant at all. We stopped when the total number of aphids dropped for
+three consecutive days or when aphid counts reached \< 80% of the
+maximum number of aphids.
+
+## Vignette descriptions
+
+All vignettes are under the `Technical details` menu above.
+
+  - `Model description`: Description of the model used to estimate
+    growth rates and density dependences.
+  - `Choosing priors`: Details of how priors were chosen for of the
+    model used to estimate growth rates and density dependences.
+  - `Estimating aphid population parameters`: The actual code deploying
+    the model used to estimate growth rates and density dependences.
+  - `Estimating dispersal`: Description of how I estimated dispersal.
+  - `Plant death`: Description of how I estimated effects of plant
+    death.
+  - `Simulation description`: Description of how I simulated aphid
+    clonal evolution.
+  - `Simulating cages`: Code deploying my simulations of aphid clonal
+    evolution.

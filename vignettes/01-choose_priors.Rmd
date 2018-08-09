@@ -78,6 +78,7 @@ The others are the preliminary data.
 
 ```{r load_prior}
 load_prior_data() %>% 
+    filter(!is.na(line)) %>% 
     add_row(line = paste0("sigma", signif(exp(tau), 2)), rep = rep(1:5, each=16),
             date = rep(5:20,5),
             X = sim_lines(R = 0.2, alpha = 1/1000, n_reps = 5, nobs_ts = rep(16, 5), 
@@ -211,6 +212,7 @@ sim_R <- function(df_, R_, alpha_ = 1/2000) {
 }
 
 load_prior_data() %>% 
+    filter(!is.na(line)) %>% 
     sim_R(0.25) %>% 
     sim_R(0.5) %>% 
     sim_R(0.75) %>% 
@@ -286,6 +288,7 @@ Here is how I coded it:
 
 ```{r load_prior_data_alpha, echo = TRUE}
 prior_df <- load_prior_data() %>% 
+    filter(!is.na(line)) %>% 
     group_by(line, rep) %>% 
     summarize(alpha = 1 / max(N)) %>% 
     ungroup()

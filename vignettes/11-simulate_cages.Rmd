@@ -68,18 +68,17 @@ R <- apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, mean) %>%
     as.numeric()
 A <- apply(rstan::extract(stan_fit, "A", permuted = FALSE), 3, mean) %>%
     as.numeric()
-D_binom <- clonewars::disp_estimates$binom
-D_nb <- clonewars::disp_estimates$nb
+D_vec <- clonewars::disp_estimates$b0
 process_error <- apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE), 
                        3, mean) %>%
     as.numeric()
-plant_mort_0 <- clonewars::plant_death$after_max_mort_coefs$inter
-plant_mort_1 <- clonewars::plant_death$after_max_mort_coefs$date
+plant_mort_0 <- clonewars::plant_death$after_max_mort_coefs$b0
+plant_mort_1 <- clonewars::plant_death$after_max_mort_coefs$b1
 plant_death_age_mean <- clonewars::plant_death$until_max_summ$max_mean
 plant_death_age_sd <- clonewars::plant_death$until_max_summ$max_sd
 repl_times <- seq(4, max_t, 4) - 1
 repl_age <- 3
-extinct_N <- 6
+extinct_N <- 5
 n_cages <- 100
 n_cores <- parallel::detectCores() - 1
 ```
@@ -89,11 +88,13 @@ n_cores <- parallel::detectCores() - 1
 lines <- 1:8
 set.seed(654651984L)
 sim_df <- cwsims::sim_cages(n_cages, N_0[,lines], max_t, R[lines], A[lines], 
-                            D_binom[lines,], D_nb[lines,], process_error,
+                            D_vec[lines], process_error,
                             plant_mort_0[lines], plant_mort_1[lines],
                             plant_death_age_mean, plant_death_age_sd,
                             repl_times, repl_age, extinct_N, n_cores) %>% 
+    .[["N"]] %>% 
     mutate(X = log(N)) %>%
+    dplyr::select(-pool) %>% 
     identity()
 
 sim_by_cage <- sim_df %>%
@@ -137,7 +138,11 @@ sim_by_cage <- sim_df %>%
 ```
 
 
-```{r plot_sims}
+
+Below looks at the output, but it's not evaluated for the output file.
+
+
+```{r plot_sims, eval = FALSE}
 
 sim_by_cage %>% 
     filter(date == max_t) %>% 
@@ -154,15 +159,15 @@ sim_by_cage %>%
 
 
 
-sim_df %>% 
-    filter(rep == 1, date < 50) %>% 
-    mutate_at(vars(plant, line), factor) %>% 
-    ggplot(aes(date, X)) +
-    geom_vline(xintercept = repl_times[repl_times < 50], color = "gray80") +
-    geom_line(aes(color = line)) +
-    facet_wrap(~ plant, nrow = 4) +
-    scale_color_brewer("Aphid line:", palette = "Dark2") +
-    NULL
+# sim_df %>% 
+#     filter(rep == 1, date < 50) %>% 
+#     mutate_at(vars(plant, line), factor) %>% 
+#     ggplot(aes(date, X)) +
+#     geom_vline(xintercept = repl_times[repl_times < 50], color = "gray80") +
+#     geom_line(aes(color = line)) +
+#     facet_wrap(~ plant, nrow = 4) +
+#     scale_color_brewer("Aphid line:", palette = "Dark2") +
+#     NULL
 
 sim_by_cage %>% 
     filter(rep %in% sample.int(n_cages, 12)) %>% 

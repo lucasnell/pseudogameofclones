@@ -26,20 +26,20 @@ navbar:
     articles:
       text: Technical details
       menu:
-      - text: Choosing priors
-        href: articles/choose_priors.html
-      - text: Estimating dispersal
-        href: articles/dispersal.html
-      - text: Estimating aphid population parameters
-        href: articles/estimate_pars.html
       - text: Model description
-        href: articles/model_description.html
+        href: articles/00-model_description.html
+      - text: Choosing priors
+        href: articles/01-choose_priors.html
+      - text: Estimating aphid population parameters
+        href: articles/02-estimate_pars.html
+      - text: Estimating dispersal
+        href: articles/03-dispersal.html
       - text: Plant death
-        href: articles/plant_death.html
-      - text: Simulating cages
-        href: articles/simulate_cages.html
+        href: articles/04-plant_death.html
       - text: Simulation description
-        href: articles/simulation_description.html
+        href: articles/10-simulation_description.html
+      - text: Simulating cages
+        href: articles/11-simulate_cages.html
     website:
       icon: fa-home fa-lg
       href: http://lucasnell.com
