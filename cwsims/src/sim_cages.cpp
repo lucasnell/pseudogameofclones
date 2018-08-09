@@ -293,6 +293,9 @@ void sim_cage(const arma::mat& N_0,
     std::normal_distribution<double> normal_rng(0.0, 1.0);
     std::poisson_distribution<arma::sword> poisson_rng(1.0);
 
+    // Mean density dependence:
+    double mean_alpha = arma::mean(A);
+
     // N at time t:
     arma::mat Nt = N_0;
     // N at time t+1:
@@ -328,6 +331,11 @@ void sim_cage(const arma::mat& N_0,
         */
         for (uint32 i = 0; i < n_plants; i++) {
 
+            /*
+             Density dependence for this plant (will be multiplied by each line's alpha):
+             */
+            double DD_i = arma::as_scalar(A * Nt.row(i).t()) / mean_alpha;
+
             for (uint32 j = 0; j < n_lines; j++) {
 
                 // Dispersal of this aphid line to and from other plants.
@@ -352,7 +360,7 @@ void sim_cage(const arma::mat& N_0,
                  (2) immigrants experience this mortality as well.
                 */
                 if (plant_days[i] <= 0) {
-                    Nt1(i,j) *= std::exp(R[j] * (1 - A[j] * Z[i]) +
+                    Nt1(i,j) *= std::exp(R[j] * (1 - A[j] * DD_i) +
                         normal_rng(eng) * process_error);
                 } else {
                     // (` - 1` below is to convert to C++ indices)
