@@ -54,25 +54,25 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
-      <a href="../articles/choose_priors.html">Choosing priors</a>
+      <a href="../articles/00-model_description.html">Model description</a>
     </li>
     <li>
-      <a href="../articles/dispersal.html">Estimating dispersal</a>
+      <a href="../articles/01-choose_priors.html">Choosing priors</a>
     </li>
     <li>
-      <a href="../articles/estimate_pars.html">Estimating aphid population parameters</a>
+      <a href="../articles/02-estimate_pars.html">Estimating aphid population parameters</a>
     </li>
     <li>
-      <a href="../articles/model_description.html">Model description</a>
+      <a href="../articles/03-dispersal.html">Estimating dispersal</a>
     </li>
     <li>
-      <a href="../articles/plant_death.html">Plant death</a>
+      <a href="../articles/04-plant_death.html">Plant death</a>
     </li>
     <li>
-      <a href="../articles/simulate_cages.html">Simulating cages</a>
+      <a href="../articles/10-simulation_description.html">Simulation description</a>
     </li>
     <li>
-      <a href="../articles/simulation_description.html">Simulation description</a>
+      <a href="../articles/11-simulate_cages.html">Simulating cages</a>
     </li>
   </ul>
 </li>
@@ -113,8 +113,8 @@
             
             <h4 class="date">2018-07-09</h4>
       
-      <small class="dont-index">Source: <a href="https://github.com/lucasnell/aphid_repetition/blob/master/vignettes/simulation_description.Rmd"><code>vignettes/simulation_description.Rmd</code></a></small>
-      <div class="hidden name"><code>simulation_description.Rmd</code></div>
+      <small class="dont-index">Source: <a href="https://github.com/lucasnell/clonewars/blob/master/vignettes/10-simulation_description.Rmd"><code>vignettes/10-simulation_description.Rmd</code></a></small>
+      <div class="hidden name"><code>10-simulation_description.Rmd</code></div>
 
     </div>
 
@@ -150,11 +150,11 @@
 <span class="math display">\[\begin{align}
     \rho_{ijt} &amp;=
         \begin{cases}
-            r_j \left( 1 - Z_{it} \right), &amp; \text{if}\ t &lt; \gamma \\
+            r_j \left( 1 - \alpha_j ~ Z_{it} \right), &amp; \text{if}\ t &lt; \gamma \\
             \log(m(t,\gamma)), &amp; \text{otherwise} \\
         \end{cases} \\
         
-    Z_{it} &amp;= \sum^{n_l}_{j=1}{\alpha_j ~ N_{ijt}} \\
+    Z_{it} &amp;= \sum^{n_l}_{j=1}{N_{ijt}} \\
     
     m(t,\gamma) &amp;= \text{logit}^{-1}\left(  \beta_{0} + \beta_{1} ~ ( t - \gamma )
         \right) \\
@@ -183,24 +183,12 @@
 <li>
 <span class="math inline">\(\mu_\gamma\)</span> and <span class="math inline">\(\sigma_\gamma\)</span> are the mean and standard deviation of the distribution of the times at which plants begin to die</li>
 </ul>
-<p>Dispersal is simulated using a combination of Bernoulli and negative binomial distributions. First, the probability that any aphids disperse at all is given by the following formula:</p>
-<p><span class="math display">\[
-p = \text{logit}^{-1}(\delta_0 + \delta_1 ~ \eta_{it} + \delta_2 ~ \eta_{it}^2)
-\]</span></p>
-<p>where…</p>
-<ul>
-<li>
-<span class="math inline">\(\eta\)</span> is the number of days that plant <span class="math inline">\(i\)</span> is past death at time <span class="math inline">\(t\)</span>
-</li>
-<li>
-<span class="math inline">\(\delta_0\)</span>, <span class="math inline">\(\delta_1\)</span>, and <span class="math inline">\(\delta_2\)</span> are coefficients for the regression of probability of dispersing &gt; 0 aphids on days past plant death</li>
-</ul>
-<p>A Bernoulli trial is performed to determine whether to disperse any aphids. If this trial is a success, then a negative binomial distribution produces the numbers of aphids of line <span class="math inline">\(j\)</span> that disperse from plant <span class="math inline">\(i\)</span> to all other plants (for receiving plant <span class="math inline">\(k\)</span>, <span class="math inline">\(d_{(i \rightarrow k)jt}\)</span>):</p>
+<p>A Poisson distribution produces the numbers of aphids of line <span class="math inline">\(j\)</span> that disperse from plant <span class="math inline">\(i\)</span> to all other plants (for receiving plant <span class="math inline">\(k\)</span>, <span class="math inline">\(d_{(i \rightarrow k)jt}\)</span>):</p>
 <span class="math display">\[\begin{align}
-    p_{d(ijt)} &amp;= \frac{\theta}{ \theta + \exp(\zeta_{0(j)}) ~ N_{ijt} } \\
-    d_{(i \rightarrow k)jt} &amp;\sim \text{NB} ( \theta / n_p , ~ p_{d(ijt)} ) \\
+    \lambda_{ijt} &amp;= \frac{ \delta_j ~ N_{ijt} }{ n_p }\\
+    d_{(i \rightarrow k)jt} &amp;\sim \text{Pois} ( \lambda_{ijt} )
 \end{align}\]</span>
-<p>where <span class="math inline">\(\zeta_0\)</span> and <span class="math inline">\(\theta\)</span> are estimated from a negative binomial GLM using <code><a href="http://www.rdocumentation.org/packages/MASS/topics/glm.nb">MASS::glm.nb</a></code>. The former has an estimate per line, while the latter has just one value for all lines. Note that in this parameterization of the negative binomial distribution, <span class="math inline">\(\theta / n_p\)</span> is the number of successful trials and <span class="math inline">\(p_d\)</span> is the probability of success (i.e., dispersal). Note also that <span class="math inline">\(d_{(i \rightarrow i)jt}\)</span> is left at zero because dispersing back to the same plant causes no net change.</p>
+<p>where <span class="math inline">\(\delta_j\)</span> is estimated from a Poisson GLM. Note also that <span class="math inline">\(d_{(i \rightarrow i)jt}\)</span> is left at zero because dispersing back to the same plant causes no net change.</p>
 <p>I used these numbers to create two <span class="math inline">\(n_l\)</span> by <span class="math inline">\(n_p\)</span> matrices, one for the number of immigrants (<span class="math inline">\(\mathbf{I}\)</span>) and another for emigrants (<span class="math inline">\(\mathbf{E}\)</span>), which are filled as follows:</p>
 <span class="math display">\[\begin{align}
 

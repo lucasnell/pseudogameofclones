@@ -54,25 +54,25 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
-      <a href="../articles/choose_priors.html">Choosing priors</a>
+      <a href="../articles/00-model_description.html">Model description</a>
     </li>
     <li>
-      <a href="../articles/dispersal.html">Estimating dispersal</a>
+      <a href="../articles/01-choose_priors.html">Choosing priors</a>
     </li>
     <li>
-      <a href="../articles/estimate_pars.html">Estimating aphid population parameters</a>
+      <a href="../articles/02-estimate_pars.html">Estimating aphid population parameters</a>
     </li>
     <li>
-      <a href="../articles/model_description.html">Model description</a>
+      <a href="../articles/03-dispersal.html">Estimating dispersal</a>
     </li>
     <li>
-      <a href="../articles/plant_death.html">Plant death</a>
+      <a href="../articles/04-plant_death.html">Plant death</a>
     </li>
     <li>
-      <a href="../articles/simulate_cages.html">Simulating cages</a>
+      <a href="../articles/10-simulation_description.html">Simulation description</a>
     </li>
     <li>
-      <a href="../articles/simulation_description.html">Simulation description</a>
+      <a href="../articles/11-simulate_cages.html">Simulating cages</a>
     </li>
   </ul>
 </li>
@@ -113,8 +113,8 @@
             
             <h4 class="date">2018-07-04</h4>
       
-      <small class="dont-index">Source: <a href="https://github.com/lucasnell/aphid_repetition/blob/master/vignettes/choose_priors.Rmd"><code>vignettes/choose_priors.Rmd</code></a></small>
-      <div class="hidden name"><code>choose_priors.Rmd</code></div>
+      <small class="dont-index">Source: <a href="https://github.com/lucasnell/clonewars/blob/master/vignettes/01-choose_priors.Rmd"><code>vignettes/01-choose_priors.Rmd</code></a></small>
+      <div class="hidden name"><code>01-choose_priors.Rmd</code></div>
 
     </div>
 
@@ -129,9 +129,9 @@
 <h2 class="hasAnchor">
 <a href="#process-error-priors" class="anchor"></a>Process error priors</h2>
 <p><span class="math inline">\(s_\varepsilon\)</span> is bound <span class="math inline">\(\ge 0\)</span> and sampled as <span class="math inline">\(\sim \text{Lognormal}(\tau, \sigma_\tau)\)</span> Based on simulations, an <span class="math inline">\(s_\varepsilon\)</span> of 1 would be very high—so high as to be not realistically possible. Values of ~ 0.15 seemed to result in simulations matching some preliminary experimental results we’ve seen in the lab. Below, “sigma-1.90” is simulated data with process error set to -1.897, “sigma1” has process error set to 1.0. The others are the preliminary data.</p>
-<p><img src="choose_priors_files/figure-html/load_prior-1.svg" width="576"></p>
+<p><img src="01-choose_priors_files/figure-html/load_prior-1.svg" width="576"></p>
 <p>To sample <span class="math inline">\(s_\varepsilon\)</span>, I chose a log-normal distribution with <code>log(0.15)</code> (-1.897) as the <span class="math inline">\(tau\)</span> and 1 for <span class="math inline">\(\sigma_\tau\)</span> because this results in low densities at values close to 1. Note that below, the x-axis is log-transformed, but axis labels indicate non-transformed values.</p>
-<p><img src="choose_priors_files/figure-html/process_error_plot-1.svg" width="576"></p>
+<p><img src="01-choose_priors_files/figure-html/process_error_plot-1.svg" width="576"></p>
 </div>
 <div id="growth-rate-priors" class="section level2">
 <h2 class="hasAnchor">
@@ -150,11 +150,11 @@
     
 \end{align}\]</span>
 <p>I also simulated some data with <span class="math inline">\(r = \{ 0.25, 0.5, 0.75, 1.25 \}\)</span> to compare the simulations to the preliminary data. Below, “rX” indicates a panel of simulated data with <span class="math inline">\(r\)</span> set to the number X. The others are the preliminary data. From these simulations, values of <span class="math inline">\(r &gt; 0.5\)</span> seem pretty unlikely.</p>
-<p><img src="choose_priors_files/figure-html/load_prior2-1.svg" width="576"></p>
+<p><img src="01-choose_priors_files/figure-html/load_prior2-1.svg" width="576"></p>
 <p>For the among-line mean of the log-transformed growth rates (<span class="math inline">\(\mu_\theta\)</span>), I used <code>mean(log(c(fast, slow)))</code>, -1.307. For the standard deviation of <span class="math inline">\(\mu_\theta\)</span> (<span class="math inline">\(\sigma_\theta\)</span>), I used <code>sd(log(c(fast, slow))) * 10</code>, 0.7922. I multiplied by 10 to add extra uncertainty because of the limited number of lines from which I derived my priors. In the plot below, I’ve exponentiated the x-axis so that it displays the values of <span class="math inline">\(r\)</span> that would result.</p>
-<p><img src="choose_priors_files/figure-html/mean_theta_distr-1.svg" width="576"></p>
+<p><img src="01-choose_priors_files/figure-html/mean_theta_distr-1.svg" width="576"></p>
 <p>For sampling <span class="math inline">\(s_\theta\)</span>, I use <code>sd(log(c(fast, slow)))</code> (-2.536) for the location parameter and 1 for the scale parameter. The latter was chosen to indicate even more uncertainty in <span class="math inline">\(s_\theta\)</span> than in <span class="math inline">\(\mu_\theta\)</span>. Note that below, the x-axis is log-transformed, but axis labels indicate non-transformed values.</p>
-<p><img src="choose_priors_files/figure-html/s_theta_distr-1.svg" width="576"></p>
+<p><img src="01-choose_priors_files/figure-html/s_theta_distr-1.svg" width="576"></p>
 </div>
 <div id="density-dependence" class="section level2">
 <h2 class="hasAnchor">
@@ -166,31 +166,32 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right)
 \]</span> … <span class="math inline">\(X_{t+1} = X_t\)</span> when <span class="math inline">\(\alpha = 1 / \exp(X_t) = 1 / N_t\)</span>. Because each repetition is run until the plant dies and populations crash, I’ll assume that for each repetition, our estimate of <span class="math inline">\(\alpha\)</span> is <span class="math inline">\(1 / \max(N_t)\)</span>.</p>
 <p>Here is how I coded it:</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">prior_df &lt;-<span class="st"> </span><span class="kw"><a href="../reference/load_prior_data.html">load_prior_data</a></span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="st">    </span><span class="kw">group_by</span>(line, rep) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb2-3" data-line-number="3"><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">alpha =</span> <span class="dv">1</span> <span class="op">/</span><span class="st"> </span><span class="kw">max</span>(N)) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb2-4" data-line-number="4"><span class="st">    </span><span class="kw">ungroup</span>()</a>
-<a class="sourceLine" id="cb2-5" data-line-number="5">prior_df</a>
-<a class="sourceLine" id="cb2-6" data-line-number="6"><span class="co">#&gt; # A tibble: 8 x 3</span></a>
-<a class="sourceLine" id="cb2-7" data-line-number="7"><span class="co">#&gt;   line         rep   alpha</span></a>
-<a class="sourceLine" id="cb2-8" data-line-number="8"><span class="co">#&gt;   &lt;fct&gt;      &lt;int&gt;   &lt;dbl&gt;</span></a>
-<a class="sourceLine" id="cb2-9" data-line-number="9"><span class="co">#&gt; 1 G15            1 0.00205</span></a>
-<a class="sourceLine" id="cb2-10" data-line-number="10"><span class="co">#&gt; 2 G15            2 0.00193</span></a>
-<a class="sourceLine" id="cb2-11" data-line-number="11"><span class="co">#&gt; 3 WI-4122-52     1 0.00260</span></a>
-<a class="sourceLine" id="cb2-12" data-line-number="12"><span class="co">#&gt; 4 WI-4122-52     2 0.00142</span></a>
-<a class="sourceLine" id="cb2-13" data-line-number="13"><span class="co">#&gt; # ... with 4 more rows</span></a></code></pre></div>
+<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="st">    </span><span class="kw">filter</span>(<span class="op">!</span><span class="kw">is.na</span>(line)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-3" data-line-number="3"><span class="st">    </span><span class="kw">group_by</span>(line, rep) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-4" data-line-number="4"><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">alpha =</span> <span class="dv">1</span> <span class="op">/</span><span class="st"> </span><span class="kw">max</span>(N)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-5" data-line-number="5"><span class="st">    </span><span class="kw">ungroup</span>()</a>
+<a class="sourceLine" id="cb2-6" data-line-number="6">prior_df</a>
+<a class="sourceLine" id="cb2-7" data-line-number="7"><span class="co">#&gt; # A tibble: 8 x 3</span></a>
+<a class="sourceLine" id="cb2-8" data-line-number="8"><span class="co">#&gt;   line         rep   alpha</span></a>
+<a class="sourceLine" id="cb2-9" data-line-number="9"><span class="co">#&gt;   &lt;fct&gt;      &lt;int&gt;   &lt;dbl&gt;</span></a>
+<a class="sourceLine" id="cb2-10" data-line-number="10"><span class="co">#&gt; 1 G15            1 0.00205</span></a>
+<a class="sourceLine" id="cb2-11" data-line-number="11"><span class="co">#&gt; 2 G15            2 0.00193</span></a>
+<a class="sourceLine" id="cb2-12" data-line-number="12"><span class="co">#&gt; 3 WI-4122-52     1 0.00260</span></a>
+<a class="sourceLine" id="cb2-13" data-line-number="13"><span class="co">#&gt; 4 WI-4122-52     2 0.00142</span></a>
+<a class="sourceLine" id="cb2-14" data-line-number="14"><span class="co">#&gt; # ... with 4 more rows</span></a></code></pre></div>
 <div id="among-line-distribution" class="section level3">
 <h3 class="hasAnchor">
 <a href="#among-line-distribution" class="anchor"></a>Among-line distribution</h3>
 <p>For estimates relating to the among-line distribution of <span class="math inline">\(\text{logit}(\alpha)\)</span>, I first calculated <span class="math inline">\(\text{logit}(\alpha)\)</span> for each line-rep combo, then calculated the mean for each line. After that, I used the mean across lines, -6.126, as my prior for <span class="math inline">\(\mu_\phi\)</span>. I multiplied the standard deviation across lines by 10 (resulting in 3.189) for my prior on <span class="math inline">\(\sigma_\phi\)</span> to decrease my certainty in estimates. For the plot below, I inverse-logit transformed the x-axis to show the resulting <span class="math inline">\(\alpha\)</span> values from these priors. It still has pretty low densities above 0.5, which is reasonable because that would indicate a “carrying capacity” of &lt; 2.</p>
-<p><img src="choose_priors_files/figure-html/alpha_overall_mean_plot-1.svg" width="576"></p>
+<p><img src="01-choose_priors_files/figure-html/alpha_overall_mean_plot-1.svg" width="576"></p>
 <p>For the distribution of <span class="math inline">\(s_\phi\)</span> values, I used the log-transformed SD for among-line mean <span class="math inline">\(\text{logit}(\alpha)\)</span> (-1.143) for the meanlog parameter (<span class="math inline">\(\delta\)</span>), and 2 for the sdlog parameter (<span class="math inline">\(\sigma_\delta\)</span>). The latter was chosen simply because I’m not very sure of what it should be, and this value results in a pretty flat prior distribution. Note that below, the x-axis is log-transformed, but axis labels indicate non-transformed values.</p>
-<p><img src="choose_priors_files/figure-html/alpha_line_means_plot-1.svg" width="576"></p>
+<p><img src="01-choose_priors_files/figure-html/alpha_line_means_plot-1.svg" width="576"></p>
 </div>
 <div id="within-line-distribution" class="section level3">
 <h3 class="hasAnchor">
 <a href="#within-line-distribution" class="anchor"></a>Within-line distribution</h3>
 <p>For estimates relating to the <em>within</em>-line distribution of <span class="math inline">\(\text{logit}(\alpha)\)</span>, I first calculated <span class="math inline">\(\text{logit}(\alpha)\)</span> for each line-rep combo, then calculated the standard deviation of these estimates for each line. After that, I used the mean of log-transformed SD estimates across lines, -1.036, as my prior for <span class="math inline">\(\zeta\)</span>. I used <span class="math inline">\(10 \times\)</span> the SD of log-transformed SD estimates across lines, -1.036, as my prior for <span class="math inline">\(\zeta\)</span>. This results in the following weakly informative prior:</p>
-<p><img src="choose_priors_files/figure-html/alpha_within_line_sd_plot-1.svg" width="576"></p>
+<p><img src="01-choose_priors_files/figure-html/alpha_within_line_sd_plot-1.svg" width="576"></p>
 </div>
 </div>
 <div id="final-priors" class="section level1">

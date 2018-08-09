@@ -54,25 +54,25 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
-      <a href="../articles/choose_priors.html">Choosing priors</a>
+      <a href="../articles/00-model_description.html">Model description</a>
     </li>
     <li>
-      <a href="../articles/dispersal.html">Estimating dispersal</a>
+      <a href="../articles/01-choose_priors.html">Choosing priors</a>
     </li>
     <li>
-      <a href="../articles/estimate_pars.html">Estimating aphid population parameters</a>
+      <a href="../articles/02-estimate_pars.html">Estimating aphid population parameters</a>
     </li>
     <li>
-      <a href="../articles/model_description.html">Model description</a>
+      <a href="../articles/03-dispersal.html">Estimating dispersal</a>
     </li>
     <li>
-      <a href="../articles/plant_death.html">Plant death</a>
+      <a href="../articles/04-plant_death.html">Plant death</a>
     </li>
     <li>
-      <a href="../articles/simulate_cages.html">Simulating cages</a>
+      <a href="../articles/10-simulation_description.html">Simulation description</a>
     </li>
     <li>
-      <a href="../articles/simulation_description.html">Simulation description</a>
+      <a href="../articles/11-simulate_cages.html">Simulating cages</a>
     </li>
   </ul>
 </li>
@@ -113,8 +113,8 @@
             
             <h4 class="date">2018-07-15</h4>
       
-      <small class="dont-index">Source: <a href="https://github.com/lucasnell/aphid_repetition/blob/master/vignettes/plant_death.Rmd"><code>vignettes/plant_death.Rmd</code></a></small>
-      <div class="hidden name"><code>plant_death.Rmd</code></div>
+      <small class="dont-index">Source: <a href="https://github.com/lucasnell/clonewars/blob/master/vignettes/04-plant_death.Rmd"><code>vignettes/04-plant_death.Rmd</code></a></small>
+      <div class="hidden name"><code>04-plant_death.Rmd</code></div>
 
     </div>
 
@@ -157,14 +157,14 @@
 <a class="sourceLine" id="cb2-18" data-line-number="18"></a>
 <a class="sourceLine" id="cb2-19" data-line-number="19">until_max <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb2-20" data-line-number="20"><span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(line, days, <span class="dt">color =</span> line)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb2-21" data-line-number="21"><span class="st">    </span><span class="kw">scale_color_brewer</span>(<span class="dt">palette =</span> <span class="st">"Dark2"</span>, <span class="dt">guide =</span> <span class="ot">FALSE</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-21" data-line-number="21"><span class="st">    </span><span class="kw">scale_color_brewer</span>(<span class="dt">palette =</span> <span class="st">"Set3"</span>, <span class="dt">guide =</span> <span class="ot">FALSE</span>) <span class="op">+</span></a>
 <a class="sourceLine" id="cb2-22" data-line-number="22"><span class="st">    </span><span class="kw">geom_point</span>()</a></code></pre></div>
-<p><img src="plant_death_files/figure-html/until_max_model-1.svg" width="576"></p>
+<p><img src="04-plant_death_files/figure-html/until_max_model-1.svg" width="576"></p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1"></a>
 <a class="sourceLine" id="cb3-2" data-line-number="2">until_max <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb3-3" data-line-number="3"><span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(days)) <span class="op">+</span></a>
 <a class="sourceLine" id="cb3-4" data-line-number="4"><span class="st">    </span><span class="kw">geom_histogram</span>(<span class="dt">bins =</span> <span class="dv">10</span>)</a></code></pre></div>
-<p><img src="plant_death_files/figure-html/until_max_model-2.svg" width="576"></p>
+<p><img src="04-plant_death_files/figure-html/until_max_model-2.svg" width="576"></p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1"></a>
 <a class="sourceLine" id="cb4-2" data-line-number="2">until_max_summ &lt;-<span class="st"> </span>until_max <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb4-3" data-line-number="3"><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">max_mean =</span> <span class="kw">mean</span>(days),</a>
@@ -187,7 +187,7 @@
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1">after_max <span class="op">%&gt;%</span></a>
 <a class="sourceLine" id="cb6-2" data-line-number="2"><span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(date, N_ratio)) <span class="op">+</span></a>
 <a class="sourceLine" id="cb6-3" data-line-number="3"><span class="st">    </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">color =</span> rep)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb6-4" data-line-number="4"><span class="st">    </span><span class="kw">scale_color_brewer</span>(<span class="dt">palette =</span> <span class="st">"Dark2"</span>, <span class="dt">guide =</span> <span class="ot">FALSE</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb6-4" data-line-number="4"><span class="st">    </span><span class="kw">scale_color_brewer</span>(<span class="dt">palette =</span> <span class="st">"Set3"</span>, <span class="dt">guide =</span> <span class="ot">FALSE</span>) <span class="op">+</span></a>
 <a class="sourceLine" id="cb6-5" data-line-number="5"><span class="st">    </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>line, <span class="dt">nrow =</span> <span class="dv">2</span>) <span class="op">+</span></a>
 <a class="sourceLine" id="cb6-6" data-line-number="6"><span class="st">    </span><span class="ot">NULL</span></a>
 <a class="sourceLine" id="cb6-7" data-line-number="7"></a>
@@ -197,11 +197,11 @@
 <a class="sourceLine" id="cb6-11" data-line-number="11"><span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(date, <span class="kw">logit</span>(N_ratio))) <span class="op">+</span></a>
 <a class="sourceLine" id="cb6-12" data-line-number="12"><span class="st">    </span><span class="co"># ggplot(aes(date, N_ratio_)) +</span></a>
 <a class="sourceLine" id="cb6-13" data-line-number="13"><span class="st">    </span><span class="co"># geom_point(aes(color = line)) +</span></a>
-<a class="sourceLine" id="cb6-14" data-line-number="14"><span class="st">    </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">color =</span> line, <span class="dt">linetype =</span> rep), <span class="dt">alpha =</span> <span class="fl">0.5</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb6-14" data-line-number="14"><span class="st">    </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">color =</span> line, <span class="dt">linetype =</span> rep), <span class="dt">alpha =</span> <span class="fl">0.6</span>) <span class="op">+</span></a>
 <a class="sourceLine" id="cb6-15" data-line-number="15"><span class="st">    </span><span class="kw">stat_summary</span>(<span class="dt">fun.y =</span> mean, <span class="dt">geom =</span> <span class="st">"point"</span>, <span class="dt">size =</span> <span class="dv">4</span>, <span class="dt">shape =</span> <span class="dv">1</span>) <span class="op">+</span></a>
 <a class="sourceLine" id="cb6-16" data-line-number="16"><span class="st">    </span><span class="kw">stat_smooth</span>(<span class="dt">method =</span> <span class="st">"lm"</span>, <span class="dt">se =</span> <span class="ot">FALSE</span>) <span class="op">+</span></a>
 <a class="sourceLine" id="cb6-17" data-line-number="17"><span class="st">    </span><span class="kw">scale_color_brewer</span>(<span class="dt">palette =</span> <span class="st">"Dark2"</span>, <span class="dt">guide =</span> <span class="ot">FALSE</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb6-18" data-line-number="18"><span class="st">        </span><span class="kw">scale_linetype_manual</span>(<span class="dt">guide =</span> <span class="ot">FALSE</span>, <span class="dt">values =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">7</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb6-18" data-line-number="18"><span class="st">    </span><span class="kw">scale_linetype_manual</span>(<span class="dt">guide =</span> <span class="ot">FALSE</span>, <span class="dt">values =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">9</span>) <span class="op">+</span></a>
 <a class="sourceLine" id="cb6-19" data-line-number="19"><span class="st">    </span><span class="ot">NULL</span></a>
 <a class="sourceLine" id="cb6-20" data-line-number="20"></a>
 <a class="sourceLine" id="cb6-21" data-line-number="21"></a>
@@ -212,7 +212,7 @@
 <a class="sourceLine" id="cb6-26" data-line-number="26"><span class="st">    </span><span class="kw">stat_summary</span>(<span class="dt">fun.y =</span> mean, <span class="dt">geom =</span> <span class="st">"point"</span>, <span class="dt">size =</span> <span class="dv">4</span>, <span class="dt">shape =</span> <span class="dv">1</span>) <span class="op">+</span></a>
 <a class="sourceLine" id="cb6-27" data-line-number="27"><span class="st">    </span><span class="kw">stat_smooth</span>(<span class="dt">method =</span> <span class="st">"lm"</span>, <span class="dt">se =</span> <span class="ot">FALSE</span>) <span class="op">+</span></a>
 <a class="sourceLine" id="cb6-28" data-line-number="28"><span class="st">    </span><span class="kw">scale_color_brewer</span>(<span class="dt">palette =</span> <span class="st">"Dark2"</span>, <span class="dt">guide =</span> <span class="ot">FALSE</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb6-29" data-line-number="29"><span class="st">    </span><span class="kw">scale_linetype_manual</span>(<span class="dt">guide =</span> <span class="ot">FALSE</span>, <span class="dt">values =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">7</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb6-29" data-line-number="29"><span class="st">    </span><span class="kw">scale_linetype_manual</span>(<span class="dt">guide =</span> <span class="ot">FALSE</span>, <span class="dt">values =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">9</span>) <span class="op">+</span></a>
 <a class="sourceLine" id="cb6-30" data-line-number="30"><span class="st">    </span><span class="ot">NULL</span></a>
 <a class="sourceLine" id="cb6-31" data-line-number="31"></a>
 <a class="sourceLine" id="cb6-32" data-line-number="32">after_max <span class="op">%&gt;%</span></a>
@@ -222,7 +222,7 @@
 <a class="sourceLine" id="cb6-36" data-line-number="36"><span class="st">    </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>line, <span class="dt">ncol =</span> <span class="dv">2</span>) <span class="op">+</span></a>
 <a class="sourceLine" id="cb6-37" data-line-number="37"><span class="st">    </span><span class="ot">NULL</span></a></code></pre></div>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" data-line-number="1"><span class="co"># AIC is lower than for other combos of date and line</span></a>
-<a class="sourceLine" id="cb7-2" data-line-number="2">after_max_mod &lt;-<span class="st"> </span>after_max <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb7-2" data-line-number="2">after_max_mod &lt;-<span class="st"> </span>after_max <span class="op">%&gt;%</span></a>
 <a class="sourceLine" id="cb7-3" data-line-number="3"><span class="st">    </span><span class="co"># # Removing rows with negative numbers dead.</span></a>
 <a class="sourceLine" id="cb7-4" data-line-number="4"><span class="st">    </span><span class="co"># filter(N_dead &gt;= 0) %&gt;% </span></a>
 <a class="sourceLine" id="cb7-5" data-line-number="5"><span class="st">    </span><span class="co"># Rounding values of N and N_dead when N was imputed:</span></a>
@@ -231,118 +231,86 @@
 <a class="sourceLine" id="cb7-8" data-line-number="8"><span class="st">    </span><span class="co"># negative amount was in N_dead to N</span></a>
 <a class="sourceLine" id="cb7-9" data-line-number="9"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">N =</span> <span class="kw">ifelse</span>(N_dead <span class="op">&lt;</span><span class="st"> </span><span class="dv">1</span>, N <span class="op">-</span><span class="st"> </span>N_dead, N),</a>
 <a class="sourceLine" id="cb7-10" data-line-number="10">           <span class="dt">N_dead =</span> <span class="kw">ifelse</span>(N_dead <span class="op">&lt;</span><span class="st"> </span><span class="dv">1</span>, <span class="dv">0</span>, N_dead)) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb7-11" data-line-number="11"><span class="st">    </span>{<span class="kw"><a href="http://www.rdocumentation.org/packages/lme4/topics/glmer">glmer</a></span>(<span class="kw">cbind</span>(N, N_dead) <span class="op">~</span><span class="st"> </span>date <span class="op">+</span><span class="st"> </span>(date <span class="op">|</span><span class="st"> </span>line), <span class="dt">family =</span> <span class="st">"binomial"</span>, <span class="dt">data =</span> .)}</a>
+<a class="sourceLine" id="cb7-11" data-line-number="11"><span class="st">    </span>{<span class="kw">glm</span>(<span class="kw">cbind</span>(N, N_dead) <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">+</span><span class="st"> </span>date <span class="op">*</span><span class="st"> </span>line, <span class="dt">family =</span> <span class="st">"binomial"</span>, <span class="dt">data =</span> .)}</a>
 <a class="sourceLine" id="cb7-12" data-line-number="12">after_max_mod <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb7-13" data-line-number="13"><span class="st">    </span><span class="kw">summary</span>()</a>
-<a class="sourceLine" id="cb7-14" data-line-number="14"><span class="co">#&gt; Generalized linear mixed model fit by maximum likelihood (Laplace</span></a>
-<a class="sourceLine" id="cb7-15" data-line-number="15"><span class="co">#&gt;   Approximation) [glmerMod]</span></a>
-<a class="sourceLine" id="cb7-16" data-line-number="16"><span class="co">#&gt;  Family: binomial  ( logit )</span></a>
-<a class="sourceLine" id="cb7-17" data-line-number="17"><span class="co">#&gt; Formula: cbind(N, N_dead) ~ date + (date | line)</span></a>
-<a class="sourceLine" id="cb7-18" data-line-number="18"><span class="co">#&gt;    Data: .</span></a>
-<a class="sourceLine" id="cb7-19" data-line-number="19"><span class="co">#&gt; </span></a>
-<a class="sourceLine" id="cb7-20" data-line-number="20"><span class="co">#&gt;      AIC      BIC   logLik deviance df.resid </span></a>
-<a class="sourceLine" id="cb7-21" data-line-number="21"><span class="co">#&gt;   9824.4   9837.3  -4907.2   9814.4       93 </span></a>
-<a class="sourceLine" id="cb7-22" data-line-number="22"><span class="co">#&gt; </span></a>
-<a class="sourceLine" id="cb7-23" data-line-number="23"><span class="co">#&gt; Scaled residuals: </span></a>
-<a class="sourceLine" id="cb7-24" data-line-number="24"><span class="co">#&gt;      Min       1Q   Median       3Q      Max </span></a>
-<a class="sourceLine" id="cb7-25" data-line-number="25"><span class="co">#&gt; -26.1127  -6.6706   0.2098   6.4840  18.2613 </span></a>
-<a class="sourceLine" id="cb7-26" data-line-number="26"><span class="co">#&gt; </span></a>
-<a class="sourceLine" id="cb7-27" data-line-number="27"><span class="co">#&gt; Random effects:</span></a>
-<a class="sourceLine" id="cb7-28" data-line-number="28"><span class="co">#&gt;  Groups Name        Variance Std.Dev. Corr </span></a>
-<a class="sourceLine" id="cb7-29" data-line-number="29"><span class="co">#&gt;  line   (Intercept) 0.5001   0.7072        </span></a>
-<a class="sourceLine" id="cb7-30" data-line-number="30"><span class="co">#&gt;         date        0.1012   0.3181   -0.82</span></a>
-<a class="sourceLine" id="cb7-31" data-line-number="31"><span class="co">#&gt; Number of obs: 98, groups:  line, 7</span></a>
-<a class="sourceLine" id="cb7-32" data-line-number="32"><span class="co">#&gt; </span></a>
-<a class="sourceLine" id="cb7-33" data-line-number="33"><span class="co">#&gt; Fixed effects:</span></a>
-<a class="sourceLine" id="cb7-34" data-line-number="34"><span class="co">#&gt;             Estimate Std. Error z value Pr(&gt;|z|)    </span></a>
-<a class="sourceLine" id="cb7-35" data-line-number="35"><span class="co">#&gt; (Intercept)   1.6965     0.2686   6.317 2.66e-10 ***</span></a>
-<a class="sourceLine" id="cb7-36" data-line-number="36"><span class="co">#&gt; date         -0.3690     0.1208  -3.056  0.00225 ** </span></a>
-<a class="sourceLine" id="cb7-37" data-line-number="37"><span class="co">#&gt; ---</span></a>
-<a class="sourceLine" id="cb7-38" data-line-number="38"><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></a>
-<a class="sourceLine" id="cb7-39" data-line-number="39"><span class="co">#&gt; </span></a>
-<a class="sourceLine" id="cb7-40" data-line-number="40"><span class="co">#&gt; Correlation of Fixed Effects:</span></a>
-<a class="sourceLine" id="cb7-41" data-line-number="41"><span class="co">#&gt;      (Intr)</span></a>
-<a class="sourceLine" id="cb7-42" data-line-number="42"><span class="co">#&gt; date -0.817</span></a>
-<a class="sourceLine" id="cb7-43" data-line-number="43"></a>
-<a class="sourceLine" id="cb7-44" data-line-number="44"></a>
-<a class="sourceLine" id="cb7-45" data-line-number="45">after_max <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb7-46" data-line-number="46"><span class="st">    </span><span class="kw">group_by</span>(line) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb7-47" data-line-number="47"><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">date =</span> <span class="kw">list</span>(<span class="kw">seq</span>(<span class="kw">min</span>(date), <span class="kw">max</span>(date), <span class="dt">length.out =</span> <span class="dv">100</span>))) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb7-48" data-line-number="48"><span class="st">    </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb7-49" data-line-number="49"><span class="st">    </span><span class="kw">unnest</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb7-50" data-line-number="50"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">N_ratio =</span> <span class="kw">predict</span>(after_max_mod, <span class="dt">type =</span> <span class="st">"response"</span>, <span class="dt">newdata =</span> .)) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb7-51" data-line-number="51"><span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(date, N_ratio, <span class="dt">color =</span> line)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb7-52" data-line-number="52"><span class="st">    </span><span class="kw">geom_point</span>(<span class="dt">data =</span> after_max, <span class="dt">alpha =</span> <span class="fl">0.5</span>, <span class="dt">shape =</span> <span class="dv">16</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb7-53" data-line-number="53"><span class="st">    </span><span class="kw">geom_line</span>(<span class="dt">size =</span> <span class="fl">0.75</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb7-54" data-line-number="54"><span class="st">    </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>line) <span class="op">+</span></a>
-<a class="sourceLine" id="cb7-55" data-line-number="55"><span class="st">    </span><span class="kw">scale_color_brewer</span>(<span class="dt">palette =</span> <span class="st">"Dark2"</span>, <span class="dt">guide =</span> <span class="ot">FALSE</span>)</a></code></pre></div>
-<p><img src="plant_death_files/figure-html/after_max_model-1.svg" width="576"></p>
+<a class="sourceLine" id="cb7-13" data-line-number="13"><span class="st">    </span><span class="kw">AIC</span>()</a>
+<a class="sourceLine" id="cb7-14" data-line-number="14"><span class="co">#&gt; [1] 11851.22</span></a>
+<a class="sourceLine" id="cb7-15" data-line-number="15"></a>
+<a class="sourceLine" id="cb7-16" data-line-number="16"></a>
+<a class="sourceLine" id="cb7-17" data-line-number="17">after_max <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb7-18" data-line-number="18"><span class="st">    </span><span class="kw">group_by</span>(line) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb7-19" data-line-number="19"><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">date =</span> <span class="kw">list</span>(<span class="kw">seq</span>(<span class="kw">min</span>(date), <span class="kw">max</span>(date), <span class="dt">length.out =</span> <span class="dv">100</span>))) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb7-20" data-line-number="20"><span class="st">    </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb7-21" data-line-number="21"><span class="st">    </span><span class="kw">unnest</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb7-22" data-line-number="22"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">N_ratio =</span> <span class="kw">predict</span>(after_max_mod, <span class="dt">type =</span> <span class="st">"response"</span>, <span class="dt">newdata =</span> .)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb7-23" data-line-number="23"><span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(date, N_ratio, <span class="dt">color =</span> line)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-24" data-line-number="24"><span class="st">    </span><span class="kw">geom_point</span>(<span class="dt">data =</span> after_max, <span class="dt">alpha =</span> <span class="fl">0.5</span>, <span class="dt">shape =</span> <span class="dv">16</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-25" data-line-number="25"><span class="st">    </span><span class="kw">geom_line</span>(<span class="dt">size =</span> <span class="fl">0.75</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-26" data-line-number="26"><span class="st">    </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>line) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-27" data-line-number="27"><span class="st">    </span><span class="kw">scale_color_brewer</span>(<span class="dt">palette =</span> <span class="st">"Dark2"</span>, <span class="dt">guide =</span> <span class="ot">FALSE</span>)</a></code></pre></div>
+<p><img src="04-plant_death_files/figure-html/after_max_model-1.svg" width="576"></p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="co"># Each line's coefficients, with an added row for WI-L4Ø that's just the mean:</span></a>
 <a class="sourceLine" id="cb8-2" data-line-number="2">after_max_coefs &lt;-<span class="st"> </span>after_max_mod <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb8-3" data-line-number="3"><span class="st">    </span><span class="kw"><a href="http://www.rdocumentation.org/packages/lme4/topics/ranef">ranef</a></span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb8-4" data-line-number="4"><span class="st">    </span>.[[<span class="st">"line"</span>]] <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb8-5" data-line-number="5"><span class="st">    `</span><span class="dt">+</span><span class="st">`</span>(</a>
-<a class="sourceLine" id="cb8-6" data-line-number="6">        after_max_mod <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb8-7" data-line-number="7"><span class="st">            </span><span class="kw"><a href="http://www.rdocumentation.org/packages/lme4/topics/fixef">fixef</a></span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb8-8" data-line-number="8"><span class="st">            </span><span class="kw">rep</span>(<span class="dt">each =</span> after_max_mod<span class="op">@</span>flist <span class="op">%&gt;%</span><span class="st"> </span>.[[<span class="st">"line"</span>]] <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb8-9" data-line-number="9"><span class="st">                    </span><span class="kw">levels</span>() <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">length</span>()) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb8-10" data-line-number="10"><span class="st">            </span><span class="kw">matrix</span>(<span class="dt">ncol =</span> after_max_mod<span class="op">@</span>cnms <span class="op">%&gt;%</span><span class="st"> </span>.[[<span class="st">"line"</span>]] <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb8-11" data-line-number="11"><span class="st">                       </span><span class="kw">length</span>())</a>
-<a class="sourceLine" id="cb8-12" data-line-number="12">    ) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb8-13" data-line-number="13"><span class="st">    </span><span class="kw">set_names</span>(<span class="kw">c</span>(<span class="st">"inter"</span>, <span class="st">"date"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb8-14" data-line-number="14"><span class="st">    </span><span class="kw">rownames_to_column</span>(<span class="st">"line"</span>) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb8-15" data-line-number="15"><span class="st">    </span><span class="kw">add_row</span>(<span class="dt">line =</span> <span class="st">"WI-L4Ø"</span>, <span class="dt">inter =</span> <span class="kw">mean</span>(.<span class="op">$</span>inter), <span class="dt">date =</span> <span class="kw">mean</span>(.<span class="op">$</span>date)) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb8-16" data-line-number="16"><span class="st">    </span><span class="co"># Ordering the same as all other data frames:</span></a>
-<a class="sourceLine" id="cb8-17" data-line-number="17"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">line =</span> <span class="kw">factor</span>(line, <span class="dt">levels =</span> <span class="kw">levels</span>(until_max<span class="op">$</span>line))) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb8-18" data-line-number="18"><span class="st">    </span><span class="kw">arrange</span>(line)</a>
-<a class="sourceLine" id="cb8-19" data-line-number="19">after_max_coefs <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb8-20" data-line-number="20"><span class="st">    </span>knitr<span class="op">::</span><span class="kw"><a href="http://www.rdocumentation.org/packages/knitr/topics/kable">kable</a></span>()</a></code></pre></div>
+<a class="sourceLine" id="cb8-3" data-line-number="3"><span class="st">    </span><span class="kw">coef</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb8-4" data-line-number="4"><span class="st">    </span>{</a>
+<a class="sourceLine" id="cb8-5" data-line-number="5">        .. &lt;-<span class="st"> </span><span class="kw">cbind</span>(</a>
+<a class="sourceLine" id="cb8-6" data-line-number="6">            .[<span class="kw">grepl</span>(<span class="st">"^date"</span>, <span class="kw">names</span>(.))],</a>
+<a class="sourceLine" id="cb8-7" data-line-number="7">            .[<span class="op">!</span><span class="kw">grepl</span>(<span class="st">"^date"</span>, <span class="kw">names</span>(.))]</a>
+<a class="sourceLine" id="cb8-8" data-line-number="8">        )</a>
+<a class="sourceLine" id="cb8-9" data-line-number="9">        <span class="kw">rownames</span>(..) &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">"line"</span>, <span class="st">""</span>, <span class="kw">names</span>(.)[<span class="op">!</span><span class="kw">grepl</span>(<span class="st">"^date"</span>, <span class="kw">names</span>(.))])</a>
+<a class="sourceLine" id="cb8-10" data-line-number="10">        ..</a>
+<a class="sourceLine" id="cb8-11" data-line-number="11">    } <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb8-12" data-line-number="12"><span class="st">    </span><span class="kw">as.data.frame</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb8-13" data-line-number="13"><span class="st">    </span><span class="kw">set_names</span>(<span class="kw">c</span>(<span class="st">"b0"</span>, <span class="st">"b1"</span>)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-14" data-line-number="14"><span class="st">    </span><span class="kw">rownames_to_column</span>(<span class="st">"line"</span>)</a>
+<a class="sourceLine" id="cb8-15" data-line-number="15">after_max_coefs <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-16" data-line-number="16"><span class="st">    </span>knitr<span class="op">::</span><span class="kw"><a href="http://www.rdocumentation.org/packages/knitr/topics/kable">kable</a></span>()</a></code></pre></div>
 <table class="table">
 <thead><tr class="header">
 <th align="left">line</th>
-<th align="right">inter</th>
-<th align="right">date</th>
+<th align="right">b0</th>
+<th align="right">b1</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td align="left">Clover-2017-2</td>
-<td align="right">1.2860131</td>
-<td align="right">-0.1848006</td>
+<td align="right">-0.2349460</td>
+<td align="right">1.3143960</td>
 </tr>
 <tr class="even">
 <td align="left">Clover-2017-6</td>
-<td align="right">0.8489053</td>
-<td align="right">0.0927634</td>
+<td align="right">0.3290626</td>
+<td align="right">0.8457315</td>
 </tr>
 <tr class="odd">
 <td align="left">R10</td>
-<td align="right">2.3289371</td>
-<td align="right">-0.8182520</td>
+<td align="right">-0.5900285</td>
+<td align="right">2.3419780</td>
 </tr>
 <tr class="even">
 <td align="left">UT3</td>
-<td align="right">1.2413170</td>
-<td align="right">-0.1945460</td>
+<td align="right">0.0414253</td>
+<td align="right">1.2377546</td>
 </tr>
 <tr class="odd">
 <td align="left">WI-2016-593</td>
-<td align="right">1.4565130</td>
-<td align="right">-0.1499511</td>
+<td align="right">0.0876192</td>
+<td align="right">1.4528203</td>
 </tr>
 <tr class="even">
 <td align="left">WI-L4</td>
-<td align="right">3.0773514</td>
-<td align="right">-0.6640818</td>
+<td align="right">-0.4337741</td>
+<td align="right">3.0956953</td>
 </tr>
 <tr class="odd">
 <td align="left">WI-L4Ø</td>
-<td align="right">1.6958105</td>
-<td align="right">-0.3687932</td>
+<td align="right">-0.0926960</td>
+<td align="right">1.5364050</td>
 </tr>
 <tr class="even">
 <td align="left">WIA-5D</td>
-<td align="right">1.6316363</td>
-<td align="right">-0.6626848</td>
+<td align="right">-0.4340395</td>
+<td align="right">1.6383908</td>
 </tr>
 </tbody>
 </table>
@@ -352,19 +320,19 @@
 <a class="sourceLine" id="cb9-4" data-line-number="4">)</a>
 <a class="sourceLine" id="cb9-5" data-line-number="5">plant_death</a>
 <a class="sourceLine" id="cb9-6" data-line-number="6"><span class="co">#&gt; $until_max_summ</span></a>
-<a class="sourceLine" id="cb9-7" data-line-number="7"><span class="co">#&gt;   max_mean   max_sd</span></a>
-<a class="sourceLine" id="cb9-8" data-line-number="8"><span class="co">#&gt; 1 13.38776 1.945254</span></a>
+<a class="sourceLine" id="cb9-7" data-line-number="7"><span class="co">#&gt;   max_mean  max_sd</span></a>
+<a class="sourceLine" id="cb9-8" data-line-number="8"><span class="co">#&gt; 1     13.5 2.04432</span></a>
 <a class="sourceLine" id="cb9-9" data-line-number="9"><span class="co">#&gt; </span></a>
 <a class="sourceLine" id="cb9-10" data-line-number="10"><span class="co">#&gt; $after_max_mort_coefs</span></a>
-<a class="sourceLine" id="cb9-11" data-line-number="11"><span class="co">#&gt;            line     inter        date</span></a>
-<a class="sourceLine" id="cb9-12" data-line-number="12"><span class="co">#&gt; 1 Clover-2017-2 1.2860131 -0.18480059</span></a>
-<a class="sourceLine" id="cb9-13" data-line-number="13"><span class="co">#&gt; 2 Clover-2017-6 0.8489053  0.09276345</span></a>
-<a class="sourceLine" id="cb9-14" data-line-number="14"><span class="co">#&gt; 3           R10 2.3289371 -0.81825196</span></a>
-<a class="sourceLine" id="cb9-15" data-line-number="15"><span class="co">#&gt; 4           UT3 1.2413170 -0.19454599</span></a>
-<a class="sourceLine" id="cb9-16" data-line-number="16"><span class="co">#&gt; 5   WI-2016-593 1.4565130 -0.14995110</span></a>
-<a class="sourceLine" id="cb9-17" data-line-number="17"><span class="co">#&gt; 6         WI-L4 3.0773514 -0.66408177</span></a>
-<a class="sourceLine" id="cb9-18" data-line-number="18"><span class="co">#&gt; 7        WI-L4Ø 1.6958105 -0.36879325</span></a>
-<a class="sourceLine" id="cb9-19" data-line-number="19"><span class="co">#&gt; 8        WIA-5D 1.6316363 -0.66268476</span></a></code></pre></div>
+<a class="sourceLine" id="cb9-11" data-line-number="11"><span class="co">#&gt;            line          b0        b1</span></a>
+<a class="sourceLine" id="cb9-12" data-line-number="12"><span class="co">#&gt; 1 Clover-2017-2 -0.23494602 1.3143960</span></a>
+<a class="sourceLine" id="cb9-13" data-line-number="13"><span class="co">#&gt; 2 Clover-2017-6  0.32906264 0.8457315</span></a>
+<a class="sourceLine" id="cb9-14" data-line-number="14"><span class="co">#&gt; 3           R10 -0.59002847 2.3419780</span></a>
+<a class="sourceLine" id="cb9-15" data-line-number="15"><span class="co">#&gt; 4           UT3  0.04142532 1.2377546</span></a>
+<a class="sourceLine" id="cb9-16" data-line-number="16"><span class="co">#&gt; 5   WI-2016-593  0.08761920 1.4528203</span></a>
+<a class="sourceLine" id="cb9-17" data-line-number="17"><span class="co">#&gt; 6         WI-L4 -0.43377410 3.0956953</span></a>
+<a class="sourceLine" id="cb9-18" data-line-number="18"><span class="co">#&gt; 7        WI-L4Ø -0.09269600 1.5364050</span></a>
+<a class="sourceLine" id="cb9-19" data-line-number="19"><span class="co">#&gt; 8        WIA-5D -0.43403950 1.6383908</span></a></code></pre></div>
 <div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" data-line-number="1">devtools<span class="op">::</span><span class="kw"><a href="http://www.rdocumentation.org/packages/devtools/topics/use_data">use_data</a></span>(plant_death, <span class="dt">overwrite =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
 </div>
   </div>
