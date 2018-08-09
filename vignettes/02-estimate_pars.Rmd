@@ -5,8 +5,8 @@ date: "2018-07-03"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Estimating aphid population parameters}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
   chunk_output_type: console
 ---
@@ -78,7 +78,11 @@ growth %>%
 
 ```{r filter_data}
 growth %>% 
-    ggplot(aes(date, X, color = factor(rep))) +
+    group_by(line) %>% 
+    mutate(rep = map_int(rep, ~ which(sort(unique(rep)) == .x))) %>% 
+    ungroup() %>% 
+    mutate(rep = factor(rep)) %>% 
+    ggplot(aes(date, X, color = rep)) +
     geom_line(size = 0.75) +
     # geom_point() +
     facet_wrap(~ line, nrow = 2) +
@@ -103,7 +107,7 @@ str(model_data, give.attr = FALSE)
 ## Run model
 
 ```{r run_model, eval = FALSE}
-# Takes ~ 30 sec at adapt_delta = 0.9
+# Takes ~ 42 sec at adapt_delta = 0.9
 set.seed(65136)
 stan_fit <- model_data %>%
     fit_lines(
