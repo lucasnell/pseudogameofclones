@@ -42,22 +42,6 @@ inline sint32 sample_plant_days(const double& days_mean,
 
 
 
-//' Update Z and plant_days
-//'
-//' @noRd
-//'
-void update_Z_pd(arma::vec& Z, arma::ivec& plant_days,
-                 const arma::mat& Nt,
-                 const arma::rowvec& A) {
-    // Update # plant days PAST death for time t+1:
-    plant_days++;
-    // Sum by row (i.e., by plant):
-    Z = arma::sum(Nt, 1);
-    return;
-}
-
-
-
 
 
 
@@ -280,6 +264,7 @@ void sim_cage(const arma::mat& N_0,
               const sint32& repl_age,
               const arma::mat& log_morts,
               const double& extinct_N,
+              const double& repl_threshold,
               pcg32& eng,
               arma::cube& N_bycage,
               arma::mat& logN_byplant,
@@ -316,13 +301,13 @@ void sim_cage(const arma::mat& N_0,
     // Matrices keeping track of numbers of dispersed aphids:
     arma::imat emigrants(n_plants, n_lines);
     arma::imat immigrants(n_plants, n_lines);
-    // Summed total aphids per plant
-    arma::vec Z(n_plants);
+    // Sum by row (i.e., by plant):
+    arma::vec Z = arma::sum(Nt, 1);
 
     for (uint32 t = 0; t < max_t; t++) {
 
-        // Update Z and plant_days:
-        update_Z_pd(Z, plant_days, Nt, A);
+        // Update # plant days PAST death for time t+1:
+        plant_days++;
         // Generate numbers of dispersed aphids:
         update_dispersal(emigrants, immigrants, Nt, D_vec, plant_days, poisson_rng, eng);
 
@@ -384,21 +369,34 @@ void sim_cage(const arma::mat& N_0,
         }
 
 
-        /*
-         If it's a replacement time point, disperse all aphids from replaced
-         plants to others
-        */
-        // To make sure this doesn't past bounds:
-        if (repl_ind < repl_times.size()) {
-            // Now check:
-            if ((t+1) == repl_times[repl_ind]) {
-                replace_plants(repl_ind, plant_days, Nt1, extinct, normal_rng, eng,
-                               repl_age, plant_death_age_mean, plant_death_age_sd);
-            }
-        }
+        // /*
+        //  If it's a replacement time point, disperse all aphids from replaced
+        //  plants to others
+        // */
+        // // To make sure this doesn't past bounds:
+        // if (repl_ind < repl_times.size()) {
+        //     // Now check:
+        //     if ((t+1) == repl_times[repl_ind]) {
+        //         replace_plants(repl_ind, plant_days, Nt1, extinct, normal_rng, eng,
+        //                        repl_age, plant_death_age_mean, plant_death_age_sd);
+        //     }
+        // }
 
         // Summarize output:
         summarize_output(Nt1, N_bycage, logN_byplant, zero_byplant, r, t);
+
+        // Update rows by plant:
+        Z = arma::sum(Nt, 1);
+
+        for (uint32 i = 0; i < n_plants; i++) {
+            if (Z(i) > repl_threshold || plant_days(i) >= 0) {
+                Z(i) = 0;
+                Nt1.row(i).zeros();
+                plant_days(i) = sample_plant_days(plant_death_age_mean,
+                           plant_death_age_sd, normal_rng, eng);
+            }
+
+        }
 
         // Iterate for time t next round
         // This also means I don't have to set Nt1 = Nt at the beginning of each round
@@ -462,6 +460,7 @@ List sim_cages_(const uint32& n_cages,
                 const std::vector<uint32>& repl_times,
                 const sint32& repl_age,
                 const double& extinct_N,
+                const double& repl_threshold,
                 const uint32& n_cores,
                 const bool& show_progress) {
 
@@ -543,7 +542,8 @@ List sim_cages_(const uint32& n_cages,
         N_bycage(arma::span(0), arma::span(), arma::span(r)) = arma::sum(N_0, 0);
         sim_cage(N_0, R, A, D_vec, process_error,
                  plant_death_age_mean, plant_death_age_sd,
-                 repl_times, repl_age_, log_morts, extinct_N, eng,
+                 repl_times, repl_age_, log_morts, extinct_N, repl_threshold,
+                 eng,
                  N_bycage, logN_byplant, zero_byplant, r);
         p.increment();
     }
