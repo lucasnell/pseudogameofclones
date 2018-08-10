@@ -10,6 +10,7 @@
 
 suppressPackageStartupMessages({
     library(clonewars)
+    library(cwsims)
 })
 
 
@@ -21,7 +22,7 @@ sim_env <- new.env()
 
 with(sim_env, {
 
-    stan_fit <- read_rds("data-raw/stan_fit.rds")
+    stan_fit <- readr::read_rds("data-raw/stan_fit.rds")
 
     line_names <-
         clonewars::load_data() %>%
@@ -29,7 +30,7 @@ with(sim_env, {
         levels()
     n_plants <- 8
     n_lines <- 8
-    N_0 <- matrix(rep(3, n_lines * n_plants), n_plants, n_lines)
+    N_0 <- matrix(rep(6, n_lines * n_plants), n_plants, n_lines)
     max_t <- 180
     R <- apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, mean) %>%
         as.numeric()
@@ -45,8 +46,8 @@ with(sim_env, {
     plant_death_age_sd <- clonewars::plant_death$until_max_summ$max_sd
     repl_times <- seq(4, max_t, 4) - 1
     repl_age <- 3
-    extinct_N <- 2
-    n_cages <- 1000
+    extinct_N <- 1
+    n_cages <- 100
     n_cores <- parallel::detectCores() - 1
 
     # # All combinations of pools from 1 to 8
@@ -58,13 +59,18 @@ with(sim_env, {
 
     # Running longer to try to find patterns
     max_t <- 2000
-    n_cages <- 100
-    repl_times <- seq(4, max_t, 4) - 1
+    # n_cages <- 100
+    # repl_times <- seq(1, max_t, 1) - 1
+    plant_death_age_mean <- 1e6
+    plant_death_age_sd <- 0.001
+    repl_age <- 0
 
-    # # Also want to remove process error to see patterns more easily
-    # process_error <- 0
+    # Also want to remove process error to see patterns more easily
+    process_error <- 0
+    # process_error <- process_error / 10
 
-    sim <- function(i) {
+    sim <- function(repl_threshold_) {
+        # if (missing(repl_age_)) repl_age_ <- repl_age
         # lines_ <- pools[[i]]
         lines_ <- 1:n_lines
         simi <- cwsims:::sim_cages(n_cages = n_cages,
@@ -81,6 +87,7 @@ with(sim_env, {
                                     repl_times = repl_times,
                                     repl_age = repl_age,
                                     extinct_N = extinct_N,
+                                    repl_threshold = repl_threshold_,
                                     n_cores = n_cores,
                                     line_names = lines_)
 
@@ -95,24 +102,88 @@ with(sim_env, {
 readr::write_rds(sim_env, "data-raw/sim_env.rds")
 
 
+# surv_by_thresh <- function(thresh) {
+#
+#     sims_ <- sim_env$sim(repl_threshold_ = thresh)
+#     pool_sims_N <- sims_$N %>%
+#         dplyr::select(-pool) %>%
+#         mutate(thresh = thresh1)
+#
+#     pool_sims_N %>%
+#         filter(date == max(date)) %>%
+#         group_by(rep, line) %>%
+#         summarize(s = ifelse(N == 0, 0L, 1L)) %>%
+#         ungroup() %>%
+#         spread(line, s) %>%
+#         dplyr::select(-rep) %>%
+#         as.matrix() %>%
+#         colMeans()
+# }
+#
+# threshes <- seq(350, 575, 10)
+# t0 <- Sys.time()
+# set.seed(549489+2)
+# sbt <- map(threshes, surv_by_thresh)
+# Sys.time() - t0; rm(t0)
+#
+#
+# do.call(rbind, sbt) %>%
+#     as_data_frame() %>%
+#     mutate(thresh = as.integer(threshes)) %>%
+#     filter_at(vars(-thresh), all_vars(. != 1.0))
+#
+# do.call(rbind, sbt) %>%
+#     as_data_frame() %>%
+#     mutate(thresh = as.integer(threshes)) %>%
+#     gather("line", "p", -thresh, factor_key = TRUE) %>%
+#     ggplot(aes(thresh, p, color = line)) +
+#     geom_line() +
+#     geom_point() +
+#     scale_color_brewer(palette = "Dark2") +
+#     facet_wrap(~ line) +
+#     NULL
+
+
+
 # Takes ~3 sec
+thresh1 <- 430L
 set.seed(549489)
-sims_ <- sim_env$sim(1)
-pool_sims_N <- sims_$N
-pool_sims_X <- sims_$X
-pool_sims_Z <- sims_$Z
+sims_ <- sim_env$sim(repl_threshold_ = thresh1)
+pool_sims_N <- sims_$N %>%
+    dplyr::select(-pool) %>%
+    mutate(thresh = thresh1)
+pool_sims_X <- sims_$X %>%
+    dplyr::select(-pool) %>%
+    mutate(thresh = thresh1)
+pool_sims_Z <- sims_$Z %>%
+    dplyr::select(-pool) %>%
+    mutate(thresh = thresh1)
+
+
+thresh2 <- 490L
+set.seed(549489+1)
+sims_ <- sim_env$sim(repl_threshold_ = thresh2)
+pool_sims_N_ <- sims_$N %>%
+    dplyr::select(-pool) %>%
+    mutate(thresh = thresh2)
+pool_sims_X_ <- sims_$X %>%
+    dplyr::select(-pool) %>%
+    mutate(thresh = thresh2)
+pool_sims_Z_ <- sims_$Z %>%
+    dplyr::select(-pool) %>%
+    mutate(thresh = thresh2)
 rm(sims_)
 
-pool_sims_N <- pool_sims_N %>%
-    dplyr::select(-pool)
-pool_sims_X <- pool_sims_X %>%
-    dplyr::select(-pool)
-pool_sims_Z <- pool_sims_Z %>%
-    dplyr::select(-pool)
 
-# readr::write_rds(pool_sims_N, "data-raw/pool_sims_N.rds")
-# readr::write_rds(pool_sims_X, "data-raw/pool_sims_X.rds")
-# readr::write_rds(pool_sims_Z, "data-raw/pool_sims_Z.rds")
+pool_sims_N <- bind_rows(pool_sims_N, pool_sims_N_)
+pool_sims_X <- bind_rows(pool_sims_X, pool_sims_X_)
+pool_sims_Z <- bind_rows(pool_sims_Z, pool_sims_Z_)
+
+rm(pool_sims_N_, pool_sims_X_, pool_sims_Z_)
+
+readr::write_rds(pool_sims_N, "data-raw/pool_sims_N.rds")
+readr::write_rds(pool_sims_X, "data-raw/pool_sims_X.rds")
+readr::write_rds(pool_sims_Z, "data-raw/pool_sims_Z.rds")
 
 
 

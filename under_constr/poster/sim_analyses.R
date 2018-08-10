@@ -3,18 +3,154 @@
 
 source("under_constr/poster/_preamble.R")
 
-pool_sims <- pool_sims_N # readr::read_rds("data-raw/pool_sims_N.rds")
+ggplot2::theme_set(
+    ggplot2::theme_get() +
+        theme(axis.ticks = element_line(),
+              axis.title = element_text(),
+              axis.text = element_text(),
+              strip.text = element_text())
+)
 
-survs <- pool_sims %>%
+pool_sims <- readr::read_rds("data-raw/pool_sims_N.rds") %>%
+    mutate(thresh = factor(thresh)) %>%
+    dplyr::select(thresh, everything()) %>%
+    arrange(thresh, rep, date, line) %>%
+    group_by(thresh, rep, date) %>%
+    mutate(prop = N / sum(N),
+           prop_end = cumsum(prop),
+           prop_start = lag(prop_end, default = 0)) %>%
+    ungroup()
+# sim_env <- readr::read_rds("data-raw/sim_env.rds")
+
+# survs <- pool_sims %>%
+#     # filter(date == 1000, repl_age == 0, thresh == 1000) %>%
+#     filter(date == max(date), repl_age == 0, thresh < 1000) %>%
+#     # filter(date == 200, repl_age == 0) %>%
+#     group_by(rep, line) %>%
+#     summarize(s = ifelse(N == 0, 0L, 1L)) %>%
+#     ungroup() %>%
+#     spread(line, s) %>%
+#     dplyr::select(-rep) %>%
+#     as.matrix()
+#
+# colMeans(survs)
+# cor(survs)
+#
+# pool_sims %>%
+#     filter(thresh < 1000) %>%
+#     # filter(thresh == 1000, date <= 500) %>%
+#     ggplot(aes(date, N, group = factor(rep))) +
+#     geom_line(alpha = 0.1) +
+#     facet_wrap(~ factor(line))
+
+
+outcomes <- pool_sims %>%
     filter(date == max(date)) %>%
-    group_by(rep, line) %>%
-    summarize(s = ifelse(N == 0, 0L, 1L)) %>%
+    group_by(thresh, rep) %>%
+    summarize(lines = list(sort(line[N > 0])),
+              outcome = paste(sort(line[N > 0]), collapse = "_")) %>%
+    group_by(thresh, outcome) %>%
+    summarize(n = n(),
+              lines = lines[1],
+              reps = list(rep)) %>%
     ungroup() %>%
-    spread(line, s) %>%
-    dplyr::select(-rep) %>%
-    as.matrix()
+    dplyr::select(-outcome) %>%
+    split(.$thresh) %>%
+    map(~ dplyr::select(.x, -thresh))
 
-cor(survs)
+
+# Colorblind palette:
+pal <- c('#a50026','#d73027','#f46d43','#fdae61','#fee090','#e0f3f8','#abd9e9','#74add1',
+         '#4575b4','#313695')
+# Removing the very light colors:
+pal <- pal[-c(5, 6)]
+
+
+set.seed(64060)
+alt_states_plots <- map(1:length(outcomes),
+                        function(i) {
+                            pool_sims %>%
+                                filter(thresh == levels(thresh)[i],
+                                       rep %in% map_int(outcomes[[i]]$reps,
+                                                        ~ .x[sample.int(length(.x), 1)]),
+                                       date <= 1000
+                                ) %>%
+                                ggplot(aes(date, N, color = factor(line))) +
+                                geom_line(size = 0.5) +
+                                # ggplot(aes(date, fill = factor(line))) +
+                                # geom_ribbon(aes(ymin = prop_start, ymax = prop_end),
+                                #             color = NA) +
+                                facet_wrap(~ factor(rep), ncol = 2) +
+                                scale_color_manual(values = pal, guide = FALSE) +
+                                # scale_color_brewer("Aphid\nline:", palette = "RdYlBu",
+                                #                    guide = FALSE) +
+                                # scale_fill_brewer("Aphid\nline:", palette = "Dark2",
+                                #                    guide = FALSE) +
+                                scale_x_continuous(breaks = seq(0, 1000, 500)) +
+                                scale_y_continuous(breaks = seq(0, 3000, 1500)) +
+                                # scale_y_continuous(breaks = seq(0, 1.0, 0.5)) +
+                                theme(strip.text = element_blank(),
+                                      axis.text = element_blank(),
+                                      axis.title = element_blank(),
+                                      axis.ticks = element_blank()) +
+                                NULL
+                        })
+
+
+
+
+
+ggsave(filename = sprintf("figs/alt_states_%02i.pdf", 1),
+       plot = alt_states_plots[[1]],
+       width = 14, height = 3 * 4, units = "cm", bg = "white",
+       useDingbats = FALSE)
+ggsave(filename = sprintf("figs/alt_states_%02i.pdf", 2),
+       plot = alt_states_plots[[2]],
+       width = 14, height = 5 * 4, units = "cm", bg = "white",
+       useDingbats = FALSE)
+
+
+
+leg <- alt_states_plots %>%
+    .[[1]] %>%
+    {. + scale_color_brewer("Aphid\nline:", palette = "Dark2") +
+            theme(legend.text = element_blank(),
+                  legend.title = element_blank(),
+                  legend.position = c(0.5, 0.5),
+                  legend.justification = c(0.5,0.5)) +
+            guides(color = guide_legend(override.aes = list(size = 1.5),
+                                        direction = "horizontal", nrow = 2))
+    } %>%
+    ggpubr::get_legend() %>%
+    ggpubr::as_ggplot() %>%
+    {
+        . +
+            theme(plot.margin = margin(0, 0, 0, 0))
+    }
+
+ggsave(filename = "figs/alt_states_legend.pdf", plot = leg,
+       width = 7.5, height = 5, units = "cm", bg = "white",
+       useDingbats = FALSE)
+
+
+#
+
+
+
+
+
+# with(sim_env, ls())
+#
+# cor(sim_env$R, sim_env$A)
+# cor(exp(sim_env$D_vec), sim_env$A)
+# cor(sim_env$plant_mort_0, sim_env$A)
+# cor(sim_env$plant_mort_1, sim_env$plant_mort_0)
+#
+# plot(sim_env$R ~ sim_env$A)
+# plot(exp(sim_env$D_vec) ~ sim_env$A)
+# plot(sim_env$plant_mort_0 ~ sim_env$A)
+# plot(sim_env$plant_mort_1 ~ sim_env$plant_mort_0)
+
 
 #
 
