@@ -62,7 +62,7 @@ geom_lotka <- function(N01, N02, nt, arrow_n, ...) {
     geom_out <- c(geom_out,
                   list(geom_path(data = eval(lv), size = 1, linetype = 2),
                        geom_point(data = data_frame(x = N01, y = N02), size = 4,
-                                  color = "black")))
+                                  color = "black", shape = 4)))
     return(geom_out)
 }
 
