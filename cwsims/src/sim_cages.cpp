@@ -302,7 +302,7 @@ void sim_cage(const arma::mat& N_0,
     arma::imat emigrants(n_plants, n_lines);
     arma::imat immigrants(n_plants, n_lines);
     // Sum by row (i.e., by plant):
-    arma::vec Z = arma::sum(Nt, 1);
+    arma::vec Z = arma::sum(Nt1, 1);
 
     for (uint32 t = 0; t < max_t; t++) {
 
@@ -386,7 +386,7 @@ void sim_cage(const arma::mat& N_0,
         summarize_output(Nt1, N_bycage, logN_byplant, zero_byplant, r, t);
 
         // Update rows by plant:
-        Z = arma::sum(Nt, 1);
+        Z = arma::sum(Nt1, 1);
 
         for (uint32 i = 0; i < n_plants; i++) {
             if (Z(i) > repl_threshold || plant_days(i) >= 0) {
