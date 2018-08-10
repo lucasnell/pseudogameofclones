@@ -151,7 +151,12 @@ handle_NAs <- function(growth, allow_NA, impute_fxn) {
         ungroup() %>%
         filter(diff != 0) %>%
         identity()
-    if (any(missing$diff > 0)) stop("\nNo duplicates allowed.", call. = FALSE);
+    if (any(missing$diff > 0)) {
+        missing %>%
+            filter(diff > 0) %>%
+            print()
+        stop("\nNo duplicates allowed.", call. = FALSE)
+    }
 
     if (allow_NA & nrow(missing) > 0) {
 
