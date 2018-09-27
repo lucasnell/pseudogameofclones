@@ -47,35 +47,36 @@ $\varepsilon$ is process error.
 
 ## Note on $Z$ and non-centered distributions
 
-Below, all mentions of $Z$ refer to Z-scores (i.e., $Z \sim \text{N}(0,1)$).
+Below, all mentions of $Z$ refer to deviates from $\text{N}(0,1)$.
 These are used to generate non-centered parameterizations of all distributions
 (see section 28.6 in the Stan Modeling Language User's Guide and Reference Manual,
 version 2.17.0).
-Each $Z$ in an equation is not referring to the same object, but to a separate
-Z-score used to generate deviates from the focal distribution.
 
+
+## Note on truncated distributions
+
+Below, `T[0,]` indicates that a distribution is truncated to be above zero.
 
 
 ## Estimating process error
 
+For observation $k$:
 
-\begin{align}
-    \varepsilon &= s_\varepsilon Z \\
-    s_\varepsilon &\sim \exp ( \tau + \sigma_\tau Z ) \\
-\end{align}
-
+$$\begin{align}
+    \varepsilon_k &= \sigma_\varepsilon Z_k \\
+    \sigma_\varepsilon &\sim \text{N} ( \theta_1, ~ \theta_2 ) \texttt{T[0,1]} \\
+\end{align}$$
 
 
 ### Estimated from model:
 
-- $s_\varepsilon$: standard deviation of the process error
+- $\sigma_\varepsilon$: standard deviation of the process error
 
 
 #### Priors to define:
 
-- $\tau$: mean for the normal distribution that generates $\log(s_\varepsilon)$ values
-- $\sigma_\tau$: sd for the normal distribution that generates $\log(s_\varepsilon)$
-  values
+- $\theta_1$: mean for the normal distribution that generates $\sigma_\varepsilon$ values
+- $\theta_2$: sd for the normal distribution that generates $\sigma_\varepsilon$ values
 
 
 
@@ -83,35 +84,34 @@ Z-score used to generate deviates from the focal distribution.
 ## Estimating growth rates 
 
 Growth rates are bound $\ge 0$ and have one estimate per aphid line,
-resulting in a vector of growth rates, $\mathbf{R}$.
+resulting in a vector of growth rates.
 The growth rate estimate for clonal line $i$ is generated as follows:
 
-
-\begin{align}
+$$\begin{align}
     
-    \mathbf{R}_i &= \exp \left( \theta + s_\theta ~ Z \right) \\
+    r_i &= \exp \left( \rho + \sigma_\rho ~ Z_i \right) \\
     
-    \theta &= \mu_{\theta} + \sigma_{\theta} ~ Z \\
-    s_\theta &= \exp(\gamma + \sigma_\gamma ~ Z) \\
+    \rho &\sim \text{N}(\theta_3, ~ \theta_4) \\
+    \sigma_\rho &\sim \text{N}(\theta_5, ~ \theta_6) \texttt{T[0,]} \\
     
-\end{align}
+\end{align}$$
 
 
 
 ### Estimated from model:
 
-- $\mathbf{R}$: vector of growth rates for each aphid line
-- $\theta$: among-line mean of the log-transformed growth rates
-- $s_\theta$: among-line standard deviation of the log-transformed growth rates
+- $\mathbf{R}$: vector ($r_i$ for all $i$) of growth rates for each aphid line
+- $\rho$: among-line mean of the log-transformed growth rates
+- $\sigma_\rho$: among-line standard deviation of the log-transformed growth rates
 
 
 ### Priors to define:
 
-- $\mu_\theta$: mean of the normal distribution that generates $\theta$ values
-- $\sigma_\theta$: standard deviation of the normal distribution that generates
-  $\theta$ values
-- $\gamma$: mean for the normal distribution that generates $\log(s_\theta)$ values
-- $\sigma_\gamma$: sd for the normal distribution that generates $\log(s_\theta)$ values
+- $\theta_3$: mean of the normal distribution that generates $\rho$ values
+- $\theta_4$: standard deviation of the normal distribution that generates
+  $\rho$ values
+- $\theta_5$: mean for the normal distribution that generates $\sigma_\rho$ values
+- $\theta_6$: sd for the normal distribution that generates $\sigma_\rho$ values
 
 
 
@@ -126,54 +126,38 @@ I used the inverse logit function to bound final $\alpha$ estimates between 0 an
 For clonal line $i$ and plant $j$, estimates are generated as follows:
 
 
-\begin{align}
+$$\begin{align}
 
-    \mathbf{A}_i &= \text{logit}^{-1} \hspace{-0.25em}
+    \alpha_{ij} &= \text{logit}^{-1} \hspace{-0.25em}
         \left(
-            \phi + s_\phi ~ Z
+            \phi + \sigma_{\phi a} ~ Z_i + \sigma_{\phi w} ~ Z_j
         \right) \\
     
-    \mathbf{P}_{j} &= \text{logit}^{-1} \hspace{-0.25em}
-        \left(
-            \text{logit}(\mathbf{A}_{\mathbf{L}_j}) +
-            \hat{s}_{\phi} ~ Z
-        \right) \\
-    
-    \phi &= \mu_{\phi} + \sigma_{\phi} ~ Z \\
-    s_{\phi} &= \exp(\delta + \sigma_\delta ~ Z) \\
-    \hat{s}_{\phi} &= \exp(\zeta + \sigma_\zeta ~ Z) \\
-\end{align}
+    \phi &\sim \text{N}(\theta_7, ~ \theta_8) \\
+    \sigma_{\phi a} &\sim \text{N}(\theta_9, ~ \theta_{10}) \texttt{T[0,]} \\
+    \sigma_{\phi w} &\sim \text{N}(\theta_{11}, ~ \theta_{12}) \texttt{T[0,]} \\
+\end{align}$$
 
 
 
 
 ### Estimated from model:
 
-- $\mathbf{A}$: vector of density dependences for each aphid line
-- $\mathbf{P}$: vector of density dependences for each plant (i.e., each time series)
+- $\mathbf{A}$: vector of density dependences ($\alpha_i$ for all $i$) for each aphid line
 - $\phi$: among-line mean of the logit-transformed density dependences
-- $s_\phi$: among-line standard deviation of the logit-transformed density dependences
-- $\hat{s}_{\phi}$: the within-line standard deviations in the logit-transformed
+- $\sigma_{\phi a}$: among-line standard deviation of the logit-transformed density
+  dependences
+- $\sigma_{\phi w}$: the within-line standard deviations in the logit-transformed
   density dependences for each aphid line
 
 
 ### Priors to define:
 
-- $\mu_\phi$: mean of the normal distribution that generates $\phi$ values
-- $\sigma_\phi$: standard deviation of the normal distribution that generates $\phi$
+- $\theta_{7}$: mean of the normal distribution that generates $\phi$ values
+- $\theta_{8}$: standard deviation of the normal distribution that generates $\phi$
   values
-- $\delta$: mean for the normal distribution that generates $\log(s_\phi)$ values
-- $\sigma_\delta$: sd for the normal distribution that generates $\log(s_\phi)$ values
-- $\zeta$: mean for the normal distribution that generates values in
-  $\log(\hat{s}_{\phi})$
-- $\sigma_\zeta$: sd for the normal distribution that generates values in
-  $\log(\hat{s}_{\phi})$
-
-
-### Other:
-
-- $\mathbf{L}_j$ is an identifier vector that returns the index to the aphid line
-  for time series $j$.
-
-
+- $\theta_{9}$: mean for the normal distribution that generates $\sigma_{\phi a}$ values
+- $\theta_{10}$: sd for the normal distribution that generates $\sigma_{\phi a}$ values
+- $\theta_{11}$: mean for the normal distribution that generates values in $\sigma_{\phi w}$
+- $\theta_{12}$: sd for the normal distribution that generates values in $\sigma_{\phi w}$
 
