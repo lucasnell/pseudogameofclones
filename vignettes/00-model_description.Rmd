@@ -58,6 +58,13 @@ version 2.17.0).
 Below, `T[0,]` indicates that a distribution is truncated to be above zero.
 
 
+## Note on hyperparameters
+
+Prior information is stored as a vector of hyperparameters $\mathbf{\Theta}$,
+indexed for each hyperparameter as $\theta_i$ for position $i$.
+
+
+
 ## Estimating process error
 
 For observation $k$:
