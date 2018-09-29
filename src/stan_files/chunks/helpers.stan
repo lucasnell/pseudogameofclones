@@ -1,15 +1,6 @@
 
 functions {
 
-    vector ricker(vector X, int n_, real r_, real a_) {
-        int X_size = rows(X);
-        vector[X_size] X_out;
-        X_out[1] = X[1];
-        X_out[2:n_] = X[1:(n_-1)] + r_ * (1 - a_ * exp(X[1:(n_-1)]));
-        if (n_ < X_size) for (t in (n_+1):X_size) X_out[t] = 0;
-        return X_out;
-    }
-
     int find_int_array(int x, int[] y) {
         int result = 0;
         for (i in 1:(dims(y)[1])) {

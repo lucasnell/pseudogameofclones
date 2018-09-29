@@ -13,3 +13,5 @@ figs
 *.ai
 
 data-raw/big
+vignettes/*.R
+vignettes/*.html
