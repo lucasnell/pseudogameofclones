@@ -311,7 +311,7 @@ filter_data <- function(growth, filter_pars) {
 #' @param filter_pars A list with the names `"start"` and `"end"`, containing single
 #'     numbers with threshold for filtering the beginning and ending of time series,
 #'     respectively. Set to `NULL` to avoid filtering entirely.
-#'     Defaults to `list(start = 0.5, end = 1.0)`.
+#'     Defaults to `list(start = 0.0, end = 0.8)`.
 #' @param allow_NA Boolean for whether time series with NAs should be included.
 #'     Defaults to `TRUE`.
 #'
@@ -325,7 +325,7 @@ filter_data <- function(growth, filter_pars) {
 #' growth <- load_data()
 #'
 load_data <- function(filter_pars = list(start = 0.0, end = 0.8),
-                      remove_unfinished = TRUE, allow_NA = TRUE,
+                      remove_unfinished = FALSE, allow_NA = TRUE,
                       impute_fxn = NULL, file = NA) {
 
     growth <-
@@ -353,12 +353,16 @@ load_data <- function(filter_pars = list(start = 0.0, end = 0.8),
 
 #' Load data that won't be used for the actual analysis, to develop priors.
 #'
+#' Argument `filter_pars` defaults to the same as for `load_data`.
+#'
 #' @inheritParams load_data
 #'
 #' @export
 #'
 #'
-load_prior_data <- function(filter_pars = list(start = 0.5, end = 0.9), file = NA) {
+load_prior_data <- function(filter_pars = NULL, file = NA) {
+
+    if (is.null(filter_pars)) filter_pars <- formals(load_data)$filter_pars
 
     growth <-
         # First read through, to clean up the excel sheet:
@@ -508,68 +512,6 @@ make_pred_df <- function(stan_fit, orig_data, line, rep, alpha = 0.05) {
 
 
 
-
-
-
-#' Load data from PZ counts that were almost finished.
-#'
-#' Here, I'm adding a last date that has 0.75 of the max.
-#' This function is temporary and should be removed when counts are finished.
-#'
-#' @inheritParams load_data
-#'
-#' @export
-#'
-#'
-load_pz_data <- function(filter_pars = list(start = 0.0, end = 0.8),
-                         remove_unfinished = TRUE, allow_NA = TRUE,
-                         impute_fxn = NULL, file = NA) {
-
-    pz_reps <- initial_read(file) %>%
-        dplyr::select(-comments) %>%
-        group_by(line, rep) %>%
-        arrange(date) %>%
-        summarize(p = tail(N, 1) / max(N),
-                  three_down = all((tail(N, 4) %>% diff() %>% sign(.)) == -1),
-                  done = p <= 0.8 | three_down,
-                  pz = "Paige Zenkovich" %in% observer | "PZ" %in% observer) %>%
-        ungroup() %>%
-        filter(pz, !done) %>%
-        dplyr::select(line, rep)
-
-
-    pz_growth <-
-        initial_read() %>%
-        # We no longer need these columns:
-        dplyr::select(-observer, -comments) %>%
-        # Filter for only PZ reps:
-        filter_line_rep(pz_reps, FALSE) %>%
-        # Now add extra date for each rep, setting N to 0.75 * <max(N) within rep>
-        split(.$line) %>%
-        map_dfr(~ split(.x, .x$rep) %>%
-                    map_dfr(function(y_) {
-                        add_row(y_, line = y_$line[1], rep = y_$rep[1],
-                                date = max(y_$date) + 1,
-                                N = round(max(y_$N, na.rm = TRUE) * 0.75),
-                                X = log(round(max(y_$N, na.rm = TRUE) * 0.75)),
-                                ham = y_$ham[1]) %>%
-                            arrange(date)
-                    })) %>%
-        # Dealing with missing values:
-        handle_NAs(allow_NA, impute_fxn) %>%
-        # Remove rows where the first two aphids were recorded and re-add it so that
-        # these dates are present for all reps (they're currently not all present)
-        standardize_day0() %>%
-        # Filter part(s) of time series if desired:
-        filter_data(filter_pars) %>%
-        # NOT changing to factor bc this data frame is made to be merged, and doing so
-        # with another data frame with different lines will cause annoying warnings
-        # mutate(line = factor(line)) %>%
-        # Make sure it's ordered properly
-        arrange(line, rep, date)
-
-    return(pz_growth)
-}
 
 
 #' Impute missing data.

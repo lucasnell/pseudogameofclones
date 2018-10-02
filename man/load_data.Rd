@@ -5,14 +5,14 @@
 \title{Load aphid growth data.}
 \usage{
 load_data(filter_pars = list(start = 0, end = 0.8),
-  remove_unfinished = TRUE, allow_NA = TRUE, impute_fxn = NULL,
+  remove_unfinished = FALSE, allow_NA = TRUE, impute_fxn = NULL,
   file = NA)
 }
 \arguments{
 \item{filter_pars}{A list with the names \code{"start"} and \code{"end"}, containing single
 numbers with threshold for filtering the beginning and ending of time series,
 respectively. Set to \code{NULL} to avoid filtering entirely.
-Defaults to \code{list(start = 0.5, end = 1.0)}.}
+Defaults to \code{list(start = 0.0, end = 0.8)}.}
 
 \item{allow_NA}{Boolean for whether time series with NAs should be included.
 Defaults to \code{TRUE}.}
