@@ -46,3 +46,12 @@
 #'
 "plant_death"
 
+
+
+#' Priors for use in estimating population parameters.
+#'
+#' @format A numeric vector of length 12. Each number is a hyperparameter value.
+#'     See `vignette("01-choose_priors")` for more information.
+#'
+"theta"
+

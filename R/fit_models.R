@@ -52,22 +52,8 @@ fit_lines <- function(data, X, L, ...) {
                         nobs_ts = nobs_ts_,
                         L = L_,
                         X = X_,
-
-                        # -----------
                         # Priors:
-                        # -----------
-                        tau = -1.8970,
-                        sigma_tau = 1.0000,
-                        mu_theta = -1.3070,
-                        sigma_theta = 0.7922,
-                        gamma = -2.5360,
-                        sigma_gamma = 1.0000,
-                        mu_phi = -6.1300,
-                        sigma_phi = 3.1620,
-                        delta = -1.1510,
-                        sigma_delta = 2.0000,
-                        zeta = -0.9733,
-                        sigma_zeta = 2.8340)
+                        theta = theta)
 
     growth_fit <- rstan::sampling(stanmodels$all_lines_plants, data = model_data_, ...)
 

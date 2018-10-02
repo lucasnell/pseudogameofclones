@@ -467,3 +467,9 @@ data_frame(
 ```
 $†$ For descriptions, "mean for $X$" indicates the mean for the distribution that generates
 $X$ values.
+
+
+```{r save_priors, eval = FALSE}
+devtools::use_data(theta, overwrite = TRUE)
+```
+
