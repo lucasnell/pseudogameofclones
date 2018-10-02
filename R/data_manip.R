@@ -326,7 +326,7 @@ filter_data <- function(growth, filter_pars) {
 #'
 load_data <- function(filter_pars = list(start = 0.0, end = 0.8),
                       remove_unfinished = FALSE, allow_NA = TRUE,
-                      impute_fxn = NULL, file = NA) {
+                      impute_fxn = impute, file = NA) {
 
     growth <-
         # First read through, to clean up the excel sheet:

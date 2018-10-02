@@ -5,7 +5,7 @@
 \title{Load aphid growth data.}
 \usage{
 load_data(filter_pars = list(start = 0, end = 0.8),
-  remove_unfinished = FALSE, allow_NA = TRUE, impute_fxn = NULL,
+  remove_unfinished = FALSE, allow_NA = TRUE, impute_fxn = impute,
   file = NA)
 }
 \arguments{
