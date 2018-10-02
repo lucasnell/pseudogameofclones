@@ -5,7 +5,7 @@
 \alias{theta}
 \title{Priors for use in estimating population parameters.}
 \format{A numeric vector of length 12. Each number is a hyperparameter value.
-See \code{vignette("choose_priors")} for more information.}
+See \code{vignette("01-choose_priors")} for more information.}
 \usage{
 theta
 }
