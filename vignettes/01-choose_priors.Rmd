@@ -5,8 +5,8 @@ date: "2018-07-04"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Choosing priors}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
   chunk_output_type: console
 ---
@@ -38,6 +38,14 @@ bayesplot::color_scheme_set("viridis")
 dlnorm_ <- function(x, location, scale) {
     dlnorm(x, meanlog = location, sdlog = scale)
 }
+# To store priors:
+theta <- numeric(12)
+# ggplot theme:
+theme_set(theme_classic() %+replace%
+              theme(strip.background = element_blank(),
+                    strip.text = element_text(size = 11),
+                    legend.background = element_blank(),
+                    plot.title = element_text(size = 14, hjust = 0)))
 ```
 
 
@@ -49,10 +57,22 @@ In general, my goal is to create weakly informative prior distributions:
 > is set up so that the information it does provide is intentionally weaker
 > than whatever actual prior knowledge is available. (p 55, Gelman et al. 2014)
 
-Gelman, A., J. B. Carlin, H. S. Stern, D. B. Dunson, A. Vehtari, and D. B. Rubin. 2014.
-*Bayesian Data Analysis*. Third edition. CRC Press, Boca Raton, FL, USA.
+* Gelman, A., J. B. Carlin, H. S. Stern, D. B. Dunson, A. Vehtari, and D. B. Rubin. 2014.
+  *Bayesian Data Analysis*. Third edition. CRC Press, Boca Raton, FL, USA.
 
 
+
+## Notes
+
+__On truncated distributions\:__
+
+Below, `T[0,]` indicates that a distribution is truncated to be above zero.
+
+
+__On hyperparameters\:__
+
+Prior information is stored as a vector of hyperparameters $\mathbf{\Theta}$,
+indexed for each hyperparameter as $\theta_i$ for position $i$.
 
 
 
@@ -62,29 +82,29 @@ Gelman, A., J. B. Carlin, H. S. Stern, D. B. Dunson, A. Vehtari, and D. B. Rubin
 ```{r define_process_priors}
 # Below are meanlog and sdlog parameters for the log-normal distribution
 # that generates values for the process error standard deviation
-tau <- signif(log(0.15), 4)
-sigma_tau <- 1
+theta[1] <- 0.15
+theta[2] <- 1
 ```
 
 
-$s_\varepsilon$ is bound $\ge 0$ and sampled as $\sim \text{Lognormal}(\tau, \sigma_\tau)$
-Based on simulations, an $s_\varepsilon$ of 1 would be very high---so high as to be not
-realistically possible.
+$\sigma_\varepsilon$ was sampled as $\sim \text{N}(\theta_1, \theta_2^2) \texttt{T[0,]}$.
+Based on simulations, a $\sigma_\varepsilon$ of 1 would be very high---so high as to
+be not realistically possible.
 Values of ~ 0.15 seemed to result in simulations matching some preliminary experimental
 results we've seen in the lab.
-Below, `r sprintf('"sigma%.2f"', tau)` is simulated data with process error set to
-`r tau`, "sigma1" has process error set to 1.0.
+Below, `r sprintf('"theta[1] %.2f"', theta[1])` is simulated data with process
+error set to $`r theta[1]`$, "theta[1] 1" has process error set to $1.0$.
 The others are the preliminary data.
 
 ```{r load_prior}
 load_prior_data() %>% 
     filter(!is.na(line)) %>% 
-    add_row(line = paste0("sigma", signif(exp(tau), 2)), rep = rep(1:5, each=16),
+    add_row(line = paste0("theta[1] ", theta[1]), rep = rep(1:5, each=16),
             date = rep(5:20,5),
             X = sim_lines(R = 0.2, alpha = 1/1000, n_reps = 5, nobs_ts = rep(16, 5), 
-                          sigma_process = exp(tau)) %>% 
+                          sigma_process = theta[1]) %>% 
                 as.numeric()) %>% 
-    add_row(line = "sigma1", rep = rep(1:5, each=16), date = rep(5:20,5),
+    add_row(line = "theta[1] 1", rep = rep(1:5, each=16), date = rep(5:20,5),
             X = sim_lines(R = 0.2, alpha = 1/1000, n_reps = 5, nobs_ts = rep(16, 5), 
                           sigma_process = 1) %>% 
                 as.numeric()) %>% 
@@ -96,20 +116,16 @@ load_prior_data() %>%
 ```
 
 
-To sample $s_\varepsilon$,
-I chose a log-normal distribution with `log(0.15)` (`r tau`) as the
-$tau$ and `r sigma_tau` for $\sigma_\tau$ because this results in low densities at values
-close to 1.
-Note that below, the x-axis is log-transformed, but axis labels indicate 
-non-transformed values.
+To sample $\sigma_\varepsilon$,
+I chose a mean (parameter $\theta_1$) of $`r theta[1]`$ and SD ($\theta_2$ parameter)
+of $`r theta[2]`$.
+I chose these values because they result in low densities at values close to 1.
 
 ```{r process_error_plot}
-compare_priors("normal", tau, sigma_tau, xlim = tau + c(-1,1) * 3.25) +
-    geom_vline(xintercept = tau) +
-    ggtitle(expression(s[epsilon] %~% plain("Lognormal")(tau * "," ~ sigma[tau]))) +
-    coord_cartesian(ylim = c(0, 0.4 / sigma_tau)) +
-    scale_x_continuous(breaks = log(c(1 * 10^(-2:0), 0.05, 0.5)),
-                       labels = c(1 * 10^(-2:0), 0.05, 0.5)) +
+compare_priors("normal", theta[1], theta[2], xlim = c(0, theta[1] + 2)) +
+    geom_vline(xintercept = theta[1]) +
+    ggtitle(expression(sigma[epsilon] %~% plain("N")(theta[1] * "," ~ theta[2]))) +
+    coord_cartesian(ylim = c(0, 0.4 / theta[2])) +
     NULL
 ```
 
@@ -120,17 +136,21 @@ compare_priors("normal", tau, sigma_tau, xlim = tau + c(-1,1) * 3.25) +
 
 ## Growth rate priors
 
+Log-transformed growth rates ($\log(r)$) were sampled as a function of an among-line
+mean ($\rho \sim \text{N} ( \theta_3, \theta_4^{~2} )$) and
+SD ($\sigma_\rho \sim \text{N} ( \theta_5, \theta_6^{~2} ) \texttt{T[0,]}$).
 
-From data sent to me from A.R. Ives related to this paper:
+For growth-rate prior information, I first used data sent to me from A.R. Ives
+related to this paper:
 
-Meisner, M. H., J. P. Harmon, and A. R. Ives. 2014. Temperature effects on
-long-term population dynamics in a parasitoid–host system.
-*Ecological Monographs* __84__:457–476.
+* Meisner, M. H., J. P. Harmon, and A. R. Ives. 2014. Temperature effects on
+  long-term population dynamics in a parasitoid–host system.
+  *Ecological Monographs* __84__:457–476.
 
-For fecundity, juvenile survival, and adult survival, the dataset had low and high
-estimates.
+The dataset had low and high estimates for fecundity, juvenile survival, and adult
+survival.
 I created two Leslie matrices, one with all of the high estimates and another
-with all the lower estimates.
+with all of the lower estimates.
 For each of these Leslie matrices, I estimated the intrinsic daily rate of increase
 ($r$) in aphid populations in the lab as $r = \log(\lambda)$, where $\lambda$ is the
 dominant eigenvector of the matrix.
@@ -159,38 +179,27 @@ cat(sprintf("slow = %.4g\n", slow))
 
 
 
-\begin{align}
-    
-    \mathbf{R}_i &= \exp \left( \theta + s_\theta ~ Z \right) \\
-    
-    \theta &= \mu_{\theta} + \sigma_{\theta} ~ Z \\
-    s_\theta &= \exp(\gamma + \sigma_\gamma ~ Z) \\
-    
-\end{align}
-
-
 ```{r define_R_priors}
-# mean and SD  of the normal distribution that generates theta values
-#   (theta = among-line mean of the log-transformed growth rates)
-mu_theta <- c(fast, slow) %>% 
+# mean and SD  of the normal distribution that generates rho values
+#   (rho = among-line mean of the log-transformed growth rates)
+theta[3] <- c(fast, slow) %>% 
     log() %>% 
     mean() %>% 
     signif(4)
-sigma_theta <- c(fast, slow) %>%
+theta[4] <- c(fast, slow) %>%
     log() %>% 
     sd() %>% 
     `*`(., 10) %>% 
     signif(4)
 
-# meanlog and sdlog parameters for the log-normal distribution that generates
-#   s_theta values
-#   (s_theta = among-line standard deviation of the log-transformed growth rates)
-gamma <- c(fast, slow) %>% 
+# meanlog and sdlog parameters for the distribution that generates
+#   sigma_rho values
+#   (sigma_rho = among-line standard deviation of the log-transformed growth rates)
+theta[5] <- c(fast, slow) %>% 
     log() %>% 
     sd() %>% 
-    log() %>% 
     signif(4)
-sigma_gamma <- 1.0
+theta[6] <- 1.0
 ```
 
 
@@ -207,7 +216,7 @@ sim_R <- function(df_, R_, alpha_ = 1/2000) {
             line = paste0("r", R_), rep = rep(1:5, each=15), 
             date = rep(1:15, 5) + 3,
             X = sim_lines(R = R_, alpha = alpha_, n_reps = 5,
-                          nobs_ts = rep(15, 5), sigma_process = exp(tau)) %>% 
+                          nobs_ts = rep(15, 5), sigma_process = theta[1]) %>% 
                 as.numeric())
 }
 
@@ -227,10 +236,12 @@ load_prior_data() %>%
 
 
 
-For the among-line mean of the log-transformed growth rates ($\mu_\theta$), 
-I used `mean(log(c(fast, slow)))`, `r mu_theta`.
-For the standard deviation of $\mu_\theta$ ($\sigma_\theta$),
-I used `sd(log(c(fast, slow))) * 10`, `r sigma_theta`.
+
+
+For sampling $\rho$, I used a mean ($\theta_3$ parameter) of `mean(log(c(fast, slow)))`,
+$`r theta[3]`$.
+For the standard deviation of $\rho$ (NOT the among-line SD, rather $\theta_4$)
+I used `sd(log(c(fast, slow))) * 10`, $`r theta[4]`$.
 I multiplied by 10 to add extra uncertainty because of the limited number of lines
 from which I derived my priors.
 In the plot below, I've exponentiated the x-axis so that it displays the values of
@@ -238,28 +249,26 @@ $r$ that would result.
 
 
 ```{r mean_theta_distr}
-compare_priors(dlnorm_, mu_theta, sigma_theta, xlim = c(0, 1.25)) +
-    geom_vline(xintercept = exp(mu_theta)) +
-    ggtitle(expression(italic(r) == plain(exp)(theta %~% plain(N)(
-        mu[theta] * "," ~ sigma[theta]^2)))) +
+compare_priors(dlnorm_, theta[3], theta[4], xlim = c(0, 2)) +
+    geom_vline(xintercept = exp(theta[3])) +
+    ggtitle(expression(plain(exp)(rho %~% plain(N)(
+        theta[3] * "," ~ theta[4])))) +
+    # coord_cartesian(ylim = c(0, 0.4 / theta[4])) +
     NULL
 ```
 
 
-For sampling $s_\theta$, I use `sd(log(c(fast, slow)))` (`r gamma`) for the location
-parameter and `r sigma_gamma` for the scale parameter.
-The latter was chosen to indicate even more uncertainty in $s_\theta$ than in
-$\mu_\theta$.
-Note that below, the x-axis is log-transformed, but axis labels indicate 
-non-transformed values.
+For sampling $\sigma_\rho$ (the among-line SD of $\log(r)$),
+I used `sd(log(c(fast, slow)))` ($`r theta[5]`$) for the mean ($\theta_5$ parameter)
+and $`r theta[6]`$ for the SD ($\theta_6$ parameter).
+The latter was chosen to indicate even more uncertainty in $\sigma_\rho$ than in
+$\rho$.
 
 ```{r s_theta_distr}
-compare_priors("normal", gamma, sigma_gamma, xlim = gamma + c(-1,1) * 3.25) +
-    geom_vline(xintercept = gamma) +
-    ggtitle(expression(s[theta] %~% plain("Lognormal")(gamma * "," ~ sigma[gamma]))) +
-    scale_x_continuous(breaks = log(c(2 * 10^(-2:0), 0.01, 0.1, 1)),
-                       labels = c(2 * 10^(-2:0), 0.01, 0.1, 1)) +
-    coord_cartesian(ylim = c(0, 0.4 / sigma_gamma)) +
+compare_priors("normal", theta[5], theta[6], xlim = c(0, 2)) +
+    geom_vline(xintercept = theta[5]) +
+    ggtitle(expression(sigma[rho] %~% plain("N")(theta[5] * "," ~ theta[6]))) +
+    coord_cartesian(ylim = c(0, 0.4 / theta[6])) +
     NULL
 ```
 
@@ -269,9 +278,17 @@ compare_priors("normal", gamma, sigma_gamma, xlim = gamma + c(-1,1) * 3.25) +
 
 ## Density dependence
 
+Logit-transformed density dependences ($\text{logit}(\alpha)$) were sampled based
+on three parameters:
+overall mean ($\phi \sim \text{N}(\theta_7, ~ \theta_8^{~2})$),
+among-line SD
+($\sigma_{\phi a} \sim \text{N}(\theta_9, ~ \theta_{10}^{~2}) \texttt{T[0,]}$),
+and
+within-line SD
+($\sigma_{\phi w} \sim \text{N}(\theta_{11}, ~ \theta_{12}^{~2}) \texttt{T[0,]}$).
 
-For density dependence, I'm going to use data from preliminary population-growth
-assays that used the same methods that we're using.
+For density dependence prior information, I used data from
+preliminary population-growth assays that used the same methods that we're using.
 We conducted these assays on 4 aphid lines that we no longer maintain in the lab
 and won't be using for our analyses or cage experiments.
 
@@ -280,7 +297,7 @@ If we look at the deterministic portion of our model...
 $$
 X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right)
 $$
-... $X_{t+1} = X_t$ when $\alpha = 1 / \exp(X_t) = 1 / N_t$.
+... we can see that $X_{t+1} = X_t$ when $\alpha = 1 / \exp(X_t) = 1 / N_t$.
 Because each repetition is run until the plant dies and populations crash,
 I'll assume that for each repetition, our estimate of $\alpha$ is $1 / \max(N_t)$.
 
@@ -306,14 +323,14 @@ prior_df <- prior_df %>%
 ```{r define_alpha_priors}
 # mean and standard deviations of the normal distribution that generates phi values
 #   (phi = among-line mean of the logit-transformed density dependences)
-mu_phi <- prior_df %>% 
+theta[7] <- prior_df %>% 
     group_by(line) %>% 
     summarize(logit_alpha = mean(logit_alpha)) %>% 
     ungroup() %>% 
     summarize(logit_alpha = mean(logit_alpha)) %>% 
     .[["logit_alpha"]] %>% 
     signif(4)
-sigma_phi <- prior_df %>% 
+theta[8] <- prior_df %>% 
     group_by(line) %>% 
     summarize(logit_alpha = mean(logit_alpha)) %>% 
     ungroup() %>% 
@@ -322,42 +339,30 @@ sigma_phi <- prior_df %>%
     `*`(., 10) %>%
     signif(4)
 
-# - $\delta$: meanlog parameter for the log-normal distribution that generates
-#   $s_\phi$ values
-# - $\sigma_\delta$: sdlog parameter for the log-normal distribution that generates
-#   $s_\phi$ values
-# - $\zeta$: meanlog parameter for the log-normal distribution that generates
-#   values in $\hat{s}_{\phi}$
-# - $\sigma_\zeta$: sdlog parameter for the log-normal distribution that generates
-#   values in $\hat{s}_{\phi}$
+# - $\theta_9$: mean of the normal distribution that generates $\sigma_{\phi a}$ values
+# - $\theta_{10}$: sd of the normal distribution that generates $\sigma_{\phi a}$ values
+# - $\theta_{11}$: mean of the normal distribution that generates $\sigma_{\phi w}$ values
+# - $\theta_{12}$: sd of the normal distribution that generates $\sigma_{\phi w}$ values
 
-# meanlog and sdlog parameters for the log-normal distribution that generates
-#   s_phi values
-#   (s_phi = among-line standard deviation of the logit-transformed density dependences)
-delta <- prior_df %>% 
+theta[9] <- prior_df %>% 
     group_by(line) %>% 
     summarize(logit_alpha = mean(logit_alpha)) %>% 
     ungroup() %>% 
     summarize(logit_alpha = sd(logit_alpha)) %>% 
     .[["logit_alpha"]] %>% 
-    log() %>% 
     signif(4)
-sigma_delta <- 2
+theta[10] <- 1
 
-# meanlog and sdlog parameters for the log-normal distribution that generates
-#   values in hat_s_phi
-#   (hat_s_phi = vector of the within-line standard deviations in the logit-transformed
-#    density dependences for each aphid line)
-zeta <- prior_df %>%
+theta[11] <- prior_df %>%
     group_by(line) %>% 
-    summarize(logit_alpha = logit_alpha %>% sd() %>% log()) %>% 
+    summarize(logit_alpha = sd(logit_alpha)) %>% 
     ungroup() %>% 
     summarize(logit_alpha = mean(logit_alpha)) %>%
     .[["logit_alpha"]] %>%
     signif(4)
-sigma_zeta <- prior_df %>%
+theta[12] <- prior_df %>%
     group_by(line) %>%
-    summarize(logit_alpha = logit_alpha %>% sd() %>% log()) %>%
+    summarize(logit_alpha = sd(logit_alpha)) %>% 
     ungroup() %>%
     summarize(logit_alpha = sd(logit_alpha)) %>%
     .[["logit_alpha"]] %>%
@@ -366,15 +371,13 @@ sigma_zeta <- prior_df %>%
 ```
 
 
-### Among-line distribution
+### Overall mean
 
-For estimates relating to the among-line distribution of $\text{logit}(\alpha)$,
-I first calculated $\text{logit}(\alpha)$ for each line-rep combo,
-then calculated the mean for each line.
-After that, I used the mean across lines, `r sprintf("%.3f", mu_phi)`,
-as my prior for $\mu_\phi$.
-I multiplied the standard deviation across lines by 10 (resulting in `r sigma_phi`)
-for my prior on $\sigma_\phi$ to decrease my certainty in estimates.
+For sampling $\phi$, I used the mean $\text{logit}(\alpha)$ across lines,
+$`r theta[7]`$, as my prior for $\theta_7$.
+I multiplied the among-line SD of $\text{logit}(\alpha)$ by 10
+(resulting in $`r theta[8]`$)
+for my prior on $\theta_8$ to decrease my certainty in estimates.
 For the plot below, I inverse-logit transformed the x-axis to show the resulting $\alpha$
 values from these priors.
 It still has pretty low densities above 0.5, which is reasonable because that
@@ -384,53 +387,47 @@ would indicate a "carrying capacity" of < 2.
 logit_dlnorm <- function(p, location, scale) {
     dnorm(logit(p), location, scale)
 }
-compare_priors(logit_dlnorm, mu_phi, sigma_phi, xlim = c(0, 1)) +
-    geom_vline(xintercept = inv_logit(mu_phi), linetype = 2) +
-    ggtitle(expression(alpha == {plain("logit")^{-1}}(
-        phi %~% plain(N)(mu[phi] * "," ~ sigma[phi]^2))))
+compare_priors(logit_dlnorm, theta[7], theta[8], xlim = c(0, 1)) +
+    geom_vline(xintercept = inv_logit(theta[7]), linetype = 2) +
+    coord_cartesian(ylim = c(0, 0.4 / theta[8])) +
+    ggtitle(expression({plain("logit")^{-1}}(
+        phi %~% plain(N)(theta[7] * "," ~ theta[8]))))
 ```
 
 
-For the distribution of $s_\phi$ values, I used the log-transformed SD for among-line 
-mean $\text{logit}(\alpha)$ (`r delta`) for the meanlog parameter ($\delta$), and
-`r sigma_delta` for the sdlog parameter ($\sigma_\delta$).
+### Among-line SD
+
+For the distribution of $\sigma_{\phi a}$ values, I used the SD for among-line 
+mean $\text{logit}(\alpha)$ ($`r theta[9]`$) for the mean (parameter $\theta_9$), and
+$`r theta[10]`$ for the SD (parameter $\theta_{10}$).
 The latter was chosen simply because I'm not very sure of what it should be, and 
 this value results in a pretty flat prior distribution.
-Note that below, the x-axis is log-transformed, but axis labels indicate 
-non-transformed values.
 
 
 ```{r alpha_line_means_plot}
-compare_priors("normal", delta, sigma_delta, xlim = delta + c(-1,1) * sigma_delta * 3) +
-    geom_vline(xintercept = delta) +
-    ggtitle(expression(s[phi] %~% plain("Lognormal")(delta * "," ~ sigma[delta]))) +
-    scale_x_continuous(breaks = log(10^(-3:2)),
-                       labels = 10^(-3:2)) +
-    coord_cartesian(ylim = c(0, 0.4 / sigma_delta)) +
+compare_priors("normal", theta[9], theta[10], xlim = c(0, 2)) +
+    geom_vline(xintercept = theta[9]) +
+    ggtitle(expression(sigma[phi * a] %~% plain("N")(theta[9] * "," ~ theta[10]))) +
+    coord_cartesian(ylim = c(0, 0.4 / theta[10])) +
     NULL
 ```
 
 
 
-### Within-line distribution
+### Within-line SD
 
-For estimates relating to the *within*-line distribution of $\text{logit}(\alpha)$,
-I first calculated $\text{logit}(\alpha)$ for each line-rep combo,
-then calculated the standard deviation of these estimates for each line.
-After that, I used the mean of log-transformed SD estimates across lines, `r zeta`,
-as my prior for $\zeta$.
-I used $10 \times$ the SD of log-transformed SD estimates across lines, `r zeta`, 
-as my prior for $\zeta$.
+For sampling $\sigma_{\phi w}$,
+I used the mean of within-line SDs, $`r theta[11]`$, for $\theta_{11}$.
+I multiplied the SD of within-line SDs by 10, resulting in $`r theta[12]`$,
+for $\theta_{12}$.
 This results in the following weakly informative prior:
 
 
 ```{r alpha_within_line_sd_plot}
-compare_priors("normal", zeta, sigma_zeta, xlim = zeta + c(-1,1) * sigma_zeta * 3) +
-    geom_vline(xintercept = zeta) +
-    ggtitle(expression(hat(s)[phi] %~% plain("Lognormal")(zeta * "," ~ sigma[zeta]))) +
-    scale_x_continuous(breaks = log(10^(-3:2)),
-                       labels = 10^(-3:2)) +
-    coord_cartesian(ylim = c(0, 0.4 / sigma_zeta)) +
+compare_priors("normal", theta[11], theta[12], xlim = c(0, theta[11] + 2 * theta[12])) +
+    geom_vline(xintercept = theta[11]) +
+    ggtitle(expression(sigma[phi * w] %~% plain("N")(theta[11] * "," ~ theta[12]))) +
+    coord_cartesian(ylim = c(0, 0.4 / theta[12])) +
     NULL
 ```
 
@@ -442,36 +439,37 @@ compare_priors("normal", zeta, sigma_zeta, xlim = zeta + c(-1,1) * sigma_zeta * 
 ```{r priors_table}
 data_frame(
     par = c(
-        "tau",
-        "sigma_tau",
-        "mu_theta",
-        "sigma_theta",
-        "gamma",
-        "sigma_gamma",
-        "mu_phi",
-        "sigma_phi",
-        "delta",
-        "sigma_delta",
-        "zeta",
-        "sigma_zeta"
+        "$\\theta_{1}$",
+        "$\\theta_{2}$",
+        "$\\theta_{3}$",
+        "$\\theta_{4}$",
+        "$\\theta_{5}$",
+        "$\\theta_{6}$",
+        "$\\theta_{7}$",
+        "$\\theta_{8}$",
+        "$\\theta_{9}$",
+        "$\\theta_{10}$",
+        "$\\theta_{11}$",
+        "$\\theta_{12}$"
     ),
-    value = c(
-        tau,
-        sigma_tau,
-        mu_theta,
-        sigma_theta,
-        gamma,
-        sigma_gamma,
-        mu_phi,
-        sigma_phi,
-        delta,
-        sigma_delta,
-        zeta,
-        sigma_zeta
+    value = sprintf("$%.5f$", theta),
+    `description${}^{†}$` = c(
+        "mean for $\\sigma_\\varepsilon$",  # 1
+        "SD for $\\sigma_\\varepsilon$",  # 2
+        "mean for $\\rho$",  # 3
+        "SD for $\\rho$",  # 4
+        "mean for $\\sigma_\\rho$",  # 5
+        "SD for $\\sigma_\\rho$",  # 6
+        "mean for $\\phi$",  # 7
+        "SD for $\\phi$",  # 8
+        "mean for $\\sigma_{\\phi a}$",  # 9
+        "SD for $\\sigma_{\\phi a}$",  # 10
+        "mean for $\\sigma_{\\phi w}$",  # 11
+        "SD for $\\sigma_{\\phi w}$"  # 12
     )
 ) %>% 
-    knitr::kable(format = "html")
-
-
+    knitr::kable(format = "html", booktabs = TRUE, escape = FALSE,
+                 align = c("l", "r", "l"))
 ```
-
+$†$ For descriptions, "mean for $X$" indicates the mean for the distribution that generates
+$X$ values.

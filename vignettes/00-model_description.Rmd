@@ -71,19 +71,19 @@ For observation $k$:
 
 $$\begin{align}
     \varepsilon_k &= \sigma_\varepsilon Z_k \\
-    \sigma_\varepsilon &\sim \text{N} ( \theta_1, ~ \theta_2 ) \texttt{T[0,1]} \\
+    \sigma_\varepsilon &\sim \text{N} ( \theta_1, ~ \theta_2^{~2} ) \texttt{T[0,]} \\
 \end{align}$$
 
 
 ### Estimated from model:
 
-- $\sigma_\varepsilon$: standard deviation of the process error
+- $\sigma_\varepsilon$: SD of the process error
 
 
 #### Priors to define:
 
 - $\theta_1$: mean for the normal distribution that generates $\sigma_\varepsilon$ values
-- $\theta_2$: sd for the normal distribution that generates $\sigma_\varepsilon$ values
+- $\theta_2$: SD for the normal distribution that generates $\sigma_\varepsilon$ values
 
 
 
@@ -95,12 +95,9 @@ resulting in a vector of growth rates.
 The growth rate estimate for clonal line $i$ is generated as follows:
 
 $$\begin{align}
-    
     r_i &= \exp \left( \rho + \sigma_\rho ~ Z_i \right) \\
-    
-    \rho &\sim \text{N}(\theta_3, ~ \theta_4) \\
-    \sigma_\rho &\sim \text{N}(\theta_5, ~ \theta_6) \texttt{T[0,]} \\
-    
+    \rho &\sim \text{N}(\theta_3, ~ \theta_4^{~2}) \\
+    \sigma_\rho &\sim \text{N}(\theta_5, ~ \theta_6^{~2}) \texttt{T[0,]} \\
 \end{align}$$
 
 
@@ -109,16 +106,15 @@ $$\begin{align}
 
 - $\mathbf{R}$: vector ($r_i$ for all $i$) of growth rates for each aphid line
 - $\rho$: among-line mean of the log-transformed growth rates
-- $\sigma_\rho$: among-line standard deviation of the log-transformed growth rates
+- $\sigma_\rho$: among-line SD of the log-transformed growth rates
 
 
 ### Priors to define:
 
-- $\theta_3$: mean of the normal distribution that generates $\rho$ values
-- $\theta_4$: standard deviation of the normal distribution that generates
-  $\rho$ values
+- $\theta_3$: mean for the normal distribution that generates $\rho$ values
+- $\theta_4$: SD for the normal distribution that generates $\rho$ values
 - $\theta_5$: mean for the normal distribution that generates $\sigma_\rho$ values
-- $\theta_6$: sd for the normal distribution that generates $\sigma_\rho$ values
+- $\theta_6$: SD for the normal distribution that generates $\sigma_\rho$ values
 
 
 
@@ -134,15 +130,13 @@ For clonal line $i$ and plant $j$, estimates are generated as follows:
 
 
 $$\begin{align}
-
     \alpha_{ij} &= \text{logit}^{-1} \hspace{-0.25em}
         \left(
             \phi + \sigma_{\phi a} ~ Z_i + \sigma_{\phi w} ~ Z_j
         \right) \\
-    
-    \phi &\sim \text{N}(\theta_7, ~ \theta_8) \\
-    \sigma_{\phi a} &\sim \text{N}(\theta_9, ~ \theta_{10}) \texttt{T[0,]} \\
-    \sigma_{\phi w} &\sim \text{N}(\theta_{11}, ~ \theta_{12}) \texttt{T[0,]} \\
+    \phi &\sim \text{N}(\theta_7, ~ \theta_8^{~2}) \\
+    \sigma_{\phi a} &\sim \text{N}(\theta_9, ~ \theta_{10}^{~2}) \texttt{T[0,]} \\
+    \sigma_{\phi w} &\sim \text{N}(\theta_{11}, ~ \theta_{12}^{~2}) \texttt{T[0,]} \\
 \end{align}$$
 
 
@@ -152,19 +146,25 @@ $$\begin{align}
 
 - $\mathbf{A}$: vector of density dependences ($\alpha_i$ for all $i$) for each aphid line
 - $\phi$: among-line mean of the logit-transformed density dependences
-- $\sigma_{\phi a}$: among-line standard deviation of the logit-transformed density
+- $\sigma_{\phi a}$: among-line SD of the logit-transformed density
   dependences
-- $\sigma_{\phi w}$: the within-line standard deviations in the logit-transformed
+- $\sigma_{\phi w}$: the within-line SDs in the logit-transformed
   density dependences for each aphid line
 
 
 ### Priors to define:
 
-- $\theta_{7}$: mean of the normal distribution that generates $\phi$ values
-- $\theta_{8}$: standard deviation of the normal distribution that generates $\phi$
-  values
+- $\theta_{7}$: mean for the normal distribution that generates $\phi$ values
+- $\theta_{8}$: SD for the normal distribution that generates $\phi$ values
 - $\theta_{9}$: mean for the normal distribution that generates $\sigma_{\phi a}$ values
-- $\theta_{10}$: sd for the normal distribution that generates $\sigma_{\phi a}$ values
-- $\theta_{11}$: mean for the normal distribution that generates values in $\sigma_{\phi w}$
-- $\theta_{12}$: sd for the normal distribution that generates values in $\sigma_{\phi w}$
+- $\theta_{10}$: SD for the normal distribution that generates $\sigma_{\phi a}$ values
+- $\theta_{11}$: mean for the normal distribution that generates $\sigma_{\phi w}$ values
+- $\theta_{12}$: SD for the normal distribution that generates $\sigma_{\phi w}$ values
+
+
+
+
+
+
+
 
