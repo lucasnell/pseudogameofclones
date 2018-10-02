@@ -37,10 +37,7 @@ suppressPackageStartupMessages({
 
 ```{r load_growth_dataset}
 growth <- 
-    load_data(impute_fxn = impute) %>%
-    mutate(line = paste(line)) %>% 
-    bind_rows(clonewars:::load_pz_data(impute_fxn = impute)) %>% 
-    mutate_at(vars(line, rep), funs(factor)) %>% 
+    load_data() %>%
     # Now filter out early part of each time series, before N > 6
     # N <= 6 is when the stochasticity associated with only starting with 2 adults
     # appears to be strongest

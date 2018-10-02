@@ -49,10 +49,7 @@ inv_logit <- function(x) {
 
 ```{r until_max_model}
 until_max <- 
-    load_data(impute_fxn = impute, filter_pars = NULL) %>%
-    mutate(line = paste(line)) %>%
-    bind_rows(clonewars:::load_pz_data(impute_fxn = impute, filter_pars = NULL)) %>%
-    mutate_at(vars(line, rep), funs(factor)) %>%
+    load_data(filter_pars = NULL) %>%
     # Now filter out early part of each time series, before N > 6
     # N <= 6 is when the stochasticity associated with only starting with 2 adults
     # appears to be strongest
@@ -68,8 +65,8 @@ until_max <-
 
 until_max %>% 
     ggplot(aes(line, days, color = line)) +
-    scale_color_brewer(palette = "Set3", guide = FALSE) +
-    geom_point()
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    geom_jitter(width = 0.2, height = 0)
 
 until_max %>% 
     ggplot(aes(days)) +
@@ -86,7 +83,7 @@ until_max_summ <- until_max %>%
 ## Looking at mortality after max is reached
 
 ```{r after_max_data}
-after_max <- load_data(filter_pars = NULL, impute_fxn = impute) %>% 
+after_max <- load_data(filter_pars = NULL) %>% 
     mutate(rep = factor(rep)) %>% 
     group_by(line, rep) %>%
     filter(1:n() >= which(N == max(N))[1]) %>%
@@ -170,13 +167,13 @@ after_max %>%
 ```
 
 ```{r after_max_coefs}
-# Each line's coefficients, with an added row for WI-L4Ø that's just the mean:
+# Each line's coefficients:
 after_max_coefs <- after_max_mod %>%
     coef() %>% 
     {
         .. <- cbind(
-            .[grepl("^date", names(.))],
-            .[!grepl("^date", names(.))]
+            .[!grepl("^date", names(.))],
+            .[grepl("^date", names(.))]
         )
         rownames(..) <- gsub("line", "", names(.)[!grepl("^date", names(.))])
         ..
