@@ -49,13 +49,15 @@ See `?impute` for information on imputing missing data.
 
 ```{r load_data}
 growth <- 
-    load_data() %>%
+    load_data(remove_unfinished = TRUE, filter_pars = list(start = 0, end = 0.8)) %>%
+    # Temporarily remove these reps:
+    filter(!(line == "WI-L4Ø" & rep %in% c(4, 7))) %>% 
     # Now filter out early part of each time series, before N > 6
     # N <= 6 is when the stochasticity associated with only starting with 2 adults
     # appears to be strongest
     group_by(line, rep) %>% 
     filter(1:n() >= which(N > 6)[1]) %>%
-    mutate(date = date - min(date)) %>%
+    mutate(date = as.integer(date - min(date))) %>%
     ungroup()
 ```
 
@@ -92,30 +94,20 @@ growth %>%
 
 
 
-## Convert data for stan
-
-```{r convert_data}
-model_data <- growth %>% 
-    line_data()
-str(model_data, give.attr = FALSE)
-```
-
-
 ## Run model
 
-```{r run_model, eval = FALSE}
-# Takes ~ 42 sec at adapt_delta = 0.9
+```{r run_model, eval = TRUE}
+# Takes ~ 35 sec
+theta_ <- theta
+theta_[seq(2, length(theta_),2)] <- 10 * theta_[seq(2, length(theta_),2)]
 set.seed(65136)
-stan_fit <- model_data %>%
-    fit_lines(
-        control = list(adapt_delta = 0.9)
-    )
+stan_fit <- fit_lines(growth, theta_ = theta_)
 ```
 ```{r write_model, eval = FALSE, echo = FALSE}
 write_rds(stan_fit, "data-raw/stan_fit.rds")
 ```
 ```{r read_model, eval = TRUE, echo = FALSE}
-stan_fit <- read_rds("data-raw/stan_fit.rds")
+# stan_fit <- read_rds("data-raw/stan_fit.rds")
 ```
 
 
@@ -128,10 +120,10 @@ stan_fit <- read_rds("data-raw/stan_fit.rds")
 
 posterior <- as.array(stan_fit)
 
-mcmc_intervals(posterior, pars = sprintf("R[%i]", 1:8)) +
+mcmc_intervals(posterior, pars = sprintf("Z_r[%i]", 1:8)) +
     scale_y_discrete(labels = growth$line %>% levels()) +
     ggtitle("Growth rates")
-mcmc_intervals(posterior, pars = sprintf("A[%i]", 1:8)) +
+mcmc_intervals(posterior, pars = sprintf("Z_a_a[%i]", 1:8)) +
     scale_y_discrete(labels = growth$line %>% levels()) +
     ggtitle("Density dependences")
 ```
@@ -142,21 +134,53 @@ it's not ready.
 
 
 ```{r examine_model2, eval = FALSE}
-apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, mean)
-apply(rstan::extract(stan_fit, "A", permuted = FALSE), 3, mean)
 
-apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE), 3, mean)
-apply(rstan::extract(stan_fit, "s_epsilon", permuted = FALSE), 3, quantile,
+for (i in 1:6) {
+    x <- c("sigma_epsilon", "rho", "sigma_rho", "phi", "sigma_phi_a", "sigma_phi_w")[i]
+    y <- theta_[seq(2, length(theta_),2)][i]
+    z <- apply(rstan::extract(stan_fit, x, permuted = FALSE), 3, sd)
+    cat(sprintf("parameter: %s\n prior SD:     %.5g\n posterior SD: %.5g\n\n", x, y, z))
+}; rm(x,y,i)
+
+
+
+
+
+apply(rstan::extract(stan_fit, "Z_r", permuted = FALSE), 3, mean)
+apply(rstan::extract(stan_fit, "Z_a_a", permuted = FALSE), 3, mean)
+
+apply(rstan::extract(stan_fit, "sigma_epsilon", permuted = FALSE), 3, mean)
+apply(rstan::extract(stan_fit, "sigma_epsilon", permuted = FALSE), 3, quantile,
       probs = c(0.025, 0.975))
 
 
 
-print(stan_fit, digits = 6, pars = c("R", "A", "s_epsilon"), probs = c())
+print(stan_fit, digits = 6, pars = c("Z_r", "Z_a_a", "sigma_epsilon"), probs = c())
+print(stan_fit, digits = 6, pars = c("phi", "sigma_phi_a", "sigma_phi_w"), probs = c())
+
+
+
+1 / gtools::inv.logit(-6.161071 + 0.944846 * c(0.009243, 0.010392, 0.015830, 0.002257, -0.003927, 0.022353, -0.005837, -0.002897))
 
 # parameters of interest
-pars_interest <- c(sprintf("A[%i]", 1:8), sprintf("R[%i]", 1:8),
-                   paste0(rep(c("", "s_"),each=2), c("theta", "phi")),
-                   "hats_phi", "s_epsilon")
+pars_interest <- c(sprintf("Z_a_a[%i]", 1:8), sprintf("Z_r[%i]", 1:8),
+                   "rho", "sigma_rho",
+                   "phi", "sigma_phi_a", "sigma_phi_w",
+                   "sigma_epsilon")
+non_ZX_pars <- names(stan_fit)[!grepl("^Z", names(stan_fit)) & 
+                                   !grepl("^X", names(stan_fit))]
+
+
+mcmc_areas(posterior, pars = non_ZX_pars[non_ZX_pars != "lp__" & non_ZX_pars != "phi"])
+
+mcmc_areas(posterior, pars = "phi")
+
+
+rhat(stan_fit, pars = non_ZX_pars) %>% 
+    mcmc_rhat() + yaxis_text(hjust = 1)
+neff_ratio(stan_fit, pars = non_ZX_pars) %>% 
+    mcmc_neff() + yaxis_text(hjust = 1)
+
 
 # Rhats
 rhats <- rhat(stan_fit, pars = pars_interest)
@@ -173,23 +197,23 @@ mcmc_acf(posterior, pars = pars_interest[9:16], lags = 10)
 mcmc_acf(posterior, pars = pars_interest[17:length(pars_interest)], lags = 10)
 
 
-lp <- log_posterior(stan_fit)
-np <- nuts_params(stan_fit)
-
-mcmc_trace(posterior, pars = pars_interest[1:8], np = np)
-mcmc_trace(posterior, pars = pars_interest[9:16], np = np)
-mcmc_trace(posterior, pars = pars_interest[17:length(pars_interest)], np = np)
-
-mcmc_nuts_divergence(np, lp)
-
-mcmc_parcoord(posterior, np = np)
-
-mcmc_scatter(
-  posterior,
-  pars = c("s_epsilon", "R[6]"),
-  transform = list(`R[6]` = "log"),
-  np = np
-)
+# # Only really useful if there were divergences:
+# np <- NULL # nuts_params(stan_fit)
+# lp <- log_posterior(stan_fit)
+# mcmc_trace(posterior, pars = pars_interest[1:8], np = np)
+# mcmc_trace(posterior, pars = pars_interest[9:16], np = np)
+# mcmc_trace(posterior, pars = pars_interest[17:length(pars_interest)], np = np)
+# 
+# mcmc_nuts_divergence(np, lp)
+# 
+# mcmc_parcoord(posterior, np = np)
+# 
+# mcmc_scatter(
+#   posterior,
+#   pars = c("s_epsilon", "R[6]"),
+#   transform = list(`R[6]` = "log"),
+#   np = np
+# )
 
 
 growth %>% 
@@ -202,7 +226,7 @@ growth %>%
 pred_df <- make_pred_df(stan_fit, growth)
 
 pred_df %>%
-    # filter(rep == 1) %>% 
+    # filter(rep == 1) %>%
     # filter(rep == 4, line == "Clover-2017-2") %>%
     ggplot(aes(date, X)) +
     geom_ribbon(aes(ymin = X_lower, ymax = X_upper),
@@ -211,7 +235,9 @@ pred_df %>%
     geom_point(shape = 1, color = "firebrick", alpha = 0.5) +
     geom_line(aes(y = X_pred), color = "dodgerblue3", size = 0.5) +
     # facet_wrap(~ rep + line, nrow = 2) +
-    facet_wrap(~ rep + line, nrow = 4) +
+    facet_wrap(~ rep + line, nrow = 7) +
+    # coord_trans(y = "exp") +
+    theme(strip.text = element_blank()) +
     NULL
 
 
