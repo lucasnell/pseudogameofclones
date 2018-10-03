@@ -1,12 +1,10 @@
 functions {
 
-    vector ricker(vector X, int start, int end, real r_, real a_,
-                  real sigma_, vector Z_X) {
+    vector ricker(vector X, int start, int end, real r_, real a_) {
         vector[end - start + 1] X_out;
         X_out[1] = X[start];
         X_out[2:(end - start + 1)] = X[start:(end - 1)] +
-            r_ * (1 - a_ * exp(X[start:(end - 1)])) +
-            (sigma_ * Z_X);
+            r_ * (1 - a_ * exp(X[start:(end - 1)]));
         return X_out;
     }
 
@@ -74,9 +72,8 @@ transformed parameters {
             real r_ = exp(rho + sigma_rho * Z_r[L[j]]);
             // density dependence (alpha) for this time series:
             real a_ = inv_logit(phi + sigma_phi_a * Z_a_a[L[j]] + sigma_phi_w * Z_a_w[j]);
-            // filling in predicted X_t+1 based on X_t, plus process error:
-            X_pred[start:end] = ricker(X, start, end, r_, a_,
-                sigma_epsilon, Z_X[(start + 1 - j):(end - j)]);
+            // filling in predicted X_t+1 based on X_t:
+            X_pred[start:end] = ricker(X, start, end, r_, a_);
             // iterate `start` index:
             start += n_;
         }
@@ -89,7 +86,6 @@ model {
     Z_r ~ normal(0, 1);                 // for growth rates by line
     Z_a_a ~ normal(0, 1);               // for density dependence by line
     Z_a_w ~ normal(0, 1);               // for density dependence by plant
-    Z_X ~ normal(0, 1);                 // for process error
 
     sigma_epsilon ~ normal(theta[1], theta[2])T[0,];
     rho  ~ normal(theta[3], theta[4]);
@@ -97,4 +93,7 @@ model {
     phi  ~ normal(theta[7], theta[8]);
     sigma_phi_a  ~ normal(theta[9], theta[10])T[0,];
     sigma_phi_w  ~ normal(theta[11], theta[12])T[0,];
+
+    // Process error:
+    X ~ normal(X_pred, sigma_epsilon);
 }
