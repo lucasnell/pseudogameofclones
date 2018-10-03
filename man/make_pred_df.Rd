@@ -4,7 +4,7 @@
 \alias{make_pred_df}
 \title{Make prediction data frame from model output and the original data frame.}
 \usage{
-make_pred_df(stan_fit, orig_data, line, rep, alpha = 0.05)
+make_pred_df(stan_fit, orig_data, line, rep, date, alpha = 0.05)
 }
 \arguments{
 \item{stan_fit}{The \code{stanfit} object containing the model fit.}
