@@ -1,23 +1,29 @@
 functions {
 
-    vector ricker(vector X, int n_, real r_, real a_) {
-        int X_size = rows(X);
-        vector[X_size] X_out;
-        X_out[1] = X[1];
-        X_out[2:n_] = X[1:(n_-1)] + r_ * (1 - a_ * exp(X[1:(n_-1)]));
-        if (n_ < X_size) for (t in (n_+1):X_size) X_out[t] = 0;
+    vector ricker(vector X, int start, int end, real r_, real a_,
+                  real sigma_, vector Z_X) {
+        vector[end - start + 1] X_out;
+        X_out[1] = X[start];
+        X_out[2:(end - start + 1)] = X[start:(end - 1)] +
+            r_ * (1 - a_ * exp(X[start:(end - 1)])) +
+            (sigma_ * Z_X);
         return X_out;
     }
 
 }
 data {
 
-    int<lower=1> N_ts;                          // Number of time series (line + rep)
-    int<lower=1> max_reps;                      // Max reps per time series
+    // Indices:
+    int<lower=1> n_ts;                          // number of time series (line + rep)
+    int<lower=1> n_obs;                         // total number of observations
+    int<lower=1> n_per[n_ts];                   // number of obs. for each time series
+
+    // Data:
+    vector<lower=0>[n_obs] X;                   // log(N_t)
+
     int<lower=1> n_lines;                       // number of aphid lines
-    int<lower=1> nobs_ts[N_ts];                 // # observations for each time series
-    int<lower=1, upper=n_lines> L[N_ts];        // aphid line for each time series
-    matrix<lower=0>[max_reps, N_ts] X;          // log(N_t)
+    int<lower=1, upper=n_lines> L[n_ts];        // aphid line for each time series
+
     // Vector of priors:
     real theta[12];
     // Priors are as follows:
@@ -37,38 +43,45 @@ data {
 }
 parameters {
 
-    // Z-transforms:
+    // Z-scores:
 
     vector[n_lines] Z_r;
     vector[n_lines] Z_a_a;
-    vector[N_ts] Z_a_w;
-    matrix<lower=0>[max_reps-1, N_ts] Z_X;
+    vector[n_ts] Z_a_w;
+    vector[(n_obs-n_ts)] Z_X;
 
-    real sigma_epsilon;                 // process error
+    real<lower=0> sigma_epsilon;        // process error
     // Means and SDs (on transformed scale):
     real rho;                           // mean growth rates: log(r)
-    real sigma_rho;                     // variation in r between lines
+    real<lower=0> sigma_rho;            // among-line SD in log(r)
     real phi;                           // mean density dependences: logit(alpha)
-    real sigma_phi_a;                   // variation in alpha among lines
-    real sigma_phi_w;                   // variation in alpha within lines
+    real<lower=0> sigma_phi_a;          // among-line SD in logit(alpha)
+    real<lower=0> sigma_phi_w;          // within-line SD in logit(alpha)
 
 }
 transformed parameters {
 
-    matrix[max_reps, N_ts] X_pred;      // predicted X not including process error
+    vector[n_obs] X_pred;               // predicted X not including process error
 
-    for (j in 1:N_ts) {
-        // number of observations for this time series:
-        int n_ = nobs_ts[j];
-        // R for this time series:
-        real r_ = exp(rho + sigma_rho * Z_r[L[j]]);
-        // A for this time series:
-        real a_ = inv_logit(phi + sigma_phi_a * Z_a_a[L[j]] + sigma_phi_w * Z_a_w[j]);
-        // Now filling in predicted X_t+1 based on X_t:
-        X_pred[, j] = ricker(X[, j], n_, r_, a_, Z_X[,j]);
-        // Adding process error:
-        X_pred[2:n_, j] += (sigma_epsilon * Z_X[1:(n_-1), j]);
+    // iterate over each time series
+    {
+        int start = 1; // starting position in `X` and `X_pred` vectors
+        for (j in 1:n_ts) {
+            // number of observations for this time series:
+            int n_ = n_per[j];
+            int end = start + n_ - 1;
+            // growth rate (r) for this time series:
+            real r_ = exp(rho + sigma_rho * Z_r[L[j]]);
+            // density dependence (alpha) for this time series:
+            real a_ = inv_logit(phi + sigma_phi_a * Z_a_a[L[j]] + sigma_phi_w * Z_a_w[j]);
+            // filling in predicted X_t+1 based on X_t, plus process error:
+            X_pred[start:end] = ricker(X, start, end, r_, a_,
+                sigma_epsilon, Z_X[(start + 1 - j):(end - j)]);
+            // iterate `start` index:
+            start += n_;
+        }
     }
+
 
 }
 model {
@@ -84,10 +97,4 @@ model {
     phi  ~ normal(theta[7], theta[8]);
     sigma_phi_a  ~ normal(theta[9], theta[10])T[0,];
     sigma_phi_w  ~ normal(theta[11], theta[12])T[0,];
-
-    // This was observation error:
-    // for (j in 1:N_ts) {
-    //     X[2:nobs_ts[j], j] ~ normal(X_pred[2:nobs_ts[j], j], sigma_epsilon);
-    // }
-
 }
