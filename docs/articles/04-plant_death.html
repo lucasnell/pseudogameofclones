@@ -138,27 +138,24 @@
 <h2 class="hasAnchor">
 <a href="#looking-at-when-the-max-is-reached" class="anchor"></a>Looking at when the max is reached</h2>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">until_max &lt;-<span class="st"> </span></a>
-<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="st">    </span><span class="kw"><a href="../reference/load_data.html">load_data</a></span>(<span class="dt">impute_fxn =</span> impute, <span class="dt">filter_pars =</span> <span class="ot">NULL</span>) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb2-3" data-line-number="3"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">line =</span> <span class="kw">paste</span>(line)) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb2-4" data-line-number="4"><span class="st">    </span><span class="kw">bind_rows</span>(clonewars<span class="op">:::</span><span class="kw"><a href="../reference/load_pz_data.html">load_pz_data</a></span>(<span class="dt">impute_fxn =</span> impute, <span class="dt">filter_pars =</span> <span class="ot">NULL</span>)) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb2-5" data-line-number="5"><span class="st">    </span><span class="kw">mutate_at</span>(<span class="kw">vars</span>(line, rep), <span class="kw">funs</span>(factor)) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb2-6" data-line-number="6"><span class="st">    </span><span class="co"># Now filter out early part of each time series, before N &gt; 6</span></a>
-<a class="sourceLine" id="cb2-7" data-line-number="7"><span class="st">    </span><span class="co"># N &lt;= 6 is when the stochasticity associated with only starting with 2 adults</span></a>
-<a class="sourceLine" id="cb2-8" data-line-number="8"><span class="st">    </span><span class="co"># appears to be strongest</span></a>
-<a class="sourceLine" id="cb2-9" data-line-number="9"><span class="st">    </span><span class="co"># Also filter out until the max is reached, then summarize to see how many days </span></a>
-<a class="sourceLine" id="cb2-10" data-line-number="10"><span class="st">    </span><span class="co"># from N &lt;= 6 to the max N</span></a>
-<a class="sourceLine" id="cb2-11" data-line-number="11"><span class="st">    </span><span class="kw">group_by</span>(line, rep) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb2-12" data-line-number="12"><span class="st">    </span><span class="kw">filter</span>(<span class="dv">1</span><span class="op">:</span><span class="kw">n</span>() <span class="op">&gt;=</span><span class="st"> </span><span class="kw">which</span>(N <span class="op">&gt;</span><span class="st"> </span><span class="dv">6</span>)[<span class="dv">1</span>],</a>
-<a class="sourceLine" id="cb2-13" data-line-number="13">           <span class="dv">1</span><span class="op">:</span><span class="kw">n</span>() <span class="op">&lt;=</span><span class="st"> </span><span class="kw">which</span>(N <span class="op">==</span><span class="st"> </span><span class="kw">max</span>(N))[<span class="dv">1</span>]) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb2-14" data-line-number="14"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">date =</span> date <span class="op">-</span><span class="st"> </span><span class="kw">min</span>(date)) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb2-15" data-line-number="15"><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">days =</span> <span class="kw">max</span>(date)) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb2-16" data-line-number="16"><span class="st">    </span><span class="kw">ungroup</span>()</a>
-<a class="sourceLine" id="cb2-17" data-line-number="17"></a>
-<a class="sourceLine" id="cb2-18" data-line-number="18"></a>
-<a class="sourceLine" id="cb2-19" data-line-number="19">until_max <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb2-20" data-line-number="20"><span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(line, days, <span class="dt">color =</span> line)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb2-21" data-line-number="21"><span class="st">    </span><span class="kw">scale_color_brewer</span>(<span class="dt">palette =</span> <span class="st">"Set3"</span>, <span class="dt">guide =</span> <span class="ot">FALSE</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb2-22" data-line-number="22"><span class="st">    </span><span class="kw">geom_point</span>()</a></code></pre></div>
+<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="st">    </span><span class="kw"><a href="http://www.rdocumentation.org/packages/clonewars/topics/load_data">load_data</a></span>(<span class="dt">filter_pars =</span> <span class="ot">NULL</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-3" data-line-number="3"><span class="st">    </span><span class="co"># Now filter out early part of each time series, before N &gt; 6</span></a>
+<a class="sourceLine" id="cb2-4" data-line-number="4"><span class="st">    </span><span class="co"># N &lt;= 6 is when the stochasticity associated with only starting with 2 adults</span></a>
+<a class="sourceLine" id="cb2-5" data-line-number="5"><span class="st">    </span><span class="co"># appears to be strongest</span></a>
+<a class="sourceLine" id="cb2-6" data-line-number="6"><span class="st">    </span><span class="co"># Also filter out until the max is reached, then summarize to see how many days </span></a>
+<a class="sourceLine" id="cb2-7" data-line-number="7"><span class="st">    </span><span class="co"># from N &lt;= 6 to the max N</span></a>
+<a class="sourceLine" id="cb2-8" data-line-number="8"><span class="st">    </span><span class="kw">group_by</span>(line, rep) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-9" data-line-number="9"><span class="st">    </span><span class="kw">filter</span>(<span class="dv">1</span><span class="op">:</span><span class="kw">n</span>() <span class="op">&gt;=</span><span class="st"> </span><span class="kw">which</span>(N <span class="op">&gt;</span><span class="st"> </span><span class="dv">6</span>)[<span class="dv">1</span>],</a>
+<a class="sourceLine" id="cb2-10" data-line-number="10">           <span class="dv">1</span><span class="op">:</span><span class="kw">n</span>() <span class="op">&lt;=</span><span class="st"> </span><span class="kw">which</span>(N <span class="op">==</span><span class="st"> </span><span class="kw">max</span>(N))[<span class="dv">1</span>]) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-11" data-line-number="11"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">date =</span> date <span class="op">-</span><span class="st"> </span><span class="kw">min</span>(date)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-12" data-line-number="12"><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">days =</span> <span class="kw">max</span>(date)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-13" data-line-number="13"><span class="st">    </span><span class="kw">ungroup</span>()</a>
+<a class="sourceLine" id="cb2-14" data-line-number="14"></a>
+<a class="sourceLine" id="cb2-15" data-line-number="15"></a>
+<a class="sourceLine" id="cb2-16" data-line-number="16">until_max <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-17" data-line-number="17"><span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(line, days, <span class="dt">color =</span> line)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-18" data-line-number="18"><span class="st">    </span><span class="kw">scale_color_brewer</span>(<span class="dt">palette =</span> <span class="st">"Dark2"</span>, <span class="dt">guide =</span> <span class="ot">FALSE</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-19" data-line-number="19"><span class="st">    </span><span class="kw">geom_jitter</span>(<span class="dt">width =</span> <span class="fl">0.2</span>, <span class="dt">height =</span> <span class="dv">0</span>)</a></code></pre></div>
 <p><img src="04-plant_death_files/figure-html/until_max_model-1.svg" width="576"></p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1"></a>
 <a class="sourceLine" id="cb3-2" data-line-number="2">until_max <span class="op">%&gt;%</span><span class="st"> </span></a>
@@ -173,7 +170,7 @@
 <div id="looking-at-mortality-after-max-is-reached" class="section level2">
 <h2 class="hasAnchor">
 <a href="#looking-at-mortality-after-max-is-reached" class="anchor"></a>Looking at mortality after max is reached</h2>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1">after_max &lt;-<span class="st"> </span><span class="kw"><a href="../reference/load_data.html">load_data</a></span>(<span class="dt">filter_pars =</span> <span class="ot">NULL</span>, <span class="dt">impute_fxn =</span> impute) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1">after_max &lt;-<span class="st"> </span><span class="kw"><a href="http://www.rdocumentation.org/packages/clonewars/topics/load_data">load_data</a></span>(<span class="dt">filter_pars =</span> <span class="ot">NULL</span>) <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb5-2" data-line-number="2"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">rep =</span> <span class="kw">factor</span>(rep)) <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb5-3" data-line-number="3"><span class="st">    </span><span class="kw">group_by</span>(line, rep) <span class="op">%&gt;%</span></a>
 <a class="sourceLine" id="cb5-4" data-line-number="4"><span class="st">    </span><span class="kw">filter</span>(<span class="dv">1</span><span class="op">:</span><span class="kw">n</span>() <span class="op">&gt;=</span><span class="st"> </span><span class="kw">which</span>(N <span class="op">==</span><span class="st"> </span><span class="kw">max</span>(N))[<span class="dv">1</span>]) <span class="op">%&gt;%</span></a>
@@ -234,7 +231,7 @@
 <a class="sourceLine" id="cb7-11" data-line-number="11"><span class="st">    </span>{<span class="kw">glm</span>(<span class="kw">cbind</span>(N, N_dead) <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">+</span><span class="st"> </span>date <span class="op">*</span><span class="st"> </span>line, <span class="dt">family =</span> <span class="st">"binomial"</span>, <span class="dt">data =</span> .)}</a>
 <a class="sourceLine" id="cb7-12" data-line-number="12">after_max_mod <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb7-13" data-line-number="13"><span class="st">    </span><span class="kw">AIC</span>()</a>
-<a class="sourceLine" id="cb7-14" data-line-number="14"><span class="co">#&gt; [1] 11851.22</span></a>
+<a class="sourceLine" id="cb7-14" data-line-number="14"><span class="co">#&gt; [1] 13543.5</span></a>
 <a class="sourceLine" id="cb7-15" data-line-number="15"></a>
 <a class="sourceLine" id="cb7-16" data-line-number="16"></a>
 <a class="sourceLine" id="cb7-17" data-line-number="17">after_max <span class="op">%&gt;%</span><span class="st"> </span></a>
@@ -249,13 +246,13 @@
 <a class="sourceLine" id="cb7-26" data-line-number="26"><span class="st">    </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>line) <span class="op">+</span></a>
 <a class="sourceLine" id="cb7-27" data-line-number="27"><span class="st">    </span><span class="kw">scale_color_brewer</span>(<span class="dt">palette =</span> <span class="st">"Dark2"</span>, <span class="dt">guide =</span> <span class="ot">FALSE</span>)</a></code></pre></div>
 <p><img src="04-plant_death_files/figure-html/after_max_model-1.svg" width="576"></p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="co"># Each line's coefficients, with an added row for WI-L4Ø that's just the mean:</span></a>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="co"># Each line's coefficients:</span></a>
 <a class="sourceLine" id="cb8-2" data-line-number="2">after_max_coefs &lt;-<span class="st"> </span>after_max_mod <span class="op">%&gt;%</span></a>
 <a class="sourceLine" id="cb8-3" data-line-number="3"><span class="st">    </span><span class="kw">coef</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb8-4" data-line-number="4"><span class="st">    </span>{</a>
 <a class="sourceLine" id="cb8-5" data-line-number="5">        .. &lt;-<span class="st"> </span><span class="kw">cbind</span>(</a>
-<a class="sourceLine" id="cb8-6" data-line-number="6">            .[<span class="kw">grepl</span>(<span class="st">"^date"</span>, <span class="kw">names</span>(.))],</a>
-<a class="sourceLine" id="cb8-7" data-line-number="7">            .[<span class="op">!</span><span class="kw">grepl</span>(<span class="st">"^date"</span>, <span class="kw">names</span>(.))]</a>
+<a class="sourceLine" id="cb8-6" data-line-number="6">            .[<span class="op">!</span><span class="kw">grepl</span>(<span class="st">"^date"</span>, <span class="kw">names</span>(.))],</a>
+<a class="sourceLine" id="cb8-7" data-line-number="7">            .[<span class="kw">grepl</span>(<span class="st">"^date"</span>, <span class="kw">names</span>(.))]</a>
 <a class="sourceLine" id="cb8-8" data-line-number="8">        )</a>
 <a class="sourceLine" id="cb8-9" data-line-number="9">        <span class="kw">rownames</span>(..) &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">"line"</span>, <span class="st">""</span>, <span class="kw">names</span>(.)[<span class="op">!</span><span class="kw">grepl</span>(<span class="st">"^date"</span>, <span class="kw">names</span>(.))])</a>
 <a class="sourceLine" id="cb8-10" data-line-number="10">        ..</a>
@@ -274,43 +271,43 @@
 <tbody>
 <tr class="odd">
 <td align="left">Clover-2017-2</td>
+<td align="right">1.314396</td>
 <td align="right">-0.2349460</td>
-<td align="right">1.3143960</td>
 </tr>
 <tr class="even">
 <td align="left">Clover-2017-6</td>
-<td align="right">0.3290626</td>
-<td align="right">0.8457315</td>
+<td align="right">0.997826</td>
+<td align="right">0.2921728</td>
 </tr>
 <tr class="odd">
 <td align="left">R10</td>
-<td align="right">-0.5900285</td>
-<td align="right">2.3419780</td>
+<td align="right">2.762726</td>
+<td align="right">-0.7291803</td>
 </tr>
 <tr class="even">
 <td align="left">UT3</td>
-<td align="right">0.0414253</td>
-<td align="right">1.2377546</td>
+<td align="right">1.926044</td>
+<td align="right">-0.1023208</td>
 </tr>
 <tr class="odd">
 <td align="left">WI-2016-593</td>
-<td align="right">0.0876192</td>
-<td align="right">1.4528203</td>
+<td align="right">1.564057</td>
+<td align="right">0.0468496</td>
 </tr>
 <tr class="even">
 <td align="left">WI-L4</td>
-<td align="right">-0.4337741</td>
-<td align="right">3.0956953</td>
+<td align="right">3.068718</td>
+<td align="right">-0.4267236</td>
 </tr>
 <tr class="odd">
 <td align="left">WI-L4Ø</td>
-<td align="right">-0.0926960</td>
-<td align="right">1.5364050</td>
+<td align="right">1.726238</td>
+<td align="right">-0.1336013</td>
 </tr>
 <tr class="even">
 <td align="left">WIA-5D</td>
+<td align="right">1.638391</td>
 <td align="right">-0.4340395</td>
-<td align="right">1.6383908</td>
 </tr>
 </tbody>
 </table>
@@ -320,19 +317,19 @@
 <a class="sourceLine" id="cb9-4" data-line-number="4">)</a>
 <a class="sourceLine" id="cb9-5" data-line-number="5">plant_death</a>
 <a class="sourceLine" id="cb9-6" data-line-number="6"><span class="co">#&gt; $until_max_summ</span></a>
-<a class="sourceLine" id="cb9-7" data-line-number="7"><span class="co">#&gt;   max_mean  max_sd</span></a>
-<a class="sourceLine" id="cb9-8" data-line-number="8"><span class="co">#&gt; 1     13.5 2.04432</span></a>
+<a class="sourceLine" id="cb9-7" data-line-number="7"><span class="co">#&gt;   max_mean   max_sd</span></a>
+<a class="sourceLine" id="cb9-8" data-line-number="8"><span class="co">#&gt; 1 14.06897 3.563273</span></a>
 <a class="sourceLine" id="cb9-9" data-line-number="9"><span class="co">#&gt; </span></a>
 <a class="sourceLine" id="cb9-10" data-line-number="10"><span class="co">#&gt; $after_max_mort_coefs</span></a>
-<a class="sourceLine" id="cb9-11" data-line-number="11"><span class="co">#&gt;            line          b0        b1</span></a>
-<a class="sourceLine" id="cb9-12" data-line-number="12"><span class="co">#&gt; 1 Clover-2017-2 -0.23494602 1.3143960</span></a>
-<a class="sourceLine" id="cb9-13" data-line-number="13"><span class="co">#&gt; 2 Clover-2017-6  0.32906264 0.8457315</span></a>
-<a class="sourceLine" id="cb9-14" data-line-number="14"><span class="co">#&gt; 3           R10 -0.59002847 2.3419780</span></a>
-<a class="sourceLine" id="cb9-15" data-line-number="15"><span class="co">#&gt; 4           UT3  0.04142532 1.2377546</span></a>
-<a class="sourceLine" id="cb9-16" data-line-number="16"><span class="co">#&gt; 5   WI-2016-593  0.08761920 1.4528203</span></a>
-<a class="sourceLine" id="cb9-17" data-line-number="17"><span class="co">#&gt; 6         WI-L4 -0.43377410 3.0956953</span></a>
-<a class="sourceLine" id="cb9-18" data-line-number="18"><span class="co">#&gt; 7        WI-L4Ø -0.09269600 1.5364050</span></a>
-<a class="sourceLine" id="cb9-19" data-line-number="19"><span class="co">#&gt; 8        WIA-5D -0.43403950 1.6383908</span></a></code></pre></div>
+<a class="sourceLine" id="cb9-11" data-line-number="11"><span class="co">#&gt;            line       b0          b1</span></a>
+<a class="sourceLine" id="cb9-12" data-line-number="12"><span class="co">#&gt; 1 Clover-2017-2 1.314396 -0.23494602</span></a>
+<a class="sourceLine" id="cb9-13" data-line-number="13"><span class="co">#&gt; 2 Clover-2017-6 0.997826  0.29217281</span></a>
+<a class="sourceLine" id="cb9-14" data-line-number="14"><span class="co">#&gt; 3           R10 2.762726 -0.72918032</span></a>
+<a class="sourceLine" id="cb9-15" data-line-number="15"><span class="co">#&gt; 4           UT3 1.926044 -0.10232077</span></a>
+<a class="sourceLine" id="cb9-16" data-line-number="16"><span class="co">#&gt; 5   WI-2016-593 1.564057  0.04684956</span></a>
+<a class="sourceLine" id="cb9-17" data-line-number="17"><span class="co">#&gt; 6         WI-L4 3.068718 -0.42672364</span></a>
+<a class="sourceLine" id="cb9-18" data-line-number="18"><span class="co">#&gt; 7        WI-L4Ø 1.726238 -0.13360134</span></a>
+<a class="sourceLine" id="cb9-19" data-line-number="19"><span class="co">#&gt; 8        WIA-5D 1.638391 -0.43403950</span></a></code></pre></div>
 <div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" data-line-number="1">devtools<span class="op">::</span><span class="kw"><a href="http://www.rdocumentation.org/packages/devtools/topics/use_data">use_data</a></span>(plant_death, <span class="dt">overwrite =</span> <span class="ot">TRUE</span>)</a></code></pre></div>
 </div>
   </div>

@@ -124,23 +124,22 @@
 <div id="imputing-missing-data" class="section level2">
 <h2 class="hasAnchor">
 <a href="#imputing-missing-data" class="anchor"></a>Imputing missing data</h2>
-<p>See <code><a href="../reference/impute.html">?impute</a></code> for information on imputing missing data.</p>
+<p>See <code>?impute</code> for information on imputing missing data.</p>
 </div>
 <div id="load-data" class="section level2">
 <h2 class="hasAnchor">
 <a href="#load-data" class="anchor"></a>Load data</h2>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1">growth &lt;-<span class="st"> </span></a>
-<a class="sourceLine" id="cb1-2" data-line-number="2"><span class="st">    </span><span class="kw"><a href="../reference/load_data.html">load_data</a></span>(<span class="dt">impute_fxn =</span> impute) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb1-3" data-line-number="3"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">line =</span> <span class="kw">paste</span>(line)) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-4" data-line-number="4"><span class="st">    </span><span class="kw">bind_rows</span>(clonewars<span class="op">:::</span><span class="kw"><a href="../reference/load_pz_data.html">load_pz_data</a></span>(<span class="dt">impute_fxn =</span> impute)) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-5" data-line-number="5"><span class="st">    </span><span class="kw">mutate_at</span>(<span class="kw">vars</span>(line, rep), <span class="kw">funs</span>(factor)) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-6" data-line-number="6"><span class="st">    </span><span class="co"># Now filter out early part of each time series, before N &gt; 6</span></a>
-<a class="sourceLine" id="cb1-7" data-line-number="7"><span class="st">    </span><span class="co"># N &lt;= 6 is when the stochasticity associated with only starting with 2 adults</span></a>
-<a class="sourceLine" id="cb1-8" data-line-number="8"><span class="st">    </span><span class="co"># appears to be strongest</span></a>
-<a class="sourceLine" id="cb1-9" data-line-number="9"><span class="st">    </span><span class="kw">group_by</span>(line, rep) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb1-10" data-line-number="10"><span class="st">    </span><span class="kw">filter</span>(<span class="dv">1</span><span class="op">:</span><span class="kw">n</span>() <span class="op">&gt;=</span><span class="st"> </span><span class="kw">which</span>(N <span class="op">&gt;</span><span class="st"> </span><span class="dv">6</span>)[<span class="dv">1</span>]) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb1-11" data-line-number="11"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">date =</span> date <span class="op">-</span><span class="st"> </span><span class="kw">min</span>(date)) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb1-12" data-line-number="12"><span class="st">    </span><span class="kw">ungroup</span>()</a></code></pre></div>
+<a class="sourceLine" id="cb1-2" data-line-number="2"><span class="st">    </span><span class="kw">load_data</span>(<span class="dt">remove_unfinished =</span> <span class="ot">TRUE</span>, <span class="dt">filter_pars =</span> <span class="kw">list</span>(<span class="dt">start =</span> <span class="dv">0</span>, <span class="dt">end =</span> <span class="fl">0.8</span>)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb1-3" data-line-number="3"><span class="st">    </span><span class="co"># Temporarily remove these reps:</span></a>
+<a class="sourceLine" id="cb1-4" data-line-number="4"><span class="st">    </span><span class="kw">filter</span>(<span class="op">!</span>(line <span class="op">==</span><span class="st"> "WI-L4Ø"</span> <span class="op">&amp;</span><span class="st"> </span>rep <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">7</span>))) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb1-5" data-line-number="5"><span class="st">    </span><span class="co"># Now filter out early part of each time series, before N &gt; 6</span></a>
+<a class="sourceLine" id="cb1-6" data-line-number="6"><span class="st">    </span><span class="co"># N &lt;= 6 is when the stochasticity associated with only starting with 2 adults</span></a>
+<a class="sourceLine" id="cb1-7" data-line-number="7"><span class="st">    </span><span class="co"># appears to be strongest</span></a>
+<a class="sourceLine" id="cb1-8" data-line-number="8"><span class="st">    </span><span class="kw">group_by</span>(line, rep) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb1-9" data-line-number="9"><span class="st">    </span><span class="kw">filter</span>(<span class="dv">1</span><span class="op">:</span><span class="kw">n</span>() <span class="op">&gt;=</span><span class="st"> </span><span class="kw">which</span>(N <span class="op">&gt;</span><span class="st"> </span><span class="dv">6</span>)[<span class="dv">1</span>]) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb1-10" data-line-number="10"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">date =</span> <span class="kw">as.integer</span>(date <span class="op">-</span><span class="st"> </span><span class="kw">min</span>(date))) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb1-11" data-line-number="11"><span class="st">    </span><span class="kw">ungroup</span>()</a></code></pre></div>
 <p>This is how many reps I have of each line:</p>
 <table class="table">
 <thead><tr class="header">
@@ -150,27 +149,27 @@
 <tbody>
 <tr class="odd">
 <td align="left">Clover-2017-2</td>
-<td align="right">6</td>
+<td align="right">5</td>
 </tr>
 <tr class="even">
 <td align="left">Clover-2017-6</td>
-<td align="right">7</td>
+<td align="right">6</td>
 </tr>
 <tr class="odd">
 <td align="left">R10</td>
-<td align="right">7</td>
+<td align="right">3</td>
 </tr>
 <tr class="even">
 <td align="left">UT3</td>
-<td align="right">7</td>
+<td align="right">3</td>
 </tr>
 <tr class="odd">
 <td align="left">WI-2016-593</td>
-<td align="right">7</td>
+<td align="right">6</td>
 </tr>
 <tr class="even">
 <td align="left">WI-L4</td>
-<td align="right">7</td>
+<td align="right">5</td>
 </tr>
 <tr class="odd">
 <td align="left">WI-L4Ø</td>
@@ -178,7 +177,7 @@
 </tr>
 <tr class="even">
 <td align="left">WIA-5D</td>
-<td align="right">7</td>
+<td align="right">6</td>
 </tr>
 </tbody>
 </table>
@@ -187,125 +186,149 @@
 <h2 class="hasAnchor">
 <a href="#see-time-series-data" class="anchor"></a>See time series data</h2>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">growth <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(date, X, <span class="dt">color =</span> <span class="kw">factor</span>(rep))) <span class="op">+</span></a>
-<a class="sourceLine" id="cb2-3" data-line-number="3"><span class="st">    </span><span class="kw">geom_line</span>(<span class="dt">size =</span> <span class="fl">0.75</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb2-4" data-line-number="4"><span class="st">    </span><span class="co"># geom_point() +</span></a>
-<a class="sourceLine" id="cb2-5" data-line-number="5"><span class="st">    </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>line, <span class="dt">nrow =</span> <span class="dv">2</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb2-6" data-line-number="6"><span class="st">    </span><span class="kw">scale_color_brewer</span>(<span class="dt">palette =</span> <span class="st">"Dark2"</span>, <span class="dt">guide =</span> <span class="ot">FALSE</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb2-7" data-line-number="7"><span class="st">    </span><span class="ot">NULL</span></a>
-<a class="sourceLine" id="cb2-8" data-line-number="8"><span class="co">#&gt; Warning in RColorBrewer::brewer.pal(n, pal): n too large, allowed maximum for palette Dark2 is 8</span></a>
-<a class="sourceLine" id="cb2-9" data-line-number="9"><span class="co">#&gt; Returning the palette you asked for with that many colors</span></a>
-<a class="sourceLine" id="cb2-10" data-line-number="10"><span class="co">#&gt; Warning: Removed 16 rows containing missing values (geom_path).</span></a></code></pre></div>
+<a class="sourceLine" id="cb2-2" data-line-number="2"><span class="st">    </span><span class="kw">group_by</span>(line) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-3" data-line-number="3"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">rep =</span> <span class="kw">map_int</span>(rep, <span class="op">~</span><span class="st"> </span><span class="kw">which</span>(<span class="kw">sort</span>(<span class="kw">unique</span>(rep)) <span class="op">==</span><span class="st"> </span>.x))) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-4" data-line-number="4"><span class="st">    </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-5" data-line-number="5"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">rep =</span> <span class="kw">factor</span>(rep)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-6" data-line-number="6"><span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(date, X, <span class="dt">color =</span> rep)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-7" data-line-number="7"><span class="st">    </span><span class="kw">geom_line</span>(<span class="dt">size =</span> <span class="fl">0.75</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-8" data-line-number="8"><span class="st">    </span><span class="kw">geom_point</span>(<span class="dt">size =</span> <span class="fl">0.75</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-9" data-line-number="9"><span class="st">    </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>line, <span class="dt">nrow =</span> <span class="dv">2</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-10" data-line-number="10"><span class="st">    </span><span class="kw">scale_color_brewer</span>(<span class="dt">palette =</span> <span class="st">"RdBu"</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-11" data-line-number="11"><span class="st">    </span><span class="ot">NULL</span></a></code></pre></div>
 <p><img src="02-estimate_pars_files/figure-html/filter_data-1.svg" width="576"></p>
-</div>
-<div id="convert-data-for-stan" class="section level2">
-<h2 class="hasAnchor">
-<a href="#convert-data-for-stan" class="anchor"></a>Convert data for stan</h2>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1">model_data &lt;-<span class="st"> </span>growth <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb3-2" data-line-number="2"><span class="st">    </span><span class="kw"><a href="../reference/line_data.html">line_data</a></span>()</a>
-<a class="sourceLine" id="cb3-3" data-line-number="3"><span class="kw">str</span>(model_data, <span class="dt">give.attr =</span> <span class="ot">FALSE</span>)</a>
-<a class="sourceLine" id="cb3-4" data-line-number="4"><span class="co">#&gt; List of 2</span></a>
-<a class="sourceLine" id="cb3-5" data-line-number="5"><span class="co">#&gt;  $ X: num [1:22, 1:54] 2.4 2.77 3.22 3.3 3.47 ...</span></a>
-<a class="sourceLine" id="cb3-6" data-line-number="6"><span class="co">#&gt;  $ L: int [1:54] 1 1 1 1 1 1 2 2 2 2 ...</span></a></code></pre></div>
 </div>
 <div id="run-model" class="section level2">
 <h2 class="hasAnchor">
 <a href="#run-model" class="anchor"></a>Run model</h2>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="co"># Takes ~ 30 sec at adapt_delta = 0.9</span></a>
-<a class="sourceLine" id="cb4-2" data-line-number="2"><span class="kw">set.seed</span>(<span class="dv">65136</span>)</a>
-<a class="sourceLine" id="cb4-3" data-line-number="3">stan_fit &lt;-<span class="st"> </span>model_data <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb4-4" data-line-number="4"><span class="st">    </span><span class="kw"><a href="../reference/fit_lines.html">fit_lines</a></span>(</a>
-<a class="sourceLine" id="cb4-5" data-line-number="5">        <span class="dt">control =</span> <span class="kw">list</span>(<span class="dt">adapt_delta =</span> <span class="fl">0.9</span>)</a>
-<a class="sourceLine" id="cb4-6" data-line-number="6">    )</a></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="co"># Takes ~ 35 sec</span></a>
+<a class="sourceLine" id="cb3-2" data-line-number="2">theta_ &lt;-<span class="st"> </span>theta</a>
+<a class="sourceLine" id="cb3-3" data-line-number="3">theta_[<span class="kw">seq</span>(<span class="dv">2</span>, <span class="kw">length</span>(theta_),<span class="dv">2</span>)] &lt;-<span class="st"> </span><span class="dv">10</span> <span class="op">*</span><span class="st"> </span>theta_[<span class="kw">seq</span>(<span class="dv">2</span>, <span class="kw">length</span>(theta_),<span class="dv">2</span>)]</a>
+<a class="sourceLine" id="cb3-4" data-line-number="4"><span class="kw">set.seed</span>(<span class="dv">65136</span>)</a>
+<a class="sourceLine" id="cb3-5" data-line-number="5">stan_fit &lt;-<span class="st"> </span><span class="kw">fit_lines</span>(growth, <span class="dt">theta_ =</span> theta_)</a></code></pre></div>
 </div>
 <div id="examine-model-output" class="section level2">
 <h2 class="hasAnchor">
 <a href="#examine-model-output" class="anchor"></a>Examine model output</h2>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1"></a>
-<a class="sourceLine" id="cb5-2" data-line-number="2"><span class="co"># http://mc-stan.org/bayesplot/articles/visual-mcmc-diagnostics.html</span></a>
-<a class="sourceLine" id="cb5-3" data-line-number="3"></a>
-<a class="sourceLine" id="cb5-4" data-line-number="4">posterior &lt;-<span class="st"> </span><span class="kw">as.array</span>(stan_fit)</a>
-<a class="sourceLine" id="cb5-5" data-line-number="5"></a>
-<a class="sourceLine" id="cb5-6" data-line-number="6"><span class="kw">mcmc_intervals</span>(posterior, <span class="dt">pars =</span> <span class="kw">sprintf</span>(<span class="st">"R[%i]"</span>, <span class="dv">1</span><span class="op">:</span><span class="dv">8</span>)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb5-7" data-line-number="7"><span class="st">    </span><span class="kw">scale_y_discrete</span>(<span class="dt">labels =</span> growth<span class="op">$</span>line <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">levels</span>()) <span class="op">+</span></a>
-<a class="sourceLine" id="cb5-8" data-line-number="8"><span class="st">    </span><span class="kw">ggtitle</span>(<span class="st">"Growth rates"</span>)</a></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1"></a>
+<a class="sourceLine" id="cb4-2" data-line-number="2"><span class="co"># http://mc-stan.org/bayesplot/articles/visual-mcmc-diagnostics.html</span></a>
+<a class="sourceLine" id="cb4-3" data-line-number="3"></a>
+<a class="sourceLine" id="cb4-4" data-line-number="4">posterior &lt;-<span class="st"> </span><span class="kw">as.array</span>(stan_fit)</a>
+<a class="sourceLine" id="cb4-5" data-line-number="5"></a>
+<a class="sourceLine" id="cb4-6" data-line-number="6"><span class="kw">mcmc_intervals</span>(posterior, <span class="dt">pars =</span> <span class="kw">sprintf</span>(<span class="st">"Z_r[%i]"</span>, <span class="dv">1</span><span class="op">:</span><span class="dv">8</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-7" data-line-number="7"><span class="st">    </span><span class="kw">scale_y_discrete</span>(<span class="dt">labels =</span> growth<span class="op">$</span>line <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">levels</span>()) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-8" data-line-number="8"><span class="st">    </span><span class="kw">ggtitle</span>(<span class="st">"Growth rates"</span>)</a></code></pre></div>
 <p><img src="02-estimate_pars_files/figure-html/examine_model-1.svg" width="576"></p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1"><span class="kw">mcmc_intervals</span>(posterior, <span class="dt">pars =</span> <span class="kw">sprintf</span>(<span class="st">"A[%i]"</span>, <span class="dv">1</span><span class="op">:</span><span class="dv">8</span>)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb6-2" data-line-number="2"><span class="st">    </span><span class="kw">scale_y_discrete</span>(<span class="dt">labels =</span> growth<span class="op">$</span>line <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">levels</span>()) <span class="op">+</span></a>
-<a class="sourceLine" id="cb6-3" data-line-number="3"><span class="st">    </span><span class="kw">ggtitle</span>(<span class="st">"Density dependences"</span>)</a></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="kw">mcmc_intervals</span>(posterior, <span class="dt">pars =</span> <span class="kw">sprintf</span>(<span class="st">"Z_a_a[%i]"</span>, <span class="dv">1</span><span class="op">:</span><span class="dv">8</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb5-2" data-line-number="2"><span class="st">    </span><span class="kw">scale_y_discrete</span>(<span class="dt">labels =</span> growth<span class="op">$</span>line <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">levels</span>()) <span class="op">+</span></a>
+<a class="sourceLine" id="cb5-3" data-line-number="3"><span class="st">    </span><span class="kw">ggtitle</span>(<span class="st">"Density dependences"</span>)</a></code></pre></div>
 <p><img src="02-estimate_pars_files/figure-html/examine_model-2.svg" width="576"></p>
 <p>This code is looking at model output. I’m not including it yet in this vignette because it’s not ready.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" data-line-number="1"><span class="kw">apply</span>(rstan<span class="op">::</span><span class="kw"><a href="http://www.rdocumentation.org/packages/rstan/topics/stanfit-method-extract">extract</a></span>(stan_fit, <span class="st">"R"</span>, <span class="dt">permuted =</span> <span class="ot">FALSE</span>), <span class="dv">3</span>, mean)</a>
-<a class="sourceLine" id="cb7-2" data-line-number="2"><span class="kw">apply</span>(rstan<span class="op">::</span><span class="kw"><a href="http://www.rdocumentation.org/packages/rstan/topics/stanfit-method-extract">extract</a></span>(stan_fit, <span class="st">"A"</span>, <span class="dt">permuted =</span> <span class="ot">FALSE</span>), <span class="dv">3</span>, mean)</a>
-<a class="sourceLine" id="cb7-3" data-line-number="3"></a>
-<a class="sourceLine" id="cb7-4" data-line-number="4"><span class="kw">apply</span>(rstan<span class="op">::</span><span class="kw"><a href="http://www.rdocumentation.org/packages/rstan/topics/stanfit-method-extract">extract</a></span>(stan_fit, <span class="st">"s_epsilon"</span>, <span class="dt">permuted =</span> <span class="ot">FALSE</span>), <span class="dv">3</span>, mean)</a>
-<a class="sourceLine" id="cb7-5" data-line-number="5"><span class="kw">apply</span>(rstan<span class="op">::</span><span class="kw"><a href="http://www.rdocumentation.org/packages/rstan/topics/stanfit-method-extract">extract</a></span>(stan_fit, <span class="st">"s_epsilon"</span>, <span class="dt">permuted =</span> <span class="ot">FALSE</span>), <span class="dv">3</span>, quantile,</a>
-<a class="sourceLine" id="cb7-6" data-line-number="6">      <span class="dt">probs =</span> <span class="kw">c</span>(<span class="fl">0.025</span>, <span class="fl">0.975</span>))</a>
-<a class="sourceLine" id="cb7-7" data-line-number="7"></a>
-<a class="sourceLine" id="cb7-8" data-line-number="8"></a>
-<a class="sourceLine" id="cb7-9" data-line-number="9"></a>
-<a class="sourceLine" id="cb7-10" data-line-number="10"><span class="kw">print</span>(stan_fit, <span class="dt">digits =</span> <span class="dv">6</span>, <span class="dt">pars =</span> <span class="kw">c</span>(<span class="st">"R"</span>, <span class="st">"A"</span>, <span class="st">"s_epsilon"</span>), <span class="dt">probs =</span> <span class="kw">c</span>())</a>
-<a class="sourceLine" id="cb7-11" data-line-number="11"></a>
-<a class="sourceLine" id="cb7-12" data-line-number="12"><span class="co"># parameters of interest</span></a>
-<a class="sourceLine" id="cb7-13" data-line-number="13">pars_interest &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">sprintf</span>(<span class="st">"A[%i]"</span>, <span class="dv">1</span><span class="op">:</span><span class="dv">8</span>), <span class="kw">sprintf</span>(<span class="st">"R[%i]"</span>, <span class="dv">1</span><span class="op">:</span><span class="dv">8</span>),</a>
-<a class="sourceLine" id="cb7-14" data-line-number="14">                   <span class="kw">paste0</span>(<span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">""</span>, <span class="st">"s_"</span>),<span class="dt">each=</span><span class="dv">2</span>), <span class="kw">c</span>(<span class="st">"theta"</span>, <span class="st">"phi"</span>)),</a>
-<a class="sourceLine" id="cb7-15" data-line-number="15">                   <span class="st">"hats_phi"</span>, <span class="st">"s_epsilon"</span>)</a>
-<a class="sourceLine" id="cb7-16" data-line-number="16"></a>
-<a class="sourceLine" id="cb7-17" data-line-number="17"><span class="co"># Rhats</span></a>
-<a class="sourceLine" id="cb7-18" data-line-number="18">rhats &lt;-<span class="st"> </span><span class="kw">rhat</span>(stan_fit, <span class="dt">pars =</span> pars_interest)</a>
-<a class="sourceLine" id="cb7-19" data-line-number="19"><span class="kw">mcmc_rhat</span>(rhats)  <span class="op">+</span><span class="st"> </span><span class="kw">yaxis_text</span>(<span class="dt">hjust =</span> <span class="dv">1</span>)</a>
-<a class="sourceLine" id="cb7-20" data-line-number="20"></a>
-<a class="sourceLine" id="cb7-21" data-line-number="21"><span class="co"># Neff / N</span></a>
-<a class="sourceLine" id="cb7-22" data-line-number="22">neff_ratios &lt;-<span class="st"> </span><span class="kw">neff_ratio</span>(stan_fit, <span class="dt">pars =</span> pars_interest)</a>
-<a class="sourceLine" id="cb7-23" data-line-number="23"><span class="kw">mcmc_neff</span>(neff_ratios, <span class="dt">size =</span> <span class="dv">2</span>) <span class="op">+</span><span class="st"> </span><span class="kw">yaxis_text</span>(<span class="dt">hjust =</span> <span class="dv">1</span>)</a>
-<a class="sourceLine" id="cb7-24" data-line-number="24"></a>
-<a class="sourceLine" id="cb7-25" data-line-number="25"></a>
-<a class="sourceLine" id="cb7-26" data-line-number="26"><span class="co"># Autocorrelation</span></a>
-<a class="sourceLine" id="cb7-27" data-line-number="27"><span class="kw">mcmc_acf</span>(posterior, <span class="dt">pars =</span> pars_interest[<span class="dv">1</span><span class="op">:</span><span class="dv">8</span>], <span class="dt">lags =</span> <span class="dv">10</span>)</a>
-<a class="sourceLine" id="cb7-28" data-line-number="28"><span class="kw">mcmc_acf</span>(posterior, <span class="dt">pars =</span> pars_interest[<span class="dv">9</span><span class="op">:</span><span class="dv">16</span>], <span class="dt">lags =</span> <span class="dv">10</span>)</a>
-<a class="sourceLine" id="cb7-29" data-line-number="29"><span class="kw">mcmc_acf</span>(posterior, <span class="dt">pars =</span> pars_interest[<span class="dv">17</span><span class="op">:</span><span class="kw">length</span>(pars_interest)], <span class="dt">lags =</span> <span class="dv">10</span>)</a>
-<a class="sourceLine" id="cb7-30" data-line-number="30"></a>
-<a class="sourceLine" id="cb7-31" data-line-number="31"></a>
-<a class="sourceLine" id="cb7-32" data-line-number="32">lp &lt;-<span class="st"> </span><span class="kw">log_posterior</span>(stan_fit)</a>
-<a class="sourceLine" id="cb7-33" data-line-number="33">np &lt;-<span class="st"> </span><span class="kw">nuts_params</span>(stan_fit)</a>
-<a class="sourceLine" id="cb7-34" data-line-number="34"></a>
-<a class="sourceLine" id="cb7-35" data-line-number="35"><span class="kw">mcmc_trace</span>(posterior, <span class="dt">pars =</span> pars_interest[<span class="dv">1</span><span class="op">:</span><span class="dv">8</span>], <span class="dt">np =</span> np)</a>
-<a class="sourceLine" id="cb7-36" data-line-number="36"><span class="kw">mcmc_trace</span>(posterior, <span class="dt">pars =</span> pars_interest[<span class="dv">9</span><span class="op">:</span><span class="dv">16</span>], <span class="dt">np =</span> np)</a>
-<a class="sourceLine" id="cb7-37" data-line-number="37"><span class="kw">mcmc_trace</span>(posterior, <span class="dt">pars =</span> pars_interest[<span class="dv">17</span><span class="op">:</span><span class="kw">length</span>(pars_interest)], <span class="dt">np =</span> np)</a>
-<a class="sourceLine" id="cb7-38" data-line-number="38"></a>
-<a class="sourceLine" id="cb7-39" data-line-number="39"><span class="kw">mcmc_nuts_divergence</span>(np, lp)</a>
-<a class="sourceLine" id="cb7-40" data-line-number="40"></a>
-<a class="sourceLine" id="cb7-41" data-line-number="41"><span class="kw">mcmc_parcoord</span>(posterior, <span class="dt">np =</span> np)</a>
-<a class="sourceLine" id="cb7-42" data-line-number="42"></a>
-<a class="sourceLine" id="cb7-43" data-line-number="43"><span class="kw">mcmc_scatter</span>(</a>
-<a class="sourceLine" id="cb7-44" data-line-number="44">  posterior,</a>
-<a class="sourceLine" id="cb7-45" data-line-number="45">  <span class="dt">pars =</span> <span class="kw">c</span>(<span class="st">"s_epsilon"</span>, <span class="st">"R[6]"</span>),</a>
-<a class="sourceLine" id="cb7-46" data-line-number="46">  <span class="dt">transform =</span> <span class="kw">list</span>(<span class="st">`</span><span class="dt">R[6]</span><span class="st">`</span> =<span class="st"> "log"</span>),</a>
-<a class="sourceLine" id="cb7-47" data-line-number="47">  <span class="dt">np =</span> np</a>
-<a class="sourceLine" id="cb7-48" data-line-number="48">)</a>
-<a class="sourceLine" id="cb7-49" data-line-number="49"></a>
-<a class="sourceLine" id="cb7-50" data-line-number="50"></a>
-<a class="sourceLine" id="cb7-51" data-line-number="51">growth <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb7-52" data-line-number="52"><span class="st">    </span><span class="kw">group_by</span>(line) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb7-53" data-line-number="53"><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">n =</span> <span class="kw">length</span>(<span class="kw">unique</span>(rep))) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb7-54" data-line-number="54"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">line =</span> <span class="kw">as.integer</span>(line)) <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb7-55" data-line-number="55"><span class="st">    </span><span class="kw">as.data.frame</span>()</a>
-<a class="sourceLine" id="cb7-56" data-line-number="56"></a>
-<a class="sourceLine" id="cb7-57" data-line-number="57"></a>
-<a class="sourceLine" id="cb7-58" data-line-number="58">pred_df &lt;-<span class="st"> </span><span class="kw"><a href="../reference/make_pred_df.html">make_pred_df</a></span>(stan_fit, growth)</a>
-<a class="sourceLine" id="cb7-59" data-line-number="59"></a>
-<a class="sourceLine" id="cb7-60" data-line-number="60">pred_df <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb7-61" data-line-number="61"><span class="st">    </span><span class="co"># filter(rep == 1) %&gt;% </span></a>
-<a class="sourceLine" id="cb7-62" data-line-number="62"><span class="st">    </span><span class="co"># filter(rep == 4, line == "Clover-2017-2") %&gt;%</span></a>
-<a class="sourceLine" id="cb7-63" data-line-number="63"><span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(date, X)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb7-64" data-line-number="64"><span class="st">    </span><span class="kw">geom_ribbon</span>(<span class="kw">aes</span>(<span class="dt">ymin =</span> X_lower, <span class="dt">ymax =</span> X_upper),</a>
-<a class="sourceLine" id="cb7-65" data-line-number="65">                <span class="dt">fill =</span> <span class="st">"gray70"</span>, <span class="dt">alpha =</span> <span class="fl">0.5</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb7-66" data-line-number="66"><span class="st">    </span><span class="kw">geom_line</span>(<span class="dt">color =</span> <span class="st">"firebrick"</span>, <span class="dt">alpha =</span> <span class="fl">0.5</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb7-67" data-line-number="67"><span class="st">    </span><span class="kw">geom_point</span>(<span class="dt">shape =</span> <span class="dv">1</span>, <span class="dt">color =</span> <span class="st">"firebrick"</span>, <span class="dt">alpha =</span> <span class="fl">0.5</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb7-68" data-line-number="68"><span class="st">    </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">y =</span> X_pred), <span class="dt">color =</span> <span class="st">"dodgerblue3"</span>, <span class="dt">size =</span> <span class="fl">0.5</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb7-69" data-line-number="69"><span class="st">    </span><span class="co"># facet_wrap(~ rep + line, nrow = 2) +</span></a>
-<a class="sourceLine" id="cb7-70" data-line-number="70"><span class="st">    </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>rep <span class="op">+</span><span class="st"> </span>line, <span class="dt">nrow =</span> <span class="dv">4</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb7-71" data-line-number="71"><span class="st">    </span><span class="ot">NULL</span></a></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1"></a>
+<a class="sourceLine" id="cb6-2" data-line-number="2"><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">6</span>) {</a>
+<a class="sourceLine" id="cb6-3" data-line-number="3">    x &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">"sigma_epsilon"</span>, <span class="st">"rho"</span>, <span class="st">"sigma_rho"</span>, <span class="st">"phi"</span>, <span class="st">"sigma_phi_a"</span>, <span class="st">"sigma_phi_w"</span>)[i]</a>
+<a class="sourceLine" id="cb6-4" data-line-number="4">    y &lt;-<span class="st"> </span>theta_[<span class="kw">seq</span>(<span class="dv">2</span>, <span class="kw">length</span>(theta_),<span class="dv">2</span>)][i]</a>
+<a class="sourceLine" id="cb6-5" data-line-number="5">    z &lt;-<span class="st"> </span><span class="kw">apply</span>(rstan<span class="op">::</span><span class="kw"><a href="http://www.rdocumentation.org/packages/rstan/topics/stanfit-method-extract">extract</a></span>(stan_fit, x, <span class="dt">permuted =</span> <span class="ot">FALSE</span>), <span class="dv">3</span>, sd)</a>
+<a class="sourceLine" id="cb6-6" data-line-number="6">    <span class="kw">cat</span>(<span class="kw">sprintf</span>(<span class="st">"parameter: %s</span><span class="ch">\n</span><span class="st"> prior SD:     %.5g</span><span class="ch">\n</span><span class="st"> posterior SD: %.5g</span><span class="ch">\n\n</span><span class="st">"</span>, x, y, z))</a>
+<a class="sourceLine" id="cb6-7" data-line-number="7">}; <span class="kw">rm</span>(x,y,i)</a>
+<a class="sourceLine" id="cb6-8" data-line-number="8"></a>
+<a class="sourceLine" id="cb6-9" data-line-number="9"></a>
+<a class="sourceLine" id="cb6-10" data-line-number="10"></a>
+<a class="sourceLine" id="cb6-11" data-line-number="11"></a>
+<a class="sourceLine" id="cb6-12" data-line-number="12"></a>
+<a class="sourceLine" id="cb6-13" data-line-number="13"><span class="kw">apply</span>(rstan<span class="op">::</span><span class="kw"><a href="http://www.rdocumentation.org/packages/rstan/topics/stanfit-method-extract">extract</a></span>(stan_fit, <span class="st">"Z_r"</span>, <span class="dt">permuted =</span> <span class="ot">FALSE</span>), <span class="dv">3</span>, mean)</a>
+<a class="sourceLine" id="cb6-14" data-line-number="14"><span class="kw">apply</span>(rstan<span class="op">::</span><span class="kw"><a href="http://www.rdocumentation.org/packages/rstan/topics/stanfit-method-extract">extract</a></span>(stan_fit, <span class="st">"Z_a_a"</span>, <span class="dt">permuted =</span> <span class="ot">FALSE</span>), <span class="dv">3</span>, mean)</a>
+<a class="sourceLine" id="cb6-15" data-line-number="15"></a>
+<a class="sourceLine" id="cb6-16" data-line-number="16"><span class="kw">apply</span>(rstan<span class="op">::</span><span class="kw"><a href="http://www.rdocumentation.org/packages/rstan/topics/stanfit-method-extract">extract</a></span>(stan_fit, <span class="st">"sigma_epsilon"</span>, <span class="dt">permuted =</span> <span class="ot">FALSE</span>), <span class="dv">3</span>, mean)</a>
+<a class="sourceLine" id="cb6-17" data-line-number="17"><span class="kw">apply</span>(rstan<span class="op">::</span><span class="kw"><a href="http://www.rdocumentation.org/packages/rstan/topics/stanfit-method-extract">extract</a></span>(stan_fit, <span class="st">"sigma_epsilon"</span>, <span class="dt">permuted =</span> <span class="ot">FALSE</span>), <span class="dv">3</span>, quantile,</a>
+<a class="sourceLine" id="cb6-18" data-line-number="18">      <span class="dt">probs =</span> <span class="kw">c</span>(<span class="fl">0.025</span>, <span class="fl">0.975</span>))</a>
+<a class="sourceLine" id="cb6-19" data-line-number="19"></a>
+<a class="sourceLine" id="cb6-20" data-line-number="20"></a>
+<a class="sourceLine" id="cb6-21" data-line-number="21"></a>
+<a class="sourceLine" id="cb6-22" data-line-number="22"><span class="kw">print</span>(stan_fit, <span class="dt">digits =</span> <span class="dv">6</span>, <span class="dt">pars =</span> <span class="kw">c</span>(<span class="st">"Z_r"</span>, <span class="st">"Z_a_a"</span>, <span class="st">"sigma_epsilon"</span>), <span class="dt">probs =</span> <span class="kw">c</span>())</a>
+<a class="sourceLine" id="cb6-23" data-line-number="23"><span class="kw">print</span>(stan_fit, <span class="dt">digits =</span> <span class="dv">6</span>, <span class="dt">pars =</span> <span class="kw">c</span>(<span class="st">"phi"</span>, <span class="st">"sigma_phi_a"</span>, <span class="st">"sigma_phi_w"</span>), <span class="dt">probs =</span> <span class="kw">c</span>())</a>
+<a class="sourceLine" id="cb6-24" data-line-number="24"></a>
+<a class="sourceLine" id="cb6-25" data-line-number="25"></a>
+<a class="sourceLine" id="cb6-26" data-line-number="26"></a>
+<a class="sourceLine" id="cb6-27" data-line-number="27"><span class="dv">1</span> <span class="op">/</span><span class="st"> </span>gtools<span class="op">::</span><span class="kw"><a href="http://www.rdocumentation.org/packages/gtools/topics/logit">inv.logit</a></span>(<span class="op">-</span><span class="fl">6.161071</span> <span class="op">+</span><span class="st"> </span><span class="fl">0.944846</span> <span class="op">*</span><span class="st"> </span><span class="kw">c</span>(<span class="fl">0.009243</span>, <span class="fl">0.010392</span>, <span class="fl">0.015830</span>, <span class="fl">0.002257</span>, <span class="fl">-0.003927</span>, <span class="fl">0.022353</span>, <span class="fl">-0.005837</span>, <span class="fl">-0.002897</span>))</a>
+<a class="sourceLine" id="cb6-28" data-line-number="28"></a>
+<a class="sourceLine" id="cb6-29" data-line-number="29"><span class="co"># parameters of interest</span></a>
+<a class="sourceLine" id="cb6-30" data-line-number="30">pars_interest &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="kw">sprintf</span>(<span class="st">"Z_a_a[%i]"</span>, <span class="dv">1</span><span class="op">:</span><span class="dv">8</span>), <span class="kw">sprintf</span>(<span class="st">"Z_r[%i]"</span>, <span class="dv">1</span><span class="op">:</span><span class="dv">8</span>),</a>
+<a class="sourceLine" id="cb6-31" data-line-number="31">                   <span class="st">"rho"</span>, <span class="st">"sigma_rho"</span>,</a>
+<a class="sourceLine" id="cb6-32" data-line-number="32">                   <span class="st">"phi"</span>, <span class="st">"sigma_phi_a"</span>, <span class="st">"sigma_phi_w"</span>,</a>
+<a class="sourceLine" id="cb6-33" data-line-number="33">                   <span class="st">"sigma_epsilon"</span>)</a>
+<a class="sourceLine" id="cb6-34" data-line-number="34">non_ZX_pars &lt;-<span class="st"> </span><span class="kw">names</span>(stan_fit)[<span class="op">!</span><span class="kw">grepl</span>(<span class="st">"^Z"</span>, <span class="kw">names</span>(stan_fit)) <span class="op">&amp;</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb6-35" data-line-number="35"><span class="st">                                   </span><span class="op">!</span><span class="kw">grepl</span>(<span class="st">"^X"</span>, <span class="kw">names</span>(stan_fit))]</a>
+<a class="sourceLine" id="cb6-36" data-line-number="36"></a>
+<a class="sourceLine" id="cb6-37" data-line-number="37"></a>
+<a class="sourceLine" id="cb6-38" data-line-number="38"><span class="kw">mcmc_areas</span>(posterior, <span class="dt">pars =</span> non_ZX_pars[non_ZX_pars <span class="op">!=</span><span class="st"> "lp__"</span> <span class="op">&amp;</span><span class="st"> </span>non_ZX_pars <span class="op">!=</span><span class="st"> "phi"</span>])</a>
+<a class="sourceLine" id="cb6-39" data-line-number="39"></a>
+<a class="sourceLine" id="cb6-40" data-line-number="40"><span class="kw">mcmc_areas</span>(posterior, <span class="dt">pars =</span> <span class="st">"phi"</span>)</a>
+<a class="sourceLine" id="cb6-41" data-line-number="41"></a>
+<a class="sourceLine" id="cb6-42" data-line-number="42"></a>
+<a class="sourceLine" id="cb6-43" data-line-number="43"><span class="kw">rhat</span>(stan_fit, <span class="dt">pars =</span> non_ZX_pars) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb6-44" data-line-number="44"><span class="st">    </span><span class="kw">mcmc_rhat</span>() <span class="op">+</span><span class="st"> </span><span class="kw">yaxis_text</span>(<span class="dt">hjust =</span> <span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb6-45" data-line-number="45"><span class="kw">neff_ratio</span>(stan_fit, <span class="dt">pars =</span> non_ZX_pars) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb6-46" data-line-number="46"><span class="st">    </span><span class="kw">mcmc_neff</span>() <span class="op">+</span><span class="st"> </span><span class="kw">yaxis_text</span>(<span class="dt">hjust =</span> <span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb6-47" data-line-number="47"></a>
+<a class="sourceLine" id="cb6-48" data-line-number="48"></a>
+<a class="sourceLine" id="cb6-49" data-line-number="49"><span class="co"># Rhats</span></a>
+<a class="sourceLine" id="cb6-50" data-line-number="50">rhats &lt;-<span class="st"> </span><span class="kw">rhat</span>(stan_fit, <span class="dt">pars =</span> pars_interest)</a>
+<a class="sourceLine" id="cb6-51" data-line-number="51"><span class="kw">mcmc_rhat</span>(rhats)  <span class="op">+</span><span class="st"> </span><span class="kw">yaxis_text</span>(<span class="dt">hjust =</span> <span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb6-52" data-line-number="52"></a>
+<a class="sourceLine" id="cb6-53" data-line-number="53"><span class="co"># Neff / N</span></a>
+<a class="sourceLine" id="cb6-54" data-line-number="54">neff_ratios &lt;-<span class="st"> </span><span class="kw">neff_ratio</span>(stan_fit, <span class="dt">pars =</span> pars_interest)</a>
+<a class="sourceLine" id="cb6-55" data-line-number="55"><span class="kw">mcmc_neff</span>(neff_ratios, <span class="dt">size =</span> <span class="dv">2</span>) <span class="op">+</span><span class="st"> </span><span class="kw">yaxis_text</span>(<span class="dt">hjust =</span> <span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb6-56" data-line-number="56"></a>
+<a class="sourceLine" id="cb6-57" data-line-number="57"></a>
+<a class="sourceLine" id="cb6-58" data-line-number="58"><span class="co"># Autocorrelation</span></a>
+<a class="sourceLine" id="cb6-59" data-line-number="59"><span class="kw">mcmc_acf</span>(posterior, <span class="dt">pars =</span> pars_interest[<span class="dv">1</span><span class="op">:</span><span class="dv">8</span>], <span class="dt">lags =</span> <span class="dv">10</span>)</a>
+<a class="sourceLine" id="cb6-60" data-line-number="60"><span class="kw">mcmc_acf</span>(posterior, <span class="dt">pars =</span> pars_interest[<span class="dv">9</span><span class="op">:</span><span class="dv">16</span>], <span class="dt">lags =</span> <span class="dv">10</span>)</a>
+<a class="sourceLine" id="cb6-61" data-line-number="61"><span class="kw">mcmc_acf</span>(posterior, <span class="dt">pars =</span> pars_interest[<span class="dv">17</span><span class="op">:</span><span class="kw">length</span>(pars_interest)], <span class="dt">lags =</span> <span class="dv">10</span>)</a>
+<a class="sourceLine" id="cb6-62" data-line-number="62"></a>
+<a class="sourceLine" id="cb6-63" data-line-number="63"></a>
+<a class="sourceLine" id="cb6-64" data-line-number="64"><span class="co"># # Only really useful if there were divergences:</span></a>
+<a class="sourceLine" id="cb6-65" data-line-number="65"><span class="co"># np &lt;- NULL # nuts_params(stan_fit)</span></a>
+<a class="sourceLine" id="cb6-66" data-line-number="66"><span class="co"># lp &lt;- log_posterior(stan_fit)</span></a>
+<a class="sourceLine" id="cb6-67" data-line-number="67"><span class="co"># mcmc_trace(posterior, pars = pars_interest[1:8], np = np)</span></a>
+<a class="sourceLine" id="cb6-68" data-line-number="68"><span class="co"># mcmc_trace(posterior, pars = pars_interest[9:16], np = np)</span></a>
+<a class="sourceLine" id="cb6-69" data-line-number="69"><span class="co"># mcmc_trace(posterior, pars = pars_interest[17:length(pars_interest)], np = np)</span></a>
+<a class="sourceLine" id="cb6-70" data-line-number="70"><span class="co"># </span></a>
+<a class="sourceLine" id="cb6-71" data-line-number="71"><span class="co"># mcmc_nuts_divergence(np, lp)</span></a>
+<a class="sourceLine" id="cb6-72" data-line-number="72"><span class="co"># </span></a>
+<a class="sourceLine" id="cb6-73" data-line-number="73"><span class="co"># mcmc_parcoord(posterior, np = np)</span></a>
+<a class="sourceLine" id="cb6-74" data-line-number="74"><span class="co"># </span></a>
+<a class="sourceLine" id="cb6-75" data-line-number="75"><span class="co"># mcmc_scatter(</span></a>
+<a class="sourceLine" id="cb6-76" data-line-number="76"><span class="co">#   posterior,</span></a>
+<a class="sourceLine" id="cb6-77" data-line-number="77"><span class="co">#   pars = c("s_epsilon", "R[6]"),</span></a>
+<a class="sourceLine" id="cb6-78" data-line-number="78"><span class="co">#   transform = list(`R[6]` = "log"),</span></a>
+<a class="sourceLine" id="cb6-79" data-line-number="79"><span class="co">#   np = np</span></a>
+<a class="sourceLine" id="cb6-80" data-line-number="80"><span class="co"># )</span></a>
+<a class="sourceLine" id="cb6-81" data-line-number="81"></a>
+<a class="sourceLine" id="cb6-82" data-line-number="82"></a>
+<a class="sourceLine" id="cb6-83" data-line-number="83">growth <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb6-84" data-line-number="84"><span class="st">    </span><span class="kw">group_by</span>(line) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb6-85" data-line-number="85"><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">n =</span> <span class="kw">length</span>(<span class="kw">unique</span>(rep))) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb6-86" data-line-number="86"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">line =</span> <span class="kw">as.integer</span>(line)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb6-87" data-line-number="87"><span class="st">    </span><span class="kw">as.data.frame</span>()</a>
+<a class="sourceLine" id="cb6-88" data-line-number="88"></a>
+<a class="sourceLine" id="cb6-89" data-line-number="89"></a>
+<a class="sourceLine" id="cb6-90" data-line-number="90">pred_df &lt;-<span class="st"> </span><span class="kw">make_pred_df</span>(stan_fit, growth)</a>
+<a class="sourceLine" id="cb6-91" data-line-number="91"></a>
+<a class="sourceLine" id="cb6-92" data-line-number="92">pred_df <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb6-93" data-line-number="93"><span class="st">    </span><span class="co"># filter(rep == 1) %&gt;%</span></a>
+<a class="sourceLine" id="cb6-94" data-line-number="94"><span class="st">    </span><span class="co"># filter(rep == 4, line == "Clover-2017-2") %&gt;%</span></a>
+<a class="sourceLine" id="cb6-95" data-line-number="95"><span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(date, X)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb6-96" data-line-number="96"><span class="st">    </span><span class="kw">geom_ribbon</span>(<span class="kw">aes</span>(<span class="dt">ymin =</span> X_lower, <span class="dt">ymax =</span> X_upper),</a>
+<a class="sourceLine" id="cb6-97" data-line-number="97">                <span class="dt">fill =</span> <span class="st">"gray70"</span>, <span class="dt">alpha =</span> <span class="fl">0.5</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb6-98" data-line-number="98"><span class="st">    </span><span class="kw">geom_line</span>(<span class="dt">color =</span> <span class="st">"firebrick"</span>, <span class="dt">alpha =</span> <span class="fl">0.5</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb6-99" data-line-number="99"><span class="st">    </span><span class="kw">geom_point</span>(<span class="dt">shape =</span> <span class="dv">1</span>, <span class="dt">color =</span> <span class="st">"firebrick"</span>, <span class="dt">alpha =</span> <span class="fl">0.5</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb6-100" data-line-number="100"><span class="st">    </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">y =</span> X_pred), <span class="dt">color =</span> <span class="st">"dodgerblue3"</span>, <span class="dt">size =</span> <span class="fl">0.5</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb6-101" data-line-number="101"><span class="st">    </span><span class="co"># facet_wrap(~ rep + line, nrow = 2) +</span></a>
+<a class="sourceLine" id="cb6-102" data-line-number="102"><span class="st">    </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>rep <span class="op">+</span><span class="st"> </span>line, <span class="dt">nrow =</span> <span class="dv">7</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb6-103" data-line-number="103"><span class="st">    </span><span class="co"># coord_trans(y = "exp") +</span></a>
+<a class="sourceLine" id="cb6-104" data-line-number="104"><span class="st">    </span><span class="kw">theme</span>(<span class="dt">strip.text =</span> <span class="kw">element_blank</span>()) <span class="op">+</span></a>
+<a class="sourceLine" id="cb6-105" data-line-number="105"><span class="st">    </span><span class="ot">NULL</span></a></code></pre></div>
 </div>
   </div>
 
@@ -317,7 +340,6 @@
 <li><a href="#imputing-missing-data">Imputing missing data</a></li>
       <li><a href="#load-data">Load data</a></li>
       <li><a href="#see-time-series-data">See time series data</a></li>
-      <li><a href="#convert-data-for-stan">Convert data for stan</a></li>
       <li><a href="#run-model">Run model</a></li>
       <li><a href="#examine-model-output">Examine model output</a></li>
       </ul>

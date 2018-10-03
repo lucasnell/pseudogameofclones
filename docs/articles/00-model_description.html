@@ -129,33 +129,44 @@
 X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 \]</span></p>
 <p>where <span class="math inline">\(X_t\)</span> is log aphid counts for a particular plant at time <span class="math inline">\(t\)</span>, <span class="math inline">\(r\)</span> is the aphid line’s growth rate, <span class="math inline">\(\alpha\)</span> is the line’s density dependence, and <span class="math inline">\(\varepsilon\)</span> is process error.</p>
-<div id="note-on-z-and-non-centered-distributions" class="section level2">
+<div id="notes" class="section level2">
 <h2 class="hasAnchor">
-<a href="#note-on-z-and-non-centered-distributions" class="anchor"></a>Note on <span class="math inline">\(Z\)</span> and non-centered distributions</h2>
-<p>Below, all mentions of <span class="math inline">\(Z\)</span> refer to Z-scores (i.e., <span class="math inline">\(Z \sim \text{N}(0,1)\)</span>). These are used to generate non-centered parameterizations of all distributions (see section 28.6 in the Stan Modeling Language User’s Guide and Reference Manual, version 2.17.0). Each <span class="math inline">\(Z\)</span> in an equation is not referring to the same object, but to a separate Z-score used to generate deviates from the focal distribution.</p>
+<a href="#notes" class="anchor"></a>Notes</h2>
+<p><strong>on <span class="math inline">\(Z\)</span> and non-centered distributions:</strong></p>
+<p>Below, all mentions of <span class="math inline">\(Z\)</span> refer to deviates from <span class="math inline">\(\text{N}(0,1)\)</span>. These are used to generate non-centered parameterizations of all distributions (see section 28.6 in the Stan Modeling Language User’s Guide and Reference Manual, version 2.17.0).</p>
+<p><strong>on truncated distributions:</strong></p>
+<p>Below, <code>T[0,]</code> indicates that a distribution is truncated to be above zero.</p>
+<p><strong>on normal-distribution notation:</strong></p>
+<p>Normal distributions below are denoted as <span class="math inline">\(\sim \text{N}(\mu, \sigma)\)</span>.</p>
+</div>
+<div id="note-on-hyperparameters" class="section level2">
+<h2 class="hasAnchor">
+<a href="#note-on-hyperparameters" class="anchor"></a>Note on hyperparameters</h2>
+<p>Prior information is stored as a vector of hyperparameters <span class="math inline">\(\mathbf{\Theta}\)</span>, indexed for each hyperparameter as <span class="math inline">\(\theta_i\)</span> for position <span class="math inline">\(i\)</span>.</p>
 </div>
 <div id="estimating-process-error" class="section level2">
 <h2 class="hasAnchor">
 <a href="#estimating-process-error" class="anchor"></a>Estimating process error</h2>
-<span class="math display">\[\begin{align}
-    \varepsilon &amp;= s_\varepsilon Z \\
-    s_\varepsilon &amp;\sim \exp ( \tau + \sigma_\tau Z ) \\
-\end{align}\]</span>
+<p>For observation <span class="math inline">\(k\)</span>:</p>
+<p><span class="math display">\[\begin{align}
+    \varepsilon_k &amp;= \sigma_\varepsilon Z_k \\
+    \sigma_\varepsilon &amp;\sim \text{N} ( \theta_1, ~ \theta_2 ) \texttt{T[0,]} \\
+\end{align}\]</span></p>
 <div id="estimated-from-model" class="section level3">
 <h3 class="hasAnchor">
 <a href="#estimated-from-model" class="anchor"></a>Estimated from model:</h3>
 <ul>
 <li>
-<span class="math inline">\(s_\varepsilon\)</span>: standard deviation of the process error</li>
+<span class="math inline">\(\sigma_\varepsilon\)</span>: SD of the process error</li>
 </ul>
 <div id="priors-to-define" class="section level4">
 <h4 class="hasAnchor">
 <a href="#priors-to-define" class="anchor"></a>Priors to define:</h4>
 <ul>
 <li>
-<span class="math inline">\(\tau\)</span>: mean for the normal distribution that generates <span class="math inline">\(\log(s_\varepsilon)\)</span> values</li>
+<span class="math inline">\(\theta_1\)</span>: mean for the normal distribution that generates <span class="math inline">\(\sigma_\varepsilon\)</span> values</li>
 <li>
-<span class="math inline">\(\sigma_\tau\)</span>: sd for the normal distribution that generates <span class="math inline">\(\log(s_\varepsilon)\)</span> values</li>
+<span class="math inline">\(\theta_2\)</span>: SD for the normal distribution that generates <span class="math inline">\(\sigma_\varepsilon\)</span> values</li>
 </ul>
 </div>
 </div>
@@ -163,25 +174,22 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <div id="estimating-growth-rates" class="section level2">
 <h2 class="hasAnchor">
 <a href="#estimating-growth-rates" class="anchor"></a>Estimating growth rates</h2>
-<p>Growth rates are bound <span class="math inline">\(\ge 0\)</span> and have one estimate per aphid line, resulting in a vector of growth rates, <span class="math inline">\(\mathbf{R}\)</span>. The growth rate estimate for clonal line <span class="math inline">\(i\)</span> is generated as follows:</p>
-<span class="math display">\[\begin{align}
-    
-    \mathbf{R}_i &amp;= \exp \left( \theta + s_\theta ~ Z \right) \\
-    
-    \theta &amp;= \mu_{\theta} + \sigma_{\theta} ~ Z \\
-    s_\theta &amp;= \exp(\gamma + \sigma_\gamma ~ Z) \\
-    
-\end{align}\]</span>
+<p>Growth rates are bound <span class="math inline">\(\ge 0\)</span> and have one estimate per aphid line, resulting in a vector of growth rates. The growth rate estimate for clonal line <span class="math inline">\(i\)</span> is generated as follows:</p>
+<p><span class="math display">\[\begin{align}
+    r_i &amp;= \exp \left( \rho + \sigma_\rho ~ Z_i \right) \\
+    \rho &amp;\sim \text{N}(\theta_3, ~ \theta_4) \\
+    \sigma_\rho &amp;\sim \text{N}(\theta_5, ~ \theta_6) \texttt{T[0,]} \\
+\end{align}\]</span></p>
 <div id="estimated-from-model-1" class="section level3">
 <h3 class="hasAnchor">
 <a href="#estimated-from-model-1" class="anchor"></a>Estimated from model:</h3>
 <ul>
 <li>
-<span class="math inline">\(\mathbf{R}\)</span>: vector of growth rates for each aphid line</li>
+<span class="math inline">\(\mathbf{R}\)</span>: vector (<span class="math inline">\(r_i\)</span> for all <span class="math inline">\(i\)</span>) of growth rates for each aphid line</li>
 <li>
-<span class="math inline">\(\theta\)</span>: among-line mean of the log-transformed growth rates</li>
+<span class="math inline">\(\rho\)</span>: among-line mean of the log-transformed growth rates</li>
 <li>
-<span class="math inline">\(s_\theta\)</span>: among-line standard deviation of the log-transformed growth rates</li>
+<span class="math inline">\(\sigma_\rho\)</span>: among-line SD of the log-transformed growth rates</li>
 </ul>
 </div>
 <div id="priors-to-define-1" class="section level3">
@@ -189,13 +197,13 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <a href="#priors-to-define-1" class="anchor"></a>Priors to define:</h3>
 <ul>
 <li>
-<span class="math inline">\(\mu_\theta\)</span>: mean of the normal distribution that generates <span class="math inline">\(\theta\)</span> values</li>
+<span class="math inline">\(\theta_3\)</span>: mean for the normal distribution that generates <span class="math inline">\(\rho\)</span> values</li>
 <li>
-<span class="math inline">\(\sigma_\theta\)</span>: standard deviation of the normal distribution that generates <span class="math inline">\(\theta\)</span> values</li>
+<span class="math inline">\(\theta_4\)</span>: SD for the normal distribution that generates <span class="math inline">\(\rho\)</span> values</li>
 <li>
-<span class="math inline">\(\gamma\)</span>: mean for the normal distribution that generates <span class="math inline">\(\log(s_\theta)\)</span> values</li>
+<span class="math inline">\(\theta_5\)</span>: mean for the normal distribution that generates <span class="math inline">\(\sigma_\rho\)</span> values</li>
 <li>
-<span class="math inline">\(\sigma_\gamma\)</span>: sd for the normal distribution that generates <span class="math inline">\(\log(s_\theta)\)</span> values</li>
+<span class="math inline">\(\theta_6\)</span>: SD for the normal distribution that generates <span class="math inline">\(\sigma_\rho\)</span> values</li>
 </ul>
 </div>
 </div>
@@ -203,37 +211,27 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <h2 class="hasAnchor">
 <a href="#estimating-density-dependence" class="anchor"></a>Estimating density dependence</h2>
 <p>Density dependences are bound between 0 and 1 and also have estimates for each line. They differ from <span class="math inline">\(r\)</span> in that they also have variance within aphid lines, to account for effects of variability in plant resources affecting aphid density dependence. I used the inverse logit function to bound final <span class="math inline">\(\alpha\)</span> estimates between 0 and 1. For clonal line <span class="math inline">\(i\)</span> and plant <span class="math inline">\(j\)</span>, estimates are generated as follows:</p>
-<span class="math display">\[\begin{align}
-
-    \mathbf{A}_i &amp;= \text{logit}^{-1} \hspace{-0.25em}
+<p><span class="math display">\[\begin{align}
+    \alpha_{ij} &amp;= \text{logit}^{-1} \hspace{-0.25em}
         \left(
-            \phi + s_\phi ~ Z
+            \phi + \sigma_{\phi a} ~ Z_i + \sigma_{\phi w} ~ Z_j
         \right) \\
-    
-    \mathbf{P}_{j} &amp;= \text{logit}^{-1} \hspace{-0.25em}
-        \left(
-            \text{logit}(\mathbf{A}_{\mathbf{L}_j}) +
-            \hat{s}_{\phi} ~ Z
-        \right) \\
-    
-    \phi &amp;= \mu_{\phi} + \sigma_{\phi} ~ Z \\
-    s_{\phi} &amp;= \exp(\delta + \sigma_\delta ~ Z) \\
-    \hat{s}_{\phi} &amp;= \exp(\zeta + \sigma_\zeta ~ Z) \\
-\end{align}\]</span>
+    \phi &amp;\sim \text{N}(\theta_7, ~ \theta_8) \\
+    \sigma_{\phi a} &amp;\sim \text{N}(\theta_9, ~ \theta_{10}) \texttt{T[0,]} \\
+    \sigma_{\phi w} &amp;\sim \text{N}(\theta_{11}, ~ \theta_{12}) \texttt{T[0,]} \\
+\end{align}\]</span></p>
 <div id="estimated-from-model-2" class="section level3">
 <h3 class="hasAnchor">
 <a href="#estimated-from-model-2" class="anchor"></a>Estimated from model:</h3>
 <ul>
 <li>
-<span class="math inline">\(\mathbf{A}\)</span>: vector of density dependences for each aphid line</li>
-<li>
-<span class="math inline">\(\mathbf{P}\)</span>: vector of density dependences for each plant (i.e., each time series)</li>
+<span class="math inline">\(\mathbf{A}\)</span>: vector of density dependences (<span class="math inline">\(\alpha_i\)</span> for all <span class="math inline">\(i\)</span>) for each aphid line</li>
 <li>
 <span class="math inline">\(\phi\)</span>: among-line mean of the logit-transformed density dependences</li>
 <li>
-<span class="math inline">\(s_\phi\)</span>: among-line standard deviation of the logit-transformed density dependences</li>
+<span class="math inline">\(\sigma_{\phi a}\)</span>: among-line SD of the logit-transformed density dependences</li>
 <li>
-<span class="math inline">\(\hat{s}_{\phi}\)</span>: the within-line standard deviations in the logit-transformed density dependences for each aphid line</li>
+<span class="math inline">\(\sigma_{\phi w}\)</span>: the within-line SDs in the logit-transformed density dependences for each aphid line</li>
 </ul>
 </div>
 <div id="priors-to-define-2" class="section level3">
@@ -241,27 +239,17 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
 <a href="#priors-to-define-2" class="anchor"></a>Priors to define:</h3>
 <ul>
 <li>
-<span class="math inline">\(\mu_\phi\)</span>: mean of the normal distribution that generates <span class="math inline">\(\phi\)</span> values</li>
+<span class="math inline">\(\theta_{7}\)</span>: mean for the normal distribution that generates <span class="math inline">\(\phi\)</span> values</li>
 <li>
-<span class="math inline">\(\sigma_\phi\)</span>: standard deviation of the normal distribution that generates <span class="math inline">\(\phi\)</span> values</li>
+<span class="math inline">\(\theta_{8}\)</span>: SD for the normal distribution that generates <span class="math inline">\(\phi\)</span> values</li>
 <li>
-<span class="math inline">\(\delta\)</span>: mean for the normal distribution that generates <span class="math inline">\(\log(s_\phi)\)</span> values</li>
+<span class="math inline">\(\theta_{9}\)</span>: mean for the normal distribution that generates <span class="math inline">\(\sigma_{\phi a}\)</span> values</li>
 <li>
-<span class="math inline">\(\sigma_\delta\)</span>: sd for the normal distribution that generates <span class="math inline">\(\log(s_\phi)\)</span> values</li>
+<span class="math inline">\(\theta_{10}\)</span>: SD for the normal distribution that generates <span class="math inline">\(\sigma_{\phi a}\)</span> values</li>
 <li>
-<span class="math inline">\(\zeta\)</span>: mean for the normal distribution that generates values in <span class="math inline">\(\log(\hat{s}_{\phi})\)</span>
-</li>
+<span class="math inline">\(\theta_{11}\)</span>: mean for the normal distribution that generates <span class="math inline">\(\sigma_{\phi w}\)</span> values</li>
 <li>
-<span class="math inline">\(\sigma_\zeta\)</span>: sd for the normal distribution that generates values in <span class="math inline">\(\log(\hat{s}_{\phi})\)</span>
-</li>
-</ul>
-</div>
-<div id="other" class="section level3">
-<h3 class="hasAnchor">
-<a href="#other" class="anchor"></a>Other:</h3>
-<ul>
-<li>
-<span class="math inline">\(\mathbf{L}_j\)</span> is an identifier vector that returns the index to the aphid line for time series <span class="math inline">\(j\)</span>.</li>
+<span class="math inline">\(\theta_{12}\)</span>: SD for the normal distribution that generates <span class="math inline">\(\sigma_{\phi w}\)</span> values</li>
 </ul>
 </div>
 </div>
@@ -275,7 +263,8 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
       <ul class="nav nav-pills nav-stacked">
 <li>
 <a href="#model-description">Model description</a><ul class="nav nav-pills nav-stacked">
-<li><a href="#note-on-z-and-non-centered-distributions">Note on <span class="math inline">\(Z\)</span> and non-centered distributions</a></li>
+<li><a href="#notes">Notes</a></li>
+      <li><a href="#note-on-hyperparameters">Note on hyperparameters</a></li>
       <li><a href="#estimating-process-error">Estimating process error</a></li>
       <li><a href="#estimating-growth-rates">Estimating growth rates</a></li>
       <li><a href="#estimating-density-dependence">Estimating density dependence</a></li>

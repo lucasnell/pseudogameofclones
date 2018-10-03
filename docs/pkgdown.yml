@@ -1,12 +1,5 @@
 pandoc: 2.1.1
 pkgdown: 1.1.0
 pkgdown_sha: ~
-articles:
-  00-model_description: 00-model_description.html
-  01-choose_priors: 01-choose_priors.html
-  02-estimate_pars: 02-estimate_pars.html
-  03-dispersal: 03-dispersal.html
-  04-plant_death: 04-plant_death.html
-  10-simulation_description: 10-simulation_description.html
-  11-simulate_cages: 11-simulate_cages.html
+articles: []
 

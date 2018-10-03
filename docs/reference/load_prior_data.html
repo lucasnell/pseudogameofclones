@@ -32,7 +32,7 @@
 
 <meta property="og:title" content="Load data that won't be used for the actual analysis, to develop priors. — load_prior_data" />
 
-<meta property="og:description" content="Load data that won't be used for the actual analysis, to develop priors." />
+<meta property="og:description" content="Argument filter_pars defaults to the same as for load_data." />
 
 <meta property="og:image" content="/logo.png" />
 <meta name="twitter:card" content="summary" />
@@ -149,11 +149,11 @@
 
     <div class="ref-description">
     
-    <p>Load data that won't be used for the actual analysis, to develop priors.</p>
+    <p>Argument <code>filter_pars</code> defaults to the same as for <code>load_data</code>.</p>
     
     </div>
 
-    <pre class="usage"><span class='fu'>load_prior_data</span>(<span class='kw'>filter_pars</span> <span class='kw'>=</span> <span class='fu'>list</span>(<span class='kw'>start</span> <span class='kw'>=</span> <span class='fl'>0.5</span>, <span class='kw'>end</span> <span class='kw'>=</span> <span class='fl'>0.9</span>), <span class='kw'>file</span> <span class='kw'>=</span> <span class='fl'>NA</span>)</pre>
+    <pre class="usage"><span class='fu'>load_prior_data</span>(<span class='kw'>filter_pars</span> <span class='kw'>=</span> <span class='kw'>NULL</span>, <span class='kw'>file</span> <span class='kw'>=</span> <span class='fl'>NA</span>)</pre>
     
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -163,7 +163,7 @@
       <td><p>A list with the names <code>"start"</code> and <code>"end"</code>, containing single
 numbers with threshold for filtering the beginning and ending of time series,
 respectively. Set to <code>NULL</code> to avoid filtering entirely.
-Defaults to <code>list(start = 0.5, end = 1.0)</code>.</p></td>
+Defaults to <code>list(start = 0.0, end = 0.9)</code>.</p></td>
     </tr>
     <tr>
       <th>file</th>

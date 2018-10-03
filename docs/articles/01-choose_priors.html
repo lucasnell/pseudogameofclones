@@ -124,48 +124,56 @@
 <blockquote>
 <p>We characterize a prior distribution as <em>weakly informative</em> if it is proper but is set up so that the information it does provide is intentionally weaker than whatever actual prior knowledge is available. (p 55, Gelman et al. 2014)</p>
 </blockquote>
-<p>Gelman, A., J. B. Carlin, H. S. Stern, D. B. Dunson, A. Vehtari, and D. B. Rubin. 2014. <em>Bayesian Data Analysis</em>. Third edition. CRC Press, Boca Raton, FL, USA.</p>
+<ul>
+<li>Gelman, A., J. B. Carlin, H. S. Stern, D. B. Dunson, A. Vehtari, and D. B. Rubin. 2014. <em>Bayesian Data Analysis</em>. Third edition. CRC Press, Boca Raton, FL, USA.</li>
+</ul>
+<div id="notes" class="section level2">
+<h2 class="hasAnchor">
+<a href="#notes" class="anchor"></a>Notes</h2>
+<p><strong>on truncated distributions:</strong></p>
+<p>Below, <code>T[0,]</code> indicates that a distribution is truncated to be above zero.</p>
+<p><strong>on hyperparameters:</strong></p>
+<p>Prior information is stored as a vector of hyperparameters <span class="math inline">\(\mathbf{\Theta}\)</span>, indexed for each hyperparameter as <span class="math inline">\(\theta_i\)</span> for position <span class="math inline">\(i\)</span>.</p>
+<p><strong>on normal-distribution notation:</strong></p>
+<p>Normal distributions below are denoted as <span class="math inline">\(\sim \text{N}(\mu, \sigma)\)</span>.</p>
+</div>
 <div id="process-error-priors" class="section level2">
 <h2 class="hasAnchor">
 <a href="#process-error-priors" class="anchor"></a>Process error priors</h2>
-<p><span class="math inline">\(s_\varepsilon\)</span> is bound <span class="math inline">\(\ge 0\)</span> and sampled as <span class="math inline">\(\sim \text{Lognormal}(\tau, \sigma_\tau)\)</span> Based on simulations, an <span class="math inline">\(s_\varepsilon\)</span> of 1 would be very high—so high as to be not realistically possible. Values of ~ 0.15 seemed to result in simulations matching some preliminary experimental results we’ve seen in the lab. Below, “sigma-1.90” is simulated data with process error set to -1.897, “sigma1” has process error set to 1.0. The others are the preliminary data.</p>
+<p><span class="math inline">\(\sigma_\varepsilon\)</span> was sampled as <span class="math inline">\(\sim \text{N}(\theta_1, \theta_2) \texttt{T[0,]}\)</span>. Based on simulations, a <span class="math inline">\(\sigma_\varepsilon\)</span> of 1 would be very high—so high as to be not realistically possible. Values of ~ 0.15 seemed to result in simulations matching some preliminary experimental results we’ve seen in the lab. Below, “theta[1] 0.15” is simulated data with process error set to <span class="math inline">\(0.15\)</span>, “theta[1] 1” has process error set to <span class="math inline">\(1.0\)</span>. The others are the preliminary data.</p>
 <p><img src="01-choose_priors_files/figure-html/load_prior-1.svg" width="576"></p>
-<p>To sample <span class="math inline">\(s_\varepsilon\)</span>, I chose a log-normal distribution with <code>log(0.15)</code> (-1.897) as the <span class="math inline">\(tau\)</span> and 1 for <span class="math inline">\(\sigma_\tau\)</span> because this results in low densities at values close to 1. Note that below, the x-axis is log-transformed, but axis labels indicate non-transformed values.</p>
+<p>To sample <span class="math inline">\(\sigma_\varepsilon\)</span>, I chose a mean (parameter <span class="math inline">\(\theta_1\)</span>) of <span class="math inline">\(0.15\)</span> and SD (<span class="math inline">\(\theta_2\)</span> parameter) of <span class="math inline">\(1\)</span>. I chose these values because they result in low densities at values close to 1.</p>
 <p><img src="01-choose_priors_files/figure-html/process_error_plot-1.svg" width="576"></p>
 </div>
 <div id="growth-rate-priors" class="section level2">
 <h2 class="hasAnchor">
 <a href="#growth-rate-priors" class="anchor"></a>Growth rate priors</h2>
-<p>From data sent to me from A.R. Ives related to this paper:</p>
-<p>Meisner, M. H., J. P. Harmon, and A. R. Ives. 2014. Temperature effects on long-term population dynamics in a parasitoid–host system. <em>Ecological Monographs</em> <strong>84</strong>:457–476.</p>
-<p>For fecundity, juvenile survival, and adult survival, the dataset had low and high estimates. I created two Leslie matrices, one with all of the high estimates and another with all the lower estimates. For each of these Leslie matrices, I estimated the intrinsic daily rate of increase (<span class="math inline">\(r\)</span>) in aphid populations in the lab as <span class="math inline">\(r = \log(\lambda)\)</span>, where <span class="math inline">\(\lambda\)</span> is the dominant eigenvector of the matrix. Thus I have fast and slow estimates of population growth to use as prior information about our population-growth assays.</p>
+<p>Log-transformed growth rates (<span class="math inline">\(\log(r)\)</span>) were sampled as a function of an among-line mean (<span class="math inline">\(\rho \sim \text{N} ( \theta_3, \theta_4 )\)</span>) and SD (<span class="math inline">\(\sigma_\rho \sim \text{N} ( \theta_5, \theta_6 ) \texttt{T[0,]}\)</span>).</p>
+<p>For growth-rate prior information, I first used data sent to me from A.R. Ives related to this paper:</p>
+<ul>
+<li>Meisner, M. H., J. P. Harmon, and A. R. Ives. 2014. Temperature effects on long-term population dynamics in a parasitoid–host system. <em>Ecological Monographs</em> <strong>84</strong>:457–476.</li>
+</ul>
+<p>The dataset had low and high estimates for fecundity, juvenile survival, and adult survival. I created two Leslie matrices, one with all of the high estimates and another with all of the lower estimates. For each of these Leslie matrices, I estimated the intrinsic daily rate of increase (<span class="math inline">\(r\)</span>) in aphid populations in the lab as <span class="math inline">\(r = \log(\lambda)\)</span>, where <span class="math inline">\(\lambda\)</span> is the dominant eigenvector of the matrix. Thus I have fast and slow estimates of population growth to use as prior information about our population-growth assays.</p>
 <pre><code>#&gt; fast = 0.2863
 #&gt; slow = 0.256</code></pre>
-<span class="math display">\[\begin{align}
-    
-    \mathbf{R}_i &amp;= \exp \left( \theta + s_\theta ~ Z \right) \\
-    
-    \theta &amp;= \mu_{\theta} + \sigma_{\theta} ~ Z \\
-    s_\theta &amp;= \exp(\gamma + \sigma_\gamma ~ Z) \\
-    
-\end{align}\]</span>
 <p>I also simulated some data with <span class="math inline">\(r = \{ 0.25, 0.5, 0.75, 1.25 \}\)</span> to compare the simulations to the preliminary data. Below, “rX” indicates a panel of simulated data with <span class="math inline">\(r\)</span> set to the number X. The others are the preliminary data. From these simulations, values of <span class="math inline">\(r &gt; 0.5\)</span> seem pretty unlikely.</p>
 <p><img src="01-choose_priors_files/figure-html/load_prior2-1.svg" width="576"></p>
-<p>For the among-line mean of the log-transformed growth rates (<span class="math inline">\(\mu_\theta\)</span>), I used <code>mean(log(c(fast, slow)))</code>, -1.307. For the standard deviation of <span class="math inline">\(\mu_\theta\)</span> (<span class="math inline">\(\sigma_\theta\)</span>), I used <code>sd(log(c(fast, slow))) * 10</code>, 0.7922. I multiplied by 10 to add extra uncertainty because of the limited number of lines from which I derived my priors. In the plot below, I’ve exponentiated the x-axis so that it displays the values of <span class="math inline">\(r\)</span> that would result.</p>
+<p>For sampling <span class="math inline">\(\rho\)</span>, I used a mean (<span class="math inline">\(\theta_3\)</span> parameter) of <code>mean(log(c(fast, slow)))</code>, <span class="math inline">\(-1.307\)</span>. For the standard deviation of <span class="math inline">\(\rho\)</span> (NOT the among-line SD, rather <span class="math inline">\(\theta_4\)</span>) I used <code>sd(log(c(fast, slow))) * 10</code>, <span class="math inline">\(0.7922\)</span>. I multiplied by 10 to add extra uncertainty because of the limited number of lines from which I derived my priors. In the plot below, I’ve exponentiated the x-axis so that it displays the values of <span class="math inline">\(r\)</span> that would result.</p>
 <p><img src="01-choose_priors_files/figure-html/mean_theta_distr-1.svg" width="576"></p>
-<p>For sampling <span class="math inline">\(s_\theta\)</span>, I use <code>sd(log(c(fast, slow)))</code> (-2.536) for the location parameter and 1 for the scale parameter. The latter was chosen to indicate even more uncertainty in <span class="math inline">\(s_\theta\)</span> than in <span class="math inline">\(\mu_\theta\)</span>. Note that below, the x-axis is log-transformed, but axis labels indicate non-transformed values.</p>
+<p>For sampling <span class="math inline">\(\sigma_\rho\)</span> (the among-line SD of <span class="math inline">\(\log(r)\)</span>), I used <code>sd(log(c(fast, slow)))</code> (<span class="math inline">\(0.07922\)</span>) for the mean (<span class="math inline">\(\theta_5\)</span> parameter) and <span class="math inline">\(1\)</span> for the SD (<span class="math inline">\(\theta_6\)</span> parameter). The latter was chosen to indicate even more uncertainty in <span class="math inline">\(\sigma_\rho\)</span> than in <span class="math inline">\(\rho\)</span>.</p>
 <p><img src="01-choose_priors_files/figure-html/s_theta_distr-1.svg" width="576"></p>
 </div>
 <div id="density-dependence" class="section level2">
 <h2 class="hasAnchor">
 <a href="#density-dependence" class="anchor"></a>Density dependence</h2>
-<p>For density dependence, I’m going to use data from preliminary population-growth assays that used the same methods that we’re using. We conducted these assays on 4 aphid lines that we no longer maintain in the lab and won’t be using for our analyses or cage experiments.</p>
+<p>Logit-transformed density dependences (<span class="math inline">\(\text{logit}(\alpha)\)</span>) were sampled based on three parameters: overall mean (<span class="math inline">\(\phi \sim \text{N}(\theta_7, ~ \theta_8)\)</span>), among-line SD (<span class="math inline">\(\sigma_{\phi a} \sim \text{N}(\theta_9, ~ \theta_{10}) \texttt{T[0,]}\)</span>), and within-line SD (<span class="math inline">\(\sigma_{\phi w} \sim \text{N}(\theta_{11}, ~ \theta_{12}) \texttt{T[0,]}\)</span>).</p>
+<p>For density dependence prior information, I used data from preliminary population-growth assays that used the same methods that we’re using. We conducted these assays on 4 aphid lines that we no longer maintain in the lab and won’t be using for our analyses or cage experiments.</p>
 <p>If we look at the deterministic portion of our model…</p>
 <p><span class="math display">\[
 X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right)
-\]</span> … <span class="math inline">\(X_{t+1} = X_t\)</span> when <span class="math inline">\(\alpha = 1 / \exp(X_t) = 1 / N_t\)</span>. Because each repetition is run until the plant dies and populations crash, I’ll assume that for each repetition, our estimate of <span class="math inline">\(\alpha\)</span> is <span class="math inline">\(1 / \max(N_t)\)</span>.</p>
+\]</span> … we can see that <span class="math inline">\(X_{t+1} = X_t\)</span> when <span class="math inline">\(\alpha = 1 / \exp(X_t) = 1 / N_t\)</span>. Because each repetition is run until the plant dies and populations crash, I’ll assume that for each repetition, our estimate of <span class="math inline">\(\alpha\)</span> is <span class="math inline">\(1 / \max(N_t)\)</span>.</p>
 <p>Here is how I coded it:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">prior_df &lt;-<span class="st"> </span><span class="kw"><a href="../reference/load_prior_data.html">load_prior_data</a></span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">prior_df &lt;-<span class="st"> </span><span class="kw">load_prior_data</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb2-2" data-line-number="2"><span class="st">    </span><span class="kw">filter</span>(<span class="op">!</span><span class="kw">is.na</span>(line)) <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb2-3" data-line-number="3"><span class="st">    </span><span class="kw">group_by</span>(line, rep) <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb2-4" data-line-number="4"><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">alpha =</span> <span class="dv">1</span> <span class="op">/</span><span class="st"> </span><span class="kw">max</span>(N)) <span class="op">%&gt;%</span><span class="st"> </span></a>
@@ -179,18 +187,22 @@ X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right)
 <a class="sourceLine" id="cb2-12" data-line-number="12"><span class="co">#&gt; 3 WI-4122-52     1 0.00260</span></a>
 <a class="sourceLine" id="cb2-13" data-line-number="13"><span class="co">#&gt; 4 WI-4122-52     2 0.00142</span></a>
 <a class="sourceLine" id="cb2-14" data-line-number="14"><span class="co">#&gt; # ... with 4 more rows</span></a></code></pre></div>
-<div id="among-line-distribution" class="section level3">
+<div id="overall-mean" class="section level3">
 <h3 class="hasAnchor">
-<a href="#among-line-distribution" class="anchor"></a>Among-line distribution</h3>
-<p>For estimates relating to the among-line distribution of <span class="math inline">\(\text{logit}(\alpha)\)</span>, I first calculated <span class="math inline">\(\text{logit}(\alpha)\)</span> for each line-rep combo, then calculated the mean for each line. After that, I used the mean across lines, -6.126, as my prior for <span class="math inline">\(\mu_\phi\)</span>. I multiplied the standard deviation across lines by 10 (resulting in 3.189) for my prior on <span class="math inline">\(\sigma_\phi\)</span> to decrease my certainty in estimates. For the plot below, I inverse-logit transformed the x-axis to show the resulting <span class="math inline">\(\alpha\)</span> values from these priors. It still has pretty low densities above 0.5, which is reasonable because that would indicate a “carrying capacity” of &lt; 2.</p>
+<a href="#overall-mean" class="anchor"></a>Overall mean</h3>
+<p>For sampling <span class="math inline">\(\phi\)</span>, I used the mean <span class="math inline">\(\text{logit}(\alpha)\)</span> across lines, <span class="math inline">\(-6.126\)</span>, as my prior for <span class="math inline">\(\theta_7\)</span>. I multiplied the among-line SD of <span class="math inline">\(\text{logit}(\alpha)\)</span> by 10 (resulting in <span class="math inline">\(3.189\)</span>) for my prior on <span class="math inline">\(\theta_8\)</span> to decrease my certainty in estimates. For the plot below, I inverse-logit transformed the x-axis to show the resulting <span class="math inline">\(\alpha\)</span> values from these priors. It still has pretty low densities above 0.5, which is reasonable because that would indicate a “carrying capacity” of &lt; 2.</p>
 <p><img src="01-choose_priors_files/figure-html/alpha_overall_mean_plot-1.svg" width="576"></p>
-<p>For the distribution of <span class="math inline">\(s_\phi\)</span> values, I used the log-transformed SD for among-line mean <span class="math inline">\(\text{logit}(\alpha)\)</span> (-1.143) for the meanlog parameter (<span class="math inline">\(\delta\)</span>), and 2 for the sdlog parameter (<span class="math inline">\(\sigma_\delta\)</span>). The latter was chosen simply because I’m not very sure of what it should be, and this value results in a pretty flat prior distribution. Note that below, the x-axis is log-transformed, but axis labels indicate non-transformed values.</p>
+</div>
+<div id="among-line-sd" class="section level3">
+<h3 class="hasAnchor">
+<a href="#among-line-sd" class="anchor"></a>Among-line SD</h3>
+<p>For the distribution of <span class="math inline">\(\sigma_{\phi a}\)</span> values, I used the SD for among-line mean <span class="math inline">\(\text{logit}(\alpha)\)</span> (<span class="math inline">\(0.3189\)</span>) for the mean (parameter <span class="math inline">\(\theta_9\)</span>), and <span class="math inline">\(1\)</span> for the SD (parameter <span class="math inline">\(\theta_{10}\)</span>). The latter was chosen simply because I’m not very sure of what it should be, and this value results in a pretty flat prior distribution.</p>
 <p><img src="01-choose_priors_files/figure-html/alpha_line_means_plot-1.svg" width="576"></p>
 </div>
-<div id="within-line-distribution" class="section level3">
+<div id="within-line-sd" class="section level3">
 <h3 class="hasAnchor">
-<a href="#within-line-distribution" class="anchor"></a>Within-line distribution</h3>
-<p>For estimates relating to the <em>within</em>-line distribution of <span class="math inline">\(\text{logit}(\alpha)\)</span>, I first calculated <span class="math inline">\(\text{logit}(\alpha)\)</span> for each line-rep combo, then calculated the standard deviation of these estimates for each line. After that, I used the mean of log-transformed SD estimates across lines, -1.036, as my prior for <span class="math inline">\(\zeta\)</span>. I used <span class="math inline">\(10 \times\)</span> the SD of log-transformed SD estimates across lines, -1.036, as my prior for <span class="math inline">\(\zeta\)</span>. This results in the following weakly informative prior:</p>
+<a href="#within-line-sd" class="anchor"></a>Within-line SD</h3>
+<p>For sampling <span class="math inline">\(\sigma_{\phi w}\)</span>, I used the mean of within-line SDs, <span class="math inline">\(0.6679\)</span>, for <span class="math inline">\(\theta_{11}\)</span>. I multiplied the SD of within-line SDs by 10, resulting in <span class="math inline">\(1.437\)</span>, for <span class="math inline">\(\theta_{12}\)</span>. This results in the following weakly informative prior:</p>
 <p><img src="01-choose_priors_files/figure-html/alpha_within_line_sd_plot-1.svg" width="576"></p>
 </div>
 </div>
@@ -205,106 +217,146 @@ par
 <th style="text-align:right;">
 value
 </th>
+<th style="text-align:left;">
+description<span class="math inline">\({}^{†}\)</span>
+</th>
 </tr></thead>
 <tbody>
 <tr>
 <td style="text-align:left;">
-tau
+<span class="math inline">\(\theta_{1}\)</span>
 </td>
 <td style="text-align:right;">
--1.8970
+<span class="math inline">\(0.15000\)</span>
+</td>
+<td style="text-align:left;">
+mean for <span class="math inline">\(\sigma_\varepsilon\)</span>
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-sigma_tau
+<span class="math inline">\(\theta_{2}\)</span>
 </td>
 <td style="text-align:right;">
-1.0000
+<span class="math inline">\(1.00000\)</span>
+</td>
+<td style="text-align:left;">
+SD for <span class="math inline">\(\sigma_\varepsilon\)</span>
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-mu_theta
+<span class="math inline">\(\theta_{3}\)</span>
 </td>
 <td style="text-align:right;">
--1.3070
+<span class="math inline">\(-1.30700\)</span>
+</td>
+<td style="text-align:left;">
+mean for <span class="math inline">\(\rho\)</span>
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-sigma_theta
+<span class="math inline">\(\theta_{4}\)</span>
 </td>
 <td style="text-align:right;">
-0.7922
+<span class="math inline">\(0.79220\)</span>
+</td>
+<td style="text-align:left;">
+SD for <span class="math inline">\(\rho\)</span>
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-gamma
+<span class="math inline">\(\theta_{5}\)</span>
 </td>
 <td style="text-align:right;">
--2.5360
+<span class="math inline">\(0.07922\)</span>
+</td>
+<td style="text-align:left;">
+mean for <span class="math inline">\(\sigma_\rho\)</span>
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-sigma_gamma
+<span class="math inline">\(\theta_{6}\)</span>
 </td>
 <td style="text-align:right;">
-1.0000
+<span class="math inline">\(1.00000\)</span>
+</td>
+<td style="text-align:left;">
+SD for <span class="math inline">\(\sigma_\rho\)</span>
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-mu_phi
+<span class="math inline">\(\theta_{7}\)</span>
 </td>
 <td style="text-align:right;">
--6.1260
+<span class="math inline">\(-6.12600\)</span>
+</td>
+<td style="text-align:left;">
+mean for <span class="math inline">\(\phi\)</span>
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-sigma_phi
+<span class="math inline">\(\theta_{8}\)</span>
 </td>
 <td style="text-align:right;">
-3.1890
+<span class="math inline">\(3.18900\)</span>
+</td>
+<td style="text-align:left;">
+SD for <span class="math inline">\(\phi\)</span>
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-delta
+<span class="math inline">\(\theta_{9}\)</span>
 </td>
 <td style="text-align:right;">
--1.1430
+<span class="math inline">\(0.31890\)</span>
+</td>
+<td style="text-align:left;">
+mean for <span class="math inline">\(\sigma_{\phi a}\)</span>
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-sigma_delta
+<span class="math inline">\(\theta_{10}\)</span>
 </td>
 <td style="text-align:right;">
-2.0000
+<span class="math inline">\(1.00000\)</span>
+</td>
+<td style="text-align:left;">
+SD for <span class="math inline">\(\sigma_{\phi a}\)</span>
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-zeta
+<span class="math inline">\(\theta_{11}\)</span>
 </td>
 <td style="text-align:right;">
--1.0360
+<span class="math inline">\(0.66790\)</span>
+</td>
+<td style="text-align:left;">
+mean for <span class="math inline">\(\sigma_{\phi w}\)</span>
 </td>
 </tr>
 <tr>
 <td style="text-align:left;">
-sigma_zeta
+<span class="math inline">\(\theta_{12}\)</span>
 </td>
 <td style="text-align:right;">
-3.0530
+<span class="math inline">\(1.43700\)</span>
+</td>
+<td style="text-align:left;">
+SD for <span class="math inline">\(\sigma_{\phi w}\)</span>
 </td>
 </tr>
 </tbody>
 </table>
+<p><span class="math inline">\(†\)</span> For descriptions, “mean for <span class="math inline">\(X\)</span>” indicates the mean for the distribution that generates <span class="math inline">\(X\)</span> values.</p>
 </div>
   </div>
 
@@ -313,7 +365,8 @@ sigma_zeta
       <h2 class="hasAnchor">
 <a href="#tocnav" class="anchor"></a>Contents</h2>
       <ul class="nav nav-pills nav-stacked">
-<li><a href="#process-error-priors">Process error priors</a></li>
+<li><a href="#notes">Notes</a></li>
+      <li><a href="#process-error-priors">Process error priors</a></li>
       <li><a href="#growth-rate-priors">Growth rate priors</a></li>
       <li><a href="#density-dependence">Density dependence</a></li>
       <li><a href="#final-priors">Final priors</a></li>

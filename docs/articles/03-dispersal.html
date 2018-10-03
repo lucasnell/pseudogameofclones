@@ -141,14 +141,14 @@
 <h2 class="hasAnchor">
 <a href="#load-data" class="anchor"></a>Load data</h2>
 <p>I don’t need to do the same filtering when loading the dataset for dispersal estimates as when loading data for population-growth parameter estimation. The only filtering I need to do is removing the first day of counts when both individuals were on the ground.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">growth &lt;-<span class="st"> </span><span class="kw"><a href="../reference/load_data.html">load_data</a></span>(<span class="dt">filter_pars =</span> <span class="ot">NULL</span>,</a>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1">growth &lt;-<span class="st"> </span><span class="kw"><a href="http://www.rdocumentation.org/packages/clonewars/topics/load_data">load_data</a></span>(<span class="dt">filter_pars =</span> <span class="ot">NULL</span>,</a>
 <a class="sourceLine" id="cb2-2" data-line-number="2">                    <span class="dt">remove_unfinished =</span> <span class="ot">FALSE</span>) <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb2-3" data-line-number="3"><span class="st">    </span><span class="kw">filter</span>(date <span class="op">!=</span><span class="st"> </span><span class="dv">0</span>) <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb2-4" data-line-number="4"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">rep =</span> <span class="kw">factor</span>(rep)) <span class="op">%&gt;%</span></a>
 <a class="sourceLine" id="cb2-5" data-line-number="5"><span class="st">    </span><span class="kw">group_by</span>(line, rep) <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb2-6" data-line-number="6"><span class="st">    </span><span class="kw">arrange</span>(date) <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb2-7" data-line-number="7"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">disp =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(disp), <span class="dv">0</span>, disp),</a>
-<a class="sourceLine" id="cb2-8" data-line-number="8">           <span class="dt">X =</span> <span class="kw"><a href="../reference/impute.html">impute</a></span>(X),</a>
+<a class="sourceLine" id="cb2-8" data-line-number="8">           <span class="dt">X =</span> <span class="kw"><a href="http://www.rdocumentation.org/packages/clonewars/topics/impute">impute</a></span>(X),</a>
 <a class="sourceLine" id="cb2-9" data-line-number="9">           <span class="dt">N =</span> <span class="kw">round</span>(<span class="kw">exp</span>(X)),</a>
 <a class="sourceLine" id="cb2-10" data-line-number="10">           <span class="dt">X =</span> <span class="kw">log</span>(N),</a>
 <a class="sourceLine" id="cb2-11" data-line-number="11">           <span class="dt">pN =</span> N <span class="op">-</span><span class="st"> </span>disp,  <span class="co"># numbers of aphids on plant</span></a>
@@ -209,7 +209,7 @@
 <tr class="odd">
 <td align="left">WI-L4Ø</td>
 <td align="right">10</td>
-<td align="right">58</td>
+<td align="right">65</td>
 </tr>
 <tr class="even">
 <td align="left">WIA-5D</td>
@@ -273,7 +273,7 @@
 </tr>
 <tr class="odd">
 <td align="left">WI-L4Ø</td>
-<td align="right">-4.190</td>
+<td align="right">-4.203</td>
 </tr>
 <tr class="even">
 <td align="left">WIA-5D</td>

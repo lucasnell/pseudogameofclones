@@ -153,8 +153,8 @@
     
     </div>
 
-    <pre class="usage"><span class='fu'>load_data</span>(<span class='kw'>filter_pars</span> <span class='kw'>=</span> <span class='fu'>list</span>(<span class='kw'>start</span> <span class='kw'>=</span> <span class='fl'>0</span>, <span class='kw'>end</span> <span class='kw'>=</span> <span class='fl'>0.8</span>),
-  <span class='kw'>remove_unfinished</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='kw'>allow_NA</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='kw'>impute_fxn</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
+    <pre class="usage"><span class='fu'>load_data</span>(<span class='kw'>filter_pars</span> <span class='kw'>=</span> <span class='fu'>list</span>(<span class='kw'>start</span> <span class='kw'>=</span> <span class='fl'>0</span>, <span class='kw'>end</span> <span class='kw'>=</span> <span class='fl'>0.9</span>),
+  <span class='kw'>remove_unfinished</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>, <span class='kw'>allow_NA</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='kw'>impute_fxn</span> <span class='kw'>=</span> <span class='no'>impute</span>,
   <span class='kw'>file</span> <span class='kw'>=</span> <span class='fl'>NA</span>)</pre>
     
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
@@ -165,7 +165,7 @@
       <td><p>A list with the names <code>"start"</code> and <code>"end"</code>, containing single
 numbers with threshold for filtering the beginning and ending of time series,
 respectively. Set to <code>NULL</code> to avoid filtering entirely.
-Defaults to <code>list(start = 0.5, end = 1.0)</code>.</p></td>
+Defaults to <code>list(start = 0.0, end = 0.9)</code>.</p></td>
     </tr>
     <tr>
       <th>allow_NA</th>

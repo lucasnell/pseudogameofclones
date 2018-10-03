@@ -153,34 +153,38 @@
     
     </div>
 
-    <pre class="usage"><span class='fu'>fit_lines</span>(<span class='no'>data</span>, <span class='no'>X</span>, <span class='no'>L</span>, <span class='no'>...</span>)</pre>
+    <pre class="usage"><span class='fu'>fit_lines</span>(<span class='no'>data_df</span>, <span class='no'>line</span>, <span class='no'>rep</span>, <span class='no'>date</span>, <span class='no'>X</span>, <span class='no'>...</span>)</pre>
     
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>data</th>
-      <td><p>An optional data frame, list, or environment that contains <code>X</code>.
-By default, variables are taken from the environment from which
-the function was called.</p></td>
+      <th>data_df</th>
+      <td><p>A data frame that contains columns for <code>line</code>, <code>rep</code>, and <code>X</code>.</p></td>
+    </tr>
+    <tr>
+      <th>line</th>
+      <td><p>An optional string specifying the name for the column in <code>data_df</code> that
+contains which line each observation belongs to.
+Defaults to <code>"line"</code>.</p></td>
+    </tr>
+    <tr>
+      <th>rep</th>
+      <td><p>An optional string specifying the name for the column in <code>data_df</code> that
+contains which rep each observation belongs to.
+Defaults to <code>"rep"</code>.</p></td>
+    </tr>
+    <tr>
+      <th>date</th>
+      <td><p>An optional string specifying the name for the column in <code>data_df</code> that
+contains the date for each observation.
+Defaults to <code>"date"</code>.</p></td>
     </tr>
     <tr>
       <th>X</th>
-      <td><p>Name of the matrix in <code>data</code> that contains the log-transformed counts
-through time (1 time series per column).
-This option is not required if the proper object inside <code>data</code> is literally
-named <code>X</code> (as would be the case if you used <code><a href='line_data.html'>line_data()</a></code>).
-Each column should contain <code>NA</code>s at the end (ONLY the end) if
-it wasn't observed as many times as was the time series in the matrix with
-the most observations.
-<em>Other than at the end, missing values are not yet supported</em>.</p></td>
-    </tr>
-    <tr>
-      <th>L</th>
-      <td><p>Vector (of the same length as number of columns in <code>X</code>) containing
-the line number for each time-series column in <code>X</code>.
-This option is not required if the proper object inside <code>data</code> is literally
-named <code>L</code> (as would be the case if you used <code><a href='line_data.html'>line_data()</a></code>).</p></td>
+      <td><p>An optional string specifying the name for the column in <code>data_df</code> that
+contains the <code>X</code> value for each observation (<code>X = log(N)</code>).
+Defaults to <code>"X"</code>.</p></td>
     </tr>
     <tr>
       <th>...</th>

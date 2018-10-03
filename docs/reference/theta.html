@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Load data from PZ counts that were almost finished. — load_pz_data • clonewars</title>
+<title>Priors for use in estimating population parameters. — theta • clonewars</title>
 
 <!-- jquery -->
 <script src="https://code.jquery.com/jquery-3.1.0.min.js" integrity="sha384-nrOSfDHtoPMzJHjVTdCopGqIqeYETSXhZDFyniQ8ZHcVy08QesyHcnOUpMpqnmWq" crossorigin="anonymous"></script>
@@ -30,10 +30,9 @@
 
 
 
-<meta property="og:title" content="Load data from PZ counts that were almost finished. — load_pz_data" />
+<meta property="og:title" content="Priors for use in estimating population parameters. — theta" />
 
-<meta property="og:description" content="Here, I'm adding a last date that has 0.75 of the max.
-This function is temporary and should be removed when counts are finished." />
+<meta property="og:description" content="Priors for use in estimating population parameters." />
 
 <meta property="og:image" content="/logo.png" />
 <meta name="twitter:card" content="summary" />
@@ -143,51 +142,32 @@ This function is temporary and should be removed when counts are finished." />
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>Load data from PZ counts that were almost finished.</h1>
-    <small class="dont-index">Source: <a href='https://github.com/lucasnell/clonewars/blob/master/R/data_manip.R'><code>R/data_manip.R</code></a></small>
-    <div class="hidden name"><code>load_pz_data.Rd</code></div>
+    <h1>Priors for use in estimating population parameters.</h1>
+    <small class="dont-index">Source: <a href='https://github.com/lucasnell/clonewars/blob/master/R/data.R'><code>R/data.R</code></a></small>
+    <div class="hidden name"><code>theta.Rd</code></div>
     </div>
 
     <div class="ref-description">
     
-    <p>Here, I'm adding a last date that has 0.75 of the max.
-This function is temporary and should be removed when counts are finished.</p>
+    <p>Priors for use in estimating population parameters.</p>
     
     </div>
 
-    <pre class="usage"><span class='fu'>load_pz_data</span>(<span class='kw'>filter_pars</span> <span class='kw'>=</span> <span class='fu'>list</span>(<span class='kw'>start</span> <span class='kw'>=</span> <span class='fl'>0</span>, <span class='kw'>end</span> <span class='kw'>=</span> <span class='fl'>0.8</span>),
-  <span class='kw'>remove_unfinished</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='kw'>allow_NA</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='kw'>impute_fxn</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>file</span> <span class='kw'>=</span> <span class='fl'>NA</span>)</pre>
-    
-    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
-    <table class="ref-arguments">
-    <colgroup><col class="name" /><col class="desc" /></colgroup>
-    <tr>
-      <th>filter_pars</th>
-      <td><p>A list with the names <code>"start"</code> and <code>"end"</code>, containing single
-numbers with threshold for filtering the beginning and ending of time series,
-respectively. Set to <code>NULL</code> to avoid filtering entirely.
-Defaults to <code>list(start = 0.5, end = 1.0)</code>.</p></td>
-    </tr>
-    <tr>
-      <th>allow_NA</th>
-      <td><p>Boolean for whether time series with NAs should be included.
-Defaults to <code>TRUE</code>.</p></td>
-    </tr>
-    <tr>
-      <th>file</th>
-      <td><p>A filename to read from. If left empty, this will read from the
-default path on your DropBox folder.</p></td>
-    </tr>
-    </table>
+    <pre class="usage"><span class='no'>theta</span></pre>
+        
+    <h2 class="hasAnchor" id="format"><a class="anchor" href="#format"></a>Format</h2>
+
+    <p>A numeric vector of length 12. Each number is a hyperparameter value.
+See <code>vignette("01-choose_priors")</code> for more information.</p>
     
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
     <h2>Contents</h2>
     <ul class="nav nav-pills nav-stacked">
-      <li><a href="#arguments">Arguments</a></li>
-                </ul>
+      
+      <li><a href="#format">Format</a></li>
+          </ul>
 
   </div>
 </div>
