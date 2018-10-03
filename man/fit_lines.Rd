@@ -4,26 +4,26 @@
 \alias{fit_lines}
 \title{Fit multiple time series for multiple aphid lines.}
 \usage{
-fit_lines(data, X, L, ...)
+fit_lines(data_df, line, rep, date, X, ...)
 }
 \arguments{
-\item{data}{An optional data frame, list, or environment that contains \code{X}.
-By default, variables are taken from the environment from which
-the function was called.}
+\item{data_df}{A data frame that contains columns for \code{line}, \code{rep}, and \code{X}.}
 
-\item{X}{Name of the matrix in \code{data} that contains the log-transformed counts
-through time (1 time series per column).
-This option is not required if the proper object inside \code{data} is literally
-named \code{X} (as would be the case if you used \code{line_data()}).
-Each column should contain \code{NA}s at the end (ONLY the end) if
-it wasn't observed as many times as was the time series in the matrix with
-the most observations.
-\emph{Other than at the end, missing values are not yet supported}.}
+\item{line}{An optional string specifying the name for the column in \code{data_df} that
+contains which line each observation belongs to.
+Defaults to \code{"line"}.}
 
-\item{L}{Vector (of the same length as number of columns in \code{X}) containing
-the line number for each time-series column in \code{X}.
-This option is not required if the proper object inside \code{data} is literally
-named \code{L} (as would be the case if you used \code{line_data()}).}
+\item{rep}{An optional string specifying the name for the column in \code{data_df} that
+contains which rep each observation belongs to.
+Defaults to \code{"rep"}.}
+
+\item{date}{An optional string specifying the name for the column in \code{data_df} that
+contains the date for each observation.
+Defaults to \code{"date"}.}
+
+\item{X}{An optional string specifying the name for the column in \code{data_df} that
+contains the \code{X} value for each observation (\code{X = log(N)}).
+Defaults to \code{"X"}.}
 
 \item{...}{Arguments passed to \code{rstan::sampling} (e.g., iter, chains).}
 }

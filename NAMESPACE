@@ -3,7 +3,6 @@
 export(compare_priors)
 export(fit_lines)
 export(impute)
-export(line_data)
 export(load_data)
 export(load_prior_data)
 export(make_pred_df)

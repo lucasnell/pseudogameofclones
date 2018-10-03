@@ -3,21 +3,19 @@
 
 #' Fit multiple time series for multiple aphid lines.
 #'
-#' @param data An optional data frame, list, or environment that contains `X`.
-#'     By default, variables are taken from the environment from which
-#'     the function was called.
-#' @param X Name of the matrix in `data` that contains the log-transformed counts
-#'     through time (1 time series per column).
-#'     This option is not required if the proper object inside `data` is literally
-#'     named `X` (as would be the case if you used `line_data()`).
-#'     Each column should contain `NA`s at the end (ONLY the end) if
-#'     it wasn't observed as many times as was the time series in the matrix with
-#'     the most observations.
-#'     \emph{Other than at the end, missing values are not yet supported}.
-#' @param L Vector (of the same length as number of columns in `X`) containing
-#'     the line number for each time-series column in `X`.
-#'     This option is not required if the proper object inside `data` is literally
-#'     named `L` (as would be the case if you used `line_data()`).
+#' @param data_df A data frame that contains columns for `line`, `rep`, and `X`.
+#' @param line An optional string specifying the name for the column in `data_df` that
+#'     contains which line each observation belongs to.
+#'     Defaults to `"line"`.
+#' @param rep An optional string specifying the name for the column in `data_df` that
+#'     contains which rep each observation belongs to.
+#'     Defaults to `"rep"`.
+#' @param date An optional string specifying the name for the column in `data_df` that
+#'     contains the date for each observation.
+#'     Defaults to `"date"`.
+#' @param X An optional string specifying the name for the column in `data_df` that
+#'     contains the `X` value for each observation (`X = log(N)`).
+#'     Defaults to `"X"`.
 #' @param ... Arguments passed to `rstan::sampling` (e.g., iter, chains).
 #'
 #' @return A `stanfit` object containing the model fit.
@@ -25,35 +23,60 @@
 #'
 #'
 #'
-fit_lines <- function(data, X, L, ...) {
+fit_lines <- function(data_df, line, rep, date, X, theta_, ...) {
 
-    if (missing(data)) data <- sys.frame(sys.parent())
+    stopifnot(inherits(data_df, "data.frame"))
 
+    if (missing(line)) line <- quote(line)
+    if (missing(rep)) rep <- quote(rep)
+    if (missing(date)) date <- quote(date)
     if (missing(X)) X <- quote(X)
-    if (missing(L)) L <- quote(L)
+    # theta is already defined:
+    if (missing(theta_)) theta_ <- theta
+
+    line <- substitute(line)
+    rep <- substitute(rep)
+    date <- substitute(date)
     X <- substitute(X)
-    L <- substitute(L)
 
-    X_ <- eval(X, envir = data)
-    L_ <- eval(L, envir = data)
-    n_lines_ <- length(unique(L_))
-    if (length(L_) != ncol(X_)) {
-        stop("\nIn `fit_lines`, `L` must have the same length as number of ",
-             "columns in `X`", call. = FALSE)
-    }
+    data_df <- data_df %>%
+        dplyr::select(!!line, !!rep, !!date, !!X) %>%
+        dplyr::arrange(!!line, !!rep, !!date) %>%
+        mutate_if(is.factor, as.integer) %>%
+        identity()
 
+    # number of observations for each time series:
+    n_ts_ <- data_df %>%
+        dplyr::group_by(!!line, !!rep) %>%
+        summarize() %>%
+        nrow()
+    n_obs_ <- nrow(data_df)
+    n_per_ <- data_df %>%
+        dplyr::group_by(!!line, !!rep) %>%
+        summarize(n_ = n()) %>%
+        .[["n_"]] %>%
+        set_names(NULL)
+    stopifnot(sum(n_per_) == n_obs_)
 
-    nobs_ts_ <- apply(X_, 2, function(x) sum(!is.na(x)))
-    X_[is.na(X_)] <- 0
+    X_ <- data_df[[X]]
 
-    model_data_ <- list(N_ts = ncol(X_),
-                        max_reps = max(nobs_ts_),
-                        n_lines = n_lines_,
-                        nobs_ts = nobs_ts_,
-                        L = L_,
-                        X = X_,
-                        # Priors:
-                        theta = theta)
+    n_lines_ <- length(unique(data_df[[line]]))
+    # Line number for each time series:
+    L_ <- data_df %>%
+        dplyr::group_by(!!line, !!rep) %>%
+        summarize() %>%
+        .[["line"]] %>%
+        set_names(NULL)
+
+    model_data_ <- list(
+        n_ts = n_ts_,
+        n_obs = n_obs_,
+        n_per = n_per_,
+        X = X_,
+        n_lines = n_lines_,
+        L = L_,
+        theta = theta_
+    )
 
     growth_fit <- rstan::sampling(stanmodels$all_lines_plants, data = model_data_, ...)
 

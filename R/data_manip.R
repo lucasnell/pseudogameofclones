@@ -66,7 +66,7 @@ initial_read <- function(file, line_lgl_fun = base::identity) {
         filter(line_lgl_fun(line %in% c("R10", "WIA-5D", "WI-L4", "WI-L4Ø", "UT3",
                                         "WI-2016-593", "Clover-2017-2",
                                         "Clover-2017-6"))) %>%
-        mutate(disp = clonewars:::parse_comments(comments),  # <-- "dispersed" aphids
+        mutate(disp = parse_comments(comments),  # <-- "dispersed" aphids
                N = stem1_juv + stem1_adults + leaf1_juv + leaf1_adults +
                    stem2_juv + stem2_adults + leaf2_juv + leaf2_adults +
                    stem3_juv + stem3_adults + leaf3_juv + leaf3_adults +
@@ -186,6 +186,8 @@ handle_NAs <- function(growth, allow_NA, impute_fxn) {
     } else if (nrow(missing) > 0) {
         growth <- filter_line_rep(growth, missing, exclude = TRUE)
     }
+    growth <- growth %>%
+        mutate(date = as.integer(date))
     return(growth)
 }
 
@@ -204,12 +206,12 @@ standardize_day0 <- function(growth) {
     growth <- growth %>%
         filter(!(date == 0 & disp == N)) %>%
         group_by(line, rep) %>%
-        mutate(date = date - min(date) + 1) %>%
+        mutate(date = as.integer(date - min(date) + 1)) %>%
         ungroup() %>%
         split(.$line) %>%
         map_dfr(~ split(.x, .x$rep) %>%
                     map_dfr(function(y_) {
-                        add_row(y_, line = y_$line[1], rep = y_$rep[1], date = 0,
+                        add_row(y_, line = y_$line[1], rep = y_$rep[1], date = 0L,
                                 N = 2, X = log(2), ham = y_$ham[1]) %>%
                             arrange(date)
                     }))
@@ -288,12 +290,12 @@ filter_data <- function(growth, filter_pars) {
         # Start filter:
         if (!is.null(filter_pars$start)) {
             growth <- growth %>%
-                filter(clonewars:::start_filter(X, filter_pars$start))
+                filter(start_filter(X, filter_pars$start))
         }
         # End filter:
         if (!is.null(filter_pars$end)) {
             growth <- growth %>%
-                filter(clonewars:::end_filter(X, filter_pars$end))
+                filter(end_filter(X, filter_pars$end))
         }
         growth <- growth %>%
             ungroup()
@@ -311,7 +313,7 @@ filter_data <- function(growth, filter_pars) {
 #' @param filter_pars A list with the names `"start"` and `"end"`, containing single
 #'     numbers with threshold for filtering the beginning and ending of time series,
 #'     respectively. Set to `NULL` to avoid filtering entirely.
-#'     Defaults to `list(start = 0.0, end = 0.8)`.
+#'     Defaults to `list(start = 0.0, end = 0.9)`.
 #' @param allow_NA Boolean for whether time series with NAs should be included.
 #'     Defaults to `TRUE`.
 #'
@@ -324,7 +326,7 @@ filter_data <- function(growth, filter_pars) {
 #'
 #' growth <- load_data()
 #'
-load_data <- function(filter_pars = list(start = 0.0, end = 0.8),
+load_data <- function(filter_pars = list(start = 0.0, end = 0.9),
                       remove_unfinished = FALSE, allow_NA = TRUE,
                       impute_fxn = impute, file = NA) {
 
@@ -383,80 +385,7 @@ load_prior_data <- function(filter_pars = NULL, file = NA) {
 
 
 
-#' Convert a data frame of data to one to be used in `fit_lines`.
-#'
-#' @param data A data frame.
-#' @param line Name of column (no quotes) indicating the aphid line.
-#' @param rep Name of column (no quotes) indicating the rep within each line.
-#' @param date Name of column (no quotes) indicating the date.
-#' @param X Name of column (no quotes) indicating the log(N).
-#'
-#' @return A list containing (1) a matrix of log(N), where each time series has its own
-#'     column (named `X` in the output list) and (2) a vector of integers indicating
-#'     the aphid-line number for each time-series column in (named `L`).
-#'     Aphid line numbers come from converting the original factor column into
-#'     an integer. You can replicate the same integers by running `as.integer(line)`.
-#'
-#' @export
-#'
-line_data <- function(data, line, rep, date, X) {
 
-    if (missing(line)) line <- quote(line)
-    if (missing(rep)) rep <- quote(rep)
-    if (missing(date)) date <- quote(date)
-    if (missing(X)) X <- quote(X)
-
-    line <- substitute(line)
-    rep <- substitute(rep)
-    date <- substitute(date)
-    X <- substitute(X)
-
-    line <- eval(line, data)
-    stopifnot(inherits(line, "factor"))
-    line <- as.integer(line)
-    rep <- eval(rep, data)
-    date <- eval(date, data)
-    X <- eval(X, data)
-
-    if (length(line) != length(rep) |
-        length(line) != length(date) |
-        length(line) != length(X)) {
-        stop("\nOne or more of line, rep, date, and X don't have the same length.",
-             call. = FALSE)
-    }
-
-    # Coerce to list of data frames
-    dat_frames <- data_frame(line, rep, date, X) %>%
-        arrange(line, rep, date) %>%
-        split(.$line) %>%
-        map(~ split(.x, .x$rep)) %>%
-        # Unlist just one level
-        flatten() %>%
-        # No need for names
-        set_names(NULL) %>%
-        # Remove empty data frames
-        discard(~ nrow(.x) == 0) %>%
-        # Make absolutely sure it's arranged by date:
-        map(~ arrange(.x, date))
-
-    L <- map_int(dat_frames, ~ unique(.x$line))
-
-    # Now turn X to matrix
-    X <- dat_frames %>%
-            map(~ .x %>%
-                    rename(!!paste(.x$line[1], .x$rep[1], sep = "_") := X) %>%
-                    dplyr::select(!!paste(.x$line[1], .x$rep[1], sep = "_")) %>%
-                    mutate(n = 1:n())) %>%
-            reduce(function(x, y) full_join(x, y, by = "n")) %>%
-            dplyr::select(-n) %>%
-            as.data.frame() %>%
-            setNames(NULL) %>%
-            as.matrix() %>%
-            identity()
-
-    return(list(X = X, L = L))
-
-}
 
 
 #' Make prediction data frame from model output and the original data frame.
@@ -470,44 +399,26 @@ line_data <- function(data, line, rep, date, X) {
 #'
 #' @export
 #'
-make_pred_df <- function(stan_fit, orig_data, line, rep, alpha = 0.05) {
+make_pred_df <- function(stan_fit, orig_data, line, rep, date, alpha = 0.05) {
 
     if (missing(line)) line <- quote(line)
     if (missing(rep)) rep <- quote(rep)
+    if (missing(date)) date <- quote(date)
     line <- substitute(line)
     rep <- substitute(rep)
+    date <- substitute(date)
 
-    n_ts <- orig_data %>%
-        distinct(!!line, !!rep) %>%
-        nrow()
-
-    rstan::extract(stan_fit, "X_pred", permuted = FALSE) %>%
-        apply(3, mean) %>%
-        matrix(ncol = n_ts) %>%
-        tbl_df() %>%
-        setNames(1:n_ts) %>%
-        gather("ts", "X_pred", convert = TRUE) %>%
-        mutate(X_lower = rstan::extract(stan_fit, "X_pred", permuted = FALSE) %>%
-                   apply(3, quantile, probs = alpha / 2) %>%
-                   matrix(ncol = n_ts) %>%
-                   tbl_df() %>%
-                   setNames(paste0("ts", 1:n_ts)) %>%
-                   gather("ts", "X") %>%
-                   dplyr::select(X) %>%
-                   unlist(),
+    pred_df <- orig_data %>%
+        dplyr::arrange(!!line, !!rep, !!date) %>%
+        mutate(X_pred = rstan::extract(stan_fit, "X_pred", permuted = FALSE) %>%
+                   apply(3, mean),
+               X_lower = rstan::extract(stan_fit, "X_pred", permuted = FALSE) %>%
+                   apply(3, quantile, probs = alpha / 2),
                X_upper = rstan::extract(stan_fit, "X_pred", permuted = FALSE) %>%
-                   apply(3, quantile, probs = 1 - alpha / 2) %>%
-                   matrix(ncol = n_ts) %>%
-                   tbl_df() %>%
-                   setNames(paste0("ts", 1:n_ts)) %>%
-                   gather("ts", "X") %>%
-                   dplyr::select(X) %>%
-                   unlist()) %>%
-        filter(X_pred != 0) %>%
-        dplyr::select(-ts) %>%
-        bind_cols(arrange(orig_data, line, rep, date)) %>%
-        dplyr::select(line, rep, date, X, X_pred, X_lower, X_upper, everything()) %>%
-        identity()
+                   apply(3, quantile, probs = 1 - alpha / 2)) %>%
+        dplyr::select(line, rep, date, X, X_pred, X_lower, X_upper, everything())
+
+    return(pred_df)
 }
 
 

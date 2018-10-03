@@ -10,7 +10,7 @@ load_prior_data(filter_pars = NULL, file = NA)
 \item{filter_pars}{A list with the names \code{"start"} and \code{"end"}, containing single
 numbers with threshold for filtering the beginning and ending of time series,
 respectively. Set to \code{NULL} to avoid filtering entirely.
-Defaults to \code{list(start = 0.0, end = 0.8)}.}
+Defaults to \code{list(start = 0.0, end = 0.9)}.}
 
 \item{file}{A filename to read from. If left empty, this will read from the
 default path on your DropBox folder.}
