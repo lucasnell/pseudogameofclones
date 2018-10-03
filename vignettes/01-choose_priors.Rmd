@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
   fig.height = 4,
   echo = FALSE
 )
-# knitr::opts_knit$set(root.dir = normalizePath(".."))
+knitr::opts_knit$set(root.dir = normalizePath(".."))
 options(tibble.print_min = 4L, tibble.print_max = 4L)
 ```
 ```{r source_Rprofile, echo = FALSE}
@@ -58,17 +58,20 @@ In general, my goal is to create weakly informative prior distributions:
 
 ## Notes
 
-__On truncated distributions\:__
+__on truncated distributions\:__
 
 Below, `T[0,]` indicates that a distribution is truncated to be above zero.
 
 
-__On hyperparameters\:__
+__on hyperparameters\:__
 
 Prior information is stored as a vector of hyperparameters $\mathbf{\Theta}$,
 indexed for each hyperparameter as $\theta_i$ for position $i$.
 
 
+__on normal-distribution notation\:__
+
+Normal distributions below are denoted as $\sim \text{N}(\mu, \sigma)$.
 
 
 ## Process error priors
@@ -81,7 +84,7 @@ theta[2] <- 1
 ```
 
 
-$\sigma_\varepsilon$ was sampled as $\sim \text{N}(\theta_1, \theta_2^2) \texttt{T[0,]}$.
+$\sigma_\varepsilon$ was sampled as $\sim \text{N}(\theta_1, \theta_2) \texttt{T[0,]}$.
 Based on simulations, a $\sigma_\varepsilon$ of 1 would be very high---so high as to
 be not realistically possible.
 Values of ~ 0.15 seemed to result in simulations matching some preliminary experimental
@@ -131,8 +134,8 @@ compare_priors("normal", theta[1], theta[2], xlim = c(0, theta[1] + 2)) +
 ## Growth rate priors
 
 Log-transformed growth rates ($\log(r)$) were sampled as a function of an among-line
-mean ($\rho \sim \text{N} ( \theta_3, \theta_4^{~2} )$) and
-SD ($\sigma_\rho \sim \text{N} ( \theta_5, \theta_6^{~2} ) \texttt{T[0,]}$).
+mean ($\rho \sim \text{N} ( \theta_3, \theta_4 )$) and
+SD ($\sigma_\rho \sim \text{N} ( \theta_5, \theta_6 ) \texttt{T[0,]}$).
 
 For growth-rate prior information, I first used data sent to me from A.R. Ives
 related to this paper:
@@ -274,12 +277,12 @@ compare_priors("normal", theta[5], theta[6], xlim = c(0, 2)) +
 
 Logit-transformed density dependences ($\text{logit}(\alpha)$) were sampled based
 on three parameters:
-overall mean ($\phi \sim \text{N}(\theta_7, ~ \theta_8^{~2})$),
+overall mean ($\phi \sim \text{N}(\theta_7, ~ \theta_8)$),
 among-line SD
-($\sigma_{\phi a} \sim \text{N}(\theta_9, ~ \theta_{10}^{~2}) \texttt{T[0,]}$),
+($\sigma_{\phi a} \sim \text{N}(\theta_9, ~ \theta_{10}) \texttt{T[0,]}$),
 and
 within-line SD
-($\sigma_{\phi w} \sim \text{N}(\theta_{11}, ~ \theta_{12}^{~2}) \texttt{T[0,]}$).
+($\sigma_{\phi w} \sim \text{N}(\theta_{11}, ~ \theta_{12}) \texttt{T[0,]}$).
 
 For density dependence prior information, I used data from
 preliminary population-growth assays that used the same methods that we're using.

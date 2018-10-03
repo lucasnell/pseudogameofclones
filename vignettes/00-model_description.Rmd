@@ -45,7 +45,9 @@ and
 $\varepsilon$ is process error.
 
 
-## Note on $Z$ and non-centered distributions
+## Notes
+
+__on $Z$ and non-centered distributions\:__
 
 Below, all mentions of $Z$ refer to deviates from $\text{N}(0,1)$.
 These are used to generate non-centered parameterizations of all distributions
@@ -53,9 +55,15 @@ These are used to generate non-centered parameterizations of all distributions
 version 2.17.0).
 
 
-## Note on truncated distributions
+__on truncated distributions\:__
 
 Below, `T[0,]` indicates that a distribution is truncated to be above zero.
+
+
+__on normal-distribution notation\:__
+
+Normal distributions below are denoted as $\sim \text{N}(\mu, \sigma)$.
+
 
 
 ## Note on hyperparameters
@@ -71,7 +79,7 @@ For observation $k$:
 
 $$\begin{align}
     \varepsilon_k &= \sigma_\varepsilon Z_k \\
-    \sigma_\varepsilon &\sim \text{N} ( \theta_1, ~ \theta_2^{~2} ) \texttt{T[0,]} \\
+    \sigma_\varepsilon &\sim \text{N} ( \theta_1, ~ \theta_2 ) \texttt{T[0,]} \\
 \end{align}$$
 
 
@@ -96,8 +104,8 @@ The growth rate estimate for clonal line $i$ is generated as follows:
 
 $$\begin{align}
     r_i &= \exp \left( \rho + \sigma_\rho ~ Z_i \right) \\
-    \rho &\sim \text{N}(\theta_3, ~ \theta_4^{~2}) \\
-    \sigma_\rho &\sim \text{N}(\theta_5, ~ \theta_6^{~2}) \texttt{T[0,]} \\
+    \rho &\sim \text{N}(\theta_3, ~ \theta_4) \\
+    \sigma_\rho &\sim \text{N}(\theta_5, ~ \theta_6) \texttt{T[0,]} \\
 \end{align}$$
 
 
@@ -134,9 +142,9 @@ $$\begin{align}
         \left(
             \phi + \sigma_{\phi a} ~ Z_i + \sigma_{\phi w} ~ Z_j
         \right) \\
-    \phi &\sim \text{N}(\theta_7, ~ \theta_8^{~2}) \\
-    \sigma_{\phi a} &\sim \text{N}(\theta_9, ~ \theta_{10}^{~2}) \texttt{T[0,]} \\
-    \sigma_{\phi w} &\sim \text{N}(\theta_{11}, ~ \theta_{12}^{~2}) \texttt{T[0,]} \\
+    \phi &\sim \text{N}(\theta_7, ~ \theta_8) \\
+    \sigma_{\phi a} &\sim \text{N}(\theta_9, ~ \theta_{10}) \texttt{T[0,]} \\
+    \sigma_{\phi w} &\sim \text{N}(\theta_{11}, ~ \theta_{12}) \texttt{T[0,]} \\
 \end{align}$$
 
 
