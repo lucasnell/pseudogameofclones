@@ -24,7 +24,8 @@
 #'
 #'
 fit_lines <- function(data_df, line, rep, date, X, theta_,
-                      model_name = c("full_model", "no_within_alpha"),
+                      model_name = c("full_model", "no_within_alpha",
+                                     "no_among_alpha", "no_among_r"),
                       ...) {
 
     model_name <- match.arg(model_name)
