@@ -23,7 +23,11 @@
 #'
 #'
 #'
-fit_lines <- function(data_df, line, rep, date, X, theta_, model_name, ...) {
+fit_lines <- function(data_df, line, rep, date, X, theta_,
+                      model_name = c("full_model", "no_within_alpha"),
+                      ...) {
+
+    model_name <- match.arg(model_name)
 
     stopifnot(inherits(data_df, "data.frame"))
     if (missing(line)) line <- quote(line)
@@ -32,9 +36,6 @@ fit_lines <- function(data_df, line, rep, date, X, theta_, model_name, ...) {
     if (missing(X)) X <- quote(X)
     # theta is already defined:
     if (missing(theta_)) theta_ <- theta
-
-    if (missing(model_name)) model_name <- "all_lines_plants"
-    model_name <- match.arg(model_name, c("all_lines_plants", "no_wi_alpha"))
 
     line <- substitute(line)
     rep <- substitute(rep)

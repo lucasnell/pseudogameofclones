@@ -1,3 +1,11 @@
+/*
+ This model includes all parameters, including...
+ - Among-line variability in growth rates
+ - Among-line variability in density dependences
+ - Within-line variability in density dependences
+ - Process error that is estimated by the model
+ */
+
 functions {
 
     vector ricker(vector X, int start, int end, real r_, real a_) {

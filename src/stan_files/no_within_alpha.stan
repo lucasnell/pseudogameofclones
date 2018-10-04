@@ -1,4 +1,11 @@
-// Version without within-line variance in alpha
+
+/*
+ This model does NOT include within-line variance in density dependence.
+ It DOES include...
+ - Among-line variability in growth rates
+ - Among-line variability in density dependences
+ - Process error that is estimated by the model
+ */
 
 functions {
 
