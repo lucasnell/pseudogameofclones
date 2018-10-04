@@ -1,3 +1,5 @@
+// Version without within-line variance in alpha
+
 functions {
 
     vector ricker(vector X, int start, int end, real r_, real a_) {
@@ -45,7 +47,7 @@ parameters {
 
     vector[n_lines] Z_r;
     vector[n_lines] Z_a_a;
-    vector[n_ts] Z_a_w;
+    // vector[n_ts] Z_a_w;
 
     real<lower=0> sigma_epsilon;        // process error
     // Means and SDs (on transformed scale):
@@ -53,7 +55,7 @@ parameters {
     real<lower=0> sigma_rho;            // among-line SD in log(r)
     real phi;                           // mean density dependences: logit(alpha)
     real<lower=0> sigma_phi_a;          // among-line SD in logit(alpha)
-    real<lower=0> sigma_phi_w;          // within-line SD in logit(alpha)
+    // real<lower=0> sigma_phi_w;          // within-line SD in logit(alpha)
 
 }
 transformed parameters {
@@ -70,7 +72,8 @@ transformed parameters {
             // growth rate (r) for this time series:
             real r_ = exp(rho + sigma_rho * Z_r[L[j]]);
             // density dependence (alpha) for this time series:
-            real a_ = inv_logit(phi + sigma_phi_a * Z_a_a[L[j]] + sigma_phi_w * Z_a_w[j]);
+            real a_ = inv_logit(phi + sigma_phi_a * Z_a_a[L[j]]);
+            // + sigma_phi_w * Z_a_w[j]);
             // filling in predicted X_t+1 based on X_t:
             X_pred[start:end] = ricker(X, start, end, r_, a_);
             // iterate `start` index:
@@ -84,14 +87,14 @@ model {
 
     Z_r ~ normal(0, 1);                 // for growth rates by line
     Z_a_a ~ normal(0, 1);               // for density dependence by line
-    Z_a_w ~ normal(0, 1);               // for density dependence by plant
+    // Z_a_w ~ normal(0, 1);               // for density dependence by plant
 
     sigma_epsilon ~ normal(theta[1], theta[2])T[0,];
     rho  ~ normal(theta[3], theta[4]);
     sigma_rho  ~ normal(theta[5], theta[6])T[0,];
     phi  ~ normal(theta[7], theta[8]);
     sigma_phi_a  ~ normal(theta[9], theta[10])T[0,];
-    sigma_phi_w  ~ normal(theta[11], theta[12])T[0,];
+    // sigma_phi_w  ~ normal(theta[11], theta[12])T[0,];
 
     // Process error:
     X ~ normal(X_pred, sigma_epsilon);

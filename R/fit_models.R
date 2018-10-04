@@ -23,16 +23,18 @@
 #'
 #'
 #'
-fit_lines <- function(data_df, line, rep, date, X, theta_, ...) {
+fit_lines <- function(data_df, line, rep, date, X, theta_, model_name, ...) {
 
     stopifnot(inherits(data_df, "data.frame"))
-
     if (missing(line)) line <- quote(line)
     if (missing(rep)) rep <- quote(rep)
     if (missing(date)) date <- quote(date)
     if (missing(X)) X <- quote(X)
     # theta is already defined:
     if (missing(theta_)) theta_ <- theta
+
+    if (missing(model_name)) model_name <- "all_lines_plants"
+    model_name <- match.arg(model_name, c("all_lines_plants", "no_wi_alpha"))
 
     line <- substitute(line)
     rep <- substitute(rep)
@@ -78,7 +80,7 @@ fit_lines <- function(data_df, line, rep, date, X, theta_, ...) {
         theta = theta_
     )
 
-    growth_fit <- rstan::sampling(stanmodels$all_lines_plants, data = model_data_, ...)
+    growth_fit <- rstan::sampling(stanmodels[[model_name]], data = model_data_, ...)
 
     return(growth_fit)
 }
