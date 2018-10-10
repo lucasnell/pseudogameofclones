@@ -16,6 +16,10 @@
 #' @param X An optional string specifying the name for the column in `data_df` that
 #'     contains the `X` value for each observation (`X = log(N)`).
 #'     Defaults to `"X"`.
+#' @param sigma_epsilon Value for the SD of the process error if using a model
+#'     that doesn't esimate this value itself.
+#'     This argument is not used if using a model that estimates the process error SD.
+#'     Defaults to `NULL`.
 #' @param ... Arguments passed to `rstan::sampling` (e.g., iter, chains).
 #'
 #' @return A `stanfit` object containing the model fit.
@@ -25,7 +29,10 @@
 #'
 fit_lines <- function(data_df, line, rep, date, X, theta_,
                       model_name = c("full_model", "no_within_alpha",
-                                     "no_among_alpha", "no_among_r"),
+                                     "no_among_alpha", "one_alpha",
+                                     "one_r", "one_r_alpha",
+                                     "pass_sigma_epsilon"),
+                      sigma_epsilon = NULL,
                       ...) {
 
     model_name <- match.arg(model_name)
@@ -81,6 +88,24 @@ fit_lines <- function(data_df, line, rep, date, X, theta_,
         L = L_,
         theta = theta_
     )
+
+    if (model_name == "pass_sigma_epsilon") {
+        err <- FALSE
+        if (is.null(sigma_epsilon)) {
+            err <- TRUE
+        } else if (!is.numeric(sigma_epsilon) | length(sigma_epsilon) != 1) {
+            err <- TRUE
+        } else if (sigma_epsilon < 0) {
+            err <- TRUE
+        }
+        if (err) {
+            stop("\nIf using a model that doesn't estimate the process error SD ",
+                 "then you must pass a single number >= 0 to the `sigma_epsilon` ",
+                 "argument.",
+                 call. = FALSE)
+        }
+        model_data$sigma_epsilon <- sigma_epsilon
+    }
 
     growth_fit <- rstan::sampling(stanmodels[[model_name]], data = model_data_, ...)
 
