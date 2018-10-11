@@ -4,7 +4,10 @@
 \alias{fit_lines}
 \title{Fit multiple time series for multiple aphid lines.}
 \usage{
-fit_lines(data_df, line, rep, date, X, theta_, ...)
+fit_lines(data_df, line, rep, date, X, theta_,
+  model_name = c("full_model", "no_within_alpha", "no_among_alpha",
+  "one_alpha", "one_r", "one_r_alpha", "pass_sigma_epsilon"),
+  sigma_epsilon = NULL, ...)
 }
 \arguments{
 \item{data_df}{A data frame that contains columns for \code{line}, \code{rep}, and \code{X}.}
@@ -24,6 +27,11 @@ Defaults to \code{"date"}.}
 \item{X}{An optional string specifying the name for the column in \code{data_df} that
 contains the \code{X} value for each observation (\code{X = log(N)}).
 Defaults to \code{"X"}.}
+
+\item{sigma_epsilon}{Value for the SD of the process error if using a model
+that doesn't esimate this value itself.
+This argument is not used if using a model that estimates the process error SD.
+Defaults to \code{NULL}.}
 
 \item{...}{Arguments passed to \code{rstan::sampling} (e.g., iter, chains).}
 }

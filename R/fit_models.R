@@ -37,6 +37,9 @@ fit_lines <- function(data_df, line, rep, date, X, theta_,
 
     model_name <- match.arg(model_name)
 
+    cat(sprintf("\n~~~~~~~~~~~~~~~~\nUsing \"%s model\"\n~~~~~~~~~~~~~~~~\n\n",
+                model_name))
+
     stopifnot(inherits(data_df, "data.frame"))
     if (missing(line)) line <- quote(line)
     if (missing(rep)) rep <- quote(rep)
