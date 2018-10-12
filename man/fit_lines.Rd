@@ -28,6 +28,14 @@ Defaults to \code{"date"}.}
 contains the \code{X} value for each observation (\code{X = log(N)}).
 Defaults to \code{"X"}.}
 
+\item{theta_}{Optional vector of length 12 that specifies prior hyperparameters.}
+
+\item{model_name}{String specifying the name of the model to fit.
+The options are
+\code{"full_model"}, \code{"no_within_alpha"}, \code{"no_among_alpha"},
+\code{"one_alpha"}, \code{"one_r"}, \code{"one_r_alpha"}, or \code{"pass_sigma_epsilon"}.
+Defaults to \code{"full_model"}.}
+
 \item{sigma_epsilon}{Value for the SD of the process error if using a model
 that doesn't esimate this value itself.
 This argument is not used if using a model that estimates the process error SD.

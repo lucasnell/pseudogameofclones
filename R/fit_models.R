@@ -16,6 +16,12 @@
 #' @param X An optional string specifying the name for the column in `data_df` that
 #'     contains the `X` value for each observation (`X = log(N)`).
 #'     Defaults to `"X"`.
+#' @param theta_ Optional vector of length 12 that specifies prior hyperparameters.
+#' @param model_name String specifying the name of the model to fit.
+#'     The options are
+#'     `"full_model"`, `"no_within_alpha"`, `"no_among_alpha"`,
+#'     `"one_alpha"`, `"one_r"`, `"one_r_alpha"`, or `"pass_sigma_epsilon"`.
+#'     Defaults to `"full_model"`.
 #' @param sigma_epsilon Value for the SD of the process error if using a model
 #'     that doesn't esimate this value itself.
 #'     This argument is not used if using a model that estimates the process error SD.
