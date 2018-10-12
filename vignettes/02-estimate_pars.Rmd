@@ -49,9 +49,7 @@ See `?impute` for information on imputing missing data.
 
 ```{r load_data}
 growth <- 
-    load_data(remove_unfinished = TRUE, filter_pars = list(start = 0, end = 0.8)) %>%
-    # Temporarily remove these reps:
-    filter(!(line == "WI-L4Ø" & rep %in% c(4, 7))) %>% 
+    load_data() %>%
     # Now filter out early part of each time series, before N > 6
     # N <= 6 is when the stochasticity associated with only starting with 2 adults
     # appears to be strongest
@@ -97,11 +95,9 @@ growth %>%
 ## Run model
 
 ```{r run_model, eval = TRUE}
-# Takes ~ 35 sec
-theta_ <- theta
-theta_[seq(2, length(theta_),2)] <- 10 * theta_[seq(2, length(theta_),2)]
-set.seed(65136)
-stan_fit <- fit_lines(growth, theta_ = theta_)
+# Takes ~ 30 sec
+stan_fit <- fit_lines(growth,
+                      seed = 65136, control = list(adapt_delta = 0.8))
 ```
 ```{r write_model, eval = FALSE, echo = FALSE}
 write_rds(stan_fit, "data-raw/stan_fit.rds")
@@ -123,9 +119,9 @@ posterior <- as.array(stan_fit)
 mcmc_intervals(posterior, pars = sprintf("Z_r[%i]", 1:8)) +
     scale_y_discrete(labels = growth$line %>% levels()) +
     ggtitle("Growth rates")
-mcmc_intervals(posterior, pars = sprintf("Z_a_a[%i]", 1:8)) +
-    scale_y_discrete(labels = growth$line %>% levels()) +
-    ggtitle("Density dependences")
+# mcmc_intervals(posterior, pars = sprintf("Z_a_a[%i]", 1:8)) +
+#     scale_y_discrete(labels = growth$line %>% levels()) +
+#     ggtitle("Density dependences")
 ```
 
 
@@ -137,12 +133,49 @@ it's not ready.
 
 for (i in 1:6) {
     x <- c("sigma_epsilon", "rho", "sigma_rho", "phi", "sigma_phi_a", "sigma_phi_w")[i]
-    y <- theta_[seq(2, length(theta_),2)][i]
+    y <- theta[seq(2, length(theta),2)][i]
     z <- apply(rstan::extract(stan_fit, x, permuted = FALSE), 3, sd)
     cat(sprintf("parameter: %s\n prior SD:     %.5g\n posterior SD: %.5g\n\n", x, y, z))
 }; rm(x,y,i)
 
 
+growth %>% 
+    arrange(line, rep, date) %>% 
+    select(obs = X) %>% 
+    mutate(pred = apply(rstan::extract(stan_fit, "X_pred", permuted = FALSE),
+                        3, mean),
+           resid = apply(rstan::extract(stan_fit, "X_resid", permuted = FALSE),
+                        3, mean)) %>%
+    # ggplot(aes(pred, obs)) +
+    ggplot(aes(pred, resid)) +
+    geom_point(shape = 1, alpha = 0.5) +
+    # geom_abline(slope = 1, intercept = 0, color = "dodgerblue", linetype = 2,
+    #             size = 1) +
+    # annotate(geom = "text", x = 6.5, y = 7, label = "1:1 line", hjust = 1, vjust = 0,
+    #          color = "dodgerblue", fontface = "bold") +
+    geom_abline(slope = 0, intercept = 0, color = "dodgerblue", linetype = 2,
+                size = 1) +
+    xlab("predicted X") +
+    # ylab("observed X") +
+    ylab("residual") +
+    NULL
+
+
+cor_df <- data_frame(
+    lp__ = as.numeric(rstan::extract(stan_fit, "lp__", permuted = FALSE)[,,1]),
+    sigma_epsilon = as.numeric(rstan::extract(stan_fit, "sigma_epsilon",
+                                              permuted = FALSE)[,,1]),
+    rho = as.numeric(rstan::extract(stan_fit, "rho", permuted = FALSE)[,,1]),
+    sigma_rho = as.numeric(rstan::extract(stan_fit, "sigma_rho", permuted = FALSE)[,,1]),
+    phi = as.numeric(rstan::extract(stan_fit, "phi", permuted = FALSE)[,,1]),
+    # sigma_phi_a = as.numeric(rstan::extract(stan_fit, "sigma_phi_a",
+    #                                         permuted = FALSE)[,,1]),
+    sigma_phi_w = as.numeric(rstan::extract(stan_fit, "sigma_phi_w",
+                                            permuted = FALSE)[,,1]))
+
+
+cp <- GGally::ggpairs(cor_df)
+cp + theme(strip.text = element_text(size = 10, lineheight = 2, hjust = 0.5, vjust = 1))
 
 
 
@@ -159,11 +192,9 @@ print(stan_fit, digits = 6, pars = c("Z_r", "Z_a_a", "sigma_epsilon"), probs = c
 print(stan_fit, digits = 6, pars = c("phi", "sigma_phi_a", "sigma_phi_w"), probs = c())
 
 
-
-1 / gtools::inv.logit(-6.161071 + 0.944846 * c(0.009243, 0.010392, 0.015830, 0.002257, -0.003927, 0.022353, -0.005837, -0.002897))
-
 # parameters of interest
-pars_interest <- c(sprintf("Z_a_a[%i]", 1:8), sprintf("Z_r[%i]", 1:8),
+pars_interest <- c(#sprintf("Z_a_a[%i]", 1:8),
+                   sprintf("Z_r[%i]", 1:8),
                    "rho", "sigma_rho",
                    "phi", "sigma_phi_a", "sigma_phi_w",
                    "sigma_epsilon")
@@ -174,11 +205,17 @@ non_ZX_pars <- names(stan_fit)[!grepl("^Z", names(stan_fit)) &
 mcmc_areas(posterior, pars = non_ZX_pars[non_ZX_pars != "lp__" & non_ZX_pars != "phi"])
 
 mcmc_areas(posterior, pars = "phi")
+mcmc_areas(posterior, pars = "lp__")
 
 
 rhat(stan_fit, pars = non_ZX_pars) %>% 
     mcmc_rhat() + yaxis_text(hjust = 1)
 neff_ratio(stan_fit, pars = non_ZX_pars) %>% 
+    mcmc_neff() + yaxis_text(hjust = 1)
+
+rhat(stan_fit, pars = pars_interest) %>% 
+    mcmc_rhat() + yaxis_text(hjust = 1)
+neff_ratio(stan_fit, pars = pars_interest) %>% 
     mcmc_neff() + yaxis_text(hjust = 1)
 
 
@@ -226,7 +263,7 @@ growth %>%
 pred_df <- make_pred_df(stan_fit, growth)
 
 pred_df %>%
-    # filter(rep == 1) %>%
+    filter(rep == 1) %>%
     # filter(rep == 4, line == "Clover-2017-2") %>%
     ggplot(aes(date, X)) +
     geom_ribbon(aes(ymin = X_lower, ymax = X_upper),
@@ -234,9 +271,9 @@ pred_df %>%
     geom_line(color = "firebrick", alpha = 0.5) +
     geom_point(shape = 1, color = "firebrick", alpha = 0.5) +
     geom_line(aes(y = X_pred), color = "dodgerblue3", size = 0.5) +
-    # facet_wrap(~ rep + line, nrow = 2) +
-    facet_wrap(~ rep + line, nrow = 7) +
-    # coord_trans(y = "exp") +
+    facet_wrap(~ rep + line, nrow = 2) +
+    # facet_wrap(~ rep + line, nrow = 7) +
+    coord_trans(y = "exp") +
     theme(strip.text = element_blank()) +
     NULL
 
