@@ -2,6 +2,7 @@
 
 
 source("under_constr/poster/_preamble.R")
+source("under_constr/poster/simulations.R")
 
 ggplot2::theme_set(
     ggplot2::theme_get() +
@@ -11,16 +12,24 @@ ggplot2::theme_set(
               strip.text = element_text())
 )
 
-pool_sims <- readr::read_rds("data-raw/pool_sims_N.rds") %>%
-    mutate(thresh = factor(thresh)) %>%
-    dplyr::select(thresh, everything()) %>%
-    arrange(thresh, rep, date, line) %>%
-    group_by(thresh, rep, date) %>%
+sims <- test_threshes(c(100, 1000))
+
+pool_sims <- sims$N %>%
+    arrange(thresh, date, line) %>%
+    group_by(thresh, date) %>%
     mutate(prop = N / sum(N),
            prop_end = cumsum(prop),
            prop_start = lag(prop_end, default = 0)) %>%
     ungroup()
-# sim_env <- readr::read_rds("data-raw/sim_env.rds")
+
+
+pool_sims %>%
+    # filter(date < 500) %>%
+    ggplot(aes(date, N, color = line)) +
+    geom_line() +
+    facet_grid(thresh ~ ., scales = "free_y") +
+    scale_color_brewer(palette = "Dark2", guide = FALSE)
+
 
 # survs <- pool_sims %>%
 #     # filter(date == 1000, repl_age == 0, thresh == 1000) %>%

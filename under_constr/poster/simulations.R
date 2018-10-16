@@ -58,16 +58,20 @@ with(sim_env, {
     #     flatten()
 
     # Running longer to try to find patterns
-    max_t <- 2000
+    max_t <- 500
     # n_cages <- 100
     # repl_times <- seq(1, max_t, 1) - 1
     plant_death_age_mean <- 1e6
-    plant_death_age_sd <- 0.001
+    plant_death_age_sd <- 0.0
     repl_age <- 0
 
     # Also want to remove process error to see patterns more easily
     process_error <- 0
     # process_error <- process_error / 10
+    disp_error <- FALSE
+    # Because we're not including any stochasticity, we can run it only once
+    n_cages <- 1
+    n_cores <- 1
 
     sim <- function(repl_threshold_) {
         # if (missing(repl_age_)) repl_age_ <- repl_age
@@ -80,6 +84,7 @@ with(sim_env, {
                                     A = A[lines_],
                                     D_vec = D_vec[lines_],
                                     process_error = process_error,
+                                    disp_error = disp_error,
                                     plant_mort_0 = plant_mort_0[lines_],
                                     plant_mort_1 = plant_mort_1[lines_],
                                     plant_death_age_mean = plant_death_age_mean,
@@ -99,7 +104,7 @@ with(sim_env, {
 })
 
 
-readr::write_rds(sim_env, "data-raw/sim_env.rds")
+# readr::write_rds(sim_env, "data-raw/sim_env.rds")
 
 
 # surv_by_thresh <- function(thresh) {
@@ -144,47 +149,36 @@ readr::write_rds(sim_env, "data-raw/sim_env.rds")
 #     NULL
 
 
-
-# Takes ~3 sec
-thresh1 <- 430L
-set.seed(549489)
-sims_ <- sim_env$sim(repl_threshold_ = thresh1)
-pool_sims_N <- sims_$N %>%
-    dplyr::select(-pool) %>%
-    mutate(thresh = thresh1)
-pool_sims_X <- sims_$X %>%
-    dplyr::select(-pool) %>%
-    mutate(thresh = thresh1)
-pool_sims_Z <- sims_$Z %>%
-    dplyr::select(-pool) %>%
-    mutate(thresh = thresh1)
-
-
-thresh2 <- 490L
-set.seed(549489+1)
-sims_ <- sim_env$sim(repl_threshold_ = thresh2)
-pool_sims_N_ <- sims_$N %>%
-    dplyr::select(-pool) %>%
-    mutate(thresh = thresh2)
-pool_sims_X_ <- sims_$X %>%
-    dplyr::select(-pool) %>%
-    mutate(thresh = thresh2)
-pool_sims_Z_ <- sims_$Z %>%
-    dplyr::select(-pool) %>%
-    mutate(thresh = thresh2)
-rm(sims_)
-
-
-pool_sims_N <- bind_rows(pool_sims_N, pool_sims_N_)
-pool_sims_X <- bind_rows(pool_sims_X, pool_sims_X_)
-pool_sims_Z <- bind_rows(pool_sims_Z, pool_sims_Z_)
-
-rm(pool_sims_N_, pool_sims_X_, pool_sims_Z_)
-
-readr::write_rds(pool_sims_N, "data-raw/pool_sims_N.rds")
-readr::write_rds(pool_sims_X, "data-raw/pool_sims_X.rds")
-readr::write_rds(pool_sims_Z, "data-raw/pool_sims_Z.rds")
-
+test_threshes <- function(threshes) {
+    sim_list <- lapply(threshes,
+           function(thresh_) {
+               sims_ <- sim_env$sim(repl_threshold_ = thresh_)
+               sims_$N <- sims_$N %>%
+                   dplyr::select(-pool) %>%
+                   mutate(thresh = thresh_)
+               sims_$X <- sims_$X %>%
+                   dplyr::select(-pool) %>%
+                   mutate(thresh = thresh_)
+               sims_$Z <- sims_$Z %>%
+                   dplyr::select(-pool) %>%
+                   mutate(thresh = thresh_)
+               return(sims_)
+           })
+    pool_sims <- list()
+    pool_sims$N <- bind_rows(lapply(sim_list, function(x) x$N)) %>%
+        dplyr::select(-rep) %>%
+        dplyr::mutate_at(vars(line, thresh), factor) %>%
+        dplyr::select(thresh, everything())
+    pool_sims$X <- bind_rows(lapply(sim_list, function(x) x$X)) %>%
+        dplyr::select(-rep) %>%
+        dplyr::mutate_at(vars(plant, thresh), factor) %>%
+        dplyr::select(thresh, everything())
+    pool_sims$Z <- bind_rows(lapply(sim_list, function(x) x$Z)) %>%
+        dplyr::select(-rep) %>%
+        dplyr::mutate_at(vars(plant, thresh), factor) %>%
+        dplyr::select(thresh, everything())
+    return(pool_sims)
+}
 
 
 
