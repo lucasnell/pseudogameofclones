@@ -29,8 +29,12 @@ inline double inv_logit(const double& alpha) {
 //'
 inline sint32 sample_plant_days(const double& days_mean,
                                 const double& days_sd,
+                                const arma::ivec& plant_death_ages, const uint32& i,
                                 std::normal_distribution<double>& normal_rng,
                                 pcg32& eng) {
+    if (plant_death_ages.n_elem > 0) {
+        return -1 * plant_death_ages(i) - 1;
+    }
     double days_ = -1 * std::round(days_mean + normal_rng(eng) * days_sd);
     if (days_ > -1) days_ = -1;
     sint32 days = static_cast<sint32>(days_);
@@ -49,12 +53,11 @@ inline sint32 sample_plant_days(const double& days_mean,
 /*
  Emigration of one line from one plant to all other plants:
  */
-arma::ivec emigration(const uint32& i, const uint32& j,
-                      const arma::mat& Nt, const arma::mat& D_vec,
-                      const arma::ivec& plant_days,
-                      std::poisson_distribution<arma::sword>& poisson_rng, pcg32& eng) {
+arma::vec emigration(const uint32& i, const uint32& j,
+                     const arma::mat& Nt, const arma::mat& D_vec,
+                     std::poisson_distribution<arma::sword>& poisson_rng, pcg32& eng) {
 
-    arma::ivec disp_out(Nt.n_rows, arma::fill::zeros);
+    arma::vec disp_out(Nt.n_rows, arma::fill::zeros);
 
     if (Nt(i, j) == 0) return disp_out;
 
@@ -75,7 +78,7 @@ arma::ivec emigration(const uint32& i, const uint32& j,
              */
             disp_out(ii) = 0;
         } else {
-            disp_out(ii) = poisson_rng(eng);
+            disp_out(ii) = static_cast<double>(poisson_rng(eng));
         }
     }
     // Making absolutely sure that dispersal never exceeds the number possible:
@@ -100,13 +103,35 @@ arma::ivec emigration(const uint32& i, const uint32& j,
     return disp_out;
 }
 
+/*
+ Same thing as above, but overloaded for not including dispersal stochasticity
+ */
+arma::vec emigration(const uint32& i, const uint32& j,
+                      const arma::mat& Nt, const arma::mat& D_vec) {
+
+
+    if (Nt(i, j) == 0) return arma::vec(Nt.n_rows, arma::fill::zeros);
+
+    // Else we have to calculate E(# dispersed)
+    // Calculate lambda:
+    double lambda_ = D_vec(j) * Nt(i,j);
+    // Because we're splitting mu_ over the number of plants:
+    double np = static_cast<double>(Nt.n_rows);
+    lambda_ /= np;
+
+    arma::vec disp_out(Nt.n_rows);
+    disp_out.fill(lambda_);
+    disp_out(i) = 0;
+
+    return disp_out;
+}
+
 
 /*
  Update dispersal
  */
-void update_dispersal(arma::imat& emigrants, arma::imat& immigrants,
+void update_dispersal(arma::mat& emigrants, arma::mat& immigrants,
                       const arma::mat& Nt, const arma::mat& D_vec,
-                      const arma::ivec& plant_days,
                       std::poisson_distribution<arma::sword>& poisson_rng, pcg32& eng) {
 
     immigrants.fill(0);
@@ -116,7 +141,30 @@ void update_dispersal(arma::imat& emigrants, arma::imat& immigrants,
     for (uint32 j = 0; j < n_lines; j++) {
         for (uint32 i = 0; i < n_plants; i++) {
             // Emigrants of line j from plant i to all others:
-            arma::ivec e_ij = emigration(i, j, Nt, D_vec, plant_days, poisson_rng, eng);
+            arma::vec e_ij = emigration(i, j, Nt, D_vec, poisson_rng, eng);
+            emigrants(i, j) = arma::accu(e_ij);
+            immigrants.col(j) += e_ij;
+        }
+    }
+
+    return;
+
+}
+
+/*
+ Overloaded for not including dispersal stochasticity
+ */
+void update_dispersal(arma::mat& emigrants, arma::mat& immigrants,
+                      const arma::mat& Nt, const arma::mat& D_vec) {
+
+    immigrants.fill(0);
+    uint32 n_lines = emigrants.n_cols;
+    uint32 n_plants = emigrants.n_rows;
+
+    for (uint32 j = 0; j < n_lines; j++) {
+        for (uint32 i = 0; i < n_plants; i++) {
+            // Emigrants of line j from plant i to all others:
+            arma::vec e_ij = emigration(i, j, Nt, D_vec);
             emigrants(i, j) = arma::accu(e_ij);
             immigrants.col(j) += e_ij;
         }
@@ -140,7 +188,8 @@ void replace_plants(uint32& repl_ind,
                     pcg32& eng,
                     const sint32& repl_age,
                     const double& plant_death_age_mean,
-                    const double& plant_death_age_sd) {
+                    const double& plant_death_age_sd,
+                    const arma::ivec& plant_death_ages) {
 
     uint32 n_plants = Nt1.n_rows;
     uint32 n_lines = Nt1.n_cols;
@@ -157,8 +206,9 @@ void replace_plants(uint32& repl_ind,
     for (uint32 i = 0; i < n_plants; i++) {
         if (plant_days(i) >= repl_age) {
             replaced.push_back(i);
-            plant_days(i) = sample_plant_days(plant_death_age_mean,
-                       plant_death_age_sd, normal_rng, eng);
+            plant_days(i) = sample_plant_days(plant_death_age_mean, plant_death_age_sd,
+                       plant_death_ages, i,
+                       normal_rng, eng);
         } else {
             not_replaced.push_back(i);
         }
@@ -258,8 +308,10 @@ void sim_cage(const arma::mat& N_0,
               const arma::rowvec& A,
               const arma::vec& D_vec,
               const double& process_error,
+              const bool& disp_error,
               const double& plant_death_age_mean,
               const double& plant_death_age_sd,
+              const arma::ivec& plant_death_ages,
               const std::vector<uint32>& repl_times,
               const sint32& repl_age,
               const arma::mat& log_morts,
@@ -293,14 +345,15 @@ void sim_cage(const arma::mat& N_0,
     arma::ivec plant_days(n_plants);
     for (uint i = 0; i < n_plants; i++) {
         plant_days(i) = sample_plant_days(plant_death_age_mean, plant_death_age_sd,
-                                          normal_rng, eng);
+                   plant_death_ages, i,
+                   normal_rng, eng);
     }
-    // Index to keep track of position in `repl_times`
+// Index to keep track of position in `repl_times`
     uint32 repl_ind = 0;
     if (repl_times.front() == 0) repl_ind++;
     // Matrices keeping track of numbers of dispersed aphids:
-    arma::imat emigrants(n_plants, n_lines);
-    arma::imat immigrants(n_plants, n_lines);
+    arma::mat emigrants(n_plants, n_lines);
+    arma::mat immigrants(n_plants, n_lines);
     // Sum by row (i.e., by plant):
     arma::vec Z = arma::sum(Nt1, 1);
 
@@ -309,7 +362,13 @@ void sim_cage(const arma::mat& N_0,
         // Update # plant days PAST death for time t+1:
         plant_days++;
         // Generate numbers of dispersed aphids:
-        update_dispersal(emigrants, immigrants, Nt, D_vec, plant_days, poisson_rng, eng);
+        if (disp_error) {
+            // Disperal is Poisson process:
+            update_dispersal(emigrants, immigrants, Nt, D_vec, poisson_rng, eng);
+        } else {
+            // Dispersal is entirely deterministic:
+            update_dispersal(emigrants, immigrants, Nt, D_vec);
+        }
 
         /*
          Go back through to simulate at time t+1
@@ -393,7 +452,9 @@ void sim_cage(const arma::mat& N_0,
                 Z(i) = 0;
                 Nt1.row(i).zeros();
                 plant_days(i) = sample_plant_days(plant_death_age_mean,
-                           plant_death_age_sd, normal_rng, eng);
+                           plant_death_age_sd,
+                           plant_death_ages, i,
+                           normal_rng, eng);
             }
 
         }
@@ -453,10 +514,12 @@ List sim_cages_(const uint32& n_cages,
                 const arma::rowvec& A,
                 const arma::vec& D_vec,
                 const double& process_error,
+                const bool& disp_error,
                 const arma::rowvec& plant_mort_0,
                 const arma::rowvec& plant_mort_1,
                 const double& plant_death_age_mean,
                 const double& plant_death_age_sd,
+                const arma::ivec& plant_death_ages,
                 const std::vector<uint32>& repl_times,
                 const sint32& repl_age,
                 const double& extinct_N,
@@ -492,6 +555,13 @@ List sim_cages_(const uint32& n_cages,
     }
     if (plant_mort_1.n_elem != n_lines) {
         err_msg += "ERROR: plant_mort_1.n_elem != n_lines\n";
+    }
+    if (plant_death_ages.n_elem != 0 && plant_death_ages.n_elem != n_plants) {
+        err_msg += "ERROR: plant_death_ages.n_elem != 0 && ";
+        err_msg += "plant_death_ages.n_elem != n_plants\n";
+    }
+    if (arma::any(plant_death_ages <= 0)) {
+        err_msg += "ERROR: arma::any(plant_death_ages <= 0)\n";
     }
     if (repl_times.size() == 0) {
         err_msg += "ERROR: repl_times.size() == 0\n";
@@ -540,8 +610,8 @@ List sim_cages_(const uint32& n_cages,
     for (uint32 r = 0; r < n_cages; r++) {
         if (p.is_aborted()) continue;
         N_bycage(arma::span(0), arma::span(), arma::span(r)) = arma::sum(N_0, 0);
-        sim_cage(N_0, R, A, D_vec, process_error,
-                 plant_death_age_mean, plant_death_age_sd,
+        sim_cage(N_0, R, A, D_vec, process_error, disp_error,
+                 plant_death_age_mean, plant_death_age_sd, plant_death_ages,
                  repl_times, repl_age_, log_morts, extinct_N, repl_threshold,
                  eng,
                  N_bycage, logN_byplant, zero_byplant, r);

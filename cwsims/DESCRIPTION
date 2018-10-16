@@ -19,4 +19,4 @@ LinkingTo:
     RcppArmadillo,
     RcppProgress
 SystemRequirements: C++11
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.0

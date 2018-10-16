@@ -34,6 +34,8 @@ sim_cages <- function(n_cages, N_0, max_t, R, A, D_vec, process_error,
                       plant_mort_0, plant_mort_1,
                       plant_death_age_mean, plant_death_age_sd,
                       repl_times, repl_age, extinct_N, repl_threshold,
+                      disp_error = TRUE,
+                      plant_death_ages = NULL,
                       n_cores = 1,
                       show_progress = FALSE,
                       line_names = NULL) {
@@ -42,6 +44,7 @@ sim_cages <- function(n_cages, N_0, max_t, R, A, D_vec, process_error,
     D_vec <- exp(D_vec)
 
     if (is.null(line_names)) line_names <- 1:length(R)
+    if (is.null(plant_death_ages)) plant_death_ages <- integer(0)
 
     sims <- sim_cages_(n_cages = n_cages,
                        N_0 = N_0,
@@ -50,10 +53,12 @@ sim_cages <- function(n_cages, N_0, max_t, R, A, D_vec, process_error,
                        A = A,
                        D_vec,
                        process_error = process_error,
+                       disp_error = disp_error,
                        plant_mort_0 = plant_mort_0,
                        plant_mort_1 = plant_mort_1,
                        plant_death_age_mean = plant_death_age_mean,
                        plant_death_age_sd = plant_death_age_sd,
+                       plant_death_ages = plant_death_ages,
                        repl_times = repl_times,
                        repl_age = repl_age,
                        extinct_N = extinct_N,

@@ -8,8 +8,8 @@
 using namespace Rcpp;
 
 // sim_cages_
-List sim_cages_(const uint32& n_cages, const arma::mat& N_0, const uint32& max_t, const arma::rowvec& R, const arma::rowvec& A, const arma::vec& D_vec, const double& process_error, const arma::rowvec& plant_mort_0, const arma::rowvec& plant_mort_1, const double& plant_death_age_mean, const double& plant_death_age_sd, const std::vector<uint32>& repl_times, const sint32& repl_age, const double& extinct_N, const double& repl_threshold, const uint32& n_cores, const bool& show_progress);
-RcppExport SEXP _cwsims_sim_cages_(SEXP n_cagesSEXP, SEXP N_0SEXP, SEXP max_tSEXP, SEXP RSEXP, SEXP ASEXP, SEXP D_vecSEXP, SEXP process_errorSEXP, SEXP plant_mort_0SEXP, SEXP plant_mort_1SEXP, SEXP plant_death_age_meanSEXP, SEXP plant_death_age_sdSEXP, SEXP repl_timesSEXP, SEXP repl_ageSEXP, SEXP extinct_NSEXP, SEXP repl_thresholdSEXP, SEXP n_coresSEXP, SEXP show_progressSEXP) {
+List sim_cages_(const uint32& n_cages, const arma::mat& N_0, const uint32& max_t, const arma::rowvec& R, const arma::rowvec& A, const arma::vec& D_vec, const double& process_error, const bool& disp_error, const arma::rowvec& plant_mort_0, const arma::rowvec& plant_mort_1, const double& plant_death_age_mean, const double& plant_death_age_sd, const arma::ivec& plant_death_ages, const std::vector<uint32>& repl_times, const sint32& repl_age, const double& extinct_N, const double& repl_threshold, const uint32& n_cores, const bool& show_progress);
+RcppExport SEXP _cwsims_sim_cages_(SEXP n_cagesSEXP, SEXP N_0SEXP, SEXP max_tSEXP, SEXP RSEXP, SEXP ASEXP, SEXP D_vecSEXP, SEXP process_errorSEXP, SEXP disp_errorSEXP, SEXP plant_mort_0SEXP, SEXP plant_mort_1SEXP, SEXP plant_death_age_meanSEXP, SEXP plant_death_age_sdSEXP, SEXP plant_death_agesSEXP, SEXP repl_timesSEXP, SEXP repl_ageSEXP, SEXP extinct_NSEXP, SEXP repl_thresholdSEXP, SEXP n_coresSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -20,23 +20,25 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::rowvec& >::type A(ASEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type D_vec(D_vecSEXP);
     Rcpp::traits::input_parameter< const double& >::type process_error(process_errorSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type disp_error(disp_errorSEXP);
     Rcpp::traits::input_parameter< const arma::rowvec& >::type plant_mort_0(plant_mort_0SEXP);
     Rcpp::traits::input_parameter< const arma::rowvec& >::type plant_mort_1(plant_mort_1SEXP);
     Rcpp::traits::input_parameter< const double& >::type plant_death_age_mean(plant_death_age_meanSEXP);
     Rcpp::traits::input_parameter< const double& >::type plant_death_age_sd(plant_death_age_sdSEXP);
+    Rcpp::traits::input_parameter< const arma::ivec& >::type plant_death_ages(plant_death_agesSEXP);
     Rcpp::traits::input_parameter< const std::vector<uint32>& >::type repl_times(repl_timesSEXP);
     Rcpp::traits::input_parameter< const sint32& >::type repl_age(repl_ageSEXP);
     Rcpp::traits::input_parameter< const double& >::type extinct_N(extinct_NSEXP);
     Rcpp::traits::input_parameter< const double& >::type repl_threshold(repl_thresholdSEXP);
     Rcpp::traits::input_parameter< const uint32& >::type n_cores(n_coresSEXP);
     Rcpp::traits::input_parameter< const bool& >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(sim_cages_(n_cages, N_0, max_t, R, A, D_vec, process_error, plant_mort_0, plant_mort_1, plant_death_age_mean, plant_death_age_sd, repl_times, repl_age, extinct_N, repl_threshold, n_cores, show_progress));
+    rcpp_result_gen = Rcpp::wrap(sim_cages_(n_cages, N_0, max_t, R, A, D_vec, process_error, disp_error, plant_mort_0, plant_mort_1, plant_death_age_mean, plant_death_age_sd, plant_death_ages, repl_times, repl_age, extinct_N, repl_threshold, n_cores, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_cwsims_sim_cages_", (DL_FUNC) &_cwsims_sim_cages_, 17},
+    {"_cwsims_sim_cages_", (DL_FUNC) &_cwsims_sim_cages_, 19},
     {NULL, NULL, 0}
 };
 

@@ -4,10 +4,11 @@
 \alias{sim_cages}
 \title{Simulate multiple cages and simplify output.}
 \usage{
-sim_cages(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error, plant_mort_0,
-  plant_mort_1, plant_death_age_mean, plant_death_age_sd, repl_times, repl_age,
-  extinct_N, n_cores = 1, by_cage = FALSE, condense = TRUE,
-  show_progress = FALSE)
+sim_cages(n_cages, N_0, max_t, R, A, D_vec, process_error, plant_mort_0,
+  plant_mort_1, plant_death_age_mean, plant_death_age_sd, repl_times,
+  repl_age, extinct_N, repl_threshold, disp_error = TRUE,
+  plant_death_ages = NULL, n_cores = 1, show_progress = FALSE,
+  line_names = NULL)
 }
 \arguments{
 \item{n_cages}{Number of cages to simulate.}
@@ -19,16 +20,6 @@ sim_cages(n_cages, N_0, max_t, R, A, D_binom, D_nb, process_error, plant_mort_0,
 \item{R}{Growth rates for each line.}
 
 \item{A}{Density dependence for each line.}
-
-\item{D_binom}{Data frame containing intercept and coefficient estimates for
-binomial GLM of `<whether dispersal > 0> ~ N_t + N_t^2`.
-There should be one set of estimates for each line regardless of whether the model
-estimated separate values for each line.}
-
-\item{D_nb}{Data frame containing intercept and overdispersion estimates for
-negative binomial GLM of `<# dispersed | dispersal occurs> ~ 1`.
-There should be one set of estimates for each line regardless of whether the model
-estimated separate values for each line.}
 
 \item{process_error}{SD of process error.}
 
@@ -48,6 +39,16 @@ estimated separate values for each line.}
 
 \item{show_progress}{Boolean for whether to show progress bar. Defaults to
 \code{FALSE}.}
+
+\item{D_binom}{Data frame containing intercept and coefficient estimates for
+binomial GLM of `<whether dispersal > 0> ~ N_t + N_t^2`.
+There should be one set of estimates for each line regardless of whether the model
+estimated separate values for each line.}
+
+\item{D_nb}{Data frame containing intercept and overdispersion estimates for
+negative binomial GLM of `<# dispersed | dispersal occurs> ~ 1`.
+There should be one set of estimates for each line regardless of whether the model
+estimated separate values for each line.}
 }
 \description{
 Simulate multiple cages and simplify output.
