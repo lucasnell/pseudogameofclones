@@ -20,7 +20,8 @@
 #' @param model_name String specifying the name of the model to fit.
 #'     The options are
 #'     `"full_model"`, `"no_within_alpha"`, `"no_among_alpha"`,
-#'     `"one_alpha"`, `"one_r"`, `"one_r_alpha"`, or `"pass_sigma_epsilon"`.
+#'     `"one_alpha"`, `"one_r"`, `"one_r_alpha"`, `"pass_sigma_epsilon"`,
+#'     or `"full_model_plant_death"`.
 #'     Defaults to `"full_model"`.
 #' @param sigma_epsilon Value for the SD of the process error if using a model
 #'     that doesn't esimate this value itself.
@@ -37,7 +38,8 @@ fit_lines <- function(data_df, line, rep, date, X, theta_,
                       model_name = c("full_model", "no_within_alpha",
                                      "no_among_alpha", "one_alpha",
                                      "one_r", "one_r_alpha",
-                                     "pass_sigma_epsilon"),
+                                     "pass_sigma_epsilon",
+                                     "full_model_plant_death"),
                       sigma_epsilon = NULL,
                       ...) {
 
@@ -113,7 +115,10 @@ fit_lines <- function(data_df, line, rep, date, X, theta_,
                  "argument.",
                  call. = FALSE)
         }
-        model_data$sigma_epsilon <- sigma_epsilon
+        model_data_$sigma_epsilon <- sigma_epsilon
+    }
+    if (model_name == "full_model_plant_death") {
+        model_data_$theta <- NULL
     }
 
     growth_fit <- rstan::sampling(stanmodels[[model_name]], data = model_data_, ...)
