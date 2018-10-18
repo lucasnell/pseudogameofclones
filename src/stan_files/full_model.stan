@@ -104,8 +104,18 @@ model {
     hat_sigma_phi_p  ~ normal(theta[11], theta[12])T[0,];
 
     // Process error:
-    X_hat ~ normal(X_hat_pred, hat_sigma_epsilon);
-
+    // iterate over each time series
+    {
+        int start = 1; // starting position in `X` and `X_hat_pred` vectors
+        for (j in 1:n_ts) {
+            // number of observations for this time series:
+            int n_ = n_per[j];
+            int end = start + n_ - 1;
+            X_hat[(start+1):end]  ~ normal(X_hat_pred[(start+1):end], hat_sigma_epsilon);
+            // iterate `start` index:
+            start += n_;
+        }
+    }
 }
 generated quantities {
 
