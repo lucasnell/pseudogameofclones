@@ -61,10 +61,13 @@ individuals were on the ground.
 ```{r load_data}
 growth <- load_data(filter_pars = NULL,
                     remove_unfinished = FALSE) %>% 
-    filter(date != 0) %>% 
-    mutate(rep = factor(rep)) %>%
     group_by(line, rep) %>% 
-    arrange(date) %>% 
+    filter(1:n() >= which(N > 6)[1]) %>%
+    mutate(date = as.integer(date - min(date))) %>%
+    ungroup() %>% 
+    mutate(rep = factor(rep)) %>%
+    arrange(line, rep, date) %>% 
+    group_by(line, rep) %>% 
     mutate(disp = ifelse(is.na(disp), 0, disp),
            X = impute(X),
            N = round(exp(X)),
@@ -75,7 +78,6 @@ growth <- load_data(filter_pars = NULL,
            past_death = date - which(N == max(N))[1], # days past plant death
            disp_b = ifelse(dD == 0, 0, 1)) %>% 
     ungroup() %>% 
-    arrange(line, rep, date) %>% 
     identity()
 ```
 
@@ -103,14 +105,36 @@ Below, colors represent different reps.
 ```{r disp_N_plot, warning=FALSE}
 
 growth %>%
-    {mutate(., pred = glm(dD ~ line + offset(X), family = "poisson", 
-                      data = growth) %>% predict(type = "response"))} %>% 
+    # {mutate(., pred = glm(dD ~ line + offset(X), family = "poisson", 
+    #                   data = growth) %>% predict(type = "response"))} %>% 
     ggplot(aes(N)) +
     geom_point(aes(y = dD, color = rep), shape = 16, alpha = 0.75) +
-    geom_line(aes(y = pred), color = "black", shape = 1, alpha = 0.75) +
+    # geom_line(aes(y = pred), color = "black", shape = 1, alpha = 0.75) +
     facet_wrap(~ line) +
     scale_color_brewer(palette = "Set3", guide = FALSE) +
     NULL
+
+
+growth %>%
+    ggplot(aes(line, log1p(dD))) +
+    geom_point(shape = 1, position = position_jitter(height = 0, width = 0.25), alpha = 0.5) +
+    scale_color_brewer(palette = "Set3", guide = FALSE) +
+    NULL
+
+
+growth %>%
+    group_by(line, rep) %>% 
+    summarize(disp = sum(disp) / sum(N)) %>% 
+    ungroup() %>% 
+    ggplot(aes(line, disp, color = line)) +
+    geom_point(shape = 16, size = 3, alpha = 0.5,
+               position = position_jitter(height = 0, width = 0.2)) +
+    stat_summary(geom = "point", fun.y = mean, color = "black", size = 6, shape = 1) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    NULL
+
+
+
 ```
 
 
