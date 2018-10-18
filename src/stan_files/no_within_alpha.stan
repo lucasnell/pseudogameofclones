@@ -1,6 +1,6 @@
 
 /*
- This model does NOT include within-line variance in density dependence.
+ This model does NOT include among-plant variance in density dependence.
  It DOES include...
  - Among-line variability in growth rates
  - Among-line variability in density dependences
@@ -38,65 +38,88 @@ data {
     //     12. SD for logit(density dependence) within-line SD
 
 }
+transformed data {
+    vector[n_obs] X_hat;
+    real mu;
+    real tau;
+
+    mu = mean(X);
+    tau = sd(X);
+
+    X_hat = (X - mu) / tau;
+}
 parameters {
 
     // Z-scores:
 
     vector[n_lines] Z_r;
-    vector[n_lines] Z_a_a;
-    // vector[n_ts] Z_a_w;
+    vector[n_lines] Z_alpha_l;
+    // vector[n_ts] Z_alpha_p;
 
     real<lower=0> sigma_epsilon;        // process error
     // Means and SDs (on transformed scale):
     real rho;                           // mean growth rates: log(r)
     real<lower=0> sigma_rho;            // among-line SD in log(r)
     real phi;                           // mean density dependences: logit(alpha)
-    real<lower=0> sigma_phi_a;          // among-line SD in logit(alpha)
-    // real<lower=0> sigma_phi_w;          // within-line SD in logit(alpha)
+    real<lower=0> sigma_phi_l;          // among-line SD in logit(alpha)
+    // real<lower=0> sigma_phi_p;          // within-line SD in logit(alpha)
 
 }
 transformed parameters {
 
-    vector[n_obs] X_pred;               // predicted X not including process error
+    vector[n_obs] X_hat_pred;               // predicted X not including process error
 
     // iterate over each time series
     {
-        int start = 1; // starting position in `X` and `X_pred` vectors
+        int start = 1; // starting position in `X` and `X_hat_pred` vectors
         for (j in 1:n_ts) {
             // number of observations for this time series:
             int n_ = n_per[j];
             int end = start + n_ - 1;
             // growth rate (r) for this time series:
-            real r_ = exp(rho + sigma_rho * Z_r[L[j]]);
+            real r_hat = exp(rho + sigma_rho * Z_r[L[j]]);
             // density dependence (alpha) for this time series:
-            real a_ = inv_logit(phi + sigma_phi_a * Z_a_a[L[j]]);
-            // + sigma_phi_w * Z_a_w[j]);
+            real alpha_hat = inv_logit(phi + sigma_phi_l * Z_alpha_l[L[j]]);
+                // + sigma_phi_p * Z_alpha_p[j]
             // filling in predicted X_t+1 based on X_t:
-            X_pred[start:end] = ricker(X, start, end, r_, a_);
+            X_hat_pred[start:end] = ricker(X_hat, start, end, r_hat, alpha_hat);
             // iterate `start` index:
             start += n_;
         }
     }
 
-
 }
 model {
 
     Z_r ~ normal(0, 1);                 // for growth rates by line
-    Z_a_a ~ normal(0, 1);               // for density dependence by line
-    // Z_a_w ~ normal(0, 1);               // for density dependence by plant
+    Z_alpha_l ~ normal(0, 1);               // for density dependence by line
+    // Z_alpha_p ~ normal(0, 1);               // for density dependence by plant
 
     sigma_epsilon ~ normal(theta[1], theta[2])T[0,];
     rho  ~ normal(theta[3], theta[4]);
     sigma_rho  ~ normal(theta[5], theta[6])T[0,];
     phi  ~ normal(theta[7], theta[8]);
-    sigma_phi_a  ~ normal(theta[9], theta[10])T[0,];
-    // sigma_phi_w  ~ normal(theta[11], theta[12])T[0,];
+    sigma_phi_l  ~ normal(theta[9], theta[10])T[0,];
+    // sigma_phi_p  ~ normal(theta[11], theta[12])T[0,];
 
     // Process error:
-    X ~ normal(X_pred, sigma_epsilon);
+    X_hat ~ normal(X_hat_pred, sigma_epsilon);
 }
 generated quantities {
     vector[n_obs] X_resid;
-    X_resid = X - X_pred;
+
+    /*
+     Parameter estimates in original scale:
+     */
+    vector[n_obs] X_pred;
+    vector[n_lines] R;  // growth rate by line
+    vector[n_lines] A;  // alpha by line
+    real sigma_process; // SD of process error
+
+    X_resid = X_hat - X_hat_pred;
+
+    X_pred = X_hat_pred * tau + mu;
+    R = exp(rho + sigma_rho * Z_r) * tau;
+    A = inv_logit(phi + sigma_phi_l * Z_alpha_l);
+    sigma_process = sigma_epsilon * tau;
 }
