@@ -49,14 +49,15 @@ See `?impute` for information on imputing missing data.
 
 ```{r load_data}
 growth <- 
-    load_data() %>%
+    load_data(filter_pars = list(start = 0, end = 0.5)) %>%
     # Now filter out early part of each time series, before N > 6
     # N <= 6 is when the stochasticity associated with only starting with 2 adults
     # appears to be strongest
     group_by(line, rep) %>% 
     filter(1:n() >= which(N > 6)[1]) %>%
     mutate(date = as.integer(date - min(date))) %>%
-    ungroup()
+    ungroup() %>% 
+    identity()
 ```
 
 This is how many reps I have of each line:
@@ -73,7 +74,7 @@ growth %>%
 
 ## See time series data
 
-```{r filter_data}
+```{r plot_time_series, echo = FALSE}
 growth %>% 
     group_by(line) %>% 
     mutate(rep = map_int(rep, ~ which(sort(unique(rep)) == .x))) %>% 
@@ -83,7 +84,7 @@ growth %>%
     geom_line(size = 0.75) +
     geom_point(size = 0.75) +
     facet_wrap(~ line, nrow = 2) +
-    scale_color_brewer(palette = "RdBu") +
+    scale_color_brewer(palette = "RdBu", guide = FALSE) +
     NULL
 ```
 
@@ -94,51 +95,58 @@ growth %>%
 
 ## Run model
 
-```{r run_model, eval = TRUE}
-# Takes ~ 30 sec
-stan_fit <- fit_lines(growth,
-                      seed = 65136, control = list(adapt_delta = 0.8))
+```{r run_model, eval = FALSE}
+# Takes ~ 6 min
+t0 <- Sys.time()
+stan_fit <- fit_lines(growth, # theta_ = rep(0:1, 6),
+                      model_name = "full_model_plant_death",
+                      seed = 65136, control = list(adapt_delta = 0.9))
+Sys.time() - t0; rm(t0); print(rhat(stan_fit) %>% keep(~ .x > 1.05) %>% length())
 ```
 ```{r write_model, eval = FALSE, echo = FALSE}
-write_rds(stan_fit, "data-raw/stan_fit.rds")
+# write_rds(stan_fit, "data-raw/stan_fit.rds")
+write_rds(stan_fit, "data-raw/stan_fit_b.rds")
 ```
 ```{r read_model, eval = TRUE, echo = FALSE}
 # stan_fit <- read_rds("data-raw/stan_fit.rds")
+stan_fit <- read_rds("data-raw/stan_fit_b.rds")
 ```
 
 
-## Examine model output
+## Examine model performance
 
 
-```{r examine_model, message=FALSE}
 
-# http://mc-stan.org/bayesplot/articles/visual-mcmc-diagnostics.html
 
+
+## Model estimates
+
+```{r model_posterior}
 posterior <- as.array(stan_fit)
+```
 
-mcmc_intervals(posterior, pars = sprintf("Z_r[%i]", 1:8)) +
+Estimates of R for each line:
+
+```{r R_estimates, echo = FALSE, message = FALSE}
+# http://mc-stan.org/bayesplot/articles/visual-mcmc-diagnostics.html
+mcmc_intervals(posterior, pars = sprintf("R[%i]", 1:8)) +
     scale_y_discrete(labels = growth$line %>% levels()) +
     ggtitle("Growth rates")
-# mcmc_intervals(posterior, pars = sprintf("Z_a_a[%i]", 1:8)) +
-#     scale_y_discrete(labels = growth$line %>% levels()) +
-#     ggtitle("Density dependences")
 ```
 
 
-This code is looking at model output. I'm not including it yet in this vignette because
-it's not ready.
+Estimates for density dependence:
+
+```{r A_estimates, echo = FALSE, message = FALSE}
+mcmc_intervals(posterior, pars = sprintf("A[%i]", 1:8)) +
+    scale_y_discrete(labels = growth$line %>% levels()) +
+    ggtitle("Density dependences")
+```
 
 
-```{r examine_model2, eval = FALSE}
+Residuals vs. predicted X:
 
-for (i in 1:6) {
-    x <- c("sigma_epsilon", "rho", "sigma_rho", "phi", "sigma_phi_a", "sigma_phi_w")[i]
-    y <- theta[seq(2, length(theta),2)][i]
-    z <- apply(rstan::extract(stan_fit, x, permuted = FALSE), 3, sd)
-    cat(sprintf("parameter: %s\n prior SD:     %.5g\n posterior SD: %.5g\n\n", x, y, z))
-}; rm(x,y,i)
-
-
+```{r resid_pred, echo = FALSE}
 growth %>% 
     arrange(line, rep, date) %>% 
     select(obs = X) %>% 
@@ -146,120 +154,141 @@ growth %>%
                         3, mean),
            resid = apply(rstan::extract(stan_fit, "X_resid", permuted = FALSE),
                         3, mean)) %>%
-    # ggplot(aes(pred, obs)) +
     ggplot(aes(pred, resid)) +
     geom_point(shape = 1, alpha = 0.5) +
-    # geom_abline(slope = 1, intercept = 0, color = "dodgerblue", linetype = 2,
-    #             size = 1) +
-    # annotate(geom = "text", x = 6.5, y = 7, label = "1:1 line", hjust = 1, vjust = 0,
-    #          color = "dodgerblue", fontface = "bold") +
     geom_abline(slope = 0, intercept = 0, color = "dodgerblue", linetype = 2,
                 size = 1) +
     xlab("predicted X") +
     # ylab("observed X") +
     ylab("residual") +
     NULL
+```
 
 
+Correlations between parameter estimates:
+
+```{r est_cors, echo = FALSE}
 cor_df <- data_frame(
     lp__ = as.numeric(rstan::extract(stan_fit, "lp__", permuted = FALSE)[,,1]),
     sigma_epsilon = as.numeric(rstan::extract(stan_fit, "sigma_epsilon",
                                               permuted = FALSE)[,,1]),
     rho = as.numeric(rstan::extract(stan_fit, "rho", permuted = FALSE)[,,1]),
-    sigma_rho = as.numeric(rstan::extract(stan_fit, "sigma_rho", permuted = FALSE)[,,1]),
+    sigma_rho = as.numeric(rstan::extract(stan_fit, "hat_sigma_rho", 
+                                          permuted = FALSE)[,,1]),
     phi = as.numeric(rstan::extract(stan_fit, "phi", permuted = FALSE)[,,1]),
-    # sigma_phi_a = as.numeric(rstan::extract(stan_fit, "sigma_phi_a",
-    #                                         permuted = FALSE)[,,1]),
-    sigma_phi_w = as.numeric(rstan::extract(stan_fit, "sigma_phi_w",
+    sigma_phi_l = as.numeric(rstan::extract(stan_fit, "hat_sigma_phi_l",
+                                            permuted = FALSE)[,,1]),
+    sigma_phi_p = as.numeric(rstan::extract(stan_fit, "b_hat",
                                             permuted = FALSE)[,,1]))
-
 
 cp <- GGally::ggpairs(cor_df)
 cp + theme(strip.text = element_text(size = 10, lineheight = 2, hjust = 0.5, vjust = 1))
+```
 
 
 
-apply(rstan::extract(stan_fit, "Z_r", permuted = FALSE), 3, mean)
-apply(rstan::extract(stan_fit, "Z_a_a", permuted = FALSE), 3, mean)
 
-apply(rstan::extract(stan_fit, "sigma_epsilon", permuted = FALSE), 3, mean)
-apply(rstan::extract(stan_fit, "sigma_epsilon", permuted = FALSE), 3, quantile,
-      probs = c(0.025, 0.975))
-
-
-
-print(stan_fit, digits = 6, pars = c("Z_r", "Z_a_a", "sigma_epsilon"), probs = c())
-print(stan_fit, digits = 6, pars = c("phi", "sigma_phi_a", "sigma_phi_w"), probs = c())
-
-
+```{r misc, eval=FALSE}
 # parameters of interest
-pars_interest <- c(#sprintf("Z_a_a[%i]", 1:8),
-                   sprintf("Z_r[%i]", 1:8),
-                   "rho", "sigma_rho",
-                   "phi", "sigma_phi_a", "sigma_phi_w",
+pars_interest <- c(sprintf("R[%i]", 1:8),
+                   sprintf("A[%i]", 1:8),
+                   "rho", "hat_sigma_rho",
+                   "phi", 
+                   "hat_sigma_phi_l",
+                   "b_hat",
+                   # "hat_sigma_phi_p",
                    "sigma_epsilon")
-non_ZX_pars <- names(stan_fit)[!grepl("^Z", names(stan_fit)) & 
-                                   !grepl("^X", names(stan_fit))]
+non_ZX_pars <- names(stan_fit)
+non_ZX_pars <- non_ZX_pars[!grepl("^Z", non_ZX_pars) & !grepl("^X", non_ZX_pars)]
 
 
-mcmc_areas(posterior, pars = non_ZX_pars[non_ZX_pars != "lp__" & non_ZX_pars != "phi"])
-
-mcmc_areas(posterior, pars = "phi")
+mcmc_areas(posterior, pars = "b_hat")
+mcmc_areas(posterior, pars = non_ZX_pars[grepl("sigma", non_ZX_pars)])
+mcmc_areas(posterior, pars = c("phi", "rho"))
+# mcmc_areas(posterior, pars = non_ZX_pars[grepl("^A", non_ZX_pars)])
+# mcmc_areas(posterior, pars = non_ZX_pars[grepl("^R", non_ZX_pars)])
 mcmc_areas(posterior, pars = "lp__")
+# mcmc_areas(posterior, pars = names(stan_fit)[grepl("Z_alpha_p", names(stan_fit))])
 
+# In case you're interested in seeing possible names to look at (without
+# having huge list that includes every X_pred[<i>])
+prefixes <- names(stan_fit) %>% 
+    {
+        i <- stringr::str_locate(., "\\[") %>% 
+            .[,1] %>%
+            as.integer()
+        ifelse(is.na(i), ., stringr::str_sub(., 1, i - 1))
+    } %>% 
+    unique()
+```
+
+```{r n_effs, echo = FALSE}
+
+```
+
+R-hat values for main estimates, plus for predicted values:
+
+```{r r_hats_neffs, echo = FALSE}
+# Indices for when new time series start (we don't want to plot diagnostics on these
+# bc their values are constant):
+new_ts <- c(1,
+            growth %>% 
+                {which(.$line != lag(.$line) | .$rep != lag(.$rep))})
+
+
+
+rhat(stan_fit) %>% 
+    keep(~ .x > 1.05)
 
 rhat(stan_fit, pars = non_ZX_pars) %>% 
-    mcmc_rhat() + yaxis_text(hjust = 1)
+    mcmc_rhat() +
+    ggtitle("For main estimates") +
+    yaxis_text(hjust = 1)
+rhat(stan_fit,
+     pars = names(stan_fit)[grepl("^Z", names(stan_fit)) | 
+                                grepl("^X", names(stan_fit))]) %>% 
+    {
+        # Converting to regex strings:
+        regex <- paste(c(sprintf("X_hat_pred\\[%i\\]", new_ts),
+                         sprintf("X_resid\\[%i\\]", new_ts),
+                         sprintf("X_pred\\[%i\\]", new_ts)),
+                       collapse = "|")
+        inds <- stringr::str_detect(names(.), regex)
+        .[!inds]
+    } %>% 
+    mcmc_rhat() +
+    ggtitle("For predictions") +
+    yaxis_text(hjust = 1, on = FALSE)
+
+
 neff_ratio(stan_fit, pars = non_ZX_pars) %>% 
-    mcmc_neff() + yaxis_text(hjust = 1)
+    mcmc_neff() +
+    ggtitle("For main estimates") +
+    yaxis_text(hjust = 1)
 
-rhat(stan_fit, pars = pars_interest) %>% 
-    mcmc_rhat() + yaxis_text(hjust = 1)
-neff_ratio(stan_fit, pars = pars_interest) %>% 
-    mcmc_neff() + yaxis_text(hjust = 1)
-
-
-# Rhats
-rhats <- rhat(stan_fit, pars = pars_interest)
-mcmc_rhat(rhats)  + yaxis_text(hjust = 1)
-
-# Neff / N
-neff_ratios <- neff_ratio(stan_fit, pars = pars_interest)
-mcmc_neff(neff_ratios, size = 2) + yaxis_text(hjust = 1)
-
-
-# Autocorrelation
-mcmc_acf(posterior, pars = pars_interest[1:8], lags = 10)
-mcmc_acf(posterior, pars = pars_interest[9:16], lags = 10)
-mcmc_acf(posterior, pars = pars_interest[17:length(pars_interest)], lags = 10)
-
-
-# # Only really useful if there were divergences:
-# np <- NULL # nuts_params(stan_fit)
-# lp <- log_posterior(stan_fit)
-# mcmc_trace(posterior, pars = pars_interest[1:8], np = np)
-# mcmc_trace(posterior, pars = pars_interest[9:16], np = np)
-# mcmc_trace(posterior, pars = pars_interest[17:length(pars_interest)], np = np)
-# 
-# mcmc_nuts_divergence(np, lp)
-# 
-# mcmc_parcoord(posterior, np = np)
-# 
-# mcmc_scatter(
-#   posterior,
-#   pars = c("s_epsilon", "R[6]"),
-#   transform = list(`R[6]` = "log"),
-#   np = np
-# )
+neff_ratio(stan_fit,
+           pars = names(stan_fit)[grepl("^Z", names(stan_fit)) | 
+                                      grepl("^X", names(stan_fit))]) %>% 
+    {
+        # Converting to regex strings:
+        regex <- paste(c(sprintf("X_hat_pred\\[%i\\]", new_ts),
+                         sprintf("X_resid\\[%i\\]", new_ts),
+                         sprintf("X_pred\\[%i\\]", new_ts)),
+                       collapse = "|")
+        inds <- stringr::str_detect(names(.), regex)
+        .[!inds]
+    } %>%
+    mcmc_neff() +
+    ggtitle("For predictions") +
+    yaxis_text(on = FALSE)
+    # range() %>% 
+    # {sprintf("For predictions, range of N_eff / N = [%.2f, %.2f]\n", .[1], .[2])} %>% 
+    # cat()
+```
 
 
-growth %>% 
-    group_by(line) %>% 
-    summarize(n = length(unique(rep))) %>% 
-    mutate(line = as.integer(line)) %>% 
-    as.data.frame()
 
-
+```{r predictions}
 pred_df <- make_pred_df(stan_fit, growth)
 
 pred_df %>%
@@ -273,8 +302,24 @@ pred_df %>%
     geom_line(aes(y = X_pred), color = "dodgerblue3", size = 0.5) +
     facet_wrap(~ rep + line, nrow = 2) +
     # facet_wrap(~ rep + line, nrow = 7) +
-    coord_trans(y = "exp") +
+    # coord_trans(y = "exp") +
     theme(strip.text = element_blank()) +
+    NULL
+
+
+
+pred_df %>%
+    # filter(rep == 1) %>%
+    group_by(line, rep) %>% 
+    mutate(pcg = X_pred - lag(X_pred)) %>% 
+    ungroup() %>% 
+    # ggplot(aes(date, X)) +
+    ggplot(aes(lag(X_pred), pcg)) +
+    geom_line(color = "firebrick", alpha = 0.5) +
+    # facet_wrap(~ rep + line, nrow = 2) +
+    facet_wrap(~ rep + line, nrow = 7) +
+    theme(strip.text = element_blank()) +
+    coord_trans(x = "exp") +
     NULL
 
 
