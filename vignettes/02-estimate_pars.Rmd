@@ -100,16 +100,16 @@ growth %>%
 t0 <- Sys.time()
 stan_fit <- fit_lines(growth, # theta_ = rep(0:1, 6),
                       model_name = "full_model_plant_death",
-                      seed = 65136, control = list(adapt_delta = 0.9))
+                      seed = 65136, control = list(adapt_delta = 0.8))
 Sys.time() - t0; rm(t0); print(rhat(stan_fit) %>% keep(~ .x > 1.05) %>% length())
 ```
 ```{r write_model, eval = FALSE, echo = FALSE}
 # write_rds(stan_fit, "data-raw/stan_fit.rds")
-write_rds(stan_fit, "data-raw/stan_fit_b.rds")
+# write_rds(stan_fit, "data-raw/stan_fit_b.rds")
 ```
 ```{r read_model, eval = TRUE, echo = FALSE}
-# stan_fit <- read_rds("data-raw/stan_fit.rds")
-stan_fit <- read_rds("data-raw/stan_fit_b.rds")
+# stan_fita <- read_rds("data-raw/stan_fit.rds")
+# stan_fit <- read_rds("data-raw/stan_fit_b.rds")
 ```
 
 
@@ -168,18 +168,12 @@ growth %>%
 Correlations between parameter estimates:
 
 ```{r est_cors, echo = FALSE}
-cor_df <- data_frame(
-    lp__ = as.numeric(rstan::extract(stan_fit, "lp__", permuted = FALSE)[,,1]),
-    sigma_epsilon = as.numeric(rstan::extract(stan_fit, "sigma_epsilon",
-                                              permuted = FALSE)[,,1]),
-    rho = as.numeric(rstan::extract(stan_fit, "rho", permuted = FALSE)[,,1]),
-    sigma_rho = as.numeric(rstan::extract(stan_fit, "hat_sigma_rho", 
-                                          permuted = FALSE)[,,1]),
-    phi = as.numeric(rstan::extract(stan_fit, "phi", permuted = FALSE)[,,1]),
-    sigma_phi_l = as.numeric(rstan::extract(stan_fit, "hat_sigma_phi_l",
-                                            permuted = FALSE)[,,1]),
-    sigma_phi_p = as.numeric(rstan::extract(stan_fit, "b_hat",
-                                            permuted = FALSE)[,,1]))
+names_iwant <- c("lp__", "sigma_epsilon", "rho", "hat_sigma_rho",
+               "phi", "hat_sigma_phi_l", "b_hat")
+cor_df <- rstan::extract(stan_fit, names_iwant) %>% 
+    lapply(as_data_frame) %>% 
+    bind_cols() %>% 
+    set_names(names_iwant)
 
 cp <- GGally::ggpairs(cor_df)
 cp + theme(strip.text = element_text(size = 10, lineheight = 2, hjust = 0.5, vjust = 1))
@@ -204,7 +198,7 @@ non_ZX_pars <- non_ZX_pars[!grepl("^Z", non_ZX_pars) & !grepl("^X", non_ZX_pars)
 
 mcmc_areas(posterior, pars = "b_hat")
 mcmc_areas(posterior, pars = non_ZX_pars[grepl("sigma", non_ZX_pars)])
-mcmc_areas(posterior, pars = c("phi", "rho"))
+mcmc_areas(posterior, pars = c("phi"))
 # mcmc_areas(posterior, pars = non_ZX_pars[grepl("^A", non_ZX_pars)])
 # mcmc_areas(posterior, pars = non_ZX_pars[grepl("^R", non_ZX_pars)])
 mcmc_areas(posterior, pars = "lp__")
@@ -278,9 +272,10 @@ neff_ratio(stan_fit,
         inds <- stringr::str_detect(names(.), regex)
         .[!inds]
     } %>%
+    keep(~ .x < 0.8) %>% 
     mcmc_neff() +
     ggtitle("For predictions") +
-    yaxis_text(on = FALSE)
+    yaxis_text(on = TRUE)
     # range() %>% 
     # {sprintf("For predictions, range of N_eff / N = [%.2f, %.2f]\n", .[1], .[2])} %>% 
     # cat()
@@ -314,12 +309,13 @@ pred_df %>%
     mutate(pcg = X_pred - lag(X_pred)) %>% 
     ungroup() %>% 
     # ggplot(aes(date, X)) +
-    ggplot(aes(lag(X_pred), pcg)) +
+    ggplot(aes(exp(X_pred), pcg)) +
     geom_line(color = "firebrick", alpha = 0.5) +
+    stat_smooth(method = "lm", geom = "line", se = FALSE, na.rm = TRUE) +
     # facet_wrap(~ rep + line, nrow = 2) +
     facet_wrap(~ rep + line, nrow = 7) +
     theme(strip.text = element_blank()) +
-    coord_trans(x = "exp") +
+    # coord_trans(x = "exp") +
     NULL
 
 

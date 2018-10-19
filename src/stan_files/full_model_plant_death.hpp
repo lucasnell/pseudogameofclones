@@ -659,11 +659,11 @@ public:
             if (hat_sigma_rho < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
             else lp_accum__.add(-normal_ccdf_log(0, get_base1(theta,5,"theta",1), get_base1(theta,6,"theta",1)));
             current_statement_begin__ = 134;
-            lp_accum__.add(normal_log<propto__>(phi, get_base1(theta,7,"theta",1), get_base1(theta,8,"theta",1)));
+            lp_accum__.add(normal_log<propto__>(phi, get_base1(theta,7,"theta",1), (10 * get_base1(theta,8,"theta",1))));
             current_statement_begin__ = 135;
-            lp_accum__.add(normal_log<propto__>(hat_sigma_phi_l, get_base1(theta,9,"theta",1), get_base1(theta,10,"theta",1)));
+            lp_accum__.add(normal_log<propto__>(hat_sigma_phi_l, get_base1(theta,9,"theta",1), (10 * get_base1(theta,10,"theta",1))));
             if (hat_sigma_phi_l < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
-            else lp_accum__.add(-normal_ccdf_log(0, get_base1(theta,9,"theta",1), get_base1(theta,10,"theta",1)));
+            else lp_accum__.add(-normal_ccdf_log(0, get_base1(theta,9,"theta",1), (10 * get_base1(theta,10,"theta",1))));
             current_statement_begin__ = 138;
             lp_accum__.add(normal_log<propto__>(b_hat, 0, 1));
             if (b_hat < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());

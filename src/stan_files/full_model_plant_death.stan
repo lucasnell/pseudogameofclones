@@ -131,8 +131,8 @@ model {
     hat_sigma_epsilon ~ normal(theta[1], theta[2])T[0,];
     rho  ~ normal(theta[3], theta[4]);
     hat_sigma_rho  ~ normal(theta[5], theta[6])T[0,];
-    phi  ~ normal(theta[7], theta[8]);
-    hat_sigma_phi_l  ~ normal(theta[9], theta[10])T[0,];
+    phi  ~ normal(theta[7], 10 * theta[8]);
+    hat_sigma_phi_l  ~ normal(theta[9], 10 * theta[10])T[0,];
     // hat_sigma_phi_p  ~ normal(theta[11], theta[12])T[0,];
 
     b_hat ~ normal(0, 1)T[0,];               // for effects of total aphids on plant health
