@@ -34,10 +34,7 @@ bayesplot::color_scheme_set("viridis")
 ```
 
 
-This file will eventually contain the analyses to estimate aphid population-growth
-parameters.
-It is not yet finished, and much of the code below is not run during the making of
-this document.
+This file contains the analyses to estimate aphid population-growth parameters.
 
 
 ## Imputing missing data
@@ -67,6 +64,9 @@ growth %>%
     group_by(line) %>% 
     summarize(n = rep %>% unique() %>% length()) %>% 
     knitr::kable()
+n_ts <- growth %>%
+    distinct(line, rep) %>%
+    nrow()
 ```
 
 
@@ -96,20 +96,19 @@ growth %>%
 ## Run model
 
 ```{r run_model, eval = FALSE}
-# Takes ~ 6 min
-t0 <- Sys.time()
-stan_fit <- fit_lines(growth, # theta_ = rep(0:1, 6),
-                      model_name = "full_model_plant_death",
-                      seed = 65136, control = list(adapt_delta = 0.8))
-Sys.time() - t0; rm(t0); print(rhat(stan_fit) %>% keep(~ .x > 1.05) %>% length())
+# Takes ~ 2.5 min
+stan_fit <- fit_lines(growth, model_name = "full_model_plant_death",
+                      seed = 65135)
 ```
 ```{r write_model, eval = FALSE, echo = FALSE}
-# write_rds(stan_fit, "data-raw/stan_fit.rds")
-# write_rds(stan_fit, "data-raw/stan_fit_b.rds")
+write_rds(stan_fit, "data-raw/stan_fit.rds")
 ```
 ```{r read_model, eval = TRUE, echo = FALSE}
-# stan_fita <- read_rds("data-raw/stan_fit.rds")
-# stan_fit <- read_rds("data-raw/stan_fit_b.rds")
+stan_fit <- read_rds("data-raw/stan_fit.rds")
+```
+```{r model_posterior_preds, echo = FALSE}
+posterior <- as.array(stan_fit)
+pred_df <- make_pred_df(stan_fit, growth)
 ```
 
 
@@ -117,13 +116,139 @@ Sys.time() - t0; rm(t0); print(rhat(stan_fit) %>% keep(~ .x > 1.05) %>% length()
 
 
 
+Residuals vs. predicted X:
+
+```{r resid_pred, echo = FALSE}
+growth %>% 
+    arrange(line, rep, date) %>% 
+    select(obs = X) %>% 
+    mutate(pred = apply(rstan::extract(stan_fit, "X_pred", permuted = FALSE),
+                        3, mean),
+           resid = apply(rstan::extract(stan_fit, "X_resid", permuted = FALSE),
+                        3, mean)) %>%
+    ggplot(aes(pred, resid)) +
+    geom_point(shape = 1, alpha = 0.5) +
+    geom_abline(slope = 0, intercept = 0, color = "dodgerblue", linetype = 2,
+                size = 1) +
+    xlab("predicted X") +
+    ylab("residual") +
+    NULL
+```
+
+
+Correlations between parameter estimates:
+
+```{r est_cors, echo = FALSE}
+names_iwant <- c("lp__", "sigma_epsilon", "rho", "sigma_rho", "phi", "sigma_phi_l")
+cor_df <- rstan::extract(stan_fit, names_iwant) %>% 
+    lapply(as_data_frame) %>% 
+    bind_cols() %>% 
+    set_names(names_iwant)
+GGally::ggpairs(cor_df) + 
+    theme(strip.text = element_text(size = 10, lineheight = 2,
+                                    hjust = 0.5, vjust = 1))
+```
+
+
+
+R-hat values are all well below 1.05:
+
+```{r r_hats, echo = FALSE}
+# Indices for when new time series start (we don't want to plot diagnostics on these
+# bc their values are constant):
+new_ts <- c(1,
+            growth %>% 
+                {which(.$line != lag(.$line) | .$rep != lag(.$rep))})
+rhat(stan_fit) %>% 
+    {
+        # Converting to regex strings:
+        regex <- paste(c(sprintf("X_hat_pred\\[%i\\]", new_ts),
+                         sprintf("X_resid\\[%i\\]", new_ts),
+                         sprintf("X_pred\\[%i\\]", new_ts)),
+                       collapse = "|")
+        inds <- stringr::str_detect(names(.), regex)
+        .[!inds]
+    } %>% 
+    {data_frame(par = names(.), rhat = .)} %>% 
+    ggplot(aes(rhat)) +
+    geom_histogram(bins = 50, fill = viridisLite::viridis(1, begin = 0.95)) +
+    scale_x_continuous(expression(hat(R)), limits = c(NA, 1.05),
+                       breaks = c(1, 1.05))
+```
+
+
+Most ratios of effective sample sizes are near 1.
+
+```{r neffs_all, echo = FALSE}
+neff_ratio(stan_fit) %>% 
+    {
+        # Converting to regex strings:
+        regex <- paste(c(sprintf("X_hat_pred\\[%i\\]", new_ts),
+                         sprintf("X_resid\\[%i\\]", new_ts),
+                         sprintf("X_pred\\[%i\\]", new_ts)),
+                       collapse = "|")
+        inds <- stringr::str_detect(names(.), regex)
+        .[!inds]
+    } %>% 
+    {data_frame(par = names(.), neff = .)} %>% 
+    ggplot(aes(neff)) +
+    geom_histogram(bins = 50, fill = viridisLite::viridis(1, begin = 0.8)) +
+    xlab(expression(N[eff]/N))
+```
+
+
+A few are pretty low, but none have less than 400 useful reps overall, so I'm not too
+worried.
+
+```{r neffs_lowest, echo = FALSE}
+neff_ratio(stan_fit) %>% 
+    {
+        # Converting to regex strings:
+        regex <- paste(c(sprintf("X_hat_pred\\[%i\\]", new_ts),
+                         sprintf("X_resid\\[%i\\]", new_ts),
+                         sprintf("X_pred\\[%i\\]", new_ts)),
+                       collapse = "|")
+        inds <- stringr::str_detect(names(.), regex)
+        .[!inds]
+    } %>%
+    keep(~ .x < 0.25) %>% 
+    {data_frame(par = names(.) %>% factor(), neff = .)} %>% 
+    ggplot(aes(neff, par)) +
+    geom_vline(xintercept = 0.1, linetype = 2, color = "gray80") +
+    geom_segment(aes(xend = 0, yend = par),
+                 color = viridisLite::viridis(1, begin = 0.8)) +
+    geom_point(color = viridisLite::viridis(1, begin = 0.8)) +
+    xlab(expression(N[eff]/N)) +
+    ylab(NULL)
+```
+
+
+
+From predicted values for each time series, plots of per-capita growth
+versus abundance appear to show mostly negative trends,
+which is good because this indicates density dependence.
+
+
+```{r pred_pcg, echo = FALSE}
+pred_df %>%
+    group_by(line, rep) %>% 
+    mutate(pcg = X_pred - lag(X_pred)) %>% 
+    ungroup() %>% 
+    ggplot(aes(exp(X_pred), pcg)) +
+    geom_hline(yintercept = 0, linetype = 2, color = "gray80") +
+    geom_line(color = viridisLite::viridis(1, begin = 0.8)) +
+    stat_smooth(method = "lm", geom = "line", se = FALSE, na.rm = TRUE,
+                color = viridisLite::viridis(1, begin = 0.1), linetype = 1) +
+    facet_wrap(~ rep + line, nrow = 6) +
+    theme(strip.text = element_blank(), panel.border = element_rect(fill = NA)) +
+    scale_x_continuous("N", breaks = c(0, 500)) +
+    ylab("Per-capita growth rate") +
+    NULL
+```
+
 
 
 ## Model estimates
-
-```{r model_posterior}
-posterior <- as.array(stan_fit)
-```
 
 Estimates of R for each line:
 
@@ -144,66 +269,37 @@ mcmc_intervals(posterior, pars = sprintf("A[%i]", 1:8)) +
 ```
 
 
-Residuals vs. predicted X:
+Estimates for beta (for each plant):
 
-```{r resid_pred, echo = FALSE}
-growth %>% 
-    arrange(line, rep, date) %>% 
-    select(obs = X) %>% 
-    mutate(pred = apply(rstan::extract(stan_fit, "X_pred", permuted = FALSE),
-                        3, mean),
-           resid = apply(rstan::extract(stan_fit, "X_resid", permuted = FALSE),
-                        3, mean)) %>%
-    ggplot(aes(pred, resid)) +
-    geom_point(shape = 1, alpha = 0.5) +
-    geom_abline(slope = 0, intercept = 0, color = "dodgerblue", linetype = 2,
-                size = 1) +
-    xlab("predicted X") +
-    # ylab("observed X") +
-    ylab("residual") +
-    NULL
+```{r A_estimates, echo = FALSE, message = FALSE}
+mcmc_intervals(posterior, pars = sprintf("betas[%i]", 1:n_ts)) +
+    ggtitle("Effects of plant-health declines\nacross time on alpha")
 ```
 
 
-Correlations between parameter estimates:
+Other estimates of interest:
 
-```{r est_cors, echo = FALSE}
-names_iwant <- c("lp__", "sigma_epsilon", "rho", "hat_sigma_rho",
-               "phi", "hat_sigma_phi_l", "b_hat")
-cor_df <- rstan::extract(stan_fit, names_iwant) %>% 
+```{r other_estimates}
+other_pars <- names(stan_fit)
+other_pars <- other_pars[!grepl("^Z", other_pars) &
+                             !grepl("^X", other_pars) &
+                             !grepl("^betas", other_pars) &
+                             !grepl("^A", other_pars) &
+                             !grepl("^R", other_pars) &
+                             other_pars != "sigma_hat_epsilon"]
+
+rstan::extract(stan_fit, other_pars) %>%
     lapply(as_data_frame) %>% 
     bind_cols() %>% 
-    set_names(names_iwant)
-
-cp <- GGally::ggpairs(cor_df)
-cp + theme(strip.text = element_text(size = 10, lineheight = 2, hjust = 0.5, vjust = 1))
+    set_names(other_pars) %>% 
+    gather("par", "value", factor_key = TRUE) %>% 
+    ggplot(aes(value)) +
+    geom_density(color = viridisLite::viridis(1, begin = 0.5)) +
+    facet_wrap(~ par, nrow = 3, scales = "free")
 ```
 
 
-
-
-```{r misc, eval=FALSE}
-# parameters of interest
-pars_interest <- c(sprintf("R[%i]", 1:8),
-                   sprintf("A[%i]", 1:8),
-                   "rho", "hat_sigma_rho",
-                   "phi", 
-                   "hat_sigma_phi_l",
-                   "b_hat",
-                   # "hat_sigma_phi_p",
-                   "sigma_epsilon")
-non_ZX_pars <- names(stan_fit)
-non_ZX_pars <- non_ZX_pars[!grepl("^Z", non_ZX_pars) & !grepl("^X", non_ZX_pars)]
-
-
-mcmc_areas(posterior, pars = "b_hat")
-mcmc_areas(posterior, pars = non_ZX_pars[grepl("sigma", non_ZX_pars)])
-mcmc_areas(posterior, pars = c("phi"))
-# mcmc_areas(posterior, pars = non_ZX_pars[grepl("^A", non_ZX_pars)])
-# mcmc_areas(posterior, pars = non_ZX_pars[grepl("^R", non_ZX_pars)])
-mcmc_areas(posterior, pars = "lp__")
-# mcmc_areas(posterior, pars = names(stan_fit)[grepl("Z_alpha_p", names(stan_fit))])
-
+```{r prefixes, eval = FALSE, echo = FALSE}
 # In case you're interested in seeing possible names to look at (without
 # having huge list that includes every X_pred[<i>])
 prefixes <- names(stan_fit) %>% 
@@ -216,110 +312,77 @@ prefixes <- names(stan_fit) %>%
     unique()
 ```
 
-```{r n_effs, echo = FALSE}
-
-```
-
-R-hat values for main estimates, plus for predicted values:
-
-```{r r_hats_neffs, echo = FALSE}
-# Indices for when new time series start (we don't want to plot diagnostics on these
-# bc their values are constant):
-new_ts <- c(1,
-            growth %>% 
-                {which(.$line != lag(.$line) | .$rep != lag(.$rep))})
 
 
 
-rhat(stan_fit) %>% 
-    keep(~ .x > 1.05)
+## Model predictions
 
-rhat(stan_fit, pars = non_ZX_pars) %>% 
-    mcmc_rhat() +
-    ggtitle("For main estimates") +
-    yaxis_text(hjust = 1)
-rhat(stan_fit,
-     pars = names(stan_fit)[grepl("^Z", names(stan_fit)) | 
-                                grepl("^X", names(stan_fit))]) %>% 
-    {
-        # Converting to regex strings:
-        regex <- paste(c(sprintf("X_hat_pred\\[%i\\]", new_ts),
-                         sprintf("X_resid\\[%i\\]", new_ts),
-                         sprintf("X_pred\\[%i\\]", new_ts)),
-                       collapse = "|")
-        inds <- stringr::str_detect(names(.), regex)
-        .[!inds]
-    } %>% 
-    mcmc_rhat() +
-    ggtitle("For predictions") +
-    yaxis_text(hjust = 1, on = FALSE)
+Model prections (minus process error; blue with gray envelopes) and observed
+abundances (red lines and dots).
 
-
-neff_ratio(stan_fit, pars = non_ZX_pars) %>% 
-    mcmc_neff() +
-    ggtitle("For main estimates") +
-    yaxis_text(hjust = 1)
-
-neff_ratio(stan_fit,
-           pars = names(stan_fit)[grepl("^Z", names(stan_fit)) | 
-                                      grepl("^X", names(stan_fit))]) %>% 
-    {
-        # Converting to regex strings:
-        regex <- paste(c(sprintf("X_hat_pred\\[%i\\]", new_ts),
-                         sprintf("X_resid\\[%i\\]", new_ts),
-                         sprintf("X_pred\\[%i\\]", new_ts)),
-                       collapse = "|")
-        inds <- stringr::str_detect(names(.), regex)
-        .[!inds]
-    } %>%
-    keep(~ .x < 0.8) %>% 
-    mcmc_neff() +
-    ggtitle("For predictions") +
-    yaxis_text(on = TRUE)
-    # range() %>% 
-    # {sprintf("For predictions, range of N_eff / N = [%.2f, %.2f]\n", .[1], .[2])} %>% 
-    # cat()
-```
-
-
-
-```{r predictions}
-pred_df <- make_pred_df(stan_fit, growth)
-
+```{r predictions, fig.height=10, fig.width=6}
 pred_df %>%
-    filter(rep == 1) %>%
-    # filter(rep == 4, line == "Clover-2017-2") %>%
     ggplot(aes(date, X)) +
     geom_ribbon(aes(ymin = X_lower, ymax = X_upper),
                 fill = "gray70", alpha = 0.5) +
     geom_line(color = "firebrick", alpha = 0.5) +
     geom_point(shape = 1, color = "firebrick", alpha = 0.5) +
     geom_line(aes(y = X_pred), color = "dodgerblue3", size = 0.5) +
-    facet_wrap(~ rep + line, nrow = 2) +
-    # facet_wrap(~ rep + line, nrow = 7) +
-    # coord_trans(y = "exp") +
+    facet_wrap(~ rep + line, nrow = 6) +
     theme(strip.text = element_blank()) +
+    xlab("Date") +
+    ylab("log(N)") +
     NULL
+```
 
 
+Below is predicted growth across a time series for each aphid line.
+The dashed line shows the value $\exp (\beta)$ that gets multiplied by each line's alpha.
+This value corresponds to the effect of deteriorating plant health through time.
 
-pred_df %>%
-    # filter(rep == 1) %>%
-    group_by(line, rep) %>% 
-    mutate(pcg = X_pred - lag(X_pred)) %>% 
-    ungroup() %>% 
-    # ggplot(aes(date, X)) +
-    ggplot(aes(exp(X_pred), pcg)) +
-    geom_line(color = "firebrick", alpha = 0.5) +
-    stat_smooth(method = "lm", geom = "line", se = FALSE, na.rm = TRUE) +
-    # facet_wrap(~ rep + line, nrow = 2) +
-    facet_wrap(~ rep + line, nrow = 7) +
-    theme(strip.text = element_blank()) +
-    # coord_trans(x = "exp") +
+```{r predictions_byline}
+# Instead of this, make plot of predicted growth through time
+beta <- rstan::extract(stan_fit, sprintf("betas[%i]", 1:n_ts)) %>% 
+    sapply(mean) %>% 
+    mean()
+R_ <- rstan::extract(stan_fit, sprintf("R[%i]", 1:8)) %>% 
+    sapply(mean)
+A_ <- rstan::extract(stan_fit, sprintf("A[%i]", 1:8)) %>% 
+    sapply(mean)
+
+ricker <- function(t_hats, R, A, X0 = log(6)) {
+    X <- numeric(length(t_hats))
+    X[1] <- X0
+    for (t in 2:length(t_hats)) {
+        X[t] <- X[t-1] + R * (1 - A * exp(beta * t_hats[t] + X[t-1]))
+    }
+    return(X)
+}
+
+max_t <- 20
+pred_growth <- data_frame(time = rep(1:max_t, 8),
+           line = factor(rep(levels(growth$line), each = max_t)),
+           R = rep(R_, each = max_t),
+           A = rep(A_, each = max_t)) %>% 
+    mutate(t_hat = (time - mean(time)) / sd(time)) %>% 
+    group_by(line) %>% 
+    mutate(X = ricker(t_hat, R[1], A[1])) %>% 
+    ungroup()
+
+pred_growth %>% 
+    ggplot(aes(time, exp(X), color = line)) +
+    geom_line(data = pred_growth %>% distinct(time, t_hat),
+              aes(y = exp(beta * t_hat) * 80),
+              linetype = 2, color = "gray60") +
+    geom_line() +
+    geom_text(data = pred_growth %>% 
+                  group_by(line) %>%
+                  summarize(time = 20.5, X = tail(X, 1)),
+              aes(label = line), hjust = 0) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    scale_x_continuous("Time", limits = c(0, 24)) +
+    scale_y_continuous("N", sec.axis = sec_axis(~ ./ 80, name = expression(exp(beta)))) +
     NULL
-
-
-
 ```
 
 
