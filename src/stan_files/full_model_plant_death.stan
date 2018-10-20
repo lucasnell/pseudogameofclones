@@ -40,7 +40,7 @@ data {
 transformed data {
 
     vector[n_obs] X_hat;
-    vector[n_obs] N_bar_hat; // sum of total aphids across time series
+    vector[n_obs] t_hat; // z-scored time across all time series
     real mu;
     real tau;
     real theta[12] = rep_array(0.0, 12);
@@ -52,28 +52,20 @@ transformed data {
 
     X_hat = (X - mu) / tau;
 
-
     // iterate over each time series
     {
         int t = 1; // starting position in `X` and `X_hat_pred` vectors
-        vector[n_obs] N = exp(X);
-        vector[n_obs] N_bar;
         real mu_;
         real tau_;
-        mu_ = mean(N);
-        tau_ = sd(N);
-        N_bar = (N - mu_) / tau_;
         for (j in 1:n_ts) {
-            // ending position for this time series:
-            int end = t + n_per[j] - 1;
-            N_bar_hat[t] = 0;
-            t += 1;
-            // Cumulative sum of N_bar across time series:
-            while (t <= end) {
-                N_bar_hat[t] = N_bar_hat[(t-1)] + N_bar[(t-1)];
-                t += 1;
+            for (i in 1:n_per[j]) {
+                t_hat[t+i-1] = i;
             }
+            t += n_per[j];
         }
+        mu_ = mean(t_hat);
+        tau_ = sd(t_hat);
+        t_hat = (t_hat - mu_) / tau_;
     }
 
 }
@@ -85,15 +77,15 @@ parameters {
     vector[n_lines] Z_alpha_l;
     // vector[n_ts] Z_alpha_p;
 
-    real<lower=0> hat_sigma_epsilon;        // process error
+    real<lower=0> sigma_hat_epsilon;        // process error
     // Means and SDs (on transformed scale):
     real rho;                           // mean growth rates: log(r)
-    real<lower=0> hat_sigma_rho;            // among-line SD in log(r)
+    real<lower=0> sigma_rho;            // among-line SD in log(r)
     real phi;                           // mean density dependences: log(alpha)
-    real<lower=0> hat_sigma_phi_l;          // among-line SD in log(alpha)
-    // real<lower=0> hat_sigma_phi_p;          // within-line SD in log(alpha)
+    real<lower=0> sigma_phi_l;          // among-line SD in log(alpha)
+    // real<lower=0> sigma_phi_p;          // within-line SD in log(alpha)
 
-    real<lower=0> b_hat;
+    vector<lower=0>[n_ts] betas;  // how plant-health reacts to time (differs by plant)
 
 }
 transformed parameters {
@@ -108,10 +100,10 @@ transformed parameters {
             int n_ = n_per[j];
             int end = start + n_ - 1;
             // growth rate (r) for this time series:
-            real r_hat = exp(rho + hat_sigma_rho * Z_r[L[j]]);
+            real r_hat = exp(rho + sigma_rho * Z_r[L[j]]);
             // density dependence (alpha) for this time series:
-            vector[(n_-1)] alpha_hat = exp(phi + hat_sigma_phi_l * Z_alpha_l[L[j]] +
-                                           b_hat * N_bar_hat[(start+1):end]);
+            vector[(n_-1)] alpha_hat = exp(phi + sigma_phi_l * Z_alpha_l[L[j]] +
+                                           betas[j] * t_hat[(start+1):end]);
             // filling in predicted X_t+1 based on X_t:
             X_hat_pred[start:end] = ricker_hat(X_hat, start, end, r_hat, alpha_hat,
                                                mu, tau);
@@ -128,14 +120,14 @@ model {
     Z_alpha_l ~ normal(0, 1);               // for density dependence by line
     // Z_alpha_p ~ normal(0, 1);               // for density dependence by plant
 
-    hat_sigma_epsilon ~ normal(theta[1], theta[2])T[0,];
+    sigma_hat_epsilon ~ normal(theta[1], theta[2])T[0,];
     rho  ~ normal(theta[3], theta[4]);
-    hat_sigma_rho  ~ normal(theta[5], theta[6])T[0,];
+    sigma_rho  ~ normal(theta[5], theta[6])T[0,];
     phi  ~ normal(theta[7], 10 * theta[8]);
-    hat_sigma_phi_l  ~ normal(theta[9], 10 * theta[10])T[0,];
-    // hat_sigma_phi_p  ~ normal(theta[11], theta[12])T[0,];
+    sigma_phi_l  ~ normal(theta[9], 10 * theta[10])T[0,];
+    // sigma_phi_p  ~ normal(theta[11], theta[12])T[0,];
 
-    b_hat ~ normal(0, 1)T[0,];               // for effects of total aphids on plant health
+    for (j in 1:n_ts) betas[j] ~ normal(0, 1)T[0,];
 
     // Process error:
     // iterate over each time series
@@ -145,7 +137,7 @@ model {
             // number of observations for this time series:
             int n_ = n_per[j];
             int end = start + n_ - 1;
-            X_hat[(start+1):end]  ~ normal(X_hat_pred[(start+1):end], hat_sigma_epsilon);
+            X_hat[(start+1):end]  ~ normal(X_hat_pred[(start+1):end], sigma_hat_epsilon);
             // iterate `start` index:
             start += n_;
         }
@@ -167,8 +159,8 @@ generated quantities {
     X_resid = X_hat - X_hat_pred;
 
     X_pred = X_hat_pred * tau + mu;
-    R = exp(rho + hat_sigma_rho * Z_r) * tau;
-    A = exp(phi + hat_sigma_phi_l * Z_alpha_l);
-    sigma_epsilon = hat_sigma_epsilon * tau;
+    R = exp(rho + sigma_rho * Z_r) * tau;
+    A = exp(phi + sigma_phi_l * Z_alpha_l);
+    sigma_epsilon = sigma_hat_epsilon * tau;
 
 }
