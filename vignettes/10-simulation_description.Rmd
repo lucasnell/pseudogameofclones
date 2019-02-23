@@ -33,12 +33,12 @@ This document outlines the structure of the simulations.
 
 Below is the model I'm simulating, for a given line and plant:
 
-
+$$
 \begin{align}
     N_{t+1} &= N_{t} ~ \text{e}^ {\rho + \varepsilon} + I - E \\
     \varepsilon &\sim \text{N}(0,\sigma^2_p) \\
 \end{align}
-
+$$
 
 where... 
 
@@ -55,23 +55,19 @@ The growth rate is determined by whether or not the plant is currently dying,
 by population growth rate for a given line, and by the abundances and density dependences
 of all lines on the focal plant:
 
-
+$$
 \begin{align}
     \rho_{ijt} &=
         \begin{cases}
             r_j \left( 1 - \alpha_j ~ Z_{it} \right), & \text{if}\ t < \gamma \\
             \log(m(t,\gamma)), & \text{otherwise} \\
         \end{cases} \\
-        
     Z_{it} &= \sum^{n_l}_{j=1}{N_{ijt}} \\
-    
     m(t,\gamma) &= \text{logit}^{-1}\left(  \beta_{0} + \beta_{1} ~ ( t - \gamma )
         \right) \\
-        
     \gamma &\sim \text{N}(\mu_\gamma, \sigma^2_\gamma)
-    
 \end{align}
-
+$$
 
 where...
 
@@ -94,12 +90,12 @@ A Poisson distribution produces the numbers of aphids of line $j$ that
 disperse from plant $i$ to all other plants (for receiving plant $k$, 
 $d_{(i \rightarrow k)jt}$):
 
-
+$$
 \begin{align}
     \lambda_{ijt} &= \frac{ \delta_j ~ N_{ijt} }{ n_p }\\
     d_{(i \rightarrow k)jt} &\sim \text{Pois} ( \lambda_{ijt} )
 \end{align}
-
+$$
 
 where $\delta_j$ is estimated from a Poisson GLM.
 Note also that $d_{(i \rightarrow i)jt}$ is left at zero because dispersing back to
@@ -109,15 +105,12 @@ I used these numbers to create two $n_l$ by $n_p$ matrices,
 one for the number of immigrants ($\mathbf{I}$) and another for emigrants
 ($\mathbf{E}$), which are filled as follows:
 
-
+$$
 \begin{align}
-
     \mathbf{I}_{ij} &= \sum^{n_p}_{k=1}{d_{(k \rightarrow i)jt}} \\
-    
     \mathbf{E}_{ij} &= \sum^{n_p}_{k=1}{d_{(i \rightarrow k)jt}} \\
-    
 \end{align}
-
+$$
 
 
 

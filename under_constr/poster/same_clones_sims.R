@@ -215,7 +215,7 @@ conf_list <- map(2:sim_env$n_lines, function(ss) {
                                     sum(win == winner[[1]][2])))) %>%
             unnest()
     }) %>%
-        mutate_all(funs(as.numeric)) %>%
+        mutate_all(list(as.numeric)) %>%
         as.matrix()
 
 })
