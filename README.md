@@ -5,7 +5,7 @@
 has not yet been a stable, usable release suitable for the
 public.](http://www.repostatus.org/badges/latest/wip.svg)](http://www.repostatus.org/#wip)
 
-# clonewars <img src="logo.svg" align="right" />
+# clonewars <img src="logo.svg" align="right" height="150" />
 
 This package contains code for the analysis and simulation of aphid
 population-growth time series data. These data are used to help
