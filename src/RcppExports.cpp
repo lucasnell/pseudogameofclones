@@ -40,11 +40,13 @@ END_RCPP
 
 RcppExport SEXP _rcpp_module_boot_stan_fit4full_model_mod();
 RcppExport SEXP _rcpp_module_boot_stan_fit4full_model_plant_death_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4full_model_plant_death_R_mod();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_clonewars_sim_cages_", (DL_FUNC) &_clonewars_sim_cages_, 19},
     {"_rcpp_module_boot_stan_fit4full_model_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4full_model_mod, 0},
     {"_rcpp_module_boot_stan_fit4full_model_plant_death_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4full_model_plant_death_mod, 0},
+    {"_rcpp_module_boot_stan_fit4full_model_plant_death_R_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4full_model_plant_death_R_mod, 0},
     {NULL, NULL, 0}
 };
 

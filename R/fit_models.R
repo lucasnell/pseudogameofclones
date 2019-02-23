@@ -29,7 +29,9 @@
 #'
 #'
 fit_lines <- function(data_df, line, rep, date, X,
-                      model_name = c("full_model_plant_death", "full_model"),
+                      model_name = c("full_model_plant_death",
+                                     "full_model_plant_death_R",
+                                     "full_model"),
                       ...) {
 
     model_name <- match.arg(model_name)

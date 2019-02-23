@@ -5,7 +5,8 @@
 \title{Fit multiple time series for multiple aphid lines.}
 \usage{
 fit_lines(data_df, line, rep, date, X,
-  model_name = c("full_model_plant_death", "full_model"), ...)
+  model_name = c("full_model_plant_death", "full_model_plant_death_R",
+  "full_model"), ...)
 }
 \arguments{
 \item{data_df}{A data frame that contains columns for \code{line}, \code{rep}, and \code{X}.}

@@ -7,18 +7,21 @@
 
  ALSO MADE ALPHA USE LOG TRANSFORM INSTEAD OF LOGIT
 
+ This version differs from other *_plant_death stan file in that the effect of plant
+ deterioration happens to r rather than alpha
+
  */
 
 functions {
 
     // For using nondimensionalized versions:
-    // Note that this version has `a_` as a vector
-    vector ricker_hat(vector X, int start, int end, real r_, vector a_,
+    // Note that this version has `r_` as a vector
+    vector ricker_hat(vector X, int start, int end, vector r_, real a_,
                       real mu_, real tau_) {
         vector[end - start + 1] X_out;
         X_out[1] = X[start];
         X_out[2:(end - start + 1)] = X[start:(end - 1)] +
-            r_ * (1 - a_ .* exp(tau_ * X[start:(end - 1)] + mu_));
+            r_ .* (1 - a_ * exp(tau_ * X[start:(end - 1)] + mu_));
         return X_out;
     }
 }
@@ -80,7 +83,7 @@ parameters {
     real rho;                               // mean growth rates: log(r)
     real<lower=0> sigma_rho;                // among-line SD in log(r)
     real phi;                               // mean density dependences: log(alpha)
-    real<lower=0> sigma_phi;              // among-line SD in log(alpha)
+    real<lower=0> sigma_phi;                // among-line SD in log(alpha)
 
     vector<lower=0>[n_ts] zetas;  // how plant-health reacts to time (differs by plant)
 
@@ -96,11 +99,11 @@ transformed parameters {
             // number of observations for this time series:
             int n_ = n_per[j];
             int end = start + n_ - 1;
-            // growth rate (r) for this time series:
-            real r_hat = exp(rho + sigma_rho * Z_r[L[j]]);
-            // density dependence (alpha) for this time series:
-            vector[(n_-1)] alpha_hat = exp(phi + sigma_phi * Z_alpha[L[j]] +
-                                           zetas[j] * t_hat[(start+1):end]);
+            // growth rate (r) times effect of plant health for this time series:
+            vector[(n_-1)] r_hat = exp(rho + sigma_rho * Z_r[L[j]] +
+                    zetas[j] * t_hat[(start+1):end]);
+            // density dependence (alpha_hat) for this time series:
+            real alpha_hat = exp(phi + sigma_phi * Z_alpha[L[j]]);
             // filling in predicted X_t+1 based on X_t:
             X_hat_pred[start:end] = ricker_hat(X_hat, start, end, r_hat, alpha_hat,
                                                mu, tau);
@@ -114,7 +117,7 @@ transformed parameters {
 model {
 
     Z_r ~ normal(0, 1);                     // for growth rates by line
-    Z_alpha ~ normal(0, 1);               // for density dependence by line
+    Z_alpha ~ normal(0, 1);                 // for density dependence by line
 
     sigma_hat_epsilon ~ normal(theta[1], theta[2])T[0,];
     rho  ~ normal(theta[3], theta[4]);
