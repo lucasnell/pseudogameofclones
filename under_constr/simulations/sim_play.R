@@ -113,3 +113,25 @@ sims %>%
     geom_line(size = 0.75) +
     scale_color_brewer(palette = "Dark2")
 
+
+
+
+
+
+
+sim_env$sim(repl_threshold_ = 8000, max_t_ = 1000) %>%
+    .[["N"]] %>%
+    dplyr::select(-pool) %>%
+    arrange(date, line) %>%
+    # group_by(date) %>%
+    # mutate(prop = N / sum(N),
+    #        prop_end = cumsum(prop),
+    #        prop_start = lag(prop_end, default = 0)) %>%
+    # ungroup() %>%
+    mutate(line = factor(line, levels = 1:sim_env$n_plants,
+                         labels = sprintf("%.4f | %.1f", exp(sim_env$D_vec),
+                                          1 / sim_env$A))) %>%
+    # filter(date < 500) %>%
+    ggplot(aes(date, N, color = line)) +
+    geom_line(size = 0.75) +
+    scale_color_brewer(palette = "Dark2")
