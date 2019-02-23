@@ -26,34 +26,11 @@ knitr::opts_chunk$set(
 
 
 This document outlines the structure of the model used to estimate population-growth
-parameters and what priors are required.
+and plant-deterioration parameters.
 
-
-
-# Model description
-
-Below is the model I'm fitting:
-
-$$
-X_{t+1} = X_t + r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
-$$
-
-where $X_t$ is log aphid counts for a particular plant at time $t$,
-$r$ is the aphid line's growth rate,
-$\alpha$ is the line's density dependence,
-and
-$\varepsilon$ is process error.
 
 
 ## Notes
-
-__on $Z$ and non-centered distributions\:__
-
-Below, all mentions of $Z$ refer to deviates from $\text{N}(0,1)$.
-These are used to generate non-centered parameterizations of all distributions
-(see section 28.6 in the Stan Modeling Language User's Guide and Reference Manual,
-version 2.17.0).
-
 
 __on truncated distributions\:__
 
@@ -65,114 +42,51 @@ __on normal-distribution notation\:__
 Normal distributions below are denoted as $\sim \text{N}(\mu, \sigma)$.
 
 
+## Scaling in the model
 
-## Note on hyperparameters
-
-Prior information is stored as a vector of hyperparameters $\mathbf{\Theta}$,
-indexed for each hyperparameter as $\theta_i$ for position $i$.
-
-
-
-## Estimating process error
-
-For observation $k$:
-
-$$\begin{align}
-    \varepsilon_k &= \sigma_\varepsilon Z_k \\
-    \sigma_\varepsilon &\sim \text{N} ( \theta_1, ~ \theta_2 ) \texttt{T[0,]} \\
-\end{align}$$
+To improve performance, I used scaled log-counts when running the model.
+Specifically, I created $\hat{X} = (X - \bar{X}) / s_X$,
+where $X$ is a vector of all the non-scaled log counts among all time series.
+Thus $\hat{X}$ had a mean of 0 and standard deviation of 1.
+All parameters were back-transformed to be on the original scale.
 
 
-### Estimated from model:
+## Model structure
 
-- $\sigma_\varepsilon$: SD of the process error
+The overall structure of the model is
 
+$$
+X_{t+1} = X_t + r \left( 1 - \beta(t) ~ \alpha ~ \text{e}^{X_t} \right) + \varepsilon
+\text{ ,}
+$$
 
-#### Priors to define:
-
-- $\theta_1$: mean for the normal distribution that generates $\sigma_\varepsilon$ values
-- $\theta_2$: SD for the normal distribution that generates $\sigma_\varepsilon$ values
-
+where $X_t$ is log aphid counts at time $t$,
+$r$ is the growth rate,
+$\alpha$ is density dependence,
+and
+$\varepsilon$ is process error.
+$\beta(t)$ is the effect of deteriorating plant health on aphid growth as a function
+of time: $\beta(t) = \exp( \zeta ~ t )$, where $\zeta$ indicates the speed at which
+plant health deteriorates through time.
 
 
 
-## Estimating growth rates 
+## Structure of estimates from the model
 
-Growth rates are bound $\ge 0$ and have one estimate per aphid line,
-resulting in a vector of growth rates.
-The growth rate estimate for clonal line $i$ is generated as follows:
+Growth rates are a random effect by aphid line, where log-transformed 
+growth rates are generated as $\sim \text{N}(\rho, \sigma_{\rho})$.
+Parameters $\rho$, $\sigma_\rho$, and values for each line are returned by the model.
 
-$$\begin{align}
-    r_i &= \exp \left( \rho + \sigma_\rho ~ Z_i \right) \\
-    \rho &\sim \text{N}(\theta_3, ~ \theta_4) \\
-    \sigma_\rho &\sim \text{N}(\theta_5, ~ \theta_6) \texttt{T[0,]} \\
-\end{align}$$
+Density dependences are a random effect by aphid line, where log-transformed 
+density dependences are generated as $\sim \text{N}(\phi, \sigma_{\phi})$.
+Parameters $\phi$, $\sigma_\phi$, and values for each line are returned by the model.
 
+Process error for each observation is $\sim \text{N}(0, \sigma_{\varepsilon})$, and
+$\sigma_{\varepsilon}$ is returned by the model.
 
-
-### Estimated from model:
-
-- $\mathbf{R}$: vector ($r_i$ for all $i$) of growth rates for each aphid line
-- $\rho$: among-line mean of the log-transformed growth rates
-- $\sigma_\rho$: among-line SD of the log-transformed growth rates
-
-
-### Priors to define:
-
-- $\theta_3$: mean for the normal distribution that generates $\rho$ values
-- $\theta_4$: SD for the normal distribution that generates $\rho$ values
-- $\theta_5$: mean for the normal distribution that generates $\sigma_\rho$ values
-- $\theta_6$: SD for the normal distribution that generates $\sigma_\rho$ values
-
-
-
-
-
-## Estimating density dependence
-
-Density dependences are bound between 0 and 1 and also have estimates for each line.
-They differ from $r$ in that they also have variance within aphid lines, to account
-for effects of variability in plant resources affecting aphid density dependence.
-I used the inverse logit function to bound final $\alpha$ estimates between 0 and 1.
-For clonal line $i$ and plant $j$, estimates are generated as follows:
-
-
-$$\begin{align}
-    \alpha_{ij} &= \text{logit}^{-1} \hspace{-0.25em}
-        \left(
-            \phi + \sigma_{\phi a} ~ Z_i + \sigma_{\phi w} ~ Z_j
-        \right) \\
-    \phi &\sim \text{N}(\theta_7, ~ \theta_8) \\
-    \sigma_{\phi a} &\sim \text{N}(\theta_9, ~ \theta_{10}) \texttt{T[0,]} \\
-    \sigma_{\phi w} &\sim \text{N}(\theta_{11}, ~ \theta_{12}) \texttt{T[0,]} \\
-\end{align}$$
-
-
-
-
-### Estimated from model:
-
-- $\mathbf{A}$: vector of density dependences ($\alpha_i$ for all $i$) for each aphid line
-- $\phi$: among-line mean of the logit-transformed density dependences
-- $\sigma_{\phi a}$: among-line SD of the logit-transformed density
-  dependences
-- $\sigma_{\phi w}$: the within-line SDs in the logit-transformed
-  density dependences for each aphid line
-
-
-### Priors to define:
-
-- $\theta_{7}$: mean for the normal distribution that generates $\phi$ values
-- $\theta_{8}$: SD for the normal distribution that generates $\phi$ values
-- $\theta_{9}$: mean for the normal distribution that generates $\sigma_{\phi a}$ values
-- $\theta_{10}$: SD for the normal distribution that generates $\sigma_{\phi a}$ values
-- $\theta_{11}$: mean for the normal distribution that generates $\sigma_{\phi w}$ values
-- $\theta_{12}$: SD for the normal distribution that generates $\sigma_{\phi w}$ values
-
-
-
-
-
+Effects of plant health are estimated by plant, where $\zeta$ values
+are generated as $\sim \text{N}(0, 1)\texttt{T[0,]}$.
+A vector of $\zeta$ values is returned by the model.
 
 
 
