@@ -6,8 +6,8 @@
 \usage{
 fit_lines(data_df, line, rep, date, X, theta_,
   model_name = c("full_model", "no_within_alpha", "no_among_alpha",
-  "one_alpha", "one_r", "one_r_alpha", "pass_sigma_epsilon"),
-  sigma_epsilon = NULL, ...)
+  "one_alpha", "one_r", "one_r_alpha", "pass_sigma_epsilon",
+  "full_model_plant_death"), sigma_epsilon = NULL, ...)
 }
 \arguments{
 \item{data_df}{A data frame that contains columns for \code{line}, \code{rep}, and \code{X}.}
@@ -33,7 +33,8 @@ Defaults to \code{"X"}.}
 \item{model_name}{String specifying the name of the model to fit.
 The options are
 \code{"full_model"}, \code{"no_within_alpha"}, \code{"no_among_alpha"},
-\code{"one_alpha"}, \code{"one_r"}, \code{"one_r_alpha"}, or \code{"pass_sigma_epsilon"}.
+\code{"one_alpha"}, \code{"one_r"}, \code{"one_r_alpha"}, \code{"pass_sigma_epsilon"},
+or \code{"full_model_plant_death"}.
 Defaults to \code{"full_model"}.}
 
 \item{sigma_epsilon}{Value for the SD of the process error if using a model
