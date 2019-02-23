@@ -9,22 +9,10 @@ using namespace Rcpp;
 
 RcppExport SEXP _rcpp_module_boot_stan_fit4full_model_mod();
 RcppExport SEXP _rcpp_module_boot_stan_fit4full_model_plant_death_mod();
-RcppExport SEXP _rcpp_module_boot_stan_fit4no_among_alpha_mod();
-RcppExport SEXP _rcpp_module_boot_stan_fit4no_within_alpha_mod();
-RcppExport SEXP _rcpp_module_boot_stan_fit4one_alpha_mod();
-RcppExport SEXP _rcpp_module_boot_stan_fit4one_r_mod();
-RcppExport SEXP _rcpp_module_boot_stan_fit4one_r_alpha_mod();
-RcppExport SEXP _rcpp_module_boot_stan_fit4pass_sigma_epsilon_mod();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rcpp_module_boot_stan_fit4full_model_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4full_model_mod, 0},
     {"_rcpp_module_boot_stan_fit4full_model_plant_death_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4full_model_plant_death_mod, 0},
-    {"_rcpp_module_boot_stan_fit4no_among_alpha_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4no_among_alpha_mod, 0},
-    {"_rcpp_module_boot_stan_fit4no_within_alpha_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4no_within_alpha_mod, 0},
-    {"_rcpp_module_boot_stan_fit4one_alpha_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4one_alpha_mod, 0},
-    {"_rcpp_module_boot_stan_fit4one_r_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4one_r_mod, 0},
-    {"_rcpp_module_boot_stan_fit4one_r_alpha_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4one_r_alpha_mod, 0},
-    {"_rcpp_module_boot_stan_fit4pass_sigma_epsilon_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4pass_sigma_epsilon_mod, 0},
     {NULL, NULL, 0}
 };
 

@@ -36,7 +36,7 @@ static int current_statement_begin__;
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
     reader.add_event(0, 0, "start", "model_full_model");
-    reader.add_event(154, 152, "end", "model_full_model");
+    reader.add_event(155, 153, "end", "model_full_model");
     return reader;
 }
 
