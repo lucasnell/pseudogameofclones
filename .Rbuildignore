@@ -1,11 +1,11 @@
 ^clonewars\.Rproj$
 ^\.Rproj\.user$
 ^\.travis\.yml$
-^under\_constr$
+^under_constr$
 ^reports$
 ^data-raw$
 ^_pkgdown\.yml$
 ^docs$
-^cwsims$
 ^figs$
-^README*$
+^README\.
+^.*\.svg$
