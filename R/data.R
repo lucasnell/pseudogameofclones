@@ -1,14 +1,4 @@
 
-#' Leslie matrices for fast and slow aphid populations.
-#'
-#' @format A list with two 27 x 27 matrices.
-#'
-#' @source \url{https://onlinelibrary.wiley.com/doi/abs/10.1890/13-1933.1}
-#'
-#'
-"leslie"
-
-
 
 #' Data to generate dispersal predictions for a given line and log(number of aphids).
 #'
@@ -32,26 +22,4 @@
 #'
 #'
 "disp_estimates"
-
-
-
-
-#' Information for simulating plant death.
-#'
-#' @format A list with two fields, each containing a single number:
-#' * `days_to_max`: An integer specifying the number of days after which the plant
-#'     begins to die.
-#' * `after_max_mortality`: The per-day mortality to add to the aphid populations on
-#'     a plant after the plant begins to die.
-#'
-"plant_death"
-
-
-
-#' Priors for use in estimating population parameters.
-#'
-#' @format A numeric vector of length 12. Each number is a hyperparameter value.
-#'     See `vignette("01-choose_priors")` for more information.
-#'
-"theta"
 
