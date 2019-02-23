@@ -6,7 +6,6 @@
  - Process error that is estimated by the model
 
  ALSO MADE ALPHA USE LOG TRANSFORM INSTEAD OF LOGIT
- ALSO NOT TAKING `theta` AS INPUT
 
  */
 
@@ -75,17 +74,15 @@ parameters {
 
     vector[n_lines] Z_r;
     vector[n_lines] Z_alpha_l;
-    // vector[n_ts] Z_alpha_p;
 
     real<lower=0> sigma_hat_epsilon;        // process error
     // Means and SDs (on transformed scale):
-    real rho;                           // mean growth rates: log(r)
-    real<lower=0> sigma_rho;            // among-line SD in log(r)
-    real phi;                           // mean density dependences: log(alpha)
-    real<lower=0> sigma_phi_l;          // among-line SD in log(alpha)
-    // real<lower=0> sigma_phi_p;          // within-line SD in log(alpha)
+    real rho;                               // mean growth rates: log(r)
+    real<lower=0> sigma_rho;                // among-line SD in log(r)
+    real phi;                               // mean density dependences: log(alpha)
+    real<lower=0> sigma_phi_l;              // among-line SD in log(alpha)
 
-    vector<lower=0>[n_ts] betas;  // how plant-health reacts to time (differs by plant)
+    vector<lower=0>[n_ts] zetas;  // how plant-health reacts to time (differs by plant)
 
 }
 transformed parameters {
@@ -103,7 +100,7 @@ transformed parameters {
             real r_hat = exp(rho + sigma_rho * Z_r[L[j]]);
             // density dependence (alpha) for this time series:
             vector[(n_-1)] alpha_hat = exp(phi + sigma_phi_l * Z_alpha_l[L[j]] +
-                                           betas[j] * t_hat[(start+1):end]);
+                                           zetas[j] * t_hat[(start+1):end]);
             // filling in predicted X_t+1 based on X_t:
             X_hat_pred[start:end] = ricker_hat(X_hat, start, end, r_hat, alpha_hat,
                                                mu, tau);
@@ -116,18 +113,16 @@ transformed parameters {
 }
 model {
 
-    Z_r ~ normal(0, 1);                 // for growth rates by line
+    Z_r ~ normal(0, 1);                     // for growth rates by line
     Z_alpha_l ~ normal(0, 1);               // for density dependence by line
-    // Z_alpha_p ~ normal(0, 1);               // for density dependence by plant
 
     sigma_hat_epsilon ~ normal(theta[1], theta[2])T[0,];
     rho  ~ normal(theta[3], theta[4]);
     sigma_rho  ~ normal(theta[5], theta[6])T[0,];
     phi  ~ normal(theta[7], 10 * theta[8]);
     sigma_phi_l  ~ normal(theta[9], 10 * theta[10])T[0,];
-    // sigma_phi_p  ~ normal(theta[11], theta[12])T[0,];
 
-    for (j in 1:n_ts) betas[j] ~ normal(0, 1)T[0,];
+    for (j in 1:n_ts) zetas[j] ~ normal(0, 1)T[0,];
 
     // Process error:
     // iterate over each time series

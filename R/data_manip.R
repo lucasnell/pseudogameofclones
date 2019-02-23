@@ -26,34 +26,28 @@ parse_comments <- function(comments) {
 
 
 
-#' Initial read of excel file.
+#' Initial read of CSV file.
 #'
-#' @param line_lgl_fun Function for what to do with logical specifying whether a line
-#'     will be included in the analyses or not. Takes only the functions
-#'     ```base::`!` ```or `base::identity`.
-#'     Defaults to `base::identity`.
-#' @param file
 #'
 #'
 #' @noRd
 #'
-initial_read <- function(file, line_lgl_fun = base::identity) {
+initial_read <- function() {
 
-    if (missing(file)) {
-        file <- paste0('~/Dropbox/Aphid Project 2017/Lucas_traits/',
-                       'traits_data_entry.xlsx')
-    }
-    if (is.null(file) | is.na(file)) {
-        file <- paste0('~/Dropbox/Aphid Project 2017/Lucas_traits/',
-                       'traits_data_entry.xlsx')
-    }
+    file <- system.file("extdata", "aphid_counts_raw.csv", package = "clonewars",
+                        mustWork = TRUE)
 
-    if (!identical(line_lgl_fun, base::identity) & !identical(line_lgl_fun, base::`!`)) {
-        stop("initial_read can only take base::identity or base::`!` for the ",
-             "line_lgl_fun argument.")
-    }
+    # Aphid lines we're still using
+    kept_lines <- c("R10", "WIA-5D", "WI-L4", "WI-L4Ø", "UT3", "WI-2016-593",
+                    "Clover-2017-2", "Clover-2017-6")
 
-    readxl::read_excel(file) %>%
+    # Column types
+    cols_ <- readr::cols(line = "c",
+                         comments = "c",
+                         observer = "c",
+                         .default = "i")
+
+    read_csv(file, col_types = cols_) %>%
         mutate(line = ifelse(line == 'WI-L4 (H+3)', 'WI-L4', line),
                line = ifelse(line == 'WI-L4ØA', 'WI-L4Ø', line),
                line = ifelse(line == 'WI-L4 (Ham-)', 'WI-L4Ø', line),
@@ -61,11 +55,8 @@ initial_read <- function(file, line_lgl_fun = base::identity) {
         # Change any NAs to zeros:
         mutate_at(vars(matches("_juv$|_adults$")),
                   function(x) ifelse(is.na(x), 0, x)) %>%
-        # Filter for or out lines that we still have and should keep for analyses
-        # (filtering depends on whether line_lgl_fun is identity or `!`)
-        filter(line_lgl_fun(line %in% c("R10", "WIA-5D", "WI-L4", "WI-L4Ø", "UT3",
-                                        "WI-2016-593", "Clover-2017-2",
-                                        "Clover-2017-6"))) %>%
+        # Filter for lines that we still have and should keep for analyses
+        filter(line %in% kept_lines) %>%
         mutate(disp = parse_comments(comments),  # <-- "dispersed" aphids
                N = stem1_juv + stem1_adults + leaf1_juv + leaf1_adults +
                    stem2_juv + stem2_adults + leaf2_juv + leaf2_adults +
@@ -74,7 +65,7 @@ initial_read <- function(file, line_lgl_fun = base::identity) {
                # makes no sense for it to be 0, then >0 the next day:
                N = ifelse(N == 0, 1, N)) %>%
         dplyr::select(-matches("_juv$|_adults$"), -year, -month, -day) %>%
-        mutate_at(vars(rep, N, disp), funs(as.integer)) %>%
+        mutate_at(vars(rep, N, disp), list(as.integer)) %>%
         mutate(X = log(N),
                # Retained lines that have *Hamiltonella defensa*:
                ham = ifelse(line %in% c("R10", "WI-L4", "UT3", "Clover-2017-2"),
@@ -328,11 +319,11 @@ filter_data <- function(growth, filter_pars) {
 #'
 load_data <- function(filter_pars = list(start = 0.0, end = 0.9),
                       remove_unfinished = FALSE, allow_NA = TRUE,
-                      impute_fxn = impute, file = NA) {
+                      impute_fxn = impute) {
 
     growth <-
         # First read through, to clean up the excel sheet:
-        initial_read(file) %>%
+        initial_read() %>%
         # We no longer need these columns:
         dplyr::select(-observer, -comments) %>%
         # Removing lines that aren't yet done:
@@ -351,38 +342,6 @@ load_data <- function(filter_pars = list(start = 0.0, end = 0.9),
 
     return(growth)
 }
-
-
-#' Load data that won't be used for the actual analysis, to develop priors.
-#'
-#' Argument `filter_pars` defaults to the same as for `load_data`.
-#'
-#' @inheritParams load_data
-#'
-#' @export
-#'
-#'
-load_prior_data <- function(filter_pars = NULL, file = NA) {
-
-    if (is.null(filter_pars)) filter_pars <- formals(load_data)$filter_pars
-
-    growth <-
-        # First read through, to clean up the excel sheet:
-        initial_read(file, `!`) %>%
-        # We no longer need these columns:
-        dplyr::select(-observer, -comments) %>%
-        # Removing lines that aren't yet done:
-        handle_unfinished(remove_unfinished = TRUE) %>%
-        # Filter part(s) of time series if desired:
-        filter_data(filter_pars) %>%
-        # Change to factor now to avoid having to drop levels, and make sure it's
-        # ordered properly
-        mutate(line = factor(line)) %>%
-        arrange(line, rep, date)
-
-    return(growth)
-}
-
 
 
 
@@ -411,7 +370,7 @@ make_pred_df <- function(stan_fit, orig_data, line, rep, date, alpha = 0.05) {
     pred_df <- orig_data %>%
         dplyr::arrange(!!line, !!rep, !!date) %>%
         mutate(X_pred = rstan::extract(stan_fit, "X_pred", permuted = FALSE) %>%
-                   apply(3, mean),
+                   apply(3, median),
                X_lower = rstan::extract(stan_fit, "X_pred", permuted = FALSE) %>%
                    apply(3, quantile, probs = alpha / 2),
                X_upper = rstan::extract(stan_fit, "X_pred", permuted = FALSE) %>%

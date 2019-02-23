@@ -33,27 +33,14 @@ data {
     int<lower=1> n_lines;                       // number of aphid lines
     int<lower=1, upper=n_lines> L[n_ts];        // aphid line for each time series
 
-    // Vector of priors:
-    real theta[12];
-    // Priors are as follows:
-    //     1.  Mean for process error SD
-    //     2.  SD for process error SD
-    //     3.  Mean for log(growth rate) mean
-    //     4.  SD for log(growth rate) mean
-    //     5.  Mean for log(growth rate) SD
-    //     6.  SD for log(growth rate) SD
-    //     7.  Mean for logit(density dependence) mean
-    //     8.  SD for logit(density dependence) mean
-    //     9.  Mean for logit(density dependence) among-line SD
-    //     10. SD for logit(density dependence) among-line SD
-    //     11. Mean for logit(density dependence) among-plant SD
-    //     12. SD for logit(density dependence) among-plant SD
-
 }
 transformed data {
     vector[n_obs] X_hat;
     real mu;
     real tau;
+    real theta[12] = rep_array(0.0, 12);
+
+    for (i in 1:6) theta[(i*2)] = 1;
 
     mu = mean(X);
     tau = sd(X);

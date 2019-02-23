@@ -7,7 +7,7 @@
 #include <omp.h>
 #endif
 
-#include "cwsims_types.hpp"
+#include "clonewars_types.hpp"
 #include "pcg.hpp"
 
 using namespace Rcpp;

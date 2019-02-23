@@ -1,5 +1,5 @@
-# ifndef __CWSIMS_TYPES_H
-# define __CWSIMS_TYPES_H
+# ifndef __CLONEWARS_TYPES_H
+# define __CLONEWARS_TYPES_H
 
 
 /*
