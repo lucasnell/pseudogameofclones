@@ -4,10 +4,8 @@
 \alias{fit_lines}
 \title{Fit multiple time series for multiple aphid lines.}
 \usage{
-fit_lines(data_df, line, rep, date, X, theta_,
-  model_name = c("full_model", "no_within_alpha", "no_among_alpha",
-  "one_alpha", "one_r", "one_r_alpha", "pass_sigma_epsilon",
-  "full_model_plant_death"), sigma_epsilon = NULL, ...)
+fit_lines(data_df, line, rep, date, X,
+  model_name = c("full_model_plant_death", "full_model"), ...)
 }
 \arguments{
 \item{data_df}{A data frame that contains columns for \code{line}, \code{rep}, and \code{X}.}
@@ -28,19 +26,10 @@ Defaults to \code{"date"}.}
 contains the \code{X} value for each observation (\code{X = log(N)}).
 Defaults to \code{"X"}.}
 
-\item{theta_}{Optional vector of length 12 that specifies prior hyperparameters.}
-
 \item{model_name}{String specifying the name of the model to fit.
 The options are
-\code{"full_model"}, \code{"no_within_alpha"}, \code{"no_among_alpha"},
-\code{"one_alpha"}, \code{"one_r"}, \code{"one_r_alpha"}, \code{"pass_sigma_epsilon"},
-or \code{"full_model_plant_death"}.
-Defaults to \code{"full_model"}.}
-
-\item{sigma_epsilon}{Value for the SD of the process error if using a model
-that doesn't esimate this value itself.
-This argument is not used if using a model that estimates the process error SD.
-Defaults to \code{NULL}.}
+\code{"full_model_plant_death"} or \code{"full_model"}.
+Defaults to \code{"full_model_plant_death"}.}
 
 \item{...}{Arguments passed to \code{rstan::sampling} (e.g., iter, chains).}
 }

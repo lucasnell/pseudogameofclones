@@ -36,7 +36,7 @@ static int current_statement_begin__;
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
     reader.add_event(0, 0, "start", "model_full_model");
-    reader.add_event(155, 153, "end", "model_full_model");
+    reader.add_event(142, 140, "end", "model_full_model");
     return reader;
 }
 
@@ -107,10 +107,10 @@ private:
     vector_d X;
     int n_lines;
     vector<int> L;
-    vector<double> theta;
     vector_d X_hat;
     double mu;
     double tau;
+    vector<double> theta;
 public:
     model_full_model(stan::io::var_context& context__,
         std::ostream* pstream__ = 0)
@@ -192,16 +192,6 @@ public:
             for (size_t i_0__ = 0; i_0__ < L_limit_0__; ++i_0__) {
                 L[i_0__] = vals_i__[pos__++];
             }
-            validate_non_negative_index("theta", "12", 12);
-            context__.validate_dims("data initialization", "theta", "double", context__.to_vec(12));
-            validate_non_negative_index("theta", "12", 12);
-            theta = std::vector<double>(12,double(0));
-            vals_r__ = context__.vals_r("theta");
-            pos__ = 0;
-            size_t theta_limit_0__ = 12;
-            for (size_t i_0__ = 0; i_0__ < theta_limit_0__; ++i_0__) {
-                theta[i_0__] = vals_r__[pos__++];
-            }
 
             // validate, data variables
             check_greater_or_equal(function__,"n_ts",n_ts,1);
@@ -223,7 +213,17 @@ public:
             stan::math::fill(mu,DUMMY_VAR__);
             tau = double(0);
             stan::math::fill(tau,DUMMY_VAR__);
+            validate_non_negative_index("theta", "12", 12);
+            theta = std::vector<double>(12,double(0));
+            stan::math::fill(theta,DUMMY_VAR__);
+            stan::math::assign(theta,rep_array(0.0,12));
 
+            for (int i = 1; i <= 6; ++i) {
+                stan::model::assign(theta, 
+                            stan::model::cons_list(stan::model::index_uni((i * 2)), stan::model::nil_index_list()), 
+                            1, 
+                            "assigning variable theta");
+            }
             stan::math::assign(mu, mean(X));
             stan::math::assign(tau, sd(X));
             stan::math::assign(X_hat, divide(subtract(X,mu),tau));
@@ -1054,7 +1054,7 @@ static int current_statement_begin__;
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
     reader.add_event(0, 0, "start", "model_full_model_plant_death");
-    reader.add_event(168, 166, "end", "model_full_model_plant_death");
+    reader.add_event(163, 161, "end", "model_full_model_plant_death");
     return reader;
 }
 
@@ -1297,7 +1297,7 @@ public:
             ++num_params_r__;
             ++num_params_r__;
             ++num_params_r__;
-            validate_non_negative_index("betas", "n_ts", n_ts);
+            validate_non_negative_index("zetas", "n_ts", n_ts);
             num_params_r__ += n_ts;
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
@@ -1414,19 +1414,19 @@ public:
             throw std::runtime_error(std::string("Error transforming variable sigma_phi_l: ") + e.what());
         }
 
-        if (!(context__.contains_r("betas")))
-            throw std::runtime_error("variable betas missing");
-        vals_r__ = context__.vals_r("betas");
+        if (!(context__.contains_r("zetas")))
+            throw std::runtime_error("variable zetas missing");
+        vals_r__ = context__.vals_r("zetas");
         pos__ = 0U;
-        validate_non_negative_index("betas", "n_ts", n_ts);
-        context__.validate_dims("initialization", "betas", "vector_d", context__.to_vec(n_ts));
-        vector_d betas(static_cast<Eigen::VectorXd::Index>(n_ts));
+        validate_non_negative_index("zetas", "n_ts", n_ts);
+        context__.validate_dims("initialization", "zetas", "vector_d", context__.to_vec(n_ts));
+        vector_d zetas(static_cast<Eigen::VectorXd::Index>(n_ts));
         for (int j1__ = 0U; j1__ < n_ts; ++j1__)
-            betas(j1__) = vals_r__[pos__++];
+            zetas(j1__) = vals_r__[pos__++];
         try {
-            writer__.vector_lb_unconstrain(0,betas);
+            writer__.vector_lb_unconstrain(0,zetas);
         } catch (const std::exception& e) { 
-            throw std::runtime_error(std::string("Error transforming variable betas: ") + e.what());
+            throw std::runtime_error(std::string("Error transforming variable zetas: ") + e.what());
         }
 
         params_r__ = writer__.data_r();
@@ -1511,12 +1511,12 @@ public:
             else
                 sigma_phi_l = in__.scalar_lb_constrain(0);
 
-            Eigen::Matrix<local_scalar_t__,Eigen::Dynamic,1>  betas;
-            (void) betas;  // dummy to suppress unused var warning
+            Eigen::Matrix<local_scalar_t__,Eigen::Dynamic,1>  zetas;
+            (void) zetas;  // dummy to suppress unused var warning
             if (jacobian__)
-                betas = in__.vector_lb_constrain(0,n_ts,lp__);
+                zetas = in__.vector_lb_constrain(0,n_ts,lp__);
             else
-                betas = in__.vector_lb_constrain(0,n_ts);
+                zetas = in__.vector_lb_constrain(0,n_ts);
 
 
             // transformed parameters
@@ -1560,7 +1560,7 @@ public:
 
                 stan::math::initialize(alpha_hat, DUMMY_VAR__);
                 stan::math::fill(alpha_hat,DUMMY_VAR__);
-                stan::math::assign(alpha_hat,stan::math::exp(add((phi + (sigma_phi_l * get_base1(Z_alpha_l,get_base1(L,j,"L",1),"Z_alpha_l",1))),multiply(get_base1(betas,j,"betas",1),stan::model::rvalue(t_hat, stan::model::cons_list(stan::model::index_min_max((start + 1), end), stan::model::nil_index_list()), "t_hat")))));
+                stan::math::assign(alpha_hat,stan::math::exp(add((phi + (sigma_phi_l * get_base1(Z_alpha_l,get_base1(L,j,"L",1),"Z_alpha_l",1))),multiply(get_base1(zetas,j,"zetas",1),stan::model::rvalue(t_hat, stan::model::cons_list(stan::model::index_min_max((start + 1), end), stan::model::nil_index_list()), "t_hat")))));
 
 
                 stan::model::assign(X_hat_pred, 
@@ -1600,8 +1600,8 @@ public:
             if (sigma_phi_l < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
             else lp_accum__.add(-normal_ccdf_log(0, get_base1(theta,9,"theta",1), (10 * get_base1(theta,10,"theta",1))));
             for (int j = 1; j <= n_ts; ++j) {
-                lp_accum__.add(normal_log<propto__>(get_base1(betas,j,"betas",1), 0, 1));
-                if (get_base1(betas,j,"betas",1) < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
+                lp_accum__.add(normal_log<propto__>(get_base1(zetas,j,"zetas",1), 0, 1));
+                if (get_base1(zetas,j,"zetas",1) < 0) lp_accum__.add(-std::numeric_limits<double>::infinity());
                 else lp_accum__.add(-normal_ccdf_log(0, 0, 1));
             }
             {
@@ -1664,7 +1664,7 @@ public:
         names__.push_back("sigma_rho");
         names__.push_back("phi");
         names__.push_back("sigma_phi_l");
-        names__.push_back("betas");
+        names__.push_back("zetas");
         names__.push_back("X_hat_pred");
         names__.push_back("X_resid");
         names__.push_back("X_pred");
@@ -1737,7 +1737,7 @@ public:
         double sigma_rho = in__.scalar_lb_constrain(0);
         double phi = in__.scalar_constrain();
         double sigma_phi_l = in__.scalar_lb_constrain(0);
-        vector_d betas = in__.vector_lb_constrain(0,n_ts);
+        vector_d zetas = in__.vector_lb_constrain(0,n_ts);
             for (int k_0__ = 0; k_0__ < n_lines; ++k_0__) {
             vars__.push_back(Z_r[k_0__]);
             }
@@ -1750,7 +1750,7 @@ public:
         vars__.push_back(phi);
         vars__.push_back(sigma_phi_l);
             for (int k_0__ = 0; k_0__ < n_ts; ++k_0__) {
-            vars__.push_back(betas[k_0__]);
+            vars__.push_back(zetas[k_0__]);
             }
 
         // declare and define transformed parameters
@@ -1802,7 +1802,7 @@ public:
 
                 stan::math::initialize(alpha_hat, DUMMY_VAR__);
                 stan::math::fill(alpha_hat,DUMMY_VAR__);
-                stan::math::assign(alpha_hat,stan::math::exp(add((phi + (sigma_phi_l * get_base1(Z_alpha_l,get_base1(L,j,"L",1),"Z_alpha_l",1))),multiply(get_base1(betas,j,"betas",1),stan::model::rvalue(t_hat, stan::model::cons_list(stan::model::index_min_max((start + 1), end), stan::model::nil_index_list()), "t_hat")))));
+                stan::math::assign(alpha_hat,stan::math::exp(add((phi + (sigma_phi_l * get_base1(Z_alpha_l,get_base1(L,j,"L",1),"Z_alpha_l",1))),multiply(get_base1(zetas,j,"zetas",1),stan::model::rvalue(t_hat, stan::model::cons_list(stan::model::index_min_max((start + 1), end), stan::model::nil_index_list()), "t_hat")))));
 
 
                 stan::model::assign(X_hat_pred, 
@@ -1939,7 +1939,7 @@ public:
         param_names__.push_back(param_name_stream__.str());
         for (int k_0__ = 1; k_0__ <= n_ts; ++k_0__) {
             param_name_stream__.str(std::string());
-            param_name_stream__ << "betas" << '.' << k_0__;
+            param_name_stream__ << "zetas" << '.' << k_0__;
             param_names__.push_back(param_name_stream__.str());
         }
 
@@ -2012,7 +2012,7 @@ public:
         param_names__.push_back(param_name_stream__.str());
         for (int k_0__ = 1; k_0__ <= n_ts; ++k_0__) {
             param_name_stream__.str(std::string());
-            param_name_stream__ << "betas" << '.' << k_0__;
+            param_name_stream__ << "zetas" << '.' << k_0__;
             param_names__.push_back(param_name_stream__.str());
         }
 
