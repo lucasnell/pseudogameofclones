@@ -29,17 +29,23 @@ if (!isTRUE(getOption('knitr.in.progress'))) source(".Rprofile")
 ```{r library_pkgs, warning=FALSE, echo=FALSE}
 suppressPackageStartupMessages({
     library(clonewars)
+    library(stringr)
+    library(viridisLite)
 })
-bayesplot::color_scheme_set("viridis")
 ```
 
 
-This file contains the analyses to estimate aphid population-growth parameters.
+This file contains the analyses to estimate aphid population-growth and
+plant-deterioration parameters.
 
 
 ## Imputing missing data
 
-See `?impute` for information on imputing missing data.
+From [Moritz et al. (2015)](https://arxiv.org/abs/1510.03924), the
+seasonal kalman filter from the `zoo` package works well, so I used this function
+to impute missing values.
+We're only missing 1 or 2 time points across a time series of >15, so this
+shouldn't have too big an impact on our results.
 
 
 ## Load data
@@ -75,17 +81,24 @@ n_ts <- growth %>%
 ## See time series data
 
 ```{r plot_time_series, echo = FALSE}
-growth %>% 
+growth_plot <- growth %>% 
     group_by(line) %>% 
     mutate(rep = map_int(rep, ~ which(sort(unique(rep)) == .x))) %>% 
     ungroup() %>% 
-    mutate(rep = factor(rep)) %>% 
+    mutate(rep = factor(rep),
+           # line = factor(sprintf("line %s", LETTERS[as.integer(line)]))) %>% 
+           NULL) %>% 
     ggplot(aes(date, X, color = rep)) +
     geom_line(size = 0.75) +
     geom_point(size = 0.75) +
     facet_wrap(~ line, nrow = 2) +
     scale_color_brewer(palette = "RdBu", guide = FALSE) +
+    scale_y_continuous("Aphid abundance", breaks = log(10^(1:3)),
+                       labels = 10^(1:3)) +
+    scale_x_continuous("Time (days)", breaks = seq(0, 20, 10)) +
     NULL
+growth_plot
+# ggsave("~/Desktop/growth_plot.pdf", growth_plot, width = 5, height = 4)
 ```
 
 
@@ -98,7 +111,7 @@ growth %>%
 ```{r run_model, eval = FALSE}
 # Takes ~ 2.5 min
 stan_fit <- fit_lines(growth, model_name = "full_model_plant_death",
-                      seed = 65135)
+                      seed = 1337925041)
 ```
 ```{r write_model, eval = FALSE, echo = FALSE}
 write_rds(stan_fit, "data-raw/stan_fit.rds")
@@ -123,9 +136,9 @@ growth %>%
     arrange(line, rep, date) %>% 
     select(obs = X) %>% 
     mutate(pred = apply(rstan::extract(stan_fit, "X_pred", permuted = FALSE),
-                        3, mean),
+                        3, median),
            resid = apply(rstan::extract(stan_fit, "X_resid", permuted = FALSE),
-                        3, mean)) %>%
+                        3, median)) %>%
     ggplot(aes(pred, resid)) +
     geom_point(shape = 1, alpha = 0.5) +
     geom_abline(slope = 0, intercept = 0, color = "dodgerblue", linetype = 2,
@@ -139,7 +152,7 @@ growth %>%
 Correlations between parameter estimates:
 
 ```{r est_cors, echo = FALSE}
-names_iwant <- c("lp__", "sigma_epsilon", "rho", "sigma_rho", "phi", "sigma_phi_l")
+names_iwant <- c("lp__", "sigma_epsilon", "rho", "sigma_rho", "phi", "sigma_phi")
 cor_df <- rstan::extract(stan_fit, names_iwant) %>% 
     lapply(as_data_frame) %>% 
     bind_cols() %>% 
@@ -147,6 +160,14 @@ cor_df <- rstan::extract(stan_fit, names_iwant) %>%
 GGally::ggpairs(cor_df) + 
     theme(strip.text = element_text(size = 10, lineheight = 2,
                                     hjust = 0.5, vjust = 1))
+
+names_iwant <- c("lp__",  names(stan_fit)[grepl("^zetas", names(stan_fit))])
+cor_df <- rstan::extract(stan_fit, names_iwant) %>% 
+    lapply(as_data_frame) %>% 
+    bind_cols() %>% 
+    set_names(names_iwant)
+
+sapply(names_iwant[names_iwant != "lp__"], function(x) cor(cor_df[[x]], cor_df$lp__)) %>% range()
 ```
 
 
@@ -159,40 +180,39 @@ R-hat values are all well below 1.05:
 new_ts <- c(1,
             growth %>% 
                 {which(.$line != lag(.$line) | .$rep != lag(.$rep))})
-rhat(stan_fit) %>% 
+bayesplot::rhat(stan_fit) %>% 
     {
         # Converting to regex strings:
         regex <- paste(c(sprintf("X_hat_pred\\[%i\\]", new_ts),
                          sprintf("X_resid\\[%i\\]", new_ts),
                          sprintf("X_pred\\[%i\\]", new_ts)),
                        collapse = "|")
-        inds <- stringr::str_detect(names(.), regex)
+        inds <- str_detect(names(.), regex)
         .[!inds]
     } %>% 
-    {data_frame(par = names(.), rhat = .)} %>% 
+    {tibble(par = names(.), rhat = .)} %>% 
     ggplot(aes(rhat)) +
-    geom_histogram(bins = 50, fill = viridisLite::viridis(1, begin = 0.95)) +
-    scale_x_continuous(expression(hat(R)), limits = c(NA, 1.05),
-                       breaks = c(1, 1.05))
+    geom_histogram(bins = 50, fill = viridis(1, begin = 0.95)) +
+    scale_x_continuous(expression(hat(R)))
 ```
 
 
 Most ratios of effective sample sizes are near 1.
 
 ```{r neffs_all, echo = FALSE}
-neff_ratio(stan_fit) %>% 
+bayesplot::neff_ratio(stan_fit) %>% 
     {
         # Converting to regex strings:
         regex <- paste(c(sprintf("X_hat_pred\\[%i\\]", new_ts),
                          sprintf("X_resid\\[%i\\]", new_ts),
                          sprintf("X_pred\\[%i\\]", new_ts)),
                        collapse = "|")
-        inds <- stringr::str_detect(names(.), regex)
+        inds <- str_detect(names(.), regex)
         .[!inds]
     } %>% 
-    {data_frame(par = names(.), neff = .)} %>% 
+    {tibble(par = names(.), neff = .)} %>% 
     ggplot(aes(neff)) +
-    geom_histogram(bins = 50, fill = viridisLite::viridis(1, begin = 0.8)) +
+    geom_histogram(bins = 50, fill = viridis(1, begin = 0.8)) +
     xlab(expression(N[eff]/N))
 ```
 
@@ -201,23 +221,23 @@ A few are pretty low, but none have less than 400 useful reps overall, so I'm no
 worried.
 
 ```{r neffs_lowest, echo = FALSE}
-neff_ratio(stan_fit) %>% 
+bayesplot::neff_ratio(stan_fit) %>% 
     {
         # Converting to regex strings:
         regex <- paste(c(sprintf("X_hat_pred\\[%i\\]", new_ts),
                          sprintf("X_resid\\[%i\\]", new_ts),
                          sprintf("X_pred\\[%i\\]", new_ts)),
                        collapse = "|")
-        inds <- stringr::str_detect(names(.), regex)
+        inds <- str_detect(names(.), regex)
         .[!inds]
     } %>%
     keep(~ .x < 0.25) %>% 
-    {data_frame(par = names(.) %>% factor(), neff = .)} %>% 
+    {tibble(par = names(.) %>% factor(), neff = .)} %>% 
     ggplot(aes(neff, par)) +
     geom_vline(xintercept = 0.1, linetype = 2, color = "gray80") +
     geom_segment(aes(xend = 0, yend = par),
-                 color = viridisLite::viridis(1, begin = 0.8)) +
-    geom_point(color = viridisLite::viridis(1, begin = 0.8)) +
+                 color = viridis(1, begin = 0.8)) +
+    geom_point(color = viridis(1, begin = 0.8)) +
     xlab(expression(N[eff]/N)) +
     ylab(NULL)
 ```
@@ -236,9 +256,9 @@ pred_df %>%
     ungroup() %>% 
     ggplot(aes(exp(X_pred), pcg)) +
     geom_hline(yintercept = 0, linetype = 2, color = "gray80") +
-    geom_line(color = viridisLite::viridis(1, begin = 0.8)) +
+    geom_line(color = viridis(1, begin = 0.8)) +
     stat_smooth(method = "lm", geom = "line", se = FALSE, na.rm = TRUE,
-                color = viridisLite::viridis(1, begin = 0.1), linetype = 1) +
+                color = viridis(1, begin = 0.1), linetype = 1) +
     facet_wrap(~ rep + line, nrow = 6) +
     theme(strip.text = element_blank(), panel.border = element_rect(fill = NA)) +
     scale_x_continuous("N", breaks = c(0, 500)) +
@@ -254,26 +274,37 @@ Estimates of R for each line:
 
 ```{r R_estimates, echo = FALSE, message = FALSE}
 # http://mc-stan.org/bayesplot/articles/visual-mcmc-diagnostics.html
-mcmc_intervals(posterior, pars = sprintf("R[%i]", 1:8)) +
+R_p <- bayesplot::mcmc_intervals(posterior, pars = sprintf("R[%i]", 1:8)) +
     scale_y_discrete(labels = growth$line %>% levels()) +
-    ggtitle("Growth rates")
+    xlab("Growth rate")
+R_p
+# ggsave("~/Desktop/R_plot.pdf", R_p, width = 4, height = 5)
 ```
 
 
 Estimates for density dependence:
 
 ```{r A_estimates, echo = FALSE, message = FALSE}
-mcmc_intervals(posterior, pars = sprintf("A[%i]", 1:8)) +
+A_p <- bayesplot::mcmc_intervals(posterior, pars = sprintf("A[%i]", 1:8)) +
     scale_y_discrete(labels = growth$line %>% levels()) +
-    ggtitle("Density dependences")
+    xlab("Density dependence")
+A_p
+# ggsave("~/Desktop/A_plot.pdf", A_p, width = 4, height = 5)
 ```
 
 
-Estimates for beta (for each plant):
+Estimates for zeta (for each plant):
 
 ```{r A_estimates, echo = FALSE, message = FALSE}
-mcmc_intervals(posterior, pars = sprintf("betas[%i]", 1:n_ts)) +
-    ggtitle("Effects of plant-health declines\nacross time on alpha")
+Z_p <- rstan::extract(stan_fit, sprintf("zetas[%i]", 1:n_ts)) %>% 
+    map_dbl(~median(.x)) %>% 
+    enframe(name = NULL) %>% 
+    ggplot(aes(value)) +
+    geom_histogram(bins = 20, fill = viridis(1, begin = 0.1)) +
+    xlab(expression(zeta)) +
+    theme(axis.title.x = element_text(size = 16))
+Z_p
+# ggsave("~/Desktop/Z_plot.pdf", Z_p, width = 4, height = 4)
 ```
 
 
@@ -283,19 +314,24 @@ Other estimates of interest:
 other_pars <- names(stan_fit)
 other_pars <- other_pars[!grepl("^Z", other_pars) &
                              !grepl("^X", other_pars) &
-                             !grepl("^betas", other_pars) &
+                             !grepl("^zetas", other_pars) &
                              !grepl("^A", other_pars) &
                              !grepl("^R", other_pars) &
                              other_pars != "sigma_hat_epsilon"]
 
+op_expr <- other_pars %>% 
+    {ifelse(grepl("^sigma_", .), paste0(gsub("_", "[", .), "]"), .)} %>% 
+    {ifelse(. == "lp__", "log ~ posterior", .)}
+
 rstan::extract(stan_fit, other_pars) %>%
-    lapply(as_data_frame) %>% 
+    lapply(as_tibble) %>% 
     bind_cols() %>% 
     set_names(other_pars) %>% 
-    gather("par", "value", factor_key = TRUE) %>% 
+    gather("par", "value") %>% 
+    mutate(par = factor(par, levels = other_pars, labels = op_expr)) %>% 
     ggplot(aes(value)) +
-    geom_density(color = viridisLite::viridis(1, begin = 0.5)) +
-    facet_wrap(~ par, nrow = 3, scales = "free")
+    geom_density(color = viridis(1, begin = 0.5)) +
+    facet_wrap(~ par, nrow = 3, scales = "free", labeller = label_parsed)
 ```
 
 
@@ -337,52 +373,60 @@ pred_df %>%
 
 
 Below is predicted growth across a time series for each aphid line.
-The dashed line shows the value $\exp (\beta)$ that gets multiplied by each line's alpha.
+The dashed line shows the value $\exp (\zeta)$ that gets multiplied by each line's alpha.
 This value corresponds to the effect of deteriorating plant health through time.
 
 ```{r predictions_byline}
 # Instead of this, make plot of predicted growth through time
-beta <- rstan::extract(stan_fit, sprintf("betas[%i]", 1:n_ts)) %>% 
-    sapply(mean) %>% 
+zeta <- rstan::extract(stan_fit, sprintf("zetas[%i]", 1:n_ts)) %>% 
+    sapply(median) %>% 
     mean()
 R_ <- rstan::extract(stan_fit, sprintf("R[%i]", 1:8)) %>% 
-    sapply(mean)
+    sapply(median)
 A_ <- rstan::extract(stan_fit, sprintf("A[%i]", 1:8)) %>% 
-    sapply(mean)
+    sapply(median)
 
 ricker <- function(t_hats, R, A, X0 = log(6)) {
     X <- numeric(length(t_hats))
     X[1] <- X0
     for (t in 2:length(t_hats)) {
-        X[t] <- X[t-1] + R * (1 - A * exp(beta * t_hats[t] + X[t-1]))
+        X[t] <- X[t-1] + R * (1 - A * exp(zeta * t_hats[t] + X[t-1]))
     }
     return(X)
 }
+
+
+t_mu <- mean(growth$date)
+t_tau <- sd(growth$date)
 
 max_t <- 20
 pred_growth <- data_frame(time = rep(1:max_t, 8),
            line = factor(rep(levels(growth$line), each = max_t)),
            R = rep(R_, each = max_t),
            A = rep(A_, each = max_t)) %>% 
-    mutate(t_hat = (time - mean(time)) / sd(time)) %>% 
+    mutate(t_hat = (time - t_mu) / t_tau) %>% 
     group_by(line) %>% 
     mutate(X = ricker(t_hat, R[1], A[1])) %>% 
     ungroup()
 
-pred_growth %>% 
+mult <- exp(max(pred_growth$X)) / exp(zeta * max(pred_growth$t_hat))
+
+pred_p <- pred_growth %>% 
     ggplot(aes(time, exp(X), color = line)) +
-    geom_line(data = pred_growth %>% distinct(time, t_hat),
-              aes(y = exp(beta * t_hat) * 80),
-              linetype = 2, color = "gray60") +
-    geom_line() +
+    geom_ribbon(data = pred_growth %>% distinct(time, t_hat),
+              aes(ymin = 0, ymax = exp(zeta * t_hat) * mult, y = NULL),
+              linetype = 2, color = NA, fill = "gray80") +
+    geom_line(size = 0.75) +
     geom_text(data = pred_growth %>% 
                   group_by(line) %>%
-                  summarize(time = 20.5, X = tail(X, 1)),
-              aes(label = line), hjust = 0) +
+                  summarize(time = max_t + 0.5, X = tail(X, 1)),
+              aes(label = line), hjust = 0, fontface = "bold", size = 3.5) +
     scale_color_brewer(palette = "Dark2", guide = FALSE) +
-    scale_x_continuous("Time", limits = c(0, 24)) +
-    scale_y_continuous("N", sec.axis = sec_axis(~ ./ 80, name = expression(exp(beta)))) +
+    scale_x_continuous("Time", limits = c(0, max_t + 5)) +
+    scale_y_continuous("N", sec.axis = sec_axis(~ ./ mult, name = expression(exp(zeta)))) +
     NULL
-```
 
+pred_p
+# ggsave("~/Desktop/pred_plot.pdf", pred_p, width = 6, height = 6)
+```
 
