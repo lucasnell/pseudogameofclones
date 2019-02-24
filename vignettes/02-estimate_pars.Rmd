@@ -378,43 +378,41 @@ This value corresponds to the effect of deteriorating plant health through time.
 
 ```{r predictions_byline}
 # Instead of this, make plot of predicted growth through time
-zeta <- rstan::extract(stan_fit, sprintf("zetas[%i]", 1:n_ts)) %>% 
+Z_ <- rstan::extract(stan_fit, sprintf("Z[%i]", 1:n_ts)) %>% 
     sapply(median) %>% 
     mean()
+mu_time <- rstan::extract(stan_fit, "mu_time") %>%
+    sapply(median) %>% set_names(NULL)
 R_ <- rstan::extract(stan_fit, sprintf("R[%i]", 1:8)) %>% 
     sapply(median)
 A_ <- rstan::extract(stan_fit, sprintf("A[%i]", 1:8)) %>% 
     sapply(median)
 
-ricker <- function(t_hats, R, A, X0 = log(6)) {
-    X <- numeric(length(t_hats))
+ricker <- function(time, R, A, X0 = log(6)) {
+    X <- numeric(length(time))
     X[1] <- X0
-    for (t in 2:length(t_hats)) {
-        X[t] <- X[t-1] + R * (1 - A * exp(zeta * t_hats[t] + X[t-1]))
+    for (t in 2:length(time)) {
+        X[t] <- X[t-1] + R * (1 - A * exp(Z_ * (time[t] - mu_time) + X[t-1]))
     }
     return(X)
 }
 
 
-t_mu <- mean(growth$date)
-t_tau <- sd(growth$date)
-
 max_t <- 20
-pred_growth <- data_frame(time = rep(1:max_t, 8),
+pred_growth <- tibble(time = rep(1:max_t, 8),
            line = factor(rep(levels(growth$line), each = max_t)),
            R = rep(R_, each = max_t),
            A = rep(A_, each = max_t)) %>% 
-    mutate(t_hat = (time - t_mu) / t_tau) %>% 
     group_by(line) %>% 
-    mutate(X = ricker(t_hat, R[1], A[1])) %>% 
+    mutate(X = ricker(time, R[1], A[1])) %>% 
     ungroup()
 
-mult <- exp(max(pred_growth$X)) / exp(zeta * max(pred_growth$t_hat))
+mult <- exp(max(pred_growth$X)) / exp(Z_ * (max(pred_growth$time) - mu_time))
 
 pred_p <- pred_growth %>% 
     ggplot(aes(time, exp(X), color = line)) +
-    geom_ribbon(data = pred_growth %>% distinct(time, t_hat),
-              aes(ymin = 0, ymax = exp(zeta * t_hat) * mult, y = NULL),
+    geom_ribbon(data = pred_growth %>% distinct(time),
+              aes(ymin = 0, ymax = exp(Z_ * (time - mu_time)) * mult, y = NULL),
               linetype = 2, color = NA, fill = "gray80") +
     geom_line(size = 0.75) +
     geom_text(data = pred_growth %>% 
@@ -427,6 +425,6 @@ pred_p <- pred_growth %>%
     NULL
 
 pred_p
-# ggsave("~/Desktop/pred_plot.pdf", pred_p, width = 6, height = 6)
+# ggsave("~/Desktop/pred_plot.pdf", pred_p, width = 8, height = 6)
 ```
 

@@ -42,6 +42,8 @@ transformed data {
     vector[n_obs] t_hat; // z-scored time across all time series
     real mu;
     real tau;
+    real mu_t;
+    real tau_t;
     real theta[12] = rep_array(0.0, 12);
 
     for (i in 1:6) theta[(i*2)] = 1;
@@ -54,17 +56,15 @@ transformed data {
     // iterate over each time series
     {
         int t = 1; // starting position in `X` and `X_hat_pred` vectors
-        real mu_;
-        real tau_;
         for (j in 1:n_ts) {
             for (i in 1:n_per[j]) {
                 t_hat[t+i-1] = i;
             }
             t += n_per[j];
         }
-        mu_ = mean(t_hat);
-        tau_ = sd(t_hat);
-        t_hat = (t_hat - mu_) / tau_;
+        mu_t = mean(t_hat);
+        tau_t = sd(t_hat);
+        t_hat = (t_hat - mu_t) / tau_t;
     }
 
 }
@@ -149,13 +149,19 @@ generated quantities {
     vector[n_obs] X_pred;
     vector[n_lines] R;  // growth rate by line
     vector[n_lines] A;  // alpha by line
+    vector[n_ts] Z;     // plant deterioration by plant
     real sigma_epsilon; // SD of process error
+    // Average time length, used for simulations:
+    real mu_time;
 
     X_resid = X_hat - X_hat_pred;
 
     X_pred = X_hat_pred * tau + mu;
     R = exp(rho + sigma_rho * Z_r) * tau;
     A = exp(phi + sigma_phi * Z_alpha);
+    Z = zetas / tau_t;
     sigma_epsilon = sigma_hat_epsilon * tau;
+
+    mu_time = mu_t;
 
 }

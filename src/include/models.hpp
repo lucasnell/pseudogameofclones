@@ -1054,7 +1054,7 @@ static int current_statement_begin__;
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
     reader.add_event(0, 0, "start", "model_full_model_plant_death");
-    reader.add_event(163, 161, "end", "model_full_model_plant_death");
+    reader.add_event(169, 167, "end", "model_full_model_plant_death");
     return reader;
 }
 
@@ -1129,6 +1129,8 @@ private:
     vector_d t_hat;
     double mu;
     double tau;
+    double mu_t;
+    double tau_t;
     vector<double> theta;
 public:
     model_full_model_plant_death(stan::io::var_context& context__,
@@ -1235,6 +1237,10 @@ public:
             stan::math::fill(mu,DUMMY_VAR__);
             tau = double(0);
             stan::math::fill(tau,DUMMY_VAR__);
+            mu_t = double(0);
+            stan::math::fill(mu_t,DUMMY_VAR__);
+            tau_t = double(0);
+            stan::math::fill(tau_t,DUMMY_VAR__);
             validate_non_negative_index("theta", "12", 12);
             theta = std::vector<double>(12,double(0));
             stan::math::fill(theta,DUMMY_VAR__);
@@ -1255,16 +1261,6 @@ public:
 
             stan::math::fill(t, std::numeric_limits<int>::min());
             stan::math::assign(t,1);
-            local_scalar_t__ mu_;
-            (void) mu_;  // dummy to suppress unused var warning
-
-            stan::math::initialize(mu_, DUMMY_VAR__);
-            stan::math::fill(mu_,DUMMY_VAR__);
-            local_scalar_t__ tau_;
-            (void) tau_;  // dummy to suppress unused var warning
-
-            stan::math::initialize(tau_, DUMMY_VAR__);
-            stan::math::fill(tau_,DUMMY_VAR__);
 
 
             for (int j = 1; j <= n_ts; ++j) {
@@ -1278,9 +1274,9 @@ public:
                 }
                 stan::math::assign(t, (t + get_base1(n_per,j,"n_per",1)));
             }
-            stan::math::assign(mu_, mean(t_hat));
-            stan::math::assign(tau_, sd(t_hat));
-            stan::math::assign(t_hat, stan::model::deep_copy(divide(subtract(t_hat,mu_),tau_)));
+            stan::math::assign(mu_t, mean(t_hat));
+            stan::math::assign(tau_t, sd(t_hat));
+            stan::math::assign(t_hat, stan::model::deep_copy(divide(subtract(t_hat,mu_t),tau_t)));
             }
 
             // validate transformed data
@@ -1670,7 +1666,9 @@ public:
         names__.push_back("X_pred");
         names__.push_back("R");
         names__.push_back("A");
+        names__.push_back("Z");
         names__.push_back("sigma_epsilon");
+        names__.push_back("mu_time");
     }
 
 
@@ -1710,6 +1708,11 @@ public:
         dimss__.push_back(dims__);
         dims__.resize(0);
         dims__.push_back(n_lines);
+        dimss__.push_back(dims__);
+        dims__.resize(0);
+        dims__.push_back(n_ts);
+        dimss__.push_back(dims__);
+        dims__.resize(0);
         dimss__.push_back(dims__);
         dims__.resize(0);
         dimss__.push_back(dims__);
@@ -1848,18 +1851,31 @@ public:
 
             stan::math::initialize(A, DUMMY_VAR__);
             stan::math::fill(A,DUMMY_VAR__);
+            validate_non_negative_index("Z", "n_ts", n_ts);
+            Eigen::Matrix<local_scalar_t__,Eigen::Dynamic,1>  Z(static_cast<Eigen::VectorXd::Index>(n_ts));
+            (void) Z;  // dummy to suppress unused var warning
+
+            stan::math::initialize(Z, DUMMY_VAR__);
+            stan::math::fill(Z,DUMMY_VAR__);
             local_scalar_t__ sigma_epsilon;
             (void) sigma_epsilon;  // dummy to suppress unused var warning
 
             stan::math::initialize(sigma_epsilon, DUMMY_VAR__);
             stan::math::fill(sigma_epsilon,DUMMY_VAR__);
+            local_scalar_t__ mu_time;
+            (void) mu_time;  // dummy to suppress unused var warning
+
+            stan::math::initialize(mu_time, DUMMY_VAR__);
+            stan::math::fill(mu_time,DUMMY_VAR__);
 
 
             stan::math::assign(X_resid, subtract(X_hat,X_hat_pred));
             stan::math::assign(X_pred, add(multiply(X_hat_pred,tau),mu));
             stan::math::assign(R, multiply(stan::math::exp(add(rho,multiply(sigma_rho,Z_r))),tau));
             stan::math::assign(A, stan::math::exp(add(phi,multiply(sigma_phi,Z_alpha))));
+            stan::math::assign(Z, divide(zetas,tau_t));
             stan::math::assign(sigma_epsilon, (sigma_hat_epsilon * tau));
+            stan::math::assign(mu_time, mu_t);
 
             // validate generated quantities
 
@@ -1876,7 +1892,11 @@ public:
             for (int k_0__ = 0; k_0__ < n_lines; ++k_0__) {
             vars__.push_back(A[k_0__]);
             }
+            for (int k_0__ = 0; k_0__ < n_ts; ++k_0__) {
+            vars__.push_back(Z[k_0__]);
+            }
         vars__.push_back(sigma_epsilon);
+        vars__.push_back(mu_time);
 
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
@@ -1975,8 +1995,16 @@ public:
             param_name_stream__ << "A" << '.' << k_0__;
             param_names__.push_back(param_name_stream__.str());
         }
+        for (int k_0__ = 1; k_0__ <= n_ts; ++k_0__) {
+            param_name_stream__.str(std::string());
+            param_name_stream__ << "Z" << '.' << k_0__;
+            param_names__.push_back(param_name_stream__.str());
+        }
         param_name_stream__.str(std::string());
         param_name_stream__ << "sigma_epsilon";
+        param_names__.push_back(param_name_stream__.str());
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "mu_time";
         param_names__.push_back(param_name_stream__.str());
     }
 
@@ -2048,8 +2076,16 @@ public:
             param_name_stream__ << "A" << '.' << k_0__;
             param_names__.push_back(param_name_stream__.str());
         }
+        for (int k_0__ = 1; k_0__ <= n_ts; ++k_0__) {
+            param_name_stream__.str(std::string());
+            param_name_stream__ << "Z" << '.' << k_0__;
+            param_names__.push_back(param_name_stream__.str());
+        }
         param_name_stream__.str(std::string());
         param_name_stream__ << "sigma_epsilon";
+        param_names__.push_back(param_name_stream__.str());
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "mu_time";
         param_names__.push_back(param_name_stream__.str());
     }
 
