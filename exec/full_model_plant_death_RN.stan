@@ -10,6 +10,9 @@
  This version differs from other *_plant_death stan file in that the effect of plant
  deterioration happens to r rather than alpha
 
+ This version differs from other *_plant_death_R stan file in that the effect of plant
+ deterioration happens as a function of cumulative X than zeta * t
+
  */
 
 functions {
@@ -42,7 +45,8 @@ data {
 transformed data {
 
     vector[n_obs] X_hat;
-    vector[n_obs] t_hat; // z-scored time across all time series
+    vector[n_obs] X_tilde;  // cumulative X over time series
+    vector[n_obs] t_hat;    // z-scored time across all time series
     real mu;
     real tau;
     real theta[12] = rep_array(0.0, 12);
@@ -60,8 +64,10 @@ transformed data {
         real mu_;
         real tau_;
         for (j in 1:n_ts) {
+            X_tilde[t] = X[t];
             for (i in 1:n_per[j]) {
                 t_hat[t+i-1] = i;
+                if (i > 1) X_tilde[t+i-1] = X_tilde[t+i-2] + X[t+i-1];
             }
             t += n_per[j];
         }
@@ -100,8 +106,8 @@ transformed parameters {
             int n_ = n_per[j];
             int end = start + n_ - 1;
             // growth rate (r) times effect of plant health for this time series:
-            vector[(n_-1)] r_hat = exp(rho + sigma_rho * Z_r[L[j]]) -
-                    exp(zetas[j] * t_hat[(start+1):end]);
+            vector[(n_-1)] r_hat = exp(rho + sigma_rho * Z_r[L[j]] -
+                    zetas[j] * X_tilde[(start+1):end]);
             // density dependence (alpha_hat) for this time series:
             real alpha_hat = exp(phi + sigma_phi * Z_alpha[L[j]]);
             // filling in predicted X_t+1 based on X_t:
