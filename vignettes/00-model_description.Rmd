@@ -68,23 +68,6 @@ and
 $\varepsilon$ is process error.
 
 
-> ALTERNATIVE VERSION
-
-$$
-X_{t+1} = X_t + (r - \text{e}^{\zeta t}) \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon
-\text{ ,}
-$$
-
-> ALTERNATIVE VERSION \#2
-
-$$
-\begin{align}
-X_{t+1} &= X_t + \text{e}^{ \zeta ~ \tilde{X}_t } ~ r \left( 1 - \alpha ~ \text{e}^{X_t} \right) + \varepsilon \\
-\tilde{X}_t &\equiv \sum_{i=0}^{t}{X_i}
-\text{ ,}
-\end{align}
-$$
-
 
 
 ## Structure of estimates from the model
