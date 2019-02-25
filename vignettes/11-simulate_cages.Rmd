@@ -51,7 +51,7 @@ growth <-
 ## Load stan fit data
 
 ```{r load_stan_fit_data}
-stan_fit <- read_rds("data-raw/stan_fit.rds")
+stan_fit <- read_rds("inst/extdata/stan_fit.rds")
 ```
 
 

@@ -22,7 +22,7 @@ sim_env <- new.env()
 
 with(sim_env, {
 
-    stan_fit <- readr::read_rds("data-raw/stan_fit.rds")
+    stan_fit <- readr::read_rds("inst/extdata/stan_fit.rds")
 
     line_names <-
         clonewars::load_data() %>%

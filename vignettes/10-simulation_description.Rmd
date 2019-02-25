@@ -34,10 +34,7 @@ This document outlines the structure of the simulations.
 Below is the model I'm simulating, for a given line and plant:
 
 $$
-\begin{align}
-    N_{t+1} &= N_{t} ~ \text{e}^ {\rho + \varepsilon} + I - E \\
-    \varepsilon &\sim \text{N}(0,\sigma^2_p) \\
-\end{align}
+    N_{t+1} &= N_{t} ~ \text{e}^ {\rho + \varepsilon} + I - E
 $$
 
 where... 
@@ -45,27 +42,21 @@ where...
 - $t$ indexes across time
 - $N$ is aphid counts
 - $\rho$ is the overall growth rate
-- $\varepsilon$ is process error
+- $\varepsilon$ is process error ($\varepsilon \sim \text{N}(0,\sigma^2_p)$)
 - $I$ is the number of immigrants
 - $E$ is the number of emigrants
-- $\sigma_p$ is the standard deviation of the process error
 
 
-The growth rate is determined by whether or not the plant is currently dying,
-by population growth rate for a given line, and by the abundances and density dependences
-of all lines on the focal plant:
+The growth rate is determined by
+(1\) the population growth rate for the focal line,
+(2\) abundances and density dependences of all lines on the focal plant, and
+(3\) plant-health deterioration as determined by plant age.
+
 
 $$
 \begin{align}
-    \rho_{ijt} &=
-        \begin{cases}
-            r_j \left( 1 - \alpha_j ~ Z_{it} \right), & \text{if}\ t < \gamma \\
-            \log(m(t,\gamma)), & \text{otherwise} \\
-        \end{cases} \\
-    Z_{it} &= \sum^{n_l}_{j=1}{N_{ijt}} \\
-    m(t,\gamma) &= \text{logit}^{-1}\left(  \beta_{0} + \beta_{1} ~ ( t - \gamma )
-        \right) \\
-    \gamma &\sim \text{N}(\mu_\gamma, \sigma^2_\gamma)
+    \rho_{ijt} &= r_j ~ (1 - \alpha_j ~ Z_{it} ~ \exp\{\zeta_i ~ L_{it}\}) \\[1ex]
+    Z_{it} &= \frac{1}{\text{mean}(\alpha)} \sum_{j=1}^{n_l}{\alpha_j N_{ijt}} \\
 \end{align}
 $$
 
@@ -75,15 +66,10 @@ where...
 - $j$ indexes across aphid lines
 - $r$ is the aphid line's growth rate
 - $\alpha$ is the aphid line's density dependence
-- $\gamma$ is the time at which a plant begins to die
-- $m(t,\gamma)$ is the mortality rate caused by plant death, based on the number of days
-  after it's started dying
+- $Z$ is scaled population abundance among all lines on plant $i$
+- $\zeta$ indicates the speed at which plant health deteriorates
+- $L$ is the age of the plant in days
 - $n_l$ is the number of aphid lines
-- $\beta_0$ and $\beta_1$ are the coefficients for the regression of the
-  logit-transformed mortality rate on time since plant-death started
-- $\mu_\gamma$ and $\sigma_\gamma$ are the mean and standard deviation of the
-  distribution of the times at which plants begin to die
-
 
 
 A Poisson distribution produces the numbers of aphids of line $j$ that
@@ -97,8 +83,9 @@ $$
 \end{align}
 $$
 
-where $\delta_j$ is estimated from a Poisson GLM.
-Note also that $d_{(i \rightarrow i)jt}$ is left at zero because dispersing back to
+where $\delta_j$ is estimated from a Poisson GLM,
+and $n_p$ is the number of plants.
+Note also that $d_{(i \rightarrow i)jt}$ is zero because dispersing back to
 the same plant causes no net change.
 
 I used these numbers to create two $n_l$ by $n_p$ matrices,
@@ -118,9 +105,10 @@ $$
 
 ## Plant replacement
 
-Plant replacements are simulated by dispersing all aphids from replaced plants to
-non-replaced plants.
-Replaced plants are started at zero for all lines.
+Plant replacements are simulated by killing all aphids on the replaced plant
+when time is equal to one of the provided replacement time points.
+Replaced plants are started at zero for all lines, and ages of plants are reset after
+replacement.
 
 ## Extinction
 
@@ -129,4 +117,43 @@ Any time $N_{ij} < \omega$, $N_{ij}$ is set to zero and listed as extinct.
 $N_{ij}$ is ignored until an aphid of line $j$ immigrates to plant $i$.
 Increasing $\omega$ to $>1$ could be reasonable given that many---perhaps
 most---dispersers die.
+
+
+
+
+```{r}
+Rcpp::sourceCpp(code = 
+"
+#include <Rcpp.h>
+#include <iostream>
+#include <random>
+
+//[[Rcpp::export]]
+uint_fast32_t foo(uint_fast32_t max_t, uint_fast32_t save_every) {
+    
+    uint_fast32_t n_steps = (max_t / save_every) + 1;
+    if (max_t % save_every > 0) n_steps++;
+
+    return n_steps;
+}
+
+//[[Rcpp::export]]
+uint_fast32_t foo2(uint_fast32_t max_t, uint_fast32_t save_every) {
+    
+    uint_fast32_t n_steps = 1;
+    for (uint_fast32_t t = 0; t < max_t; t++) {
+        if ((t+1) % save_every != 0 && (t+1) != max_t) continue;
+        n_steps++;
+    }
+
+    return n_steps;
+}
+")
+
+identical(
+    sapply(2:2077, foo2, save_every = 177),
+    sapply(2:2077, foo, save_every = 177)
+)
+
+```
 

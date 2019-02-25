@@ -114,10 +114,10 @@ stan_fit <- fit_lines(growth, model_name = "full_model_plant_death",
                       seed = 1337925041)
 ```
 ```{r write_model, eval = FALSE, echo = FALSE}
-write_rds(stan_fit, "data-raw/stan_fit.rds")
+write_rds(stan_fit, "inst/extdata/stan_fit.rds")
 ```
 ```{r read_model, eval = TRUE, echo = FALSE}
-stan_fit <- read_rds("data-raw/stan_fit.rds")
+stan_fit <- read_rds("inst/extdata/stan_fit.rds")
 ```
 ```{r model_posterior_preds, echo = FALSE}
 posterior <- as.array(stan_fit)
