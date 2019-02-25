@@ -124,7 +124,8 @@ struct OnePatch {
     // Check to see if this patch will be replaced for a given threshold
     void replace_check(const double& repl_threshold,
                        const double& zeta_t_thresh,
-                       std::vector<uint32>& repl_inds);
+                       std::vector<uint32>& repl_inds,
+                       double& not_replaced_Z);
 
     /*
      Iterate one time step

@@ -143,11 +143,12 @@ arma::vec OnePatch::emigration(const uint32& j, const arma::mat& D_vec) {
 // Check to see if this patch will be replaced for a given threshold
 void OnePatch::replace_check(const double& repl_threshold,
                              const double& zeta_t_thresh,
-                             std::vector<uint32>& repl_inds) {
+                             std::vector<uint32>& repl_inds,
+                             double& not_replaced_Z) {
     // if (Z > repl_threshold || (empty && age > 0) || (zeta_t > zeta_t_thresh)) {
     if (Z > repl_threshold || (zeta_t > zeta_t_thresh)) {
         repl_inds.push_back(this->i);
-    }
+    } else not_replaced_Z += Z;
     return;
 }
 
@@ -305,18 +306,29 @@ void AllPatches::replace_patches(const uint32& t, pcg32& eng) {
     */
     std::vector<uint32> replaced;
     replaced.reserve(n_patches);
+    double not_replaced_Z = 0;  // total aphids in non-replaced patches
     for (uint32 i = 0; i < n_patches; i++) {
-        patches[i].replace_check(repl_threshold, zeta_t_thresh, replaced);
+        patches[i].replace_check(repl_threshold, zeta_t_thresh, replaced, not_replaced_Z);
     }
 
     // If none to replace, then continue
     if (replaced.size() == 0) return;
 
     /*
-    In the rare event that all patches need replaced, just the first half of
-    patches will be replaced instead:
+     In the rare event that replacement will cause extinction, use half the indices.
+     If it still causes extinction, remove indices until it does no longer:
     */
-    if (replaced.size() == n_patches) replaced.resize(n_patches / 2);
+    if (not_replaced_Z == 0) {
+        uint32 new_size = replaced.size() / 2;
+        while (replaced.size() > new_size) {
+            not_replaced_Z += patches[replaced.back()].Z;
+            replaced.pop_back();
+        }
+    }
+    // while (not_replaced_Z == 0 && !replaced.empty()) {
+    //     not_replaced_Z += patches[replaced.back()].Z;
+    //     replaced.pop_back();
+    // }
 
     for (uint32& ii : replaced) {
         patches[ii].clear(zeta_distr.sample(eng));
