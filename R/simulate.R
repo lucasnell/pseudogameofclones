@@ -12,13 +12,17 @@
 #'     or a matrix if you want to specify everything.
 #' @param R Growth rates for each line.
 #' @param A Density dependence for each line.
-#' @param D_vec
+#' @param D_vec Vector of `b0` values, where the predicted number of dispersed aphids is
+#'     given by `exp(b0) * N` when `N` is the number of total aphids.
 #' @param process_error SD of process error. Set to 0 for no process error.
 #' @param disp_error Boolean for whether to include dispersal stochasticity.
 #' @param log_zeta_mean Mean of the distribution of log(zeta) values.
 #' @param log_zeta_sd SD of the distribution of log(zeta) values.
+#' @param zeta_t_thresh Threshold for `exp(zeta * (t - mu_time))` that makes that
+#'     patch get replaced. This is equivalent to the threshold for patch "health"
+#'     that would make an experimenter replace it.
 #' @param mu_time Mean of time values.
-#' @param repl_times Vector of times at which to replace plants.
+#' @param repl_times Vector of times at which to replace patches.
 #' @param repl_threshold Threshold above which patches are replaced.
 #' @param extinct_N Threshold below which a line is considered extinct.
 #' @param save_every Abundances will be stored every `save_every` time points.
@@ -61,53 +65,33 @@ sim_reps <- function(n_reps,
                      show_progress = FALSE,
                      line_names = NULL) {
 
-    stan_fit <- system.file("extdata", "stan_fit.rds", package = "clonewars",
-                            mustWork = TRUE)
-    stan_fit <- readRDS(stan_fit)
-
-    if (is.null(R)) {
-        R <- apply(rstan::extract(stan_fit, "R", permuted = FALSE), 3, median)
-    }
-    if (is.null(A)) {
-        A <- apply(rstan::extract(stan_fit, "A", permuted = FALSE), 3, median)
-    }
+    if (is.null(R)) R <- stan_estimates$R
+    if (is.null(A)) A <- stan_estimates$A
     n_lines <- length(A)
-    if (is.null(N0)) {
-        N0 <- matrix(1, n_patches, n_lines)
-    } else if (is.numeric(N0)) {
-        if (length(N0) != 1) stop("N0 must be a matrix or length-1 vector")
+    if (is.null(N0)) N0 <- matrix(1, n_patches, n_lines)
+    if (inherits(N0, "numeric") || inherits(N0, "integer")) {
+        if (length(N0) != 1) stop("N0 must be a matrix or length-1 numeric vector")
         N0 <- matrix(N0, n_patches, n_lines)
     }
-    if (is.null(D_vec)) {
-        D_vec <- disp_estimates$b0
-    }
-    if (is.null(process_error)) {
-        process_error <- median(rstan::extract(stan_fit, "sigma_epsilon", permuted = FALSE))
-    }
-    if (is.null(disp_error)) {
-        disp_error <- TRUE
-    }
-    if (is.null(log_zeta_mean) || is.null(log_zeta_sd)) {
-        logZ <- log(apply(rstan::extract(stan_fit, "Z", permuted = FALSE), 3, median))
-        if (is.null(log_zeta_mean)) log_zeta_mean <- mean(logZ)
-        if (is.null(log_zeta_sd)) log_zeta_sd <- sd(logZ)
-    }
-    if (is.null(mu_time)) {
-        # all estimates are the same, so we can just take the first one:
-        mu_time <- rstan::extract(stan_fit, "mu_time")[[1]][[1]]
-    }
+    if (is.null(D_vec)) D_vec <- disp_estimates$b0
+    if (is.null(process_error)) process_error <- stan_estimates$process_error
+    if (is.null(disp_error)) disp_error <- TRUE
+    if (is.null(log_zeta_mean)) log_zeta_mean <- stan_estimates$log_zeta_mean
+    if (is.null(log_zeta_sd)) log_zeta_sd <- stan_estimates$log_zeta_sd
+    if (is.null(mu_time)) mu_time <- stan_estimates$mu_time
     if (is.null(repl_times)) repl_times <- as.integer(max_t + 100)
+    if (is.null(line_names)) line_names <- stan_estimates$names
+    if (length(R) != n_lines) stop("\nlength(R) != length(A).")
+    if (ncol(N0) != n_lines) stop("\nncol(N0) != length(A).")
+    if (length(D_vec) != n_lines) stop("\nlength(D_vec) != length(A).")
+    if (!by_patch && length(line_names) != n_lines) {
+        stop("\nlength(line_names) != length(A).")
+    }
 
     D_vec <- cbind(D_vec)
     D_vec <- exp(D_vec)
 
-    if (is.null(line_names)) {
-        line_names <- clonewars::load_data() %>%
-            .[["line"]] %>%
-            levels()
-    }
-
-    sims <- clonewars:::sim_reps_(n_reps = n_reps,
+    sims <- sim_reps_(n_reps = n_reps,
                       max_t = max_t,
                       N0 = N0,
                       R = R,
@@ -132,6 +116,7 @@ sim_reps <- function(n_reps,
 
     if (!by_patch) {
         colnames(sims) <- c("rep", "time", "patch", "line", "N")
+        sims$line <- factor(sims$line, levels = 0:(n_lines-1), labels = line_names)
     } else colnames(sims) <- c("rep", "time", "patch", "N")
 
     return(sims)

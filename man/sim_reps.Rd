@@ -4,15 +4,17 @@
 \alias{sim_reps}
 \title{Simulate multiple reps and simplify output.}
 \usage{
-sim_reps(n_reps, max_t = 1000, N0 = NULL, R = NULL, A = NULL,
-  D_vec = NULL, process_error = NULL, disp_error = TRUE,
-  log_zeta_mean = NULL, log_zeta_sd = NULL, mu_time = NULL,
-  repl_times = NULL, repl_threshold = 500, extinct_N = 1e-04,
-  save_every = max_t\%/\%100, by_patch = FALSE, n_cores = 1,
-  show_progress = FALSE, line_names = NULL)
+sim_reps(n_reps, n_patches = 8, max_t = 1000, N0 = NULL, R = NULL,
+  A = NULL, D_vec = NULL, process_error = NULL, disp_error = TRUE,
+  log_zeta_mean = NULL, log_zeta_sd = NULL, zeta_t_thresh = 20,
+  mu_time = NULL, repl_times = NULL, repl_threshold = 500,
+  extinct_N = 1e-04, save_every = max_t\%/\%100, by_patch = FALSE,
+  n_cores = 1, show_progress = FALSE, line_names = NULL)
 }
 \arguments{
 \item{n_reps}{Number of reps to simulate.}
+
+\item{n_patches}{Number of patches to simulate.}
 
 \item{max_t}{Max time points to simulate for each rep.}
 
@@ -20,36 +22,44 @@ sim_reps(n_reps, max_t = 1000, N0 = NULL, R = NULL, A = NULL,
 
 \item{A}{Density dependence for each line.}
 
-\item{process_error}{SD of process error.}
+\item{D_vec}{Vector of \code{b0} values, where the predicted number of dispersed aphids is
+given by \code{exp(b0) * N} when \code{N} is the number of total aphids.}
 
-\item{repl_times}{Vector of dates on which to replace plants. Use 0-based indexing!}
+\item{process_error}{SD of process error. Set to 0 for no process error.}
+
+\item{disp_error}{Boolean for whether to include dispersal stochasticity.}
+
+\item{log_zeta_mean}{Mean of the distribution of log(zeta) values.}
+
+\item{log_zeta_sd}{SD of the distribution of log(zeta) values.}
+
+\item{zeta_t_thresh}{Threshold for \code{exp(zeta * (t - mu_time))} that makes that
+patch get replaced. This is equivalent to the threshold for patch "health"
+that would make an experimenter replace it.}
+
+\item{mu_time}{Mean of time values.}
+
+\item{repl_times}{Vector of times at which to replace patches.}
+
+\item{repl_threshold}{Threshold above which patches are replaced.}
+
+\item{extinct_N}{Threshold below which a line is considered extinct.}
+
+\item{save_every}{Abundances will be stored every \code{save_every} time points.}
+
+\item{by_patch}{Logical for whether to summarize abundances by patch, rather
+than separately by line and patch.}
 
 \item{n_cores}{Number of cores to use. Defaults to \code{1}.}
 
 \item{show_progress}{Boolean for whether to show progress bar. Defaults to
 \code{FALSE}.}
 
-\item{N_0}{Starting abundances for each aphid line on each plant.}
+\item{line_names}{Vector of names to assign to lines.}
 
-\item{D_binom}{Data frame containing intercept and coefficient estimates for
-binomial GLM of \code{<whether dispersal > 0> ~ N_t + N_t^2}.
-There should be one set of estimates for each line regardless of whether the model
-estimated separate values for each line.}
-
-\item{D_nb}{Data frame containing intercept and overdispersion estimates for
-negative binomial GLM of \code{<# dispersed | dispersal occurs> ~ 1}.
-There should be one set of estimates for each line regardless of whether the model
-estimated separate values for each line.}
-
-\item{plant_mort_0}{Intercept for plant-death-induced aphid mortality, one per line.}
-
-\item{plant_mort_1}{Coefficient for plant-death-induced aphid mortality, one per line.}
-
-\item{plant_death_age_mean}{Mean of distribution of plant-death ages.}
-
-\item{plant_death_age_sd}{SD of distribution of plant-death ages.}
-
-\item{repl_age}{Number of days past death when a plant will be replaced.}
+\item{N_0}{Starting abundances for each aphid line on each patch.
+Can be a single number if you want the same value for each line on each patch,
+or a matrix if you want to specify everything.}
 }
 \description{
 Simulate multiple reps and simplify output.
