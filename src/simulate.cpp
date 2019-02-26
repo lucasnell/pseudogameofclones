@@ -502,8 +502,10 @@ arma::mat sim_reps_(const uint32& n_reps,
     if (err_msg.size() > 0) throw(Rcpp::exception(err_msg.c_str(), false));
 
 
+    if (show_progress) Rcout << "Starting simulations..." << std::endl;
 
     Progress p(n_reps, show_progress);
+
 
     /*
      --------------
@@ -512,20 +514,20 @@ arma::mat sim_reps_(const uint32& n_reps,
      */
     arma::mat out_matrix(n_reps * rep_rows, rep_cols);
 
-    // #ifdef _OPENMP
-    // #pragma omp parallel default(shared) num_threads(n_cores) if(n_cores > 1)
-    // {
-    // #endif
+    #ifdef _OPENMP
+    #pragma omp parallel default(shared) num_threads(n_cores) if(n_cores > 1)
+    {
+    #endif
 
     std::vector<uint64> active_seeds;
 
     // Write the active seed per core or just write one of the seeds.
-    // #ifdef _OPENMP
-    // uint32 active_thread = omp_get_thread_num();
-    // active_seeds = seeds[active_thread];
-    // #else
+    #ifdef _OPENMP
+    uint32 active_thread = omp_get_thread_num();
+    active_seeds = seeds[active_thread];
+    #else
     active_seeds = seeds[0];
-    // #endif
+    #endif
 
     // pcg prng
     pcg32 eng = seeded_pcg(active_seeds);
@@ -534,10 +536,10 @@ arma::mat sim_reps_(const uint32& n_reps,
                        log_zeta_mean, log_zeta_sd, zeta_t_thresh, mu_time, repl_times,
                        repl_threshold, extinct_N, save_every, by_patch, 0.0, eng);
 
-    // // Parallelize the Loop
-    // #ifdef _OPENMP
-    // #pragma omp for schedule(static)
-    // #endif
+    // Parallelize the Loop
+    #ifdef _OPENMP
+    #pragma omp for schedule(static)
+    #endif
     for (uint32 r = 0; r < n_reps; r++) {
         if (p.is_aborted()) continue;
 
@@ -547,9 +549,11 @@ arma::mat sim_reps_(const uint32& n_reps,
         p.increment();
     }
 
-    // #ifdef _OPENMP
-    // }
-    // #endif
+    #ifdef _OPENMP
+    }
+    #endif
+
+    if (show_progress) Rcout << "... finished!" << std::endl;
 
 
     return out_matrix;
