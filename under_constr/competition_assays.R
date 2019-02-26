@@ -1,6 +1,6 @@
 
 
-library(tidyverse)
+library(clonewars)
 library(readxl)
 
 
@@ -52,11 +52,14 @@ comp_df %>%
     ggplot(aes(date)) +
     # geom_line(aes(y = total_green, linetype = factor(rep))) +
     # geom_line(aes(y = total_red, linetype = factor(rep)), color = "red") +
-    geom_hline(yintercept = 0, linetype = 3, color = "gray80") +
+    geom_hline(yintercept = 0, linetype = 2, color = "gray70") +
     geom_line(aes(y = diff_z, group = factor(rep)), color = "gray50") +
     geom_point(aes(y = diff_z, color = diff_z), shape = 16) +
-    facet_grid(green ~ red, labeller = label_both) +
-    theme_classic() +
-    # scale_color_brewer(palette = "Dark2") +
-    scale_color_gradient2(low = "#d95f02", high = "#1b9e77", mid = "gray80", midpoint = 0)
+    facet_grid(green ~ red) + #, labeller = label_both) +
+    scale_color_gradient2(low = "#d95f02", high = "#1b9e77", mid = "gray80",
+                          midpoint = 0, guide = FALSE) +
+    scale_y_continuous("Scaled difference in N", breaks = c(-2, 0, 2)) +
+    scale_x_continuous("Date", breaks = seq(0, 30, 10)) +
+    theme(strip.text = element_text(size = 10))
+
 
