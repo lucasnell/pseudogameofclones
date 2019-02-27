@@ -10,6 +10,7 @@ source(".Rprofile")
 
 # Calculate growth rate
 get_r <- function(.df) {
+    .df <- .df[(which(.df$N > 20)[1]):nrow(.df),]
     pcg <- .df$X[-1] - lag(.df$X)[-1] # per-capita growth
     n_t <- 4 # number of time steps to take average by
     if (length(pcg) < 4) return(NULL)
@@ -35,16 +36,16 @@ A <- load_data(filter_pars = NULL, remove_unfinished = FALSE) %>%
     mutate(k = 1 / a)
 
 
-library(lme4)
-
-lmer(r ~ (1 | line), R, REML = FALSE) %>% AIC()
-lm(r ~ 1, R) %>% AIC()
-
-lmer(a ~ (1 | line), A, REML = FALSE) %>% AIC()
-lm(a ~ 1, A) %>% AIC()
-
-lmer(k ~ (1 | line), A, REML = FALSE, control = lmerControl(optimizer = "bobyqa")) %>% AIC()
-lm(k ~ 1, A) %>% AIC()
+# library(lme4)
+#
+# lmer(r ~ (1 | line), R, REML = FALSE) %>% AIC()
+# lm(r ~ 1, R) %>% AIC()
+#
+# lmer(a ~ (1 | line), A, REML = FALSE) %>% AIC()
+# lm(a ~ 1, A) %>% AIC()
+#
+# lmer(k ~ (1 | line), A, REML = FALSE, control = lmerControl(optimizer = "bobyqa")) %>% AIC()
+# lm(k ~ 1, A) %>% AIC()
 
 
 
@@ -71,3 +72,124 @@ A_plot
 
 ggsave("~/Desktop/simple_R.pdf", R_plot, width = 4, height = 4)
 ggsave("~/Desktop/simple_A.pdf", A_plot, width = 4, height = 4)
+
+
+
+# ======================================================================================
+# ======================================================================================
+
+#           Simulations using these numbers
+
+# ======================================================================================
+# ======================================================================================
+
+
+
+
+suppressPackageStartupMessages({
+    library(clonewars)
+})
+source(".Rprofile")
+
+R_byline <- R %>% group_by(line) %>% summarize(Rm = mean(r))
+
+R_byline %>%
+    mutate(line = factor(line, levels = line[order(Rm)])) %>%
+    ggplot() +
+    geom_segment(aes(line, min(Rm), xend = line, yend = Rm)) +
+    geom_point(aes(line, Rm, color = line)) +
+    ylab("Growth rate") +
+    coord_flip() +
+    theme(axis.title.y = element_blank(),
+          axis.text.y = element_blank()) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE, direction = -1)
+
+
+
+set.seed(78123456)
+sim_df <- sim_reps(n_reps = 100, max_t = 500, save_every = 1, N0 = 6,
+         n_patches = 8,
+         R = R %>% group_by(line) %>% summarize(Rm = mean(r)) %>% .[["Rm"]],
+         A = A %>% group_by(line) %>% summarize(Am = mean(a)) %>% .[["Am"]] %>%
+             mean() %>% rep(8),
+         D_vec = rep(mean(disp_estimates$b0), 8),
+         repl_times = seq(3, 1000, 3),
+         repl_threshold = 10e3,
+         zeta_t_thresh = 20,
+         # log_zeta_sd = 0, process_error = FALSE, disp_error = FALSE,
+         n_cores = 4) %>%  # ,
+    # process_error = 0, disp_error = FALSE,
+    # log_zeta_sd = 0, extinct_N = 0) %>%
+    mutate_at(vars(rep, patch), factor) %>%
+    identity() %>%
+    # filter(rep %in% 0:15) %>%
+    group_by(rep, time, line) %>%
+    summarize(N = sum(N)) %>%
+    group_by(rep, time) %>%
+    mutate(prop = N / sum(N),
+           lower_prop = c(0, cumsum(prop)[-n()]),
+           upper_prop = cumsum(prop)) %>%
+    ungroup() %>%
+    mutate(line = factor(line, levels = rev(paste(R_byline$line[order(R_byline$Rm)]))))
+
+
+# Deterministic plot:
+# sim_df %>%
+#     filter(rep == 0) %>%
+#     ggplot(aes(time, N)) +
+#     # geom_ribbon(aes(y = NULL, ymin = lower_prop, ymax = upper_prop, fill = line)) +
+#     geom_line(aes(color = line), size = 0.5) +
+#     # geom_line(aes(color = patch)) +
+#     # facet_wrap( ~ rep, nrow = 10) +
+#     # facet_wrap( ~ patch, nrow = 2) +
+#     # theme(legend.position = "none") +
+#     theme(strip.text = element_blank()) +
+#     scale_color_brewer(palette = "Dark2") +
+#     scale_fill_brewer(palette = "Dark2") +
+#     theme(axis.text = element_blank(), axis.ticks = element_blank()) +
+#     guides(color = guide_legend(override.aes = list(size = 1)))
+
+
+
+sim_df %>%
+    ggplot(aes(time, N)) +
+    geom_vline(xintercept = 365, linetype = 2) +
+    geom_line(aes(color = line), size = 0.3) +
+    facet_wrap(~ rep, nrow = 10) +
+    scale_color_brewer(palette = "Dark2") +
+    theme(strip.text = element_blank()) +
+    theme(axis.title = element_blank(),
+          axis.text = element_blank(),
+          axis.ticks = element_blank()) +
+    guides(color = guide_legend(override.aes = list(size = 1)))
+
+sim_df %>%
+    filter(time == max(time)) %>%
+    group_by(line) %>%
+    summarize(N = sum(N > 0)) %>%
+    ungroup() %>%
+    mutate(line = factor(line, levels = paste(R_byline$line[order(R_byline$Rm)]))) %>%
+    ggplot(aes(line, N)) +
+    geom_segment(aes(xend = line, yend = 0)) +
+    geom_point(data = R_byline %>%
+                   mutate(Rm = ((Rm - mean(Rm)) / (sd(Rm) / 6)) + 12),
+              aes(line, Rm), shape = 1) +
+    geom_point(aes(color = line)) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE, direction = -1) +
+    coord_flip() +
+    theme(axis.title.y = element_blank(),
+          axis.text.y = element_text(size = 11)) +
+    ylab("Number of times won (out of 100)")
+#
+
+
+
+
+sim_df %>%
+    group_by(rep, time) %>%
+    summarize(nlines = sum(N>0)) %>%
+    group_by(rep) %>%
+    summarize(tl = time[nlines == tail(nlines, 1)][1]) %>%
+    ggplot(aes(tl)) +
+    geom_histogram(bins = 25, fill = "dodgerblue") +
+    xlab("Time to final line number")
