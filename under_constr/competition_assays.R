@@ -36,30 +36,31 @@ comp_df <- read_excel(paste0("~/Dropbox/Aphid Project 2017/Lauren_competition/",
     rename(green = green_line, red = red_line) %>%
     mutate(diff = total_green - total_red)
 
-
-comp_df %>%
-    filter(grepl("^27", treatment)) %>%
-    # filter(grepl("^20", treatment)) %>%
-    split(interaction(.$combo, .$rep)) %>%
-    map_dfr(function(.x) {
-        .mean <- mean(c(.x$total_red, .x$total_green))
-        .sd <- sd(c(.x$total_red, .x$total_green))
-        mutate(.x,
-               total_red = (total_red - .mean) / .sd,
-               total_green = (total_green - .mean) / .sd,
-               diff_z = total_green - total_red)
-    }) %>%
-    ggplot(aes(date)) +
-    # geom_line(aes(y = total_green, linetype = factor(rep))) +
-    # geom_line(aes(y = total_red, linetype = factor(rep)), color = "red") +
-    geom_hline(yintercept = 0, linetype = 2, color = "gray70") +
-    geom_line(aes(y = diff_z, group = factor(rep)), color = "gray50") +
-    geom_point(aes(y = diff_z, color = diff_z), shape = 16) +
-    facet_grid(green ~ red) + #, labeller = label_both) +
-    scale_color_gradient2(low = "#d95f02", high = "#1b9e77", mid = "gray80",
-                          midpoint = 0, guide = FALSE) +
-    scale_y_continuous("Scaled difference in N", breaks = c(-2, 0, 2)) +
-    scale_x_continuous("Date", breaks = seq(0, 30, 10)) +
-    theme(strip.text = element_text(size = 10))
-
-
+{
+    comp_df %>%
+        filter(grepl("^27", treatment)) %>%
+        # filter(grepl("^20", treatment)) %>%
+        split(interaction(.$combo, .$rep)) %>%
+        map_dfr(function(.x) {
+            .mean <- mean(c(.x$total_red, .x$total_green))
+            .sd <- sd(c(.x$total_red, .x$total_green))
+            mutate(.x,
+                   total_red = (total_red - .mean) / .sd,
+                   total_green = (total_green - .mean) / .sd,
+                   diff_z = total_green - total_red)
+        }) %>%
+        ggplot(aes(date)) +
+        # geom_line(aes(y = total_green, linetype = factor(rep))) +
+        # geom_line(aes(y = total_red, linetype = factor(rep)), color = "red") +
+        geom_hline(yintercept = 0, linetype = 2, color = "gray70") +
+        geom_line(aes(y = diff_z, group = factor(rep)), color = "gray50") +
+        geom_point(aes(y = diff_z, fill = diff_z), shape = 21, color = "gray40", size = 2) +
+        facet_grid(green ~ red) + #, labeller = label_both) +
+        # scale_color_gradient2(low = "#d95f02", high = "#1b9e77", mid = "gray80",
+        scale_fill_gradient2(low = "firebrick", high = "chartreuse", mid = "gray60",
+                             midpoint = 0, guide = FALSE) +
+        scale_y_continuous(expression("Scaled green" - "red"), breaks = c(-2, 0, 2)) +
+        scale_x_continuous("Date", breaks = seq(0, 30, 10)) +
+        theme(strip.text = element_text(size = 10))
+    } %>%
+    ggsave(filename = "~/Desktop/comp.pdf", height = 6, width = 6)

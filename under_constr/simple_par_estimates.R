@@ -151,34 +151,40 @@ sim_df <- sim_reps(n_reps = 100, max_t = 500, save_every = 1, N0 = 6,
 
 
 
-sim_df %>%
-    ggplot(aes(time, N)) +
-    geom_vline(xintercept = 365, linetype = 2) +
-    geom_line(aes(color = line), size = 0.3) +
-    facet_wrap(~ rep, nrow = 10) +
-    scale_color_brewer(palette = "Dark2") +
-    theme(strip.text = element_blank()) +
-    theme(axis.title = element_blank(),
-          axis.text = element_blank(),
-          axis.ticks = element_blank()) +
-    guides(color = guide_legend(override.aes = list(size = 1)))
+# Too much: a panel per rep (100)
+# sim_df %>%
+#     ggplot(aes(time, N)) +
+#     geom_vline(xintercept = 365, linetype = 2) +
+#     geom_line(aes(color = line), size = 0.3) +
+#     facet_wrap(~ rep, nrow = 10) +
+#     scale_color_brewer(palette = "Dark2") +
+#     theme(strip.text = element_blank()) +
+#     theme(axis.title = element_blank(),
+#           axis.text = element_blank(),
+#           axis.ticks = element_blank()) +
+#     guides(color = guide_legend(override.aes = list(size = 1)))
 
-sim_df %>%
+
+n_won <- sim_df %>%
     filter(time == max(time)) %>%
     group_by(line) %>%
     summarize(N = sum(N > 0)) %>%
     ungroup() %>%
-    mutate(line = factor(line, levels = paste(R_byline$line[order(R_byline$Rm)]))) %>%
+    mutate(line = factor(line, levels = paste(R_byline$line[order(R_byline$Rm)])))
+
+
+n_won %>%
     ggplot(aes(line, N)) +
     geom_segment(aes(xend = line, yend = 0)) +
-    geom_point(data = R_byline %>%
-                   mutate(Rm = ((Rm - mean(Rm)) / (sd(Rm) / 6)) + 12),
-              aes(line, Rm), shape = 1) +
+    # geom_point(data = R_byline %>%
+    #                mutate(Rm = ((Rm - min(Rm)) / (max(Rm) - min(Rm))) *
+    #                           (diff(range(n_won$N))) + min(n_won$N)),
+    #           aes(line, Rm), shape = 1) +
     geom_point(aes(color = line)) +
     scale_color_brewer(palette = "Dark2", guide = FALSE, direction = -1) +
     coord_flip() +
     theme(axis.title.y = element_blank(),
-          axis.text.y = element_text(size = 11)) +
+          axis.text.y = element_text(size = 11, color = "black")) +
     ylab("Number of times won (out of 100)")
 #
 
