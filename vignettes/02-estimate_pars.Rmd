@@ -290,6 +290,26 @@ A_p <- bayesplot::mcmc_intervals(posterior, pars = sprintf("A[%i]", 1:8)) +
     xlab("Density dependence")
 A_p
 # ggsave("~/Desktop/A_plot.pdf", A_p, width = 4, height = 5)
+
+# Probably a better, simpler plot going forward:
+# rstan::extract(stan_fit, "R", permuted = FALSE) %>% 
+#     apply(3, c) %>% 
+#     apply(2, quantile, probs = c(0.025, 0.5, 0.975)) %>%
+#     t() %>%
+#     as.data.frame() %>% 
+#     as_tibble() %>%
+#     set_names(c("low", "med", "high")) %>% 
+#     mutate(line = stan_estimates$names) %>%
+#     select(line, everything()) %>% 
+#     ggplot(aes(line)) +
+#     geom_linerange(aes(ymin = low, ymax = high)) +
+#     geom_point(aes(y = med)) +
+#     coord_flip() +
+#     ylab("Growth rate") +
+#     theme(axis.text.y = element_text(size = 11, color = "black"),
+#           axis.title.y = element_blank()) +
+#     NULL
+
 ```
 
 
