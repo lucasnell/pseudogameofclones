@@ -15,3 +15,4 @@ figs
 data-raw/big
 vignettes/*.R
 vignettes/*.html
+*host_shift

@@ -1,10 +1,10 @@
 
+# This file is for use with IPs, Spring 2019
+
 # This file uses peak abundance for density dependences
 # and max per-capita growth to esimate intrinsic growth rates
 
 library(clonewars)
-source(".Rprofile")
-
 
 
 
@@ -30,49 +30,10 @@ R <- load_data(filter_pars = NULL, remove_unfinished = FALSE) %>%
     split(interaction(.$line, .$rep, drop = TRUE)) %>%
     map_dfr(~ get_r(.x))
 
-A <- load_data(filter_pars = NULL, remove_unfinished = FALSE) %>%
+A <- load_data(filter_pars = NULL, remove_unfinished = TRUE) %>%
     split(interaction(.$line, .$rep, drop = TRUE)) %>%
     map_dfr(~ get_a(.x)) %>%
     mutate(k = 1 / a)
-
-
-# library(lme4)
-#
-# lmer(r ~ (1 | line), R, REML = FALSE) %>% AIC()
-# lm(r ~ 1, R) %>% AIC()
-#
-# lmer(a ~ (1 | line), A, REML = FALSE) %>% AIC()
-# lm(a ~ 1, A) %>% AIC()
-#
-# lmer(k ~ (1 | line), A, REML = FALSE, control = lmerControl(optimizer = "bobyqa")) %>% AIC()
-# lm(k ~ 1, A) %>% AIC()
-
-
-
-R_plot <- R %>%
-    ggplot(aes(line, r)) +
-    geom_jitter(aes(color = line), height = 0, width = 0.25) +
-    stat_summary(fun.data = "mean_cl_boot", shape = 5) +
-    scale_color_brewer(palette = "Dark2", guide = FALSE) +
-    theme(axis.title.y = element_blank(),
-          axis.text.y = element_text(size = 11, color = "black")) +
-    coord_flip() +
-    ylab("Growth rate")
-R_plot
-A_plot <- A %>%
-    ggplot(aes(line, k)) +
-    geom_jitter(aes(color = line), height = 0, width = 0.25) +
-    stat_summary(fun.data = "mean_cl_boot", shape = 5) +
-    scale_color_brewer(palette = "Dark2", guide = FALSE) +
-    theme(axis.title.y = element_blank(),
-          axis.text.y = element_text(size = 11, color = "black")) +
-    coord_flip() +
-    ylab("Carrying capacity")
-A_plot
-
-ggsave("~/Desktop/simple_R.pdf", R_plot, width = 4, height = 4)
-ggsave("~/Desktop/simple_A.pdf", A_plot, width = 4, height = 4)
-
 
 
 # ======================================================================================
@@ -84,25 +45,31 @@ ggsave("~/Desktop/simple_A.pdf", A_plot, width = 4, height = 4)
 # ======================================================================================
 
 
+# A %>% group_by(line) %>% summarize(k = mean(k)) %>%
+#     mutate(line = factor(line, levels = line[order(k)])) %>%
+#     ggplot() +
+#     geom_segment(aes(line, min(k), xend = line, yend = k)) +
+#     geom_point(aes(line, k, color = line)) +
+#     ylab("Carrying capacity") +
+#     coord_flip() +
+#     theme(axis.title.y = element_blank(),
+#           axis.text.y = element_blank()) +
+#     scale_color_brewer(palette = "Dark2", guide = FALSE, direction = -1)
 
 
-suppressPackageStartupMessages({
-    library(clonewars)
-})
-source(".Rprofile")
 
-R_byline <- R %>% group_by(line) %>% summarize(Rm = mean(r))
-
-R_byline %>%
-    mutate(line = factor(line, levels = line[order(Rm)])) %>%
-    ggplot() +
-    geom_segment(aes(line, min(Rm), xend = line, yend = Rm)) +
-    geom_point(aes(line, Rm, color = line)) +
-    ylab("Growth rate") +
-    coord_flip() +
-    theme(axis.title.y = element_blank(),
-          axis.text.y = element_blank()) +
-    scale_color_brewer(palette = "Dark2", guide = FALSE, direction = -1)
+# R_byline <- R %>% group_by(line) %>% summarize(Rm = mean(r))
+#
+# R_byline %>%
+#     mutate(line = factor(line, levels = line[order(Rm)])) %>%
+#     ggplot() +
+#     geom_segment(aes(line, min(Rm), xend = line, yend = Rm)) +
+#     geom_point(aes(line, Rm, color = line)) +
+#     ylab("Growth rate") +
+#     coord_flip() +
+#     theme(axis.title.y = element_blank(),
+#           axis.text.y = element_blank()) +
+#     scale_color_brewer(palette = "Dark2", guide = FALSE, direction = -1)
 
 
 
