@@ -8,6 +8,9 @@ library(clonewars)
 
 
 
+
+
+
 # Calculate growth rate
 get_r <- function(.df) {
     .df <- .df[(which(.df$N > 20)[1]):nrow(.df),]
@@ -34,6 +37,25 @@ A <- load_data(filter_pars = NULL, remove_unfinished = TRUE) %>%
     split(interaction(.$line, .$rep, drop = TRUE)) %>%
     map_dfr(~ get_a(.x)) %>%
     mutate(k = 1 / a)
+
+
+winner_loser <- comp_diffs %>%
+    group_by(combo, rep) %>%
+    summarize(green = green[1], red = red[1],
+              diff_z = mean(diff_z)) %>%
+    group_by(combo) %>%
+    summarize(winner = ifelse(mean(diff_z) >= 0, green, red),
+              loser = ifelse(mean(diff_z) >= 0, red, green))
+
+rankings <- rank(map_int(levels(A$line), ~ sum(winner_loser$loser == .x)))
+tibble(line = levels(A$line), rank = rankings) %>%
+    write_csv(path = "~/Desktop/rankings.csv")
+
+alphas <- A %>% group_by(line) %>% summarize(a = mean(a)) %>% .[["a"]] %>% sort()
+alphas <- alphas[c(1, 3, 6, 8)]
+
+
+a <- map_dbl(rankings, ~ alphas[which(sort(unique(rankings)) == .x)])
 
 
 # ======================================================================================
@@ -72,19 +94,16 @@ R_byline <- R %>% group_by(line) %>% summarize(Rm = mean(r))
 #     scale_color_brewer(palette = "Dark2", guide = FALSE, direction = -1)
 
 
-d <- c(-3.75, 0.00, -2.25, -0.25, -2, -2.5, -2, -3.5)
-
-# tibble(line = levels(R_byline$line), disp = d) %>%
-#     write_csv(path = "~/Desktop/disp_rates.csv")
 
 
 set.seed(78123456)
 sim_df <- sim_reps(n_reps = 100, max_t = 500, save_every = 1, N0 = 6,
          n_patches = 8,
          R = R %>% group_by(line) %>% summarize(Rm = mean(r)) %>% .[["Rm"]],
-         A = A %>% group_by(line) %>% summarize(Am = mean(a)) %>% .[["Am"]] %>%
-             mean() %>% rep(8),
-         D_vec = d,
+         # A = A %>% group_by(line) %>% summarize(Am = mean(a)) %>% .[["Am"]] %>%
+         #     mean() %>% rep(8),
+         A = a,
+         D_vec = rep(mean(disp_estimates$b0), 8),
          repl_times = seq(3, 1000, 3),
          repl_threshold = 10e3,
          zeta_t_thresh = 20,
@@ -126,7 +145,7 @@ sim_df <- sim_reps(n_reps = 100, max_t = 500, save_every = 1, N0 = 6,
 
 {
     sim_df %>%
-        filter(as.numeric(paste(rep)) < 4) %>%  # <-- all reps is too much
+        filter(rep %in% c(1, 2, 18, 69)) %>%  # <-- all reps is too much
         ggplot(aes(time, log(N))) +
         # geom_vline(xintercept = 365, linetype = 2) +
         geom_line(aes(color = line), size = 0.3) +
@@ -159,19 +178,6 @@ sim_df <- sim_reps(n_reps = 100, max_t = 500, save_every = 1, N0 = 6,
     } %>%
     ggsave(filename = "~/Desktop/coexistence.pdf", width = 2.5, height = 4)
 
-sim_df %>%
-    filter(time == max(time)) %>%
-    group_by(rep) %>%
-    summarize(N = sum(N > 0)) %>%
-    ungroup() %>%
-    {table(.$N)} %>%
-    as.data.frame(stringsAsFactors = FALSE) %>%
-    as_tibble() %>%
-    set_names(c("n_spp", "prob_times")) %>%
-    mutate(n_spp = as.integer(n_spp), prob_times = prob_times / 100) %>%
-    write_csv(path = "~/Desktop/coexistence.csv")
-
-
 
 
 n_won <- sim_df %>%
@@ -181,12 +187,8 @@ n_won <- sim_df %>%
     ungroup() %>%
     mutate(line = factor(line, levels = paste(R_byline$line[order(R_byline$Rm)])))
 
-n_won %>%
-    mutate(prob_times = N / 100) %>%
-    select(-N) %>%
-    write_csv(path = "~/Desktop/prob_survived.csv")
 
-
+write_csv(n_won, "~/Desktop/IP_Lauren/n_wins.csv")
 {
     n_won %>%
         ggplot(aes(line, N / 100)) +
