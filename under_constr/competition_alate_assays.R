@@ -4,27 +4,75 @@
 #' This version is for when alates are also counted. They were done summer 2019.
 #'
 
-# library(clonewars)
 library(tidyverse)
 library(readxl)
 
 
 source(".Rprofile")
+source("under_constr/theme_black.R")
 
-fn <- "~/Dropbox/Aphid Project 2017/Lauren_competition/competition_data_entry24July19.xlsx"
+
+# Lines in order they should appear in plots:
+lines_ <- c("R10", "WIA-5D", "WI-L4", "WI-L4Ø", "UT3", "WI-2016-593", "Clover-2017-2",
+            "Clover-2017-6")
 
 
-# comp_df <-
-read_excel(fn) %>%
+fn <- paste0("~/Dropbox/Aphid Project 2017/Lauren_competition/pre-summer_2019/",
+             "competition_data_entry.xlsx")
+
+
+old_comp_df <- read_excel(fn) %>%
     rename_all(~ tolower(.)) %>%
     filter(!is.na(green_line)) %>%
     mutate(green_line = ifelse(green_line == "Clover-2017-6 (reg+",
                                "Clover-2017-6 (reg+)", green_line),
            red_line = ifelse(red_line == "WI-L4(Ham-)", "WI-L4 (Ham-)", red_line)) %>%
-    .[["green_line"]] %>% unique()
     mutate_at(vars(green_line, red_line), ~ gsub(" \\(Ham\\-\\)", "Ø",
                                                  gsub(" \\(reg\\+\\)| \\(Ham\\+\\)", "",
                                                       .x))) %>%
+    mutate(total_red = plant_red + dispersed_red,
+           total_green = plant_green + dispersed_green) %>%
+    mutate(date = as.Date(paste(year, month, day, sep = "-"))) %>%
+    select(-year, -month, -day, -observer, -comments,
+           -starts_with("dispersed_"), -starts_with("plant_")) %>%
+    select(date, everything()) %>%
+    mutate(combo = paste0(green_line, red_line) %>%
+               factor() %>% as.integer() %>% factor()) %>%
+    group_by(treatment, combo, rep) %>%
+    mutate(date = as.integer(date - min(date))) %>%
+    ungroup() %>%
+    rename(green = green_line, red = red_line) %>%
+    mutate(diff = total_green - total_red,
+           treatment = gsub("°", " ", treatment))
+
+
+# Filter out when all aphids die out quickly
+old_comp_df <- old_comp_df %>%
+    group_by(green, red, treatment, rep) %>%
+    mutate(N = sum({(total_green + total_red) > 0})) %>%
+    ungroup() %>%
+    filter(N >= 5) %>%
+    select(-N)
+
+# Filter out when there is never an increase in either red or green aphids
+old_comp_df <- old_comp_df %>%
+    group_by(green, red, treatment, rep) %>%
+    filter(! { all(diff(total_red) <= 0) | all(diff(total_green) <= 0) }) %>%
+    ungroup()
+
+
+
+fn <- paste0("~/Dropbox/Aphid Project 2017/Lauren_competition/",
+             "competition_data_entry24July19.xlsx")
+
+
+
+comp_df <- read_excel(fn) %>%
+    rename_all(~ tolower(.)) %>%
+    filter(!is.na(green_line)) %>%
+    mutate(red_line = ifelse(red_line == "WI-L4 Ham-", "WI-L4Ø", red_line)) %>%
+    mutate_at(vars(green_line, red_line), ~ gsub(" Reg\\+| Ham\\+", "",
+                                                      .x)) %>%
     mutate(total_red = apterous_red + alate_red,
            total_green = apterous_green + alate_green) %>%
     mutate(date = as.Date(paste(year, month, day, sep = "-"), format = "%Y-%B-%d")) %>%
@@ -32,12 +80,6 @@ read_excel(fn) %>%
     select(date, everything()) %>%
     mutate(combo = paste0(green_line, red_line) %>%
                factor() %>% as.integer() %>% factor()) %>%
-    # gather("color", "line", green_line, red_line) %>%
-    # gather("color2", "total", total_green, total_red) %>%
-    # mutate(color = gsub("_line", "", color),
-    #        color2 = gsub("total_", "", color2)) %>%
-    # filter(color == color2) %>%
-    # select(-color2) %>%
     group_by(treatment, combo, rep) %>%
     mutate(date = as.integer(date - min(date))) %>%
     ungroup() %>%
@@ -62,8 +104,8 @@ comp_df <- comp_df %>%
 
 
 
-comp_plot <- function(.temp) {
-    comp_df %>%
+comp_plot <- function(.temp, .df = comp_df) {
+    .df %>%
         filter(grepl(sprintf("^%s", paste(.temp)), treatment)) %>%
         split(interaction(.$combo, .$rep)) %>%
         map_dfr(function(.x) {
@@ -86,16 +128,38 @@ comp_plot <- function(.temp) {
         scale_fill_gradient2(low = "firebrick", high = "chartreuse", mid = "gray60",
                              midpoint = 0, guide = FALSE) +
         scale_y_continuous(expression("Scaled green" - "red"), breaks = c(-2, 0, 2)) +
-        scale_x_continuous("Date", breaks = seq(0, 30, 10)) +
+        scale_x_continuous("Day", breaks = seq(0, 30, 10)) +
         theme(strip.text = element_text(size = 10)) +
-        theme_classic()
+        theme_black()
 }
 
+# comp_plot(20)
 # comp_plot(20) %>%
 #     ggsave(filename = "~/Desktop/comp_20.pdf", height = 6, width = 6)
 comp_plot(27)
 # %>%
 #     ggsave(filename = "~/Desktop/comp_27.pdf", height = 6, width = 6)
+
+
+bind_rows(old_comp_df %>%
+              filter(treatment == "27 C") %>%
+              select(date, green, red, rep, total_red, total_green, treatment),
+          comp_df %>%
+              filter(treatment == "27 C") %>%
+              select(date, green, red, rep, total_red, total_green, treatment) %>%
+              mutate(rep = rep + 100)) %>%
+    mutate(combo = paste0(green, red) %>%
+               factor() %>% as.integer() %>% factor()) %>%
+    comp_plot(.temp = 27) %>%
+    ggsave(filename = "~/Desktop/comp_27.pdf", height = 5, width = 6)
+
+
+
+# comp_plot(27) %>%
+#     ggsave(filename = "~/Desktop/comp_27.pdf", height = 5, width = 6)
+
+
+
 
 
 
@@ -135,7 +199,8 @@ alate_df <- comp_df %>%
            alate = ifelse(color == "red", alate_red, alate_green)) %>%
     mutate(pr_alate = alate / (alate + apterous),
            pr_alate = ifelse(is.nan(pr_alate), 0, pr_alate),
-           total = alate_red + alate_green + apterous_red + apterous_green) %>%
+           total = alate_red + alate_green + apterous_red + apterous_green,
+           apt_total = apterous_red + apterous_green) %>%
     select(-starts_with("alate_"), -starts_with("apterous_"), -starts_with("total_"),
            -treatment)
 
@@ -163,108 +228,226 @@ alate_df %>%
 
 
 
-alate_df %>%
+alate_ts_p <- alate_df %>%
     # ggplot(aes(apterous, logit(pr_alate))) +
     # ggplot(aes(date, asinsqrt(pr_alate))) +
-    ggplot(aes(total, pr_alate)) +
+    ggplot(aes(date, alate)) +
     geom_hline(yintercept = 0, linetype = 2, color = "gray70") +
     # geom_line(aes(group = factor(rep)), color = "gray30", alpha = 0.5) +
-    geom_point(aes(color = color), shape = 16, size = 2, alpha = 0.5) +
+    geom_point(aes(color = line), shape = 16, size = 2, alpha = 0.75) +
     facet_wrap( ~ line, nrow = 2) +
-    scale_color_manual(values = c("red", "green"), guide = FALSE) +
-    scale_y_continuous("Alate proportion") +
-    # scale_x_continuous("Date", breaks = seq(0, 30, 10)) +
-    scale_x_continuous("Total aphids") +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    scale_y_continuous("Number of alates") +
+    scale_x_continuous("Day", breaks = seq(0, 30, 10)) +
+    # scale_x_continuous("Total apterous aphids", breaks = c(0, 250, 500)) +
     theme(strip.text = element_text(size = 10)) +
-    theme_classic()
+    theme_black()
 
-
-
-alate_df
-
-library(nlme)
-
-
-nlme(alate ~ exp(total + line), alate_df,
-     fixed = total + line ~ 1,
-     random = line ~ 1,
-     correlation = corAR1(form = ~ date | combo))
-
-alate_df$combooo <- factor(paste(alate_df$combo, alate_df$rep, alate_df$color))
-gls(log1p(alate) ~ total + line + 0, alate_df,
-     correlation = corAR1(form = ~ date | combooo))
+ggsave("~/Desktop/alate_ts.pdf", alate_ts_p, width = 6, height = 4)
 
 
 
 
 
+library(lme4)
 
-# comp_diffs <- comp_df %>%
-#     filter(grepl("^27", treatment)) %>%
-#     split(interaction(.$combo, .$rep)) %>%
-#     map_dfr(function(.x) {
-#         .mean <- mean(c(.x$total_red, .x$total_green))
-#         .sd <- sd(c(.x$total_red, .x$total_green))
-#         mutate(.x,
-#                total_red = (total_red - .mean) / .sd,
-#                total_green = (total_green - .mean) / .sd,
-#                diff_z = total_green - total_red)
-#     }) %>%
-#     select(date, green, red, rep, combo, diff_z)
+z_trans <- function(x) (x - mean(x)) / sd(x)
+# z_inv_trans <- function(x, m, s) (x * s) + m
+
+
+adf <- alate_df %>%
+    group_by(rep, combo, line) %>%
+    summarize(alate = sum(alate),
+              apterous = sum(apterous),
+              total = sum(total),
+              days = n()) %>%
+    ungroup() %>%
+    # mutate(log_apterous = log(apterous),
+    #        log_total = log(total),
+    #        log_days = log(days))
+    mutate(z_apterous = z_trans(apterous),
+           z_total = z_trans(total),
+           z_days = z_trans(days))
+
+
+# Formulas for models:
+forms <- list(alate ~ z_total + (1 + z_total | line),
+              alate ~ z_total + (1 | line),
+              alate ~ z_total,
+              alate ~ z_days + (1 + z_days | line),
+              alate ~ z_days + (1 | line),
+              alate ~ z_days,
+              alate ~ z_apterous + (1 + z_apterous | line),
+              alate ~ z_apterous + (1 | line),
+              alate ~ z_apterous)
+
+
+fit_mod <- function(.f) {
+    if (grepl("\\|", deparse(.f))) {
+        m <- glmer(.f, adf, family = poisson)
+    } else {
+        m <- glm(.f, adf, family = poisson)
+    }
+    return(as.numeric(logLik(m)))
+}
+
+# Log-likelihoods
+LLs <- sapply(forms, fit_mod)
+
+# Which one's best?
+form <- forms[[which(LLs == max(LLs))]]
+
+
+mod <- glmer(form, adf, family = poisson)
+
+plot(mod)
+
+
+nd <- crossing(z_total = seq((0 - mean(adf$total)) / sd(adf$total),
+                             (1000 - mean(adf$total)) / sd(adf$total),
+                             length.out = 100),
+               line = unique(adf$line))
+nd$alate <- predict(mod, newdata = nd)
+
+
+
+nd %>%
+    ggplot() +
+    geom_line(aes(z_total, alate, group = line, color = line)) +
+    scale_y_continuous("Total alates produced",
+                       breaks = log(2 * 4^(-1:2)),
+                       labels = 2 * 4^(-1:2)) +
+    scale_x_continuous("Total aphids on plant", limits = c(NA, max(nd$z_total) * 1.25),
+                       breaks = (seq(250, 1000, 250) - mean(adf$total)) / sd(adf$total),
+                       labels = seq(250, 1000, 250)) +
+    theme_classic() +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    geom_text(data = nd %>%
+                  filter(z_total == max(nd$z_total)) %>%
+                  arrange(desc(alate)) %>%
+                  mutate(alate = alate + c(0, 0.1, rep(0, 6))),
+              aes(z_total + 0.05, alate, label = line, color = line),
+              hjust = 0) +
+    NULL
+
+
+
+
+
+adf2 <- alate_df %>%
+    group_by(rep, combo, line) %>%
+    summarize(alate = max(alate),
+              total = max(total)) %>%
+    ungroup() %>%
+    mutate(z_total = z_trans(total),
+           log_total = log(total),
+           log_alate = log(alate))
+
+
+mod2 <- glmer(alate ~ log_total + (1 + log_total | line), adf2, family = poisson)
+
+
+
+
+nd2 <- crossing(log_total = log(seq(25, 1000, length.out = 100)),
+               line = unique(adf$line))
+nd2$alate <- exp(predict(mod2, newdata = nd2))
+
+
+nd2 %>%
+    ggplot(aes(log_total, alate, color = line)) +
+    geom_point(data = adf2) +
+    geom_line(size = 1) +
+    scale_y_continuous("Max alates produced") +
+    scale_x_continuous("Max aphids on plant",
+                       breaks = log(10^(0:3)),
+                       labels = 10^(0:3)) +
+    # geom_text(data = nd2 %>%
+    #               filter(log_total == max(nd2$log_total)) %>%
+    #               arrange(desc(alate)) %>%
+    #               mutate(alate = alate + c(0, 0, 0.1, 0, 0, -0.1, 0, 0)),
+    #           aes(log_total + 0.1, alate, label = line, color = line),
+    #           hjust = 0) +
+    facet_wrap(~ line, nrow = 2) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    theme_classic() +
+    NULL
+
+
+
+
+ranefs <- function(.m) {
+    R <- as.matrix(ranef(.m)[["line"]])
+    F_ <- matrix(fixef(.m), nrow(R), 2, byrow = TRUE)
+    as.numeric(R + F_)
+}
+
+
+# # Takes ~ 13 min
+# rboots <- bootMer(mod2, ranefs, 2000, use.u = FALSE, type = "parametric",
+#                   seed = 89165456, ncpus = 4)
+# saveRDS(rboots, "rboots.rds")
 #
-#
-#
-#
-#
-# library(clonewars)
-# source(".Rprofile")
-#
-# {
-#     ggplot(data = tibble(x = 0:10), aes(x)) +
-#         stat_function(fun = sin, size = 1) +
-#         stat_function(fun = function(x) sin(x - (pi/1.5)), color = "red", size = 1) +
-#         coord_cartesian(ylim = c(-1,1)) +
-#         theme(axis.title = element_blank(),
-#               axis.text = element_blank(),
-#               axis.ticks = element_blank())
-# } %>%
-#     ggsave(filename = "~/Desktop/wa.pdf", width = 4.75, height = 2.25)
-#
-# {
-#     ggplot(data = tibble(x = 0:20), aes(x)) +
-#         stat_function(fun = sin, size = 1) +
-#         stat_function(fun = function(x) sin(x - (pi/2)), color = "red", size = 1) +
-#         coord_cartesian(ylim = c(-1,2)) +
-#         theme(axis.title = element_blank(),
-#               axis.text = element_blank(),
-#               axis.ticks = element_blank())
-#     } %>%
-#     ggsave(filename = "~/Desktop/wa_beetles.pdf", width = 4.75, height = 2.25)
-#
-# {
-#     ggplot(data = tibble(x = 0:20), aes(x)) +
-#         stat_function(fun = function(x) {
-#             z <- x
-#             z[x <= 1.5 * pi] <- (1 + sin(x[x <= 1.5 * pi])) / 2
-#             z[x > 1.5 * pi] <- 1.5 * (1 + sin(x[x > 1.5 * pi])) / 2
-#             z[x > 2.5 * pi] <- 0.5 + (1 + sin(x[x > 2.5 * pi])) / 2
-#             return(z)
-#         },
-#         size = 1) +
-#         stat_function(fun = function(x) {
-#             ifelse(x <= 2 * pi, 1, 0.5) * (1 + sin(x - (pi/2))) / 2
-#         },
-#         color = "red", size = 1) +
-#         theme(axis.title = element_blank(),
-#               axis.text = element_blank(),
-#               axis.ticks = element_blank()) +
-#         NULL
-#     } %>%
-#     ggsave(filename = "~/Desktop/wa_beetles2.pdf", width = 4.75, height = 2.25)
-#
-#
-#
-# #
+# rboots <- readRDS("rboots.rds")
+# coefs <- rboots$t
+
+# # Takes ~ 8.5 min
+# rboots <- bootMer(mod2, ranefs, 2000, use.u = TRUE, type = "parametric",
+#                   seed = 89165456, ncpus = 4)
+# saveRDS(rboots, "rboots_useuTRUE.rds")
+
+rboots <- readRDS("rboots_useuTRUE.rds")
+
+
+# rboots %>%
+#     .[["t"]] %>%
+#     {tibble(low = apply(., 2, quantile, probs = 0.25),
+#        med = apply(., 2, median),
+#        high = apply(., 2, quantile, probs = 0.75),
+#        est = ranefs(mod2),
+#        par = rep(c("intercept", "slope"), each = 8),
+#        line = rep(rownames(ranef(mod2)[["line"]]), 2))} %>%
+#     ggplot(aes(line)) +
+#     ggtitle("use.u = FALSE") +
+#     geom_pointrange(aes(y = est, ymin = low, ymax = high, color = line)) +
+#     facet_wrap(~ par, scales = "free_x") +
+#     scale_color_brewer(palette = "Dark2", guide = FALSE) +
+#     theme_classic() +
+#     theme(axis.text.x = element_text(color = "black"),
+#           axis.title.x = element_blank()) +
+#     coord_flip() +
+#     NULL
+
+
+boot_ests <- rboots %>%
+    .[["t"]] %>%
+    {tibble(low = apply(., 2, quantile, probs = 0.16),
+       med = apply(., 2, median),  # median est. from bootstrapping
+       high = apply(., 2, quantile, probs = 0.84),
+       est = as.numeric(unlist(coef(mod2)[["line"]])), # est. from model
+       par = rep(c("intercept", "slope"), each = 8),
+       line = rep(rownames(ranef(mod2)[["line"]]), 2))}
+
+
+
+est_p <- boot_ests %>%
+    mutate(line = factor(line, levels = rev(lines_))) %>%
+    ggplot(aes(line)) +
+    geom_hline(yintercept = 0, linetype = 2, color = "gray70") +
+    geom_pointrange(aes(y = med, ymin = low, ymax = high, color = line)) +
+    # geom_point(aes(y = est, color = line), shape = 18, size = 3) +
+    facet_wrap(~ par, scales = "free_x") +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    theme_black() +
+    theme(axis.text = element_text(size = 10),
+          axis.title = element_blank(),
+          strip.background = element_blank(),
+          strip.text = element_text(size = 12)) +
+    coord_flip() +
+    NULL
+
+
+ggsave("~/Desktop/estimates.pdf", est_p, width = 6, height = 4)
 
 
 
@@ -272,13 +455,30 @@ gls(log1p(alate) ~ total + line + 0, alate_df,
 
 
 
+#'
+#' Similar to above, but using median bootstrapped estimates instead of estimates
+#' from model
+#'
+
+pred_p <- boot_ests %>%
+    select(line, med, par) %>%
+    spread(par, med) %>%
+    crossing(log_total = log(seq(25, 1000, length.out = 100))) %>%
+    mutate(alate = exp(intercept + slope * log_total),
+           line = factor(line, levels = lines_)) %>%
+    ggplot(aes(log_total, alate, color = line)) +
+    geom_point(data = mutate(adf2, line = factor(line, levels = lines_)), shape = 1) +
+    geom_line(size = 1) +
+    scale_y_continuous("Max alates produced") +
+    scale_x_continuous("Max aphids on plant",
+                       breaks = log(5 * 10^(1:2)),
+                       labels = 5 * 10^(1:2)) +
+    facet_wrap(~ line, nrow = 2) +
+    scale_color_brewer(palette = "Dark2", guide = FALSE) +
+    theme_black() +
+    # theme(strip.background = element_blank(),
+    #       strip.text = element_text(size = 11)) +
+    NULL
 
 
-
-
-
-
-
-
-
-
+ggsave("~/Desktop/predictions.pdf", pred_p, width = 6, height = 4)
