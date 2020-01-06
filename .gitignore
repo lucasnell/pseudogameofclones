@@ -6,13 +6,11 @@
 *.png
 inst/doc
 data-raw/*.rds
-under_constr/_test.*
 *.rda
 *.rds
 figs
 *.ai
 
+## Symlinks:
 data-raw/big
-vignettes/*.R
-vignettes/*.html
-*host_shift
+under_constr/host_shift
