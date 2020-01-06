@@ -229,6 +229,7 @@ alate_df %>%
 
 
 alate_ts_p <- alate_df %>%
+    mutate(line = factor(line, levels = lines_)) %>%
     # ggplot(aes(apterous, logit(pr_alate))) +
     # ggplot(aes(date, asinsqrt(pr_alate))) +
     ggplot(aes(date, alate)) +
