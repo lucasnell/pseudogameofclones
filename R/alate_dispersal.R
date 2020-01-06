@@ -1,5 +1,11 @@
 
 
+#'
+#' These assays measured where alates went and how many died.
+#' The number of alates that each rep started with weren't input, so this needs to
+#' be fixed before starting.
+#'
+
 # library(clonewars)
 library(tidyverse)
 library(readxl)
