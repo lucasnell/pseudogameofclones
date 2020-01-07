@@ -4,12 +4,29 @@
 \alias{sim_reps}
 \title{Simulate multiple reps and simplify output.}
 \usage{
-sim_reps(n_reps, n_patches = 8, max_t = 1000, N0 = NULL, R = NULL,
-  A = NULL, D_vec = NULL, process_error = NULL, disp_error = TRUE,
-  log_zeta_mean = NULL, log_zeta_sd = NULL, zeta_t_thresh = 20,
-  mu_time = NULL, repl_times = NULL, repl_threshold = 500,
-  extinct_N = 1e-04, save_every = max_t\%/\%100, by_patch = FALSE,
-  n_cores = 1, show_progress = FALSE, line_names = NULL)
+sim_reps(
+  n_reps,
+  n_patches = 8,
+  max_t = 1000,
+  N0 = NULL,
+  R = NULL,
+  A = NULL,
+  D_vec = NULL,
+  process_error = NULL,
+  disp_error = TRUE,
+  log_zeta_mean = NULL,
+  log_zeta_sd = NULL,
+  zeta_t_thresh = 20,
+  mu_time = NULL,
+  repl_times = NULL,
+  repl_threshold = 500,
+  extinct_N = 1e-04,
+  save_every = max_t\%/\%100,
+  by_patch = FALSE,
+  n_cores = 1,
+  show_progress = FALSE,
+  line_names = NULL
+)
 }
 \arguments{
 \item{n_reps}{Number of reps to simulate.}

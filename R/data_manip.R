@@ -1,5 +1,9 @@
 
 
+# Note from 7 Jan 2020: Not sure any of this is useful...
+
+
+
 # For all below, X = log(N), where N is the # aphids.
 
 

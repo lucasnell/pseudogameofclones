@@ -4,8 +4,12 @@
 \alias{load_data}
 \title{Load aphid growth data.}
 \usage{
-load_data(filter_pars = list(start = 0, end = 0.9),
-  remove_unfinished = FALSE, allow_NA = TRUE, impute_fxn = impute)
+load_data(
+  filter_pars = list(start = 0, end = 0.9),
+  remove_unfinished = FALSE,
+  allow_NA = TRUE,
+  impute_fxn = impute
+)
 }
 \arguments{
 \item{filter_pars}{A list with the names \code{"start"} and \code{"end"}, containing single
