@@ -1,6 +1,6 @@
 Package: clonewars
 Version: 0.0.0.9000
-Title: Clonal Evolution in Aphids
+Title: Clonal Evolution in Aphid Metapopulations
 Description: Analyses and simulations related to aphid metapopulation clonal evolution experiments.
 Authors@R: person(c("Lucas", "A."), "Nell", email = "lucas@lucasnell.com",
                   role = c("cph", "aut", "cre"),
