@@ -8,16 +8,8 @@
  ********************************************************
  */
 
-
-
-#include <RcppArmadillo.h>
 #include <cstdint>
-#include <vector>
-#include <string>
-#include <deque>
 
-
-using namespace Rcpp;
 
 typedef uint_fast8_t uint8;
 typedef uint_fast32_t uint32;
