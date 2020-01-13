@@ -20,13 +20,13 @@ using namespace Rcpp;
  --------------
  */
 
-arma::vec logit__(const arma::vec& p) {
-    arma::vec out = arma::log(p / (1-p));
-    return out;
+void logit__(const arma::vec& p, , arma::vec& out) {
+    out = arma::log(p / (1-p));
+    return;
 }
-arma::vec inv_logit__(const arma::vec& a){
-    arma::vec out = 1 / (1 + arma::exp(-a));
-    return out;
+void inv_logit__(const arma::vec& a, , arma::vec& out){
+    out = 1 / (1 + arma::exp(-a));
+    return;
 }
 
 /*
@@ -42,7 +42,8 @@ arma::vec inv_logit__(const arma::vec& a){
 //'
 //[[Rcpp::export]]
 NumericVector logit(NumericVector p) {
-    arma::vec out = logit__(as<arma::vec>(p));
+    arma::vec out;
+    logit__(as<arma::vec>(p), out);
     return wrap(out);
 }
 //' @describeIn logit
@@ -51,7 +52,8 @@ NumericVector logit(NumericVector p) {
 //'
 //[[Rcpp::export]]
 NumericVector inv_logit(NumericVector a){
-    arma::vec out = inv_logit__(as<arma::vec>(a));
+    arma::vec out;
+    inv_logit__(as<arma::vec>(a), out);
     return wrap(out);
 }
 
@@ -71,22 +73,22 @@ NumericVector inv_logit(NumericVector a){
  --------------
  */
 
-arma::mat leslie_matrix__(const arma::uvec& instar_days, const double& surv_juv,
-                          const arma::vec& surv_adult, const arma::vec& repro) {
+void leslie_matrix__(const arma::uvec& instar_days, const double& surv_juv,
+                          const arma::vec& surv_adult, const arma::vec& repro,
+                          arma::mat& out) {
     uint32 n_stages = arma::accu(instar_days);
     arma::vec tmp;
-    arma::mat LL;
     uint32 juv_time = arma::accu(instar_days(arma::span(0, (instar_days.n_elem - 2))));
     // Age-specific survivals
     tmp = arma::vec(n_stages - 1);
     tmp.head(juv_time).fill(surv_juv);
     tmp.tail(n_stages-juv_time-1) = surv_adult(arma::span(0,(n_stages-juv_time-2)));
-    LL = arma::diagmat(tmp, -1);
+    out = arma::diagmat(tmp, -1);
     // Age-specific fecundities
-    LL(0, arma::span(juv_time, juv_time + instar_days(instar_days.n_elem - 1) - 1)) =
+    out(0, arma::span(juv_time, juv_time + instar_days(instar_days.n_elem - 1) - 1)) =
         repro(arma::span(0, instar_days(instar_days.n_elem - 1) - 1)).t();
 
-    return LL;
+    return;
 }
 
 
@@ -109,11 +111,11 @@ arma::mat leslie_matrix__(const arma::uvec& instar_days, const double& surv_juv,
 //[[Rcpp::export]]
 NumericMatrix leslie_matrix(IntegerVector instar_days, const double& surv_juv,
                             NumericVector surv_adult, NumericVector repro) {
-
-    arma::mat LL = leslie_matrix__(as<arma::uvec>(instar_days), surv_juv,
-                                   as<arma::vec>(surv_adult),
-                                   as<arma::vec>(repro));
-
+    arma::mat LL;
+    leslie_matrix__(as<arma::uvec>(instar_days), surv_juv,
+                    as<arma::vec>(surv_adult),
+                    as<arma::vec>(repro),
+                    LL);
     return wrap(LL);
 }
 
@@ -133,7 +135,7 @@ NumericMatrix leslie_matrix(IntegerVector instar_days, const double& surv_juv,
 // the proportion of different classes that is required for the population to grow
 // exponentially
 // Used for constructing X_0 for a aphid_const class
-arma::vec leslie_sad__(const arma::mat& L) {
+void leslie_sad__(const arma::mat& L, arma::vec& out) {
 
     arma::cx_vec r_cx;
     arma::cx_mat SAD;
@@ -149,7 +151,7 @@ arma::vec leslie_sad__(const arma::mat& L) {
     SADdist /= all_SAD;
     SADdist.resize(SADdist.n_elem, 1);
 
-    arma::vec SADdist_Re = arma::real(SADdist);
+    out = arma::real(SADdist);
 
-    return SADdist_Re;
+    return;
 }

@@ -8,12 +8,13 @@
 
 using namespace Rcpp;
 
-arma::vec logit__(const arma::vec& p);
-arma::vec inv_logit__(const arma::vec& a);
+void logit__(const arma::vec& p, arma::vec& out);
+void inv_logit__(const arma::vec& a, arma::vec& out);
 
-arma::mat leslie_matrix__(const arma::uvec& instar_days, const double& surv_juv,
-                          const arma::vec& surv_adult, const arma::vec& repro);
+void leslie_matrix__(const arma::uvec& instar_days, const double& surv_juv,
+                     const arma::vec& surv_adult, const arma::vec& repro,
+                     arma::mat& out);
 
-arma::vec leslie_sad__(const arma::mat& L);
+void leslie_sad__(const arma::mat& L, arma::vec& out);
 
 #endif
