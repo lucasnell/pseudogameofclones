@@ -1,4 +1,8 @@
-# ifndef __CLONEWARS_SAPPP_TYPES_H
+
+// I don't ever actually want this to compile
+# ifdef __CLONEWARS_SAPPP_TYPES_H
+// # ifndef __CLONEWARS_SAPPP_TYPES_H
+# define __CLONEWARS_SAPPP_TYPES_H
 
 /*
  This file is from the `sappp` package, much of which will be used here to incorporate
@@ -7,7 +11,6 @@
  for the actual usable code.
  */
 
-// # define __CLONEWARS_SAPPP_TYPES_H  // I don't ever actually want this to compile
 
 #include <RcppArmadillo.h> // arma namespace
 #include <vector>          // vector class
