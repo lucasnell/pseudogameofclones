@@ -1,4 +1,8 @@
-# ifndef __CLONEWARS_WASPS_H
+
+// not actually using this currently:
+# ifdef __CLONEWARS_WASPS_H
+// # ifndef __CLONEWARS_WASPS_H
+
 # define __CLONEWARS_WASPS_H
 
 #include <RcppArmadillo.h>      // arma namespace
