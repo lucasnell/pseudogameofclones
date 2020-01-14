@@ -14,3 +14,6 @@ figs
 ## Symlinks:
 data-raw/big
 host_shift
+
+## Test files:
+under_constr/_test.*
