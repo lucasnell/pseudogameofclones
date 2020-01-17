@@ -3,18 +3,18 @@
 
 #include <RcppArmadillo.h>      // arma namespace
 #include <vector>               // vector class
-#include <cmath>                // log, exp
 #include <random>               // normal distribution
-#include <cstdint>              // integer types
-#include <algorithm>            // find
 #include <pcg/pcg_random.hpp>   // pcg prng
 #include "math.hpp"             // leslie_matrix and leslie_sad
-#include "pcg.hpp"              // runif_ fxns
 #include "clonewars_types.hpp"  // integer types
 
 
 
 using namespace Rcpp;
+
+
+// This is necessary for dispersal methods
+class OnePatch;
 
 
 
@@ -36,6 +36,13 @@ public:
     /*
      Constructors
      */
+    AphidTypePop()
+        : leslie_(),
+          X_0_(),
+          K_(0),
+          n_aphid_stages_(),
+          X_t(),
+          X_t1() {};
     // Starting with "stable age distribution" with a given total density
     AphidTypePop(const double& K,
                  const arma::uvec& instar_days,
@@ -80,12 +87,40 @@ public:
 
     };
 
+
+    AphidTypePop(const AphidTypePop& other)
+        : leslie_(other.leslie_),
+          X_0_(other.X_0_),
+          K_(other.K_),
+          n_aphid_stages_(other.n_aphid_stages_),
+          X_t(other.X_t),
+          X_t1(other.X_t1) {};
+
+    AphidTypePop& operator=(const AphidTypePop& other) {
+
+        leslie_ = other.leslie_;
+        X_0_ = other.X_0_;
+        K_ = other.K_;
+        n_aphid_stages_ = other.n_aphid_stages_;
+        X_t = other.X_t;
+        X_t1 = other.X_t1;
+
+        return *this;
+    }
+
+
     /*
      Total (non-parasitized) aphids
      (Using X at time t+1 bc these get calculated before X get iterated.)
      */
     inline double total_aphids() const {
         return arma::accu(X_t1);
+    }
+
+    // Kill all aphids
+    inline void clear() {
+        X_t1.fill(0);
+        return;
     }
 
 
@@ -106,6 +141,7 @@ class ApterousPop : public AphidTypePop {
 
 public:
 
+    ApterousPop() : AphidTypePop(), alate_rate_(0) {};
     ApterousPop(const double& K,
                 const arma::uvec& instar_days,
                 const double& surv_juv,
@@ -125,6 +161,16 @@ public:
         : AphidTypePop(K, instar_days, surv_juv, surv_adult, repro, aphid_density_0),
           alate_rate_(alate_rate) {};
 
+    ApterousPop(const ApterousPop& other)
+        : AphidTypePop(other),
+          alate_rate_(other.alate_rate_) {};
+
+    ApterousPop& operator=(const ApterousPop& other) {
+        AphidTypePop::operator=(other);
+        alate_rate_ = other.alate_rate_;
+        return *this;
+    }
+
 
     const double& alate_rate() const {return alate_rate_;}
 
@@ -134,36 +180,49 @@ class AlatePop : public AphidTypePop {
 
     double disp_rate_;      // rate at which they leave focal plant
     double disp_mort_;      // mortality of dispersers
-    uint32 disp_start_;     // stage in which dispersal starts
+    uint32 disp_start_;     // index for stage in which dispersal starts
 
 public:
 
+    AlatePop() : AphidTypePop(), disp_rate_(0), disp_mort_(0), disp_start_(0) {};
     AlatePop(const double& K,
-                     const arma::uvec& instar_days,
-                     const double& surv_juv,
-                     const arma::vec& surv_adult,
-                     const arma::vec& repro,
-                     const double& aphid_density_0,
-                     const double& disp_rate,
-                     const double& disp_mort,
-                     const uint32& disp_start)
-    : AphidTypePop(K, instar_days, surv_juv, surv_adult, repro, aphid_density_0),
-      disp_rate_(disp_rate),
-      disp_mort_(disp_mort),
-      disp_start_(disp_start) {};
+             const arma::uvec& instar_days,
+             const double& surv_juv,
+             const arma::vec& surv_adult,
+             const arma::vec& repro,
+             const double& aphid_density_0,
+             const double& disp_rate,
+             const double& disp_mort)
+        : AphidTypePop(K, instar_days, surv_juv, surv_adult, repro, aphid_density_0),
+          disp_rate_(disp_rate),
+          disp_mort_(disp_mort),
+          disp_start_(arma::accu(instar_days.head(instar_days.n_elem - 1)) - 1) {};
     AlatePop(const double& K,
-                     const arma::uvec& instar_days,
-                     const double& surv_juv,
-                     const arma::vec& surv_adult,
-                     const arma::vec& repro,
-                     const arma::vec& aphid_density_0,
-                     const double& disp_rate,
-                     const double& disp_mort,
-                     const uint32& disp_start)
-    : AphidTypePop(K, instar_days, surv_juv, surv_adult, repro, aphid_density_0),
-      disp_rate_(disp_rate),
-      disp_mort_(disp_mort),
-      disp_start_(disp_start) {};
+             const arma::uvec& instar_days,
+             const double& surv_juv,
+             const arma::vec& surv_adult,
+             const arma::vec& repro,
+             const arma::vec& aphid_density_0,
+             const double& disp_rate,
+             const double& disp_mort)
+        : AphidTypePop(K, instar_days, surv_juv, surv_adult, repro, aphid_density_0),
+          disp_rate_(disp_rate),
+          disp_mort_(disp_mort),
+          disp_start_(arma::accu(instar_days.head(instar_days.n_elem - 1)) - 1) {};
+
+    AlatePop(const AlatePop& other)
+        : AphidTypePop(other),
+          disp_rate_(other.disp_rate_),
+          disp_mort_(other.disp_mort_),
+          disp_start_(other.disp_start_) {};
+
+    AlatePop& operator=(const AlatePop& other) {
+        AphidTypePop::operator=(other);
+        disp_rate_ = other.disp_rate_;
+        disp_mort_ = other.disp_mort_;
+        disp_start_ = other.disp_start_;
+        return *this;
+    }
 
 
     const double& disp_rate() const {return disp_rate_;}
@@ -181,8 +240,12 @@ class AphidPop {
     double sigma_;         // environmental standard deviation for aphids
     double rho_;           // environmental correlation among instars
     double demog_mult_;    // multiplier for demographic stochasticity
+    mutable std::normal_distribution<double> norm_distr;    // for process error
+    mutable std::poisson_distribution<uint32> pois_distr;   // samples total dispersers
+    mutable std::binomial_distribution<uint32> bino_distr;  // samples dead dispersers
 
 public:
+    std::string aphid_name;    // unique identifying name for this aphid line
     ApterousPop apterous;
     AlatePop alates;
 
@@ -190,8 +253,12 @@ public:
      Constructors.
      Make sure that all input vectors are of length 2!
      */
+    AphidPop()
+        : sigma_(0), rho_(0), demog_mult_(0), norm_distr(0,1), pois_distr(1),
+          bino_distr(1, 0.1), aphid_name(""), apterous(), alates() {};
     // Starting with "stable age distribution" with a given total density
-    AphidPop(const double& sigma,
+    AphidPop(const std::string& aphid_name_,
+             const double& sigma,
              const double& rho,
              const double& demog_mult,
              const std::vector<double>& K,
@@ -202,17 +269,21 @@ public:
              const std::vector<double>& aphid_density_0,
              const double& alate_rate,
              const double& disp_rate,
-             const double& disp_mort,
-             const uint32& disp_start)
-        : sigma_(sigma),
+             const double& disp_mort)
+        : aphid_name(aphid_name_),
+          sigma_(sigma),
           rho_(rho),
           demog_mult_(demog_mult),
+          norm_distr(0,1),
+          pois_distr(1),
+          bino_distr(1, 0.1),
           apterous(K[0], instar_days[0], surv_juv[0], surv_adult[0], repro[0],
                    aphid_density_0[0], alate_rate),
           alates(K[1], instar_days[1], surv_juv[1], surv_adult[1], repro[1],
-                 aphid_density_0[1], disp_rate, disp_mort, disp_start) {};
+                 aphid_density_0[1], disp_rate, disp_mort) {};
     // Starting with starting densities of each stage directly given:
-    AphidPop(const double& sigma,
+    AphidPop(const std::string& aphid_name_,
+             const double& sigma,
              const double& rho,
              const double& demog_mult,
              const std::vector<double>& K,
@@ -223,15 +294,18 @@ public:
              const std::vector<arma::vec>& aphid_density_0,
              const double& alate_rate,
              const double& disp_rate,
-             const double& disp_mort,
-             const uint32& disp_start)
-        : sigma_(sigma),
+             const double& disp_mort)
+        : aphid_name(aphid_name_),
+          sigma_(sigma),
           rho_(rho),
           demog_mult_(demog_mult),
+          norm_distr(0,1),
+          pois_distr(1),
+          bino_distr(1, 0.1),
           apterous(K[0], instar_days[0], surv_juv[0], surv_adult[0], repro[0],
                    aphid_density_0[0], alate_rate),
           alates(K[1], instar_days[1], surv_juv[1], surv_adult[1], repro[1],
-                 aphid_density_0[1], disp_rate, disp_mort, disp_start) {};
+                 aphid_density_0[1], disp_rate, disp_mort) {};
 
 
 
@@ -242,6 +316,25 @@ public:
     inline double total_aphids() const {
         return apterous.total_aphids() + alates.total_aphids();
     }
+
+    // Kill all aphids on patch
+    inline void clear() {
+        apterous.clear();
+        alates.clear();
+        return;
+    }
+
+    // Emigration of this line to all other patches
+    void dispersal(const OnePatch* patch,
+                   arma::mat& emigrants, arma::mat& immigrants,
+                   pcg32& eng) const;
+    // Same, but with no stochasticity
+    void dispersal(const OnePatch* patch,
+                   arma::mat& emigrants, arma::mat& immigrants) const;
+    // Add process error
+    void process_error(double z);
+    // Update new aphid abundances
+    void iterate(double S);
 
 
     const double& sigma() const {return sigma_;}
