@@ -30,12 +30,15 @@ public:
     std::vector<bool> extinct;      // keeping track of line extinctions
     bool empty;                     // boolean for whether no aphids are on this patch
     double pred_rate;               // predation on aphids
-    double z;                       // Sum of all aphids at time t
-    uint32 n_patches;               // Total # patches
-    uint32 this_j;                  // Index for this patch
+    double z;                       // sum of all aphids at time t
+    uint32 n_patches;               // total # patches
+    uint32 this_j;                  // index for this patch
+    uint32 age = 0;                 // age of this patch
 
 
-    OnePatch() : aphids(), extinct(), empty(true), pred_rate(0), z(0) {};
+    OnePatch()
+        : aphids(), extinct(), empty(true), pred_rate(0), z(0),
+          n_patches(1), this_j(0) {};
     // Starting all aphids with "stable age distribution" with a given total density
     OnePatch(const std::vector<std::string>& aphid_name_,
              const std::vector<double>& sigma,
@@ -47,23 +50,27 @@ public:
              const std::vector<std::vector<arma::vec>>& surv_adult,
              const std::vector<std::vector<arma::vec>>& repro,
              const std::vector<std::vector<double>>& aphid_density_0,
-             const std::vector<double>& alate_rate,
+             const std::vector<double>& alate_prop,
              const std::vector<double>& disp_rate,
              const std::vector<double>& disp_mort,
              const std::vector<uint32>& disp_start,
-             const double& pred_rate_)
+             const double& pred_rate_,
+             const uint32& n_patches_,
+             const uint32& this_j_)
         : aphids(),
           extinct(aphid_name_.size(), false),
           empty(true),
           pred_rate(pred_rate_),
-          z(0) {
+          z(0),
+          n_patches(n_patches_),
+          this_j(this_j_) {
 
         aphids.reserve(n_lines);
 
         for (uint32 i = 0; i < n_lines; i++) {
             AphidPop ap(aphid_name_[i], sigma[i], rho[i], demog_mult[i], K[i],
                         instar_days[i], surv_juv[i], surv_adult[i], repro[i],
-                        aphid_density_0[i], alate_rate[i], disp_rate[i], disp_mort[i],
+                        aphid_density_0[i], alate_prop[i], disp_rate[i], disp_mort[i],
                         disp_start[i]);
             aphids.push_back(ap);
             const double& zi(aphid_density_0[i]);
@@ -84,16 +91,20 @@ public:
              const std::vector<std::vector<arma::vec>>& surv_adult,
              const std::vector<std::vector<arma::vec>>& repro,
              const std::vector<std::vector<arma::vec>>& aphid_density_0,
-             const std::vector<double>& alate_rate,
+             const std::vector<double>& alate_prop,
              const std::vector<double>& disp_rate,
              const std::vector<double>& disp_mort,
              const std::vector<uint32>& disp_start,
-             const double& pred_rate_)
+             const double& pred_rate_,
+             const uint32& n_patches_,
+             const uint32& this_j_)
         : aphids(),
           extinct(aphid_name_.size(), false),
           empty(true),
           pred_rate(pred_rate_),
-          z(0) {
+          z(0),
+          n_patches(n_patches_),
+          this_j(this_j_) {
 
         uint32 n_lines = aphid_name_.size();
 
@@ -102,7 +113,7 @@ public:
         for (uint32 i = 0; i < n_lines; i++) {
             AphidPop ap(aphid_name_[i], sigma[i], rho[i], demog_mult[i], K[i],
                         instar_days[i], surv_juv[i], surv_adult[i], repro[i],
-                        aphid_density_0[i], alate_rate[i], disp_rate[i], disp_mort[i],
+                        aphid_density_0[i], alate_prop[i], disp_rate[i], disp_mort[i],
                         disp_start[i]);
             aphids.push_back(ap);
             double zi = arma::accu(aphid_density_0[i]);
@@ -111,6 +122,25 @@ public:
         }
 
     };
+
+
+    OnePatch(const OnePatch& other)
+        : aphids(other.aphids), extinct(other.extinct), empty(other.empty),
+          pred_rate(other.pred_rate), z(other.z), n_patches(other.n_patches),
+          this_j(other.this_j), age(other.age) {};
+
+    OnePatch& operator=(const OnePatch& other) {
+        aphids = other.aphids;
+        extinct = other.extinct;
+        empty = other.empty;
+        pred_rate = other.pred_rate;
+        z = other.z;
+        n_patches = other.n_patches;
+        this_j = other.this_j;
+        age = other.age;
+        return this;
+    }
+
 
     /*
      Clear to no aphids
@@ -121,30 +151,217 @@ public:
             extinct[i] = true;
         }
         empty = true;
+        age = 0;
         return;
     }
 
     /*
-     Emigration of one line from this patch to all other patches:
+     Add dispersal info to `emigrants` and `immigrants` cubes.
+     In these cubes, rows are aphid stages, columns are patches,
+     and slices are aphid lines.
     */
-    arma::vec emigration(const uint32& j,
-                         const uint32& n_patches,
-                         pcg32& eng);
+    void calc_dispersal(arma::cube& emigrants,
+                        arma::cube& immigrants,
+                        pcg32& eng) const {
+        for (uint32 i = 0; i < aphids.size(); i++) {
+            aphids[i].calc_dispersal(this, emigrants.slice(i), immigrants.slice(i), eng);
+        }
+        return;
+    }
+
+    // Same thing as above, but overloaded for not including dispersal stochasticity
+    void calc_dispersal(arma::cube& emigrants,
+                        arma::cube& immigrants) const {
+        for (uint32 i = 0; i < aphids.size(); i++) {
+            aphids[i].calc_dispersal(this, emigrants.slice(i), immigrants.slice(i));
+        }
+        return;
+    }
+
 
     /*
-     Same thing as above, but overloaded for not including dispersal stochasticity
-    */
-    arma::vec emigration(const uint32& j,
-                         const uint32& n_patches);
-
-
-    /*
-     Iterate one time step
+     Iterate one time step, after calculating dispersal numbers
      */
-    void iterate(const arma::mat& emigrants,
-                 const arma::mat& immigrants,
-                 const double& extinct_N,
-                 pcg32& eng);
+    void update_pops(const arma::cube& emigrants,
+                     const arma::cube& immigrants,
+                     const double& extinct_N,
+                     pcg32& eng) {
+
+        z = 0;
+        for (const AphidPop& ap : aphids) z += ap.total_aphids();
+
+        for (uint32 i = 0; i < aphids.size(); i++) {
+            aphids[i].update_pop(z, pred_rate,
+                                 emigrants.slice(i).col(this_j),
+                                 immigrants.slice(i).col(this_j),
+                                 eng);
+        }
+
+        age++;
+
+        return;
+
+    }
+    // Same but minus stochasticity
+    void update_pops(const arma::cube& emigrants,
+                     const arma::cube& immigrants,
+                     const double& extinct_N) {
+
+        z = 0;
+        for (const AphidPop& ap : aphids) z += ap.total_aphids();
+
+        for (uint32 i = 0; i < aphids.size(); i++) {
+            aphids[i].update_pop(z, pred_rate,
+                                 emigrants.slice(i).col(this_j),
+                                 immigrants.slice(i).col(this_j));
+            // Newly extinct:
+            if (aphids[i].total_aphids() < extinct_N && !extinct[i]) {
+                aphids[i].clear();
+                extinct[i] = true;
+                auto iter = std::find(extinct.begin(), extinct.end(), false);
+                if (iter == extinct.end()) empty = true;
+            }
+            // Newly non-extinct
+            if (aphids[i].total_aphids() > extinct_N && extinct[i]) {
+                extinct[i] = false;
+                empty = false;
+            }
+        }
+
+        age++;
+
+        return;
+
+    }
+
+};
+
+
+
+
+/*
+ Class for all patches.
+
+ For the constructors below, all arguments should have a length equal to the number of
+ aphid lines, except for `aphid_density_0` and `pred_rate_`.
+ These should have a length equal to the number of patches.
+ Each item in `aphid_density_0` should have a length equal to the number of aphid lines.
+ */
+
+class AllPatches {
+
+public:
+
+    std::vector<OnePatch> patches;
+    arma::cube emigrants;
+    arma::cube immigrants;
+
+
+    AllPatches() : patches(), emigrants(), immigrants() {};
+    // Starting all aphids with "stable age distribution" with a given total density
+    AllPatches(const std::vector<std::string>& aphid_name_,
+               const std::vector<double>& sigma,
+               const std::vector<double>& rho,
+               const std::vector<double>& demog_mult,
+               const std::vector<std::vector<double>>& K,
+               const std::vector<std::vector<arma::uvec>>& instar_days,
+               const std::vector<std::vector<double>>& surv_juv,
+               const std::vector<std::vector<arma::vec>>& surv_adult,
+               const std::vector<std::vector<arma::vec>>& repro,
+               const std::vector<std::vector<std::vector<double>>>& aphid_density_0,
+               const std::vector<double>& alate_prop,
+               const std::vector<double>& disp_rate,
+               const std::vector<double>& disp_mort,
+               const std::vector<uint32>& disp_start,
+               const std::vector<double>& pred_rate_) {
+
+        uint32 n_patches = std::min(aphid_density_0.size(), pred_rate_.size());
+        uint32 n_lines = aphid_name_.size();
+        uint32 n_stages = arma::accu(instar_days.front().front());
+
+        patches.reserve(n_patches);
+        for (uint32 j = 0; j < n_patches; j++) {
+            OnePatch ap(aphid_name_, sigma, rho, demog_mult, K, instar_days,
+                        surv_juv, surv_adult, repro, aphid_density_0[j],
+                        alate_prop, disp_rate, disp_mort, disp_start,
+                        pred_rate_[j], n_patches, j);
+            patches.push_back(ap);
+        }
+
+        emigrants.set_size(n_stages, n_patches, n_lines);
+        immigrants.set_size(n_stages, n_patches, n_lines);
+
+    }
+    // Starting each line with starting densities of each stage directly given:
+    AllPatches(const std::vector<std::string>& aphid_name_,
+               const std::vector<double>& sigma,
+               const std::vector<double>& rho,
+               const std::vector<double>& demog_mult,
+               const std::vector<std::vector<double>>& K,
+               const std::vector<std::vector<arma::uvec>>& instar_days,
+               const std::vector<std::vector<double>>& surv_juv,
+               const std::vector<std::vector<arma::vec>>& surv_adult,
+               const std::vector<std::vector<arma::vec>>& repro,
+               const std::vector<std::vector<std::vector<arma::vec>>>& aphid_density_0,
+               const std::vector<double>& alate_prop,
+               const std::vector<double>& disp_rate,
+               const std::vector<double>& disp_mort,
+               const std::vector<uint32>& disp_start,
+               const std::vector<double>& pred_rate_) {
+
+        uint32 n_patches = std::min(aphid_density_0.size(), pred_rate_.size());
+
+        patches.reserve(n_patches);
+        for (uint32 j = 0; j < n_patches; j++) {
+            OnePatch ap(aphid_name_, sigma, rho, demog_mult, K, instar_days,
+                        surv_juv, surv_adult, repro, aphid_density_0[j],
+                        alate_prop, disp_rate, disp_mort, disp_start,
+                        pred_rate_[j], n_patches, j);
+            patches.push_back(ap);
+        }
+
+        emigrants.set_size(n_stages, n_patches, n_lines);
+        immigrants.set_size(n_stages, n_patches, n_lines);
+
+    }
+
+    AllPatches(const AllPatches& other)
+        : patches(other.patches),
+          emigrants(other.emigrants),
+          immigrants(other.immigrants) {};
+
+    AllPatches& operator=(const AllPatches& other) {
+        patches = other.patches;
+        emigrants = other.emigrants;
+        immigrants = other.immigrants;
+        return this;
+    };
+
+
+
+    void iterate(const double& extinct_N, pcg32& eng) {
+        emigrants.fill(0);
+        immigrants.fill(0);
+        for (const OnePatch& p : patches) {
+            p.calc_dispersal(emigrants, immigrants, eng);
+        }
+        for (OnePatch& p : patches) {
+            p.update_pops(emigrants, immigrants, extinct_N, eng);
+        }
+        return;
+    }
+    void iterate(const double& extinct_N) {
+        emigrants.fill(0);
+        immigrants.fill(0);
+        for (const OnePatch& p : patches) {
+            p.calc_dispersal(emigrants, immigrants);
+        }
+        for (OnePatch& p : patches) {
+            p.update_pops(emigrants, immigrants, extinct_N);
+        }
+        return;
+    }
+
 
 };
 
