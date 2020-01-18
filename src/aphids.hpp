@@ -15,6 +15,8 @@ using namespace Rcpp;
 
 // This is necessary for dispersal methods
 class OnePatch;
+// Necessary here to declare friendship
+class AphidPop;
 
 
 
@@ -25,8 +27,9 @@ protected:
 
     arma::mat leslie_;       // Leslie matrix with survival and reproduction
     arma::vec X_0_;          // initial aphid abundances by stage
-    double K_;               // aphid density dependence
+    double K_;               // aphid carrying capacity
     uint32 n_aphid_stages_;  // number of aphid stages (i.e., days)
+
 
 public:
     // Changing through time
@@ -123,6 +126,13 @@ public:
         return;
     }
 
+    // Add process error:
+    void process_error(const double& z,
+                       const double& sigma,
+                       const double& rho,
+                       const double& demog_mult,
+                       std::normal_distribution<double>& norm_distr,
+                       pcg32& eng);
 
     // Returning references to private members:
     const arma::mat& leslie() const {return leslie_;}
@@ -137,46 +147,50 @@ public:
 // Aphid "type" population for apterous of a particular clonal line
 class ApterousPop : public AphidTypePop {
 
-    double alate_rate_;  // rate at which alates are produced
+    friend class AphidPop;
+
+    double alate_prop_;  // proportion of new offspring that are alates
 
 public:
 
-    ApterousPop() : AphidTypePop(), alate_rate_(0) {};
+    ApterousPop() : AphidTypePop(), alate_prop_(0) {};
     ApterousPop(const double& K,
                 const arma::uvec& instar_days,
                 const double& surv_juv,
                 const arma::vec& surv_adult,
                 const arma::vec& repro,
                 const double& aphid_density_0,
-                const double& alate_rate)
+                const double& alate_prop)
         : AphidTypePop(K, instar_days, surv_juv, surv_adult, repro, aphid_density_0),
-          alate_rate_(alate_rate) {};
+          alate_prop_(alate_prop) {};
     ApterousPop(const double& K,
                 const arma::uvec& instar_days,
                 const double& surv_juv,
                 const arma::vec& surv_adult,
                 const arma::vec& repro,
                 const arma::vec& aphid_density_0,
-                const double& alate_rate)
+                const double& alate_prop)
         : AphidTypePop(K, instar_days, surv_juv, surv_adult, repro, aphid_density_0),
-          alate_rate_(alate_rate) {};
+          alate_prop_(alate_prop) {};
 
     ApterousPop(const ApterousPop& other)
         : AphidTypePop(other),
-          alate_rate_(other.alate_rate_) {};
+          alate_prop_(other.alate_prop_) {};
 
     ApterousPop& operator=(const ApterousPop& other) {
         AphidTypePop::operator=(other);
-        alate_rate_ = other.alate_rate_;
+        alate_prop_ = other.alate_prop_;
         return *this;
     }
 
 
-    const double& alate_rate() const {return alate_rate_;}
+    const double& alate_prop() const {return alate_prop_;}
 
 };
 // Aphid "type" population for alates of a particular clonal line
 class AlatePop : public AphidTypePop {
+
+    friend class AphidPop;
 
     double disp_rate_;      // rate at which they leave focal plant
     double disp_mort_;      // mortality of dispersers
@@ -244,6 +258,13 @@ class AphidPop {
     mutable std::poisson_distribution<uint32> pois_distr;   // samples total dispersers
     mutable std::binomial_distribution<uint32> bino_distr;  // samples dead dispersers
 
+
+    // aphid intraspecific density dependence
+    inline double S(const double& z) {
+        return 1 / (1 + z / K_);
+    }
+
+
 public:
     std::string aphid_name;    // unique identifying name for this aphid line
     ApterousPop apterous;
@@ -267,7 +288,7 @@ public:
              const std::vector<arma::vec>& surv_adult,
              const std::vector<arma::vec>& repro,
              const std::vector<double>& aphid_density_0,
-             const double& alate_rate,
+             const double& alate_prop,
              const double& disp_rate,
              const double& disp_mort)
         : aphid_name(aphid_name_),
@@ -278,7 +299,7 @@ public:
           pois_distr(1),
           bino_distr(1, 0.1),
           apterous(K[0], instar_days[0], surv_juv[0], surv_adult[0], repro[0],
-                   aphid_density_0[0], alate_rate),
+                   aphid_density_0[0], alate_prop),
           alates(K[1], instar_days[1], surv_juv[1], surv_adult[1], repro[1],
                  aphid_density_0[1], disp_rate, disp_mort) {};
     // Starting with starting densities of each stage directly given:
@@ -292,7 +313,7 @@ public:
              const std::vector<arma::vec>& surv_adult,
              const std::vector<arma::vec>& repro,
              const std::vector<arma::vec>& aphid_density_0,
-             const double& alate_rate,
+             const double& alate_prop,
              const double& disp_rate,
              const double& disp_mort)
         : aphid_name(aphid_name_),
@@ -303,7 +324,7 @@ public:
           pois_distr(1),
           bino_distr(1, 0.1),
           apterous(K[0], instar_days[0], surv_juv[0], surv_adult[0], repro[0],
-                   aphid_density_0[0], alate_rate),
+                   aphid_density_0[0], alate_prop),
           alates(K[1], instar_days[1], surv_juv[1], surv_adult[1], repro[1],
                  aphid_density_0[1], disp_rate, disp_mort) {};
 
@@ -317,25 +338,38 @@ public:
         return apterous.total_aphids() + alates.total_aphids();
     }
 
-    // Kill all aphids on patch
+    // Kill all aphids
     inline void clear() {
         apterous.clear();
         alates.clear();
         return;
     }
 
-    // Emigration of this line to all other patches
-    void dispersal(const OnePatch* patch,
-                   arma::mat& emigrants, arma::mat& immigrants,
-                   pcg32& eng) const;
-    // Same, but with no stochasticity
-    void dispersal(const OnePatch* patch,
-                   arma::mat& emigrants, arma::mat& immigrants) const;
-    // Add process error
-    void process_error(double z);
-    // Update new aphid abundances
-    void iterate(double S);
 
+    /*
+     Calculate dispersal of this line to all other patches.
+     Emigration doesn't necessarily == immigration due to disperser mortality.
+    */
+    void calc_dispersal(const OnePatch* patch,
+                        arma::mat& emigrants,
+                        arma::mat& immigrants,
+                        pcg32& eng) const;
+    // Same, but with no stochasticity
+    void calc_dispersal(const OnePatch* patch,
+                        arma::mat& emigrants,
+                        arma::mat& immigrants) const;
+
+    // Update new aphid abundances
+    void update_pop(const double& z,
+                    const double& pred_rate,
+                    const arma::vec& emigrants,
+                    const arma::vec& immigrants,
+                    pcg32& eng);
+    // Same as above, but no randomness in alate production:
+    void update_pop(const double& z,
+                    const double& pred_rate,
+                    const arma::vec& emigrants,
+                    const arma::vec& immigrants);
 
     const double& sigma() const {return sigma_;}
     const double& rho() const {return rho_;}
