@@ -24,6 +24,29 @@ One patch of continuous habitat.
 */
 class OnePatch {
 
+    // aphid intraspecific density dependence
+    inline double S() const {
+        return 1 / (1 + z / K);
+    }
+
+    /*
+     Adjust for potential extinction or re-colonization:
+     */
+    void extinct_colonize(const uint32& i, const double& extinct_N) {
+        double N = aphids[i].total_aphids();
+        if (N > extinct_N && empty) empty = false;
+        // Newly extinct:
+        if (N < extinct_N && !extinct[i]) {
+            aphids[i].clear();
+            extinct[i] = true;
+        }
+        // Newly colonized:
+        if (N > extinct_N && extinct[i]) {
+            extinct[i] = false;
+        }
+        return;
+    }
+
 public:
 
     std::vector<AphidPop> aphids;   // aphids in this patch
@@ -31,6 +54,7 @@ public:
     bool empty;                     // boolean for whether no aphids are on this patch
     double pred_rate;               // predation on aphids
     double z;                       // sum of all aphids at time t
+    double K;                       // aphid carrying capacity
     uint32 n_patches;               // total # patches
     uint32 this_j;                  // index for this patch
     uint32 age = 0;                 // age of this patch
@@ -41,10 +65,10 @@ public:
           n_patches(1), this_j(0) {};
     // Starting all aphids with "stable age distribution" with a given total density
     OnePatch(const std::vector<std::string>& aphid_name_,
-             const std::vector<double>& sigma,
-             const std::vector<double>& rho,
-             const std::vector<double>& demog_mult,
-             const std::vector<std::vector<double>>& K,
+             const double& sigma,
+             const double& rho,
+             const double& demog_mult,
+             const double& K_,
              const std::vector<std::vector<arma::uvec>>& instar_days,
              const std::vector<std::vector<double>>& surv_juv,
              const std::vector<std::vector<arma::vec>>& surv_adult,
@@ -62,13 +86,14 @@ public:
           empty(true),
           pred_rate(pred_rate_),
           z(0),
+          K(K_),
           n_patches(n_patches_),
           this_j(this_j_) {
 
         aphids.reserve(n_lines);
 
         for (uint32 i = 0; i < n_lines; i++) {
-            AphidPop ap(aphid_name_[i], sigma[i], rho[i], demog_mult[i], K[i],
+            AphidPop ap(aphid_name_[i], sigma, rho, demog_mult,
                         instar_days[i], surv_juv[i], surv_adult[i], repro[i],
                         aphid_density_0[i], alate_prop[i], disp_rate[i], disp_mort[i],
                         disp_start[i]);
@@ -82,10 +107,10 @@ public:
 
     // Starting each line with starting densities of each stage directly given:
     OnePatch(const std::vector<std::string>& aphid_name_,
-             const std::vector<double>& sigma,
-             const std::vector<double>& rho,
-             const std::vector<double>& demog_mult,
-             const std::vector<std::vector<double>>& K,
+             const double& sigma,
+             const double& rho,
+             const double& demog_mult,
+             const double& K_,
              const std::vector<std::vector<arma::uvec>>& instar_days,
              const std::vector<std::vector<double>>& surv_juv,
              const std::vector<std::vector<arma::vec>>& surv_adult,
@@ -103,6 +128,7 @@ public:
           empty(true),
           pred_rate(pred_rate_),
           z(0),
+          K(K_),
           n_patches(n_patches_),
           this_j(this_j_) {
 
@@ -111,7 +137,7 @@ public:
         aphids.reserve(n_lines);
 
         for (uint32 i = 0; i < n_lines; i++) {
-            AphidPop ap(aphid_name_[i], sigma[i], rho[i], demog_mult[i], K[i],
+            AphidPop ap(aphid_name_[i], sigma, rho, demog_mult,
                         instar_days[i], surv_juv[i], surv_adult[i], repro[i],
                         aphid_density_0[i], alate_prop[i], disp_rate[i], disp_mort[i],
                         disp_start[i]);
@@ -126,7 +152,7 @@ public:
 
     OnePatch(const OnePatch& other)
         : aphids(other.aphids), extinct(other.extinct), empty(other.empty),
-          pred_rate(other.pred_rate), z(other.z), n_patches(other.n_patches),
+          pred_rate(other.pred_rate), z(other.z), K(other.K), n_patches(other.n_patches),
           this_j(other.this_j), age(other.age) {};
 
     OnePatch& operator=(const OnePatch& other) {
@@ -135,6 +161,7 @@ public:
         empty = other.empty;
         pred_rate = other.pred_rate;
         z = other.z;
+        K = other.K;
         n_patches = other.n_patches;
         this_j = other.this_j;
         age = other.age;
@@ -152,6 +179,12 @@ public:
         }
         empty = true;
         age = 0;
+        return;
+    }
+    // Same, then reset `K`
+    void clear(const double& K_) {
+        clear();
+        K = K_;
         return;
     }
 
@@ -190,11 +223,21 @@ public:
         z = 0;
         for (const AphidPop& ap : aphids) z += ap.total_aphids();
 
+        double S_ = S(z);
+
+        empty = true;
+
         for (uint32 i = 0; i < aphids.size(); i++) {
-            aphids[i].update_pop(z, pred_rate,
+
+            // Update population, including process error and dispersal:
+            aphids[i].update_pop(z, S_, pred_rate,
                                  emigrants.slice(i).col(this_j),
                                  immigrants.slice(i).col(this_j),
                                  eng);
+
+            // Adjust for potential extinction or re-colonization:
+            extinct_colonize(i, extinct_N);
+
         }
 
         age++;
@@ -210,22 +253,15 @@ public:
         z = 0;
         for (const AphidPop& ap : aphids) z += ap.total_aphids();
 
+        double S_ = S(z);
+
+        empty = true;
+
         for (uint32 i = 0; i < aphids.size(); i++) {
-            aphids[i].update_pop(z, pred_rate,
+            aphids[i].update_pop(z, S_, pred_rate,
                                  emigrants.slice(i).col(this_j),
                                  immigrants.slice(i).col(this_j));
-            // Newly extinct:
-            if (aphids[i].total_aphids() < extinct_N && !extinct[i]) {
-                aphids[i].clear();
-                extinct[i] = true;
-                auto iter = std::find(extinct.begin(), extinct.end(), false);
-                if (iter == extinct.end()) empty = true;
-            }
-            // Newly non-extinct
-            if (aphids[i].total_aphids() > extinct_N && extinct[i]) {
-                extinct[i] = false;
-                empty = false;
-            }
+            extinct_colonize(i, extinct_N);
         }
 
         age++;
@@ -233,6 +269,7 @@ public:
         return;
 
     }
+
 
 };
 
@@ -242,9 +279,9 @@ public:
 /*
  Class for all patches.
 
- For the constructors below, all arguments should have a length equal to the number of
- aphid lines, except for `aphid_density_0` and `pred_rate_`.
- These should have a length equal to the number of patches.
+ For the constructors below, all vector arguments should have a length equal to the
+ number of aphid lines, except for `K`, `aphid_density_0`, and `pred_rate_`;
+ these should have a length equal to the number of patches.
  Each item in `aphid_density_0` should have a length equal to the number of aphid lines.
  */
 
@@ -260,10 +297,10 @@ public:
     AllPatches() : patches(), emigrants(), immigrants() {};
     // Starting all aphids with "stable age distribution" with a given total density
     AllPatches(const std::vector<std::string>& aphid_name_,
-               const std::vector<double>& sigma,
-               const std::vector<double>& rho,
-               const std::vector<double>& demog_mult,
-               const std::vector<std::vector<double>>& K,
+               const double& sigma,
+               const double& rho,
+               const double& demog_mult,
+               const std::vector<double>& K,
                const std::vector<std::vector<arma::uvec>>& instar_days,
                const std::vector<std::vector<double>>& surv_juv,
                const std::vector<std::vector<arma::vec>>& surv_adult,
@@ -281,7 +318,7 @@ public:
 
         patches.reserve(n_patches);
         for (uint32 j = 0; j < n_patches; j++) {
-            OnePatch ap(aphid_name_, sigma, rho, demog_mult, K, instar_days,
+            OnePatch ap(aphid_name_, sigma, rho, demog_mult, K[j], instar_days,
                         surv_juv, surv_adult, repro, aphid_density_0[j],
                         alate_prop, disp_rate, disp_mort, disp_start,
                         pred_rate_[j], n_patches, j);
@@ -294,10 +331,10 @@ public:
     }
     // Starting each line with starting densities of each stage directly given:
     AllPatches(const std::vector<std::string>& aphid_name_,
-               const std::vector<double>& sigma,
-               const std::vector<double>& rho,
-               const std::vector<double>& demog_mult,
-               const std::vector<std::vector<double>>& K,
+               const double& sigma,
+               const double& rho,
+               const double& demog_mult,
+               const std::vector<double>& K,
                const std::vector<std::vector<arma::uvec>>& instar_days,
                const std::vector<std::vector<double>>& surv_juv,
                const std::vector<std::vector<arma::vec>>& surv_adult,
@@ -313,7 +350,7 @@ public:
 
         patches.reserve(n_patches);
         for (uint32 j = 0; j < n_patches; j++) {
-            OnePatch ap(aphid_name_, sigma, rho, demog_mult, K, instar_days,
+            OnePatch ap(aphid_name_, sigma, rho, demog_mult, K[j], instar_days,
                         surv_juv, surv_adult, repro, aphid_density_0[j],
                         alate_prop, disp_rate, disp_mort, disp_start,
                         pred_rate_[j], n_patches, j);

@@ -226,6 +226,7 @@ void AphidPop::calc_dispersal(const OnePatch* patch,
 
 
 void AphidPop::update_pop(const double& z,
+                          const double& S,
                           const double& pred_rate,
                           const arma::vec& emigrants,
                           const arma::vec& immigrants,
@@ -233,9 +234,9 @@ void AphidPop::update_pop(const double& z,
 
     // Basic updates for each:
     apterous.X_t = apterous.X_t1;
-    apterous.X_t1 = (pred_rate * S(z)) % (apterous.leslie_ * apterous.X_t);
+    apterous.X_t1 = (pred_rate * S) % (apterous.leslie_ * apterous.X_t);
     alates.X_t = alates.X_t1;
-    alates.X_t1 = (pred_rate * S(z)) % (alates.leslie_ * alates.X_t);
+    alates.X_t1 = (pred_rate * S) % (alates.leslie_ * alates.X_t);
 
     // Process error
     apterous.process_error(z, sigma_, rho_, demog_mult_, norm_distr, eng);
@@ -266,15 +267,16 @@ void AphidPop::update_pop(const double& z,
 
 // Same as above, but no randomness in alate production:
 void AphidPop::update_pop(const double& z,
+                          const double& S,
                           const double& pred_rate,
                           const arma::vec& emigrants,
                           const arma::vec& immigrants) {
 
     // Basic updates for each:
     apterous.X_t = apterous.X_t1;
-    apterous.X_t1 = (pred_rate * S(z)) % (apterous.leslie_ * apterous.X_t);
+    apterous.X_t1 = (pred_rate * S) % (apterous.leslie_ * apterous.X_t);
     alates.X_t = alates.X_t1;
-    alates.X_t1 = (pred_rate * S(z)) % (alates.leslie_ * alates.X_t);
+    alates.X_t1 = (pred_rate * S) % (alates.leslie_ * alates.X_t);
     // # offspring from apterous aphids that are alates:
     double new_alates = apterous.alate_prop_ * apterous.X_t1.front();
 
