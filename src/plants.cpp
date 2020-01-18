@@ -1,3 +1,9 @@
+// I no longer want this to compile
+# ifdef __CLONEWARS_PLANTS_H
+// # ifndef __CLONEWARS_PLANTS_H
+# define __CLONEWARS_PLANTS_H
+
+
 #include <RcppArmadillo.h>
 #include <random> // C++11 distributions
 #include <pcg/pcg_random.hpp> // pcg PRNG
@@ -559,3 +565,6 @@ arma::mat sim_reps_(const uint32& n_reps,
     return out_matrix;
 
 }
+
+
+#endif

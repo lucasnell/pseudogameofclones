@@ -1,5 +1,8 @@
-# ifndef __CLONEWARS_SIMULATE_H
-# define __CLONEWARS_SIMULATE_H
+
+// I no longer want this to compile
+# ifdef __CLONEWARS_PLANTS_H
+// # ifndef __CLONEWARS_PLANTS_H
+# define __CLONEWARS_PLANTS_H
 
 
 #include <RcppArmadillo.h>
