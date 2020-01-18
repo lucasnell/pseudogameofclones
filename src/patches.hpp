@@ -400,7 +400,46 @@ public:
     }
 
 
+    void clear_patches(const uint32& min_age) {
+        for (OnePatch& p : patches) {
+            if (p.age >= min_age) p.clear();
+        }
+        return;
+    }
+    void clear_patches(const double& min_N) {
+        for (OnePatch& p : patches) {
+            double N = p.total_aphids();
+            if (N >= min_N) p.clear();
+        }
+        return;
+    }
+    // Same, but reset `K` when they're cleared
+    void clear_patches(const uint32& min_age,
+                       std::normal_distribution<double>& distr,
+                       pcg32& eng) {
+        for (OnePatch& p : patches) {
+            if (p.age >= min_age) {
+                double K_= distr(eng);
+                p.clear(K_);
+            }
+        }
+        return;
+    }
+    void clear_patches(const double& min_N,
+                       std::normal_distribution<double>& distr,
+                       pcg32& eng) {
+        for (OnePatch& p : patches) {
+            double N = p.total_aphids();
+            if (N >= min_N) {
+                double K_= distr(eng);
+                p.clear(K_);
+            }
+        }
+        return;
+    }
+
 };
+
 
 
 
