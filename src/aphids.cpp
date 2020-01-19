@@ -225,12 +225,15 @@ void AphidPop::calc_dispersal(const OnePatch* patch,
 
 
 
-void AphidPop::update_pop(const double& z,
-                          const double& S,
-                          const double& pred_rate,
+void AphidPop::update_pop(const OnePatch* patch,
                           const arma::vec& emigrants,
                           const arma::vec& immigrants,
                           pcg32& eng) {
+
+
+    const double& z(patch->z);
+    const double& S(patch->S);
+    const double& pred_rate(patch->pred_rate);
 
     // Basic updates for each:
     apterous.X_t = apterous.X_t1;
@@ -266,11 +269,13 @@ void AphidPop::update_pop(const double& z,
 }
 
 // Same as above, but no randomness in alate production:
-void AphidPop::update_pop(const double& z,
-                          const double& S,
-                          const double& pred_rate,
+void AphidPop::update_pop(const OnePatch* patch,
                           const arma::vec& emigrants,
                           const arma::vec& immigrants) {
+
+    const double& z(patch->z);
+    const double& S(patch->S);
+    const double& pred_rate(patch->pred_rate);
 
     // Basic updates for each:
     apterous.X_t = apterous.X_t1;

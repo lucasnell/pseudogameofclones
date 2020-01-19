@@ -27,7 +27,6 @@ protected:
 
     arma::mat leslie_;       // Leslie matrix with survival and reproduction
     arma::vec X_0_;          // initial aphid abundances by stage
-    uint32 n_aphid_stages_;  // number of aphid stages (i.e., days)
 
 
 public:
@@ -38,57 +37,17 @@ public:
     /*
      Constructors
      */
-    AphidTypePop()
-        : leslie_(),
-          X_0_(),
-          n_aphid_stages_(),
-          X_t(),
-          X_t1() {};
-    // Starting with "stable age distribution" with a given total density
-    AphidTypePop(const arma::uvec& instar_days,
-                 const double& surv_juv,
-                 const arma::vec& surv_adult,
-                 const arma::vec& repro,
-                 const double& aphid_density_0)
-        : leslie_(),
-          X_0_(),
-          n_aphid_stages_(arma::accu(instar_days)),
-          X_t(), X_t1() {
-
-        leslie_matrix__(instar_days, surv_juv, surv_adult, repro, leslie_);
-
-        leslie_sad__(leslie_, X_0_);
-        X_0_ *= aphid_density_0;
-
-        X_t = X_0_;
-        X_t1 = X_0_;
-
-    };
-    // Starting with starting densities of each stage directly given:
-    AphidTypePop(const arma::uvec& instar_days,
-                 const double& surv_juv,
-                 const arma::vec& surv_adult,
-                 const arma::vec& repro,
+    AphidTypePop() : leslie_(), X_0_(), X_t(), X_t1() {};
+    AphidTypePop(const arma::mat& leslie_mat,
                  const arma::vec& aphid_density_0)
-        : leslie_(),
-          X_0_(),
-          n_aphid_stages_(arma::accu(instar_days)),
-          X_t(), X_t1() {
-
-        leslie_matrix__(instar_days, surv_juv, surv_adult, repro, leslie_);
-
-        X_0_ = aphid_density_0;
-
-        X_t = X_0_;
-        X_t1 = X_0_;
-
-    };
-
+        : leslie_(leslie_mat),
+          X_0_(aphid_density_0),
+          X_t(aphid_density_0),
+          X_t1(aphid_density_0) {};
 
     AphidTypePop(const AphidTypePop& other)
         : leslie_(other.leslie_),
           X_0_(other.X_0_),
-          n_aphid_stages_(other.n_aphid_stages_),
           X_t(other.X_t),
           X_t1(other.X_t1) {};
 
@@ -96,7 +55,6 @@ public:
 
         leslie_ = other.leslie_;
         X_0_ = other.X_0_;
-        n_aphid_stages_ = other.n_aphid_stages_;
         X_t = other.X_t;
         X_t1 = other.X_t1;
 
@@ -105,8 +63,7 @@ public:
 
 
     /*
-     Total (non-parasitized) aphids
-     (Using X at time t+1 bc these get calculated before X get iterated.)
+     Total aphids
      */
     inline double total_aphids() const {
         return arma::accu(X_t1);
@@ -145,21 +102,10 @@ class ApterousPop : public AphidTypePop {
 public:
 
     ApterousPop() : AphidTypePop(), alate_prop_(0) {};
-    ApterousPop(const arma::uvec& instar_days,
-                const double& surv_juv,
-                const arma::vec& surv_adult,
-                const arma::vec& repro,
-                const double& aphid_density_0,
-                const double& alate_prop)
-        : AphidTypePop(instar_days, surv_juv, surv_adult, repro, aphid_density_0),
-          alate_prop_(alate_prop) {};
-    ApterousPop(const arma::uvec& instar_days,
-                const double& surv_juv,
-                const arma::vec& surv_adult,
-                const arma::vec& repro,
+    ApterousPop(const arma::mat& leslie_mat,
                 const arma::vec& aphid_density_0,
                 const double& alate_prop)
-        : AphidTypePop(instar_days, surv_juv, surv_adult, repro, aphid_density_0),
+        : AphidTypePop(leslie_mat, aphid_density_0),
           alate_prop_(alate_prop) {};
 
     ApterousPop(const ApterousPop& other)
@@ -188,28 +134,15 @@ class AlatePop : public AphidTypePop {
 public:
 
     AlatePop() : AphidTypePop(), disp_rate_(0), disp_mort_(0), disp_start_(0) {};
-    AlatePop(const arma::uvec& instar_days,
-             const double& surv_juv,
-             const arma::vec& surv_adult,
-             const arma::vec& repro,
-             const double& aphid_density_0,
-             const double& disp_rate,
-             const double& disp_mort)
-        : AphidTypePop(instar_days, surv_juv, surv_adult, repro, aphid_density_0),
-          disp_rate_(disp_rate),
-          disp_mort_(disp_mort),
-          disp_start_(arma::accu(instar_days.head(instar_days.n_elem - 1)) - 1) {};
-    AlatePop(const arma::uvec& instar_days,
-             const double& surv_juv,
-             const arma::vec& surv_adult,
-             const arma::vec& repro,
+    AlatePop(const arma::mat& leslie_mat,
              const arma::vec& aphid_density_0,
              const double& disp_rate,
-             const double& disp_mort)
-        : AphidTypePop(instar_days, surv_juv, surv_adult, repro, aphid_density_0),
+             const double& disp_mort,
+             const uint32& disp_start)
+        : AphidTypePop(leslie_mat, aphid_density_0),
           disp_rate_(disp_rate),
           disp_mort_(disp_mort),
-          disp_start_(arma::accu(instar_days.head(instar_days.n_elem - 1)) - 1) {};
+          disp_start_(disp_start) {};
 
     AlatePop(const AlatePop& other)
         : AphidTypePop(other),
@@ -250,70 +183,44 @@ public:
     std::string aphid_name;    // unique identifying name for this aphid line
     ApterousPop apterous;
     AlatePop alates;
+    bool extinct;
 
     /*
      Constructors.
-     Make sure that all input vectors are of length 2!
      */
     AphidPop()
         : sigma_(0), rho_(0), demog_mult_(0), norm_distr(0,1), pois_distr(1),
           bino_distr(1, 0.1), aphid_name(""), apterous(), alates() {};
-    // Starting with "stable age distribution" with a given total density
-    AphidPop(const std::string& aphid_name_,
-             const double& sigma,
-             const double& rho,
-             const double& demog_mult,
-             const std::vector<arma::uvec>& instar_days,
-             const std::vector<double>& surv_juv,
-             const std::vector<arma::vec>& surv_adult,
-             const std::vector<arma::vec>& repro,
-             const std::vector<double>& aphid_density_0,
-             const double& alate_prop,
-             const double& disp_rate,
-             const double& disp_mort)
-        : aphid_name(aphid_name_),
-          sigma_(sigma),
-          rho_(rho),
-          demog_mult_(demog_mult),
-          norm_distr(0,1),
-          pois_distr(1),
-          bino_distr(1, 0.1),
-          apterous(instar_days[0], surv_juv[0], surv_adult[0], repro[0],
-                   aphid_density_0[0], alate_prop),
-          alates(instar_days[1], surv_juv[1], surv_adult[1], repro[1],
-                 aphid_density_0[1], disp_rate, disp_mort) {};
-    // Starting with starting densities of each stage directly given:
-    AphidPop(const std::string& aphid_name_,
-             const double& sigma,
-             const double& rho,
-             const double& demog_mult,
-             const std::vector<arma::uvec>& instar_days,
-             const std::vector<double>& surv_juv,
-             const std::vector<arma::vec>& surv_adult,
-             const std::vector<arma::vec>& repro,
-             const std::vector<arma::vec>& aphid_density_0,
-             const double& alate_prop,
-             const double& disp_rate,
-             const double& disp_mort)
-        : aphid_name(aphid_name_),
-          sigma_(sigma),
-          rho_(rho),
-          demog_mult_(demog_mult),
-          norm_distr(0,1),
-          pois_distr(1),
-          bino_distr(1, 0.1),
-          apterous(instar_days[0], surv_juv[0], surv_adult[0], repro[0],
-                   aphid_density_0[0], alate_prop),
-          alates(instar_days[1], surv_juv[1], surv_adult[1], repro[1],
-                 aphid_density_0[1], disp_rate, disp_mort) {};
 
+    // Make sure `leslie_mat` has 2 slices and `aphid_density_0` has two columns!
+    AphidPop(const std::string& aphid_name_,
+             const double& sigma,
+             const double& rho,
+             const double& demog_mult,
+             const arma::cube& leslie_mat,
+             const arma::mat& aphid_density_0,
+             const double& alate_prop,
+             const double& disp_rate,
+             const double& disp_mort,
+             const uint32& disp_start)
+        : aphid_name(aphid_name_),
+          sigma_(sigma),
+          rho_(rho),
+          demog_mult_(demog_mult),
+          norm_distr(0,1),
+          pois_distr(1),
+          bino_distr(1, 0.1),
+          apterous(leslie_mat.slice(0), aphid_density_0.col(0), alate_prop),
+          alates(leslie_mat.slice(1), aphid_density_0.col(1), disp_rate, disp_mort,
+                 disp_start),
+          extinct(false) {};
 
 
     /*
-     Total (non-parasitized) aphids
-     (Using X at time t+1 bc these get calculated before X get iterated.)
+     Total aphids
      */
     inline double total_aphids() const {
+        if (extinct) return 0;
         return apterous.total_aphids() + alates.total_aphids();
     }
 
@@ -321,6 +228,7 @@ public:
     inline void clear() {
         apterous.clear();
         alates.clear();
+        extinct = true;
         return;
     }
 
@@ -339,16 +247,12 @@ public:
                         arma::mat& immigrants) const;
 
     // Update new aphid abundances
-    void update_pop(const double& z,
-                    const double& S,
-                    const double& pred_rate,
+    void update_pop(const OnePatch* patch,
                     const arma::vec& emigrants,
                     const arma::vec& immigrants,
                     pcg32& eng);
     // Same as above, but no randomness in alate production:
-    void update_pop(const double& z,
-                    const double& S,
-                    const double& pred_rate,
+    void update_pop(const OnePatch* patch,
                     const arma::vec& emigrants,
                     const arma::vec& immigrants);
 
