@@ -12,7 +12,6 @@
 #include <cstdint>              // integer types
 #include <algorithm>            // find
 #include <pcg/pcg_random.hpp>   // pcg prng
-#include "math.hpp"             // leslie_matrix and leslie_sad
 #include "pcg.hpp"              // runif_ fxns
 #include "clonewars_types.hpp"  // integer types
 

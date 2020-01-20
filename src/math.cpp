@@ -2,7 +2,6 @@
 #include <cmath>
 
 #include "clonewars_types.hpp"
-#include "math.hpp"
 
 using namespace Rcpp;
 
@@ -20,11 +19,11 @@ using namespace Rcpp;
  --------------
  */
 
-void logit__(const arma::vec& p, , arma::vec& out) {
+void logit__(const arma::vec& p, arma::vec& out) {
     out = arma::log(p / (1-p));
     return;
 }
-void inv_logit__(const arma::vec& a, , arma::vec& out){
+void inv_logit__(const arma::vec& a, arma::vec& out){
     out = 1 / (1 + arma::exp(-a));
     return;
 }
@@ -134,8 +133,7 @@ NumericMatrix leslie_matrix(IntegerVector instar_days, const double& surv_juv,
 // This computes the "stable age distribution" from the Leslie matrix, which is
 // the proportion of different classes that is required for the population to grow
 // exponentially
-// Used for constructing X_0 for a aphid_const class
-void leslie_sad__(const arma::mat& L, arma::vec& out) {
+void sad_leslie__(const arma::mat& L, arma::vec& out) {
 
     arma::cx_vec r_cx;
     arma::cx_mat SAD;
@@ -154,4 +152,26 @@ void leslie_sad__(const arma::mat& L, arma::vec& out) {
     out = arma::real(SADdist);
 
     return;
+}
+
+
+
+
+//' Compute the "stable age distribution" from a Leslie matrix
+//'
+//' @param leslie Leslie matrix of the population.
+//'
+//' @export
+//'
+//' @return Vector with the stable age distribution given the Leslie matrix.
+//'
+//[[Rcpp::export]]
+NumericVector sad_leslie(NumericMatrix leslie) {
+
+    arma::mat L = as<arma::mat>(leslie);
+    arma::vec out;
+
+    sad_leslie__(L, out);
+
+    return wrap(out);
 }

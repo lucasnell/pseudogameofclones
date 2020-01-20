@@ -6,7 +6,6 @@
 #include "clonewars_types.hpp"  // integer types
 #include "aphids.hpp"           // aphid classes
 #include "patches.hpp"          // patch classes
-#include "math.hpp"             // leslie_matrix and leslie_sad
 #include "pcg.hpp"              // runif_ fxns
 
 
@@ -48,7 +47,7 @@ void AphidTypePop::process_error(const double& z,
 
     // Random numbers from distribution N(0,1)
     arma::vec E(non_zero.n_elem);
-    for (uint32 i = 0; i < E.n_elem; i++) E(i) = rnorm_distr(eng);
+    for (uint32 i = 0; i < E.n_elem; i++) E(i) = norm_distr(eng);
 
     // Making each element of E have correct variance-covariance matrix
     E = chol_decomp * E;
@@ -237,9 +236,9 @@ void AphidPop::update_pop(const OnePatch* patch,
 
     // Basic updates for each:
     apterous.X_t = apterous.X_t1;
-    apterous.X_t1 = (pred_rate * S) % (apterous.leslie_ * apterous.X_t);
+    apterous.X_t1 = (pred_rate * S) * (apterous.leslie_ * apterous.X_t);
     alates.X_t = alates.X_t1;
-    alates.X_t1 = (pred_rate * S) % (alates.leslie_ * alates.X_t);
+    alates.X_t1 = (pred_rate * S) * (alates.leslie_ * alates.X_t);
 
     // Process error
     apterous.process_error(z, sigma_, rho_, demog_mult_, norm_distr, eng);
@@ -273,15 +272,14 @@ void AphidPop::update_pop(const OnePatch* patch,
                           const arma::vec& emigrants,
                           const arma::vec& immigrants) {
 
-    const double& z(patch->z);
     const double& S(patch->S);
     const double& pred_rate(patch->pred_rate);
 
     // Basic updates for each:
     apterous.X_t = apterous.X_t1;
-    apterous.X_t1 = (pred_rate * S) % (apterous.leslie_ * apterous.X_t);
+    apterous.X_t1 = (pred_rate * S) * (apterous.leslie_ * apterous.X_t);
     alates.X_t = alates.X_t1;
-    alates.X_t1 = (pred_rate * S) % (alates.leslie_ * alates.X_t);
+    alates.X_t1 = (pred_rate * S) * (alates.leslie_ * alates.X_t);
     // # offspring from apterous aphids that are alates:
     double new_alates = apterous.alate_prop_ * apterous.X_t1.front();
 

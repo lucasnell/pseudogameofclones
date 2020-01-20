@@ -32,11 +32,11 @@ Seeding
 
 
 // To sample for seeds before multi-core operations
-inline std::vector<std::vector<uint64>> mc_seeds(const uint32& n_cores) {
+inline std::vector<std::vector<uint64>> mt_seeds(const uint32& n_reps) {
 
-    std::vector<std::vector<uint64>> sub_seeds(n_cores, std::vector<uint64>(4));
+    std::vector<std::vector<uint64>> sub_seeds(n_reps, std::vector<uint64>(4));
 
-    for (uint32 i = 0; i < n_cores; i++) {
+    for (uint32 i = 0; i < n_reps; i++) {
         sub_seeds[i] = as<std::vector<uint64>>(Rcpp::runif(4,0,4294967296));
     }
 
@@ -69,8 +69,8 @@ inline pcg32 seeded_pcg() {
 }
 
 /*
-For multi-core operations, you should call `mc_seeds` when outside multi-core mode,
-then input an inner `std::vector<uint32>` (from inside the object output from `mc_seeds`)
+For multi-core operations, you should call `mt_seeds` when outside multi-core mode,
+then input an inner `std::vector<uint32>` (from inside the object output from `mt_seeds`)
 to this function when in multi-core mode to seed the PRNG.
 */
 // sub_seeds needs to be at least 4-long!
@@ -84,6 +84,18 @@ inline pcg32 seeded_pcg(const std::vector<uint64>& sub_seeds) {
     return out;
 }
 
+// Change seed of existing rng
+inline void seed_pcg(pcg32& eng, const std::vector<uint64>& sub_seeds) {
+
+    uint64 seed1;
+    uint64 seed2;
+    fill_seeds(sub_seeds, seed1, seed2);
+
+    eng.seed(seed1, seed2);
+
+    return;
+}
+
 /*
 -----------
 64-bit versions
@@ -92,7 +104,7 @@ These require twice as many 32-bit integers bc they're seeded from two 128-bit i
 */
 
 // To sample for seeds before multi-core operations
-inline std::vector<std::vector<uint64>> mc_seeds64(const uint32& n_cores) {
+inline std::vector<std::vector<uint64>> mt_seeds64(const uint32& n_cores) {
 
     std::vector<std::vector<uint64>> sub_seeds(n_cores, std::vector<uint64>(8));
 

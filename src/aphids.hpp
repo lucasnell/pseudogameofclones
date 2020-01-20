@@ -5,7 +5,6 @@
 #include <vector>               // vector class
 #include <random>               // normal distribution
 #include <pcg/pcg_random.hpp>   // pcg prng
-#include "math.hpp"             // leslie_matrix and leslie_sad
 #include "clonewars_types.hpp"  // integer types
 
 
@@ -86,7 +85,6 @@ public:
     // Returning references to private members:
     const arma::mat& leslie() const {return leslie_;}
     const arma::vec& X_0() const {return X_0_;}
-    const uint32& n_aphid_stages() const {return n_aphid_stages_;}
 
 
 };
@@ -190,7 +188,7 @@ public:
      */
     AphidPop()
         : sigma_(0), rho_(0), demog_mult_(0), norm_distr(0,1), pois_distr(1),
-          bino_distr(1, 0.1), aphid_name(""), apterous(), alates() {};
+          bino_distr(1, 0.1), aphid_name(""), apterous(), alates(), extinct(false) {};
 
     // Make sure `leslie_mat` has 2 slices and `aphid_density_0` has two columns!
     AphidPop(const std::string& aphid_name_,
@@ -203,17 +201,46 @@ public:
              const double& disp_rate,
              const double& disp_mort,
              const uint32& disp_start)
-        : aphid_name(aphid_name_),
-          sigma_(sigma),
+        : sigma_(sigma),
           rho_(rho),
           demog_mult_(demog_mult),
           norm_distr(0,1),
           pois_distr(1),
           bino_distr(1, 0.1),
+          aphid_name(aphid_name_),
           apterous(leslie_mat.slice(0), aphid_density_0.col(0), alate_prop),
           alates(leslie_mat.slice(1), aphid_density_0.col(1), disp_rate, disp_mort,
                  disp_start),
           extinct(false) {};
+
+    AphidPop(const AphidPop& other)
+        : sigma_(other.sigma_),
+          rho_(other.rho_),
+          demog_mult_(other.demog_mult_),
+          norm_distr(other.norm_distr),
+          pois_distr(other.pois_distr),
+          bino_distr(other.bino_distr),
+          aphid_name(other.aphid_name),
+          apterous(other.apterous),
+          alates(other.alates),
+          extinct(other.extinct) {};
+
+    AphidPop& operator=(const AphidPop& other) {
+
+        sigma_ = other.sigma_;
+        rho_ = other.rho_;
+        demog_mult_ = other.demog_mult_;
+        norm_distr = other.norm_distr;
+        pois_distr = other.pois_distr;
+        bino_distr = other.bino_distr;
+        aphid_name = other.aphid_name;
+        apterous = other.apterous;
+        alates = other.alates;
+        extinct = other.extinct;
+
+        return *this;
+
+    };
 
 
     /*

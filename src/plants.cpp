@@ -455,7 +455,7 @@ inline uint32 calc_rep_rows(const uint32& max_t,
 //' @noRd
 //'
 //'
-//[[Rcpp::export]]
+// //[[Rcpp::export]]   // <<<<< keeping this from getting picked up into RcppExports.cpp
 arma::mat sim_reps_(const uint32& n_reps,
                     const uint32& max_t,
                     const arma::mat& N0,
@@ -477,7 +477,7 @@ arma::mat sim_reps_(const uint32& n_reps,
                     const bool& show_progress) {
 
 
-    const std::vector<std::vector<uint64> > seeds = mc_seeds(n_cores);
+    const std::vector<std::vector<uint64> > seeds = mt_seeds(n_cores);
 
     const uint32 n_patches = N0.n_rows;
     const uint32 n_lines = N0.n_cols;

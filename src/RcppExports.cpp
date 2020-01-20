@@ -7,38 +7,93 @@
 
 using namespace Rcpp;
 
-// sim_reps_
-arma::mat sim_reps_(const uint32& n_reps, const uint32& max_t, const arma::mat& N0, const arma::rowvec& R, const arma::rowvec& A, const arma::vec& D_vec, const double& process_error, const bool& disp_error, const double& log_zeta_mean, const double& log_zeta_sd, const double& zeta_t_thresh, const double& mu_time, const std::deque<uint32>& repl_times, const double& repl_threshold, const double& extinct_N, const uint32& save_every, const bool& by_patch, const uint32& n_cores, const bool& show_progress);
-RcppExport SEXP _clonewars_sim_reps_(SEXP n_repsSEXP, SEXP max_tSEXP, SEXP N0SEXP, SEXP RSEXP, SEXP ASEXP, SEXP D_vecSEXP, SEXP process_errorSEXP, SEXP disp_errorSEXP, SEXP log_zeta_meanSEXP, SEXP log_zeta_sdSEXP, SEXP zeta_t_threshSEXP, SEXP mu_timeSEXP, SEXP repl_timesSEXP, SEXP repl_thresholdSEXP, SEXP extinct_NSEXP, SEXP save_everySEXP, SEXP by_patchSEXP, SEXP n_coresSEXP, SEXP show_progressSEXP) {
+// logit
+NumericVector logit(NumericVector p);
+RcppExport SEXP _clonewars_logit(SEXP pSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type p(pSEXP);
+    rcpp_result_gen = Rcpp::wrap(logit(p));
+    return rcpp_result_gen;
+END_RCPP
+}
+// inv_logit
+NumericVector inv_logit(NumericVector a);
+RcppExport SEXP _clonewars_inv_logit(SEXP aSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type a(aSEXP);
+    rcpp_result_gen = Rcpp::wrap(inv_logit(a));
+    return rcpp_result_gen;
+END_RCPP
+}
+// leslie_matrix
+NumericMatrix leslie_matrix(IntegerVector instar_days, const double& surv_juv, NumericVector surv_adult, NumericVector repro);
+RcppExport SEXP _clonewars_leslie_matrix(SEXP instar_daysSEXP, SEXP surv_juvSEXP, SEXP surv_adultSEXP, SEXP reproSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< IntegerVector >::type instar_days(instar_daysSEXP);
+    Rcpp::traits::input_parameter< const double& >::type surv_juv(surv_juvSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type surv_adult(surv_adultSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type repro(reproSEXP);
+    rcpp_result_gen = Rcpp::wrap(leslie_matrix(instar_days, surv_juv, surv_adult, repro));
+    return rcpp_result_gen;
+END_RCPP
+}
+// sad_leslie
+NumericVector sad_leslie(NumericMatrix leslie);
+RcppExport SEXP _clonewars_sad_leslie(SEXP leslieSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type leslie(leslieSEXP);
+    rcpp_result_gen = Rcpp::wrap(sad_leslie(leslie));
+    return rcpp_result_gen;
+END_RCPP
+}
+// sim_clonewars_cpp
+DataFrame sim_clonewars_cpp(const uint32& n_reps, const uint32& max_age, const double& max_N, const std::deque<uint32>& check_for_clear, const uint32& max_t, const uint32& save_every, const double& sigma_K, const double& mu_K, const bool& disp_error, const bool& demog_error, const double& sigma_x, const double& rho, const double& extinct_N, const std::vector<std::string>& aphid_name, const std::vector<arma::cube>& leslie_mat, const std::vector<arma::cube>& aphid_density_0, const std::vector<double>& alate_prop, const std::vector<double>& disp_rate, const std::vector<double>& disp_mort, const std::vector<uint32>& disp_start, const std::vector<double>& pred_rate, uint32 n_threads, const bool& show_progress);
+RcppExport SEXP _clonewars_sim_clonewars_cpp(SEXP n_repsSEXP, SEXP max_ageSEXP, SEXP max_NSEXP, SEXP check_for_clearSEXP, SEXP max_tSEXP, SEXP save_everySEXP, SEXP sigma_KSEXP, SEXP mu_KSEXP, SEXP disp_errorSEXP, SEXP demog_errorSEXP, SEXP sigma_xSEXP, SEXP rhoSEXP, SEXP extinct_NSEXP, SEXP aphid_nameSEXP, SEXP leslie_matSEXP, SEXP aphid_density_0SEXP, SEXP alate_propSEXP, SEXP disp_rateSEXP, SEXP disp_mortSEXP, SEXP disp_startSEXP, SEXP pred_rateSEXP, SEXP n_threadsSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const uint32& >::type n_reps(n_repsSEXP);
+    Rcpp::traits::input_parameter< const uint32& >::type max_age(max_ageSEXP);
+    Rcpp::traits::input_parameter< const double& >::type max_N(max_NSEXP);
+    Rcpp::traits::input_parameter< const std::deque<uint32>& >::type check_for_clear(check_for_clearSEXP);
     Rcpp::traits::input_parameter< const uint32& >::type max_t(max_tSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type N0(N0SEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type R(RSEXP);
-    Rcpp::traits::input_parameter< const arma::rowvec& >::type A(ASEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type D_vec(D_vecSEXP);
-    Rcpp::traits::input_parameter< const double& >::type process_error(process_errorSEXP);
-    Rcpp::traits::input_parameter< const bool& >::type disp_error(disp_errorSEXP);
-    Rcpp::traits::input_parameter< const double& >::type log_zeta_mean(log_zeta_meanSEXP);
-    Rcpp::traits::input_parameter< const double& >::type log_zeta_sd(log_zeta_sdSEXP);
-    Rcpp::traits::input_parameter< const double& >::type zeta_t_thresh(zeta_t_threshSEXP);
-    Rcpp::traits::input_parameter< const double& >::type mu_time(mu_timeSEXP);
-    Rcpp::traits::input_parameter< const std::deque<uint32>& >::type repl_times(repl_timesSEXP);
-    Rcpp::traits::input_parameter< const double& >::type repl_threshold(repl_thresholdSEXP);
-    Rcpp::traits::input_parameter< const double& >::type extinct_N(extinct_NSEXP);
     Rcpp::traits::input_parameter< const uint32& >::type save_every(save_everySEXP);
-    Rcpp::traits::input_parameter< const bool& >::type by_patch(by_patchSEXP);
-    Rcpp::traits::input_parameter< const uint32& >::type n_cores(n_coresSEXP);
+    Rcpp::traits::input_parameter< const double& >::type sigma_K(sigma_KSEXP);
+    Rcpp::traits::input_parameter< const double& >::type mu_K(mu_KSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type disp_error(disp_errorSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type demog_error(demog_errorSEXP);
+    Rcpp::traits::input_parameter< const double& >::type sigma_x(sigma_xSEXP);
+    Rcpp::traits::input_parameter< const double& >::type rho(rhoSEXP);
+    Rcpp::traits::input_parameter< const double& >::type extinct_N(extinct_NSEXP);
+    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type aphid_name(aphid_nameSEXP);
+    Rcpp::traits::input_parameter< const std::vector<arma::cube>& >::type leslie_mat(leslie_matSEXP);
+    Rcpp::traits::input_parameter< const std::vector<arma::cube>& >::type aphid_density_0(aphid_density_0SEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type alate_prop(alate_propSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type disp_rate(disp_rateSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type disp_mort(disp_mortSEXP);
+    Rcpp::traits::input_parameter< const std::vector<uint32>& >::type disp_start(disp_startSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type pred_rate(pred_rateSEXP);
+    Rcpp::traits::input_parameter< uint32 >::type n_threads(n_threadsSEXP);
     Rcpp::traits::input_parameter< const bool& >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(sim_reps_(n_reps, max_t, N0, R, A, D_vec, process_error, disp_error, log_zeta_mean, log_zeta_sd, zeta_t_thresh, mu_time, repl_times, repl_threshold, extinct_N, save_every, by_patch, n_cores, show_progress));
+    rcpp_result_gen = Rcpp::wrap(sim_clonewars_cpp(n_reps, max_age, max_N, check_for_clear, max_t, save_every, sigma_K, mu_K, disp_error, demog_error, sigma_x, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_prop, disp_rate, disp_mort, disp_start, pred_rate, n_threads, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_clonewars_sim_reps_", (DL_FUNC) &_clonewars_sim_reps_, 19},
+    {"_clonewars_logit", (DL_FUNC) &_clonewars_logit, 1},
+    {"_clonewars_inv_logit", (DL_FUNC) &_clonewars_inv_logit, 1},
+    {"_clonewars_leslie_matrix", (DL_FUNC) &_clonewars_leslie_matrix, 4},
+    {"_clonewars_sad_leslie", (DL_FUNC) &_clonewars_sad_leslie, 1},
+    {"_clonewars_sim_clonewars_cpp", (DL_FUNC) &_clonewars_sim_clonewars_cpp, 23},
     {NULL, NULL, 0}
 };
 
