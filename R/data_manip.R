@@ -156,7 +156,7 @@ handle_NAs <- function(growth, allow_NA, impute_fxn) {
     if (allow_NA & nrow(missing) > 0) {
 
         missing <- missing %>%
-            unnest() %>%
+            unnest(cols = dates) %>%
             rename(date = dates)
 
         df_ <- growth[1:nrow(missing),] %>%
