@@ -1,0 +1,142 @@
+---
+title: "clonewars parameters"
+author: "Lucas A. Nell"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{clonewars parameters}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+library(clonewars)
+knitr::opts_chunk$set(comment = "")
+```
+
+
+This vignette describes the arguments that can be changed for a given aphid line.
+It also includes arguments on parasitoid wasps and how aphids interact with wasps, 
+but those aren't (yet) included in the simulations.
+They may be added later.
+
+
+# Argument descriptions
+
+- `aphid_density_0`: Starting aphid density.
+- `aphid_surv_juv`: Aphid juvenile survival.
+- `aphid_surv_adult`: Vector of aphid adult survivals by stage.
+- `aphid_repro`: Vector of aphid reproductive rates by stage.
+- `K`: Aphid density dependence.
+- `wasp_density_0`: Starting wasp density.
+- `K_y`: Wasp density dependence.
+- `s_y`: Wasp adult daily survival.
+- `wasp_sex_ratio`: Proportion of female wasps.
+- `aphid_instar_days`: Vector of the number of stages (days) per aphid instar.
+- `mum_days`: Vector for the number of days per parasitized-aphid stage. It should be 
+  of length 2, representing stages where the parasitized aphid is alive and dead, 
+  respectively.
+- `rel_attack`: Vector of relative wasp attack rates by aphid stage.
+- `a`: Overall parasitoid attack rate.
+- `k`: Aggregation parameter of the nbinom distribution.
+- `h`: Parasitoid attack rate handling time.
+- `attack_surv`: Vector of length 2 with survival rates of singly & multiply attacked 
+  aphids, respectively.
+- `sigma_x`: Environmental standard deviation for aphids.
+- `sigma_y`: Environmental standard deviation for parasitoids.
+- `rho`: Environmental correlation among instars.
+- `demog_mult`: Multiplier for demographic stochasticity.
+- `harvest_surv`: Survival rate for living aphids during a harvest.
+- `disp_aphid`: Dispersal rate for aphids.
+- `disp_wasp`: Dispersal rate for wasps.
+- `disp_start`: Stage in which dispersal starts in aphids.
+- `pred_rate`: Predation on aphids and mummies.
+
+
+
+# Default values
+
+Below, the "Default-value expression" is the code necessary to access and, in some 
+cases, manipulate an internal-data object to compute the default value.
+Here, `NA` means it is not stored internally.
+Note also that although the default value for `attack_surv`  is not stored internally,
+the object `clonewars::wasp_attack$attack_surv` stores values for a resistant line of aphids.
+
+I first created this function for the calls to `Reduce`.
+```{r meanfun}
+mf <- function(x, y) (x + y) / 2
+```
+
+
+| Argument name       | Default-value expression                  | Default value                                            |
+|:--------------------|:------------------------------------------|:---------------------------------------------------------|
+| `aphid_density_0`   | `clonewars::populations$aphids_0`               | <code>`r clonewars::populations$aphids_0`</code>               |
+| `aphid_surv_juv`    | `Reduce(mf,clonewars::populations$surv_juv)`    | <code>`r Reduce(mf,clonewars::populations$surv_juv)`</code>    |
+| `aphid_surv_adult`  | `Reduce(mf,clonewars::populations$surv_adult)`  | <code>`r Reduce(mf,clonewars::populations$surv_adult)`</code>  |
+| `aphid_repro`       | `Reduce(mf,clonewars::populations$repro)`       | <code>`r Reduce(mf,clonewars::populations$repro)`</code>       |
+| `K`                 | `clonewars::populations$K`                      | <code>`r clonewars::populations$K`</code>                      |
+| `wasp_density_0`    | `clonewars::populations$wasps_0`                | <code>`r clonewars::populations$wasps_0`</code>                |
+| `K_y`               | `clonewars::populations$K_y`                    | <code>`r clonewars::populations$K_y`</code>                    |
+| `s_y`               | `clonewars::populations$s_y`                    | <code>`r clonewars::populations$s_y`</code>                    |
+| `wasp_sex_ratio`    | `clonewars::populations$sex_ratio`              | <code>`r clonewars::populations$sex_ratio`</code>              |
+| `aphid_instar_days` | `clonewars::dev_times$instar_days$highT`        | <code>`r clonewars::dev_times$instar_days$highT`</code>        |
+| `mum_days`          | `clonewars::dev_times$mum_days`                 | <code>`r clonewars::dev_times$mum_days`</code>                 |
+| `rel_attack`        | `clonewars::wasp_attack$rel_attack$highT`       | <code>`r clonewars::wasp_attack$rel_attack$highT`</code>       |
+| `a`                 | `clonewars::wasp_attack$a`                      | <code>`r clonewars::wasp_attack$a`</code>                      |
+| `k`                 | `clonewars::wasp_attack$k`                      | <code>`r clonewars::wasp_attack$k`</code>                      |
+| `h`                 | `clonewars::wasp_attack$h`                      | <code>`r clonewars::wasp_attack$h`</code>                      |
+| `attack_surv`       | `clonewars::wasp_attack$attack_surv / 2`        | <code>`r clonewars::wasp_attack$attack_surv / 2`</code>        |
+| `sigma_x`           | `clonewars::environ$sigma_x`                    | <code>`r clonewars::environ$sigma_x`</code>                    |
+| `sigma_y`           | `clonewars::environ$sigma_y`                    | <code>`r clonewars::environ$sigma_y`</code>                    |
+| `rho`               | `clonewars::environ$rho`                        | <code>`r clonewars::environ$rho`</code>                        |
+| `demog_mult`        | `NA`                                      | <code>`r 1`</code>                                       |
+| `harvest_surv`      | `clonewars::environ$harvest_surv`               | <code>`r clonewars::environ$harvest_surv`</code>               |
+| `disp_aphid`        | `clonewars::environ$disp_aphid`                 | <code>`r clonewars::environ$disp_aphid`</code>                 |
+| `disp_wasp`         | `clonewars::environ$disp_wasp`                  | <code>`r clonewars::environ$disp_wasp`</code>                  |
+| `disp_start`        | `clonewars::environ$disp_start$highT`           | <code>`r clonewars::environ$disp_start$highT`</code>           |
+| `pred_rate`         | `clonewars::environ$pred_rate`                  | <code>`r clonewars::environ$pred_rate`</code>                  |
+
+
+
+
+# High tunnel simulations
+
+For the simulations Tony sent that he'd designed to use for the high tunnels, 
+he used two lines, one susceptible and one resistant to parasitoids, and no 
+process error.
+The days at which harvests occurred were handled not using a cycle length and 
+offset, but with a vector of harvest times; this made little difference, though.
+The following parameter values were different from default values:
+
+```{r dens_vals, echo = FALSE}
+sus_dens <- (1 - clonewars::populations$prop_resist) * clonewars::populations$aphids_0
+res_dens <- clonewars::populations$prop_resist * clonewars::populations$aphids_0
+
+res_surv <- clonewars::wasp_attack$attack_surv
+
+sus_adult <- clonewars::populations$surv_adult$high[1:32]
+res_adult <- clonewars::populations$surv_adult$low[1:32]
+
+sus_repro <- clonewars::populations$repro$high[1:32]
+res_repro <- clonewars::populations$repro$low[1:32]
+```
+
+| Argument name      | Susceptible                | Resistant                  |
+|:-------------------|:---------------------------|:---------------------------|
+| `aphid_density_0`  | <code>`r sus_dens`</code>  | <code>`r res_dens`</code>  |
+| `aphid_surv_adult` | <code>`r sus_adult`</code> | <code>`r res_adult`</code> |
+| `aphid_repro`      | <code>`r sus_repro`</code> | <code>`r res_repro`</code> |
+| `K`                | `0.0005`                   | `0.0005`                   |
+| `K_y`              | `0.0006`                   | `0.0006`                   |
+| `s_y`              | `0.55`                     | `0.55`                     |
+| `a`                | `2.5`                      | `2.5`                      |
+| `k`                | `0.1811`                   | `0.1811`                   |
+| `h`                | `0.0363`                   | `0.0363`                   |
+| `attack_surv`      | <code>`r c(0,0)`</code>    | <code>`r res_surv`</code>  |
+| `sigma_x`          | `0`                        | `0`                        |
+| `sigma_y`          | `0`                        | `0`                        |
+| `rho`              | `0`                        | `0`                        |
+| `demog_mult`       | `0`                        | `0`                        |
+
