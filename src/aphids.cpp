@@ -184,15 +184,6 @@ void AphidPop::calc_dispersal(const OnePatch* patch,
                               arma::mat& emigrants,
                               arma::mat& immigrants) const {
 
-    if (arma::any(alates.X_t < 0)) {
-        alates.X_t.print();
-        Rcout << std::endl;
-        Rcout << "alates.disp_start() = " << alates.disp_start() << std::endl;
-        Rcout << std::endl;
-        stop("\nX_disp(i) < 0 inside `AphidPop::calc_dispersal`\n");
-    }
-
-
     const uint32& this_j(patch->this_j);
     const uint32& n_patches(patch->n_patches);
 
@@ -307,43 +298,11 @@ void AphidPop::update_pop(const OnePatch* patch,
         apterous.X_t1.front() += alates.X_t1.front();
         alates.X_t1.front() = new_alates;
 
-        if (arma::any(apterous.X_t1 < 0) || arma::any(alates.X_t1 < 0)) {
-            Rcout << "apterous:" << std::endl;
-            apterous.X_t1.print();
-            Rcout << std::endl;
-            Rcout << "alates:" << std::endl;
-            alates.X_t1.print();
-            Rcout << std::endl;
-            stop("\n\nabundances are < 0.\n\n");
-        }
-
     }
 
     // Finally add immigrants and subtract emigrants
     alates.X_t1 += immigrants;
     alates.X_t1 -= emigrants;
-
-    if (arma::any(alates.X_t1 < 0)) {
-
-        Rcout << "apterous:" << std::endl;
-        apterous.X_t1.print();
-        Rcout << std::endl;
-
-        Rcout << "alates:" << std::endl;
-        alates.X_t1.print();
-        Rcout << std::endl;
-
-        Rcout << "immigrants:" << std::endl;
-        immigrants.print();
-        Rcout << std::endl;
-
-        Rcout << "emigrants:" << std::endl;
-        emigrants.print();
-        Rcout << std::endl;
-
-        stop("\n\nabundances are < 0.\n\n");
-    }
-
 
     return;
 }
