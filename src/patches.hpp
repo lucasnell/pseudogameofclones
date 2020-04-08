@@ -65,7 +65,7 @@ public:
     /*
      In `aphid_density_0` below, rows are aphid stages, columns are types (alate vs
      apterous), and slices are aphid lines.
-     In `leslie_mat` below, slices are aphid lines.
+     In `leslie_mat` below, items in vector are aphid lines, slices are alate/apterous.
      */
     OnePatch(const double& sigma,
              const double& rho,
@@ -324,8 +324,8 @@ public:
             patches.push_back(ap);
         }
 
-        emigrants.set_size(n_stages, n_patches, n_lines);
-        immigrants.set_size(n_stages, n_patches, n_lines);
+        emigrants = arma::zeros<arma::cube>(n_stages, n_patches, n_lines);
+        immigrants = arma::zeros<arma::cube>(n_stages, n_patches, n_lines);
 
     }
 

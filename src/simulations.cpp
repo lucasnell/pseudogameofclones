@@ -127,6 +127,17 @@ struct RepSummary {
         r = rep_;
     }
 
+    // This version used when assimilating all reps into the first one
+    void reserve(const uint32& n) {
+        rep.reserve(n);
+        time.reserve(n);
+        patch.reserve(n);
+        line.reserve(n);
+        type.reserve(n);
+        N.reserve(n);
+        return;
+    }
+
     void push_back(const uint32& t,
                    const AllPatches& patches) {
 
@@ -159,6 +170,7 @@ struct RepSummary {
         N.shrink_to_fit();
     }
 
+
     void assimilate(RepSummary& other) {
 
         for (uint32 i = 0; i < other.time.size(); i++) {
@@ -186,8 +198,8 @@ private:
     inline void append_one__(const uint32& t, const uint32& p, const std::string& l,
                              const double& N_ala, const double& N_apt) {
 
-        time.push_back(r);
-        time.push_back(r);
+        rep.push_back(r);
+        rep.push_back(r);
 
         time.push_back(t);
         time.push_back(t);
@@ -243,7 +255,7 @@ RepSummary one_rep__(const T& clear_threshold,
     double demog_mult = 1;
     if (!demog_error) demog_mult = 0;
     // either demographic or environmental error
-    bool process_error = demog_error && (sigma_x > 0);
+    bool process_error = demog_error || (sigma_x > 0);
 
     uint32 n_lines = aphid_name.size();
     uint32 n_patches = aphid_density_0.size();
@@ -273,7 +285,7 @@ RepSummary one_rep__(const T& clear_threshold,
 
         if (process_error) {
             patches.update_pops(eng);
-        } else patches.update_pops(eng);
+        } else patches.update_pops();
 
         if (t % save_every == 0 || t == max_t) summary.push_back(t, patches);
 
@@ -294,7 +306,7 @@ RepSummary one_rep__(const T& clear_threshold,
 
 //[[Rcpp::export]]
 DataFrame sim_clonewars_cpp(const uint32& n_reps,
-                            const uint32& max_age,
+                            const uint32& max_plant_age,
                             const double& max_N,
                             const std::deque<uint32>& check_for_clear,
                             const uint32& max_t,
@@ -320,6 +332,10 @@ DataFrame sim_clonewars_cpp(const uint32& n_reps,
     // Check that # threads isn't too high and change to 1 if not using OpenMP:
     thread_check(n_threads);
 
+    if (n_reps == 0) {
+        stop("\nERROR: n_reps == 0\n");
+    }
+
 
     uint32 n_lines = aphid_name.size();
     if (leslie_mat.size() != n_lines) {
@@ -343,11 +359,11 @@ DataFrame sim_clonewars_cpp(const uint32& n_reps,
         stop("\nERROR: pred_rate.size() != n_patches\n");
     }
 
-    if (max_age > 0 && max_N > 0) {
-        stop("\nERROR: max_age > 0 && max_N > 0\n");
+    if (max_plant_age > 0 && max_N > 0) {
+        stop("\nERROR: max_plant_age > 0 && max_N > 0\n");
     }
-    if (max_age == 0 && max_N <= 0) {
-        stop("\nERROR: max_age == 0 && max_N <= 0\n");
+    if (max_plant_age == 0 && max_N <= 0) {
+        stop("\nERROR: max_plant_age == 0 && max_N <= 0\n");
     }
 
 
@@ -382,8 +398,8 @@ DataFrame sim_clonewars_cpp(const uint32& n_reps,
     for (uint32 i = 0; i < n_reps; i++) {
         if (status_code != 0) continue;
         seed_pcg(eng, seeds[i]);
-        if (max_age > 0) {
-            summaries[i] = one_rep__<uint32>(max_age, i, check_for_clear, max_t,
+        if (max_plant_age > 0) {
+            summaries[i] = one_rep__<uint32>(max_plant_age, i, check_for_clear, max_t,
                                              save_every, sigma_K, mu_K, disp_error,
                                              demog_error, sigma_x, rho, extinct_N,
                                              aphid_name, leslie_mat, aphid_density_0,
@@ -406,9 +422,15 @@ DataFrame sim_clonewars_cpp(const uint32& n_reps,
 #endif
 
 
-    // combine all SimSummary objects into the first one
-    for (uint32 i = 1; i < n_reps; i++) {
-        summaries[0].assimilate(summaries[i]);
+    /*
+     When # reps > 1, combine all SimSummary objects into the first one.
+     This is to make it easier to add them to the output data frame.
+     */
+    if (n_reps > 1) {
+        summaries[0].reserve(summaries[0].N.size() * summaries.size());
+        for (uint32 i = 1; i < n_reps; i++) {
+            summaries[0].assimilate(summaries[i]);
+        }
     }
 
 

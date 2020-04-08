@@ -66,7 +66,7 @@ NULL
 #'
 NULL
 
-sim_clonewars_cpp <- function(n_reps, max_age, max_N, check_for_clear, max_t, save_every, sigma_K, mu_K, disp_error, demog_error, sigma_x, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_prop, disp_rate, disp_mort, disp_start, pred_rate, n_threads, show_progress) {
-    .Call(`_clonewars_sim_clonewars_cpp`, n_reps, max_age, max_N, check_for_clear, max_t, save_every, sigma_K, mu_K, disp_error, demog_error, sigma_x, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_prop, disp_rate, disp_mort, disp_start, pred_rate, n_threads, show_progress)
+sim_clonewars_cpp <- function(n_reps, max_plant_age, max_N, check_for_clear, max_t, save_every, sigma_K, mu_K, disp_error, demog_error, sigma_x, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_prop, disp_rate, disp_mort, disp_start, pred_rate, n_threads, show_progress) {
+    .Call(`_clonewars_sim_clonewars_cpp`, n_reps, max_plant_age, max_N, check_for_clear, max_t, save_every, sigma_K, mu_K, disp_error, demog_error, sigma_x, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_prop, disp_rate, disp_mort, disp_start, pred_rate, n_threads, show_progress)
 }
 

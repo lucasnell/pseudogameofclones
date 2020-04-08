@@ -70,6 +70,7 @@ public:
 
     // Kill all aphids
     inline void clear() {
+        X_t.fill(0);
         X_t1.fill(0);
         return;
     }

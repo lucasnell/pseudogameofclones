@@ -103,7 +103,7 @@ void AphidPop::calc_dispersal(const OnePatch* patch,
     const uint32& this_j(patch->this_j);
     const uint32& n_patches(patch->n_patches);
 
-    if (n_patches == 1 || alates.disp_rate() <= 0) return;
+    if (extinct || n_patches == 1 || alates.disp_rate() <= 0) return;
 
     // Abundance for alates. (Only adult alates can disperse.)
     const arma::vec& X_disp(alates.X_t);
@@ -184,10 +184,19 @@ void AphidPop::calc_dispersal(const OnePatch* patch,
                               arma::mat& emigrants,
                               arma::mat& immigrants) const {
 
+    if (arma::any(alates.X_t < 0)) {
+        alates.X_t.print();
+        Rcout << std::endl;
+        Rcout << "alates.disp_start() = " << alates.disp_start() << std::endl;
+        Rcout << std::endl;
+        stop("\nX_disp(i) < 0 inside `AphidPop::calc_dispersal`\n");
+    }
+
+
     const uint32& this_j(patch->this_j);
     const uint32& n_patches(patch->n_patches);
 
-    if (n_patches == 1 || alates.disp_rate() <= 0) return;
+    if (extinct || n_patches == 1 || alates.disp_rate() <= 0) return;
 
     // Abundance for alates. (Only adult alates can disperse.)
     const arma::vec& X_disp(alates.X_t);
@@ -203,7 +212,7 @@ void AphidPop::calc_dispersal(const OnePatch* patch,
         double lambda_ = alates.disp_rate() * X_disp(i) /
             static_cast<double>(n_patches - 1);
         n_leaving.fill(lambda_);
-        n_leaving(this_j, this_j) = 0;
+        n_leaving(this_j) = 0;
         emigrants(i, this_j) = arma::accu(n_leaving);
 
         if (alates.disp_mort() <= 0) {
@@ -230,35 +239,39 @@ void AphidPop::update_pop(const OnePatch* patch,
                           pcg32& eng) {
 
 
-    const double& z(patch->z);
-    const double& S(patch->S);
-    const double& pred_rate(patch->pred_rate);
+    if (!extinct) {
 
-    // Basic updates for each:
-    apterous.X_t = apterous.X_t1;
-    apterous.X_t1 = (pred_rate * S) * (apterous.leslie_ * apterous.X_t);
-    alates.X_t = alates.X_t1;
-    alates.X_t1 = (pred_rate * S) * (alates.leslie_ * alates.X_t);
+        const double& z(patch->z);
+        const double& S(patch->S);
+        const double& pred_rate(patch->pred_rate);
 
-    // Process error
-    apterous.process_error(z, sigma_, rho_, demog_mult_, norm_distr, eng);
-    alates.process_error(z, sigma_, rho_, demog_mult_, norm_distr, eng);
+        // Basic updates for each:
+        apterous.X_t = apterous.X_t1;
+        apterous.X_t1 = (1 - pred_rate) * S * (apterous.leslie_ * apterous.X_t);
+        alates.X_t = alates.X_t1;
+        alates.X_t1 = (1 - pred_rate) * S * (alates.leslie_ * alates.X_t);
 
-    // Sample for # offspring from apterous aphids that are alates:
-    double new_alates = 0;
-    if (apterous.alate_prop_ > 0 && apterous.X_t1.front() > 0) {
-        double lambda_ = apterous.alate_prop_ * apterous.X_t1.front();
-        pois_distr.param(std::poisson_distribution<uint32>::param_type(lambda_));
-        new_alates = static_cast<double>(pois_distr(eng));
+        // Process error
+        apterous.process_error(z, sigma_, rho_, demog_mult_, norm_distr, eng);
+        alates.process_error(z, sigma_, rho_, demog_mult_, norm_distr, eng);
+
+        // Sample for # offspring from apterous aphids that are alates:
+        double new_alates = 0;
+        if (apterous.alate_prop_ > 0 && apterous.X_t1.front() > 0) {
+            double lambda_ = apterous.alate_prop_ * apterous.X_t1.front();
+            pois_distr.param(std::poisson_distribution<uint32>::param_type(lambda_));
+            new_alates = static_cast<double>(pois_distr(eng));
+        }
+
+        /*
+         All alate offspring are assumed to be apterous,
+         so the only way to get new alates is from apterous aphids.
+         */
+        apterous.X_t1.front() -= new_alates;
+        apterous.X_t1.front() += alates.X_t1.front();
+        alates.X_t1.front() = new_alates;
+
     }
-
-    /*
-     All alate offspring are assumed to be apterous,
-     so the only way to get new alates is from apterous aphids.
-     */
-    apterous.X_t1.front() -= new_alates;
-    apterous.X_t1.front() += alates.X_t1.front();
-    alates.X_t1.front() = new_alates;
 
     // Finally add immigrants and subtract emigrants
     alates.X_t1 += immigrants;
@@ -272,28 +285,65 @@ void AphidPop::update_pop(const OnePatch* patch,
                           const arma::vec& emigrants,
                           const arma::vec& immigrants) {
 
-    const double& S(patch->S);
-    const double& pred_rate(patch->pred_rate);
 
-    // Basic updates for each:
-    apterous.X_t = apterous.X_t1;
-    apterous.X_t1 = (pred_rate * S) * (apterous.leslie_ * apterous.X_t);
-    alates.X_t = alates.X_t1;
-    alates.X_t1 = (pred_rate * S) * (alates.leslie_ * alates.X_t);
-    // # offspring from apterous aphids that are alates:
-    double new_alates = apterous.alate_prop_ * apterous.X_t1.front();
+    if (!extinct) {
 
-    /*
-     All alate offspring are assumed to be apterous,
-     so the only way to get new alates is from apterous aphids.
-     */
-    apterous.X_t1.front() -= new_alates;
-    apterous.X_t1.front() += alates.X_t1.front();
-    alates.X_t1.front() = new_alates;
+        const double& S(patch->S);
+        const double& pred_rate(patch->pred_rate);
+
+        // Basic updates for each:
+        apterous.X_t = apterous.X_t1;
+        apterous.X_t1 = (1 - pred_rate) * S * (apterous.leslie_ * apterous.X_t);
+        alates.X_t = alates.X_t1;
+        alates.X_t1 = (1 - pred_rate) * S * (alates.leslie_ * alates.X_t);
+        // # offspring from apterous aphids that are alates:
+        double new_alates = apterous.alate_prop_ * apterous.X_t1.front();
+
+        /*
+         All alate offspring are assumed to be apterous,
+         so the only way to get new alates is from apterous aphids.
+         */
+        apterous.X_t1.front() -= new_alates;
+        apterous.X_t1.front() += alates.X_t1.front();
+        alates.X_t1.front() = new_alates;
+
+        if (arma::any(apterous.X_t1 < 0) || arma::any(alates.X_t1 < 0)) {
+            Rcout << "apterous:" << std::endl;
+            apterous.X_t1.print();
+            Rcout << std::endl;
+            Rcout << "alates:" << std::endl;
+            alates.X_t1.print();
+            Rcout << std::endl;
+            stop("\n\nabundances are < 0.\n\n");
+        }
+
+    }
 
     // Finally add immigrants and subtract emigrants
     alates.X_t1 += immigrants;
     alates.X_t1 -= emigrants;
+
+    if (arma::any(alates.X_t1 < 0)) {
+
+        Rcout << "apterous:" << std::endl;
+        apterous.X_t1.print();
+        Rcout << std::endl;
+
+        Rcout << "alates:" << std::endl;
+        alates.X_t1.print();
+        Rcout << std::endl;
+
+        Rcout << "immigrants:" << std::endl;
+        immigrants.print();
+        Rcout << std::endl;
+
+        Rcout << "emigrants:" << std::endl;
+        emigrants.print();
+        Rcout << std::endl;
+
+        stop("\n\nabundances are < 0.\n\n");
+    }
+
 
     return;
 }
