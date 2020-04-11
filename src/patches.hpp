@@ -17,6 +17,26 @@ using namespace Rcpp;
 
 
 
+// Info for clearing patches
+template <typename T>
+struct PatchClearingInfo {
+
+    uint32 ind;
+    double N;
+    T thresh_info; // age or # aphids
+
+    PatchClearingInfo(const uint32& ind_, const double& N_, const T& thresh_info_)
+        : ind(ind_), N(N_), thresh_info(thresh_info_) {}
+    PatchClearingInfo(const PatchClearingInfo<T>& other)
+        : ind(other.ind), N(other.N), thresh_info(other.thresh_info) {}
+
+    bool operator<(const PatchClearingInfo<T>& other) const {
+        return thresh_info > other.thresh_info; // using `>` to make it sort descending
+    }
+
+};
+
+
 
 
 
@@ -272,6 +292,12 @@ class AllPatches {
     bool K_error;       // whether to include stochasticity in `K`
 
 
+    // Do the actual clearing of patches while avoiding extinction
+    template <typename T>
+    void do_clearing(std::vector<PatchClearingInfo<T>>& clear_patches,
+                     double& remaining,
+                     pcg32& eng);
+
 
 public:
 
@@ -393,45 +419,11 @@ public:
     }
 
 
-
-
-
     // Clear patches by either a maximum age or total abundance
-    inline void clear_patches(const uint32& max_age,
-                              pcg32& eng) {
-        if (K_error) {
-            for (OnePatch& p : patches) {
-                if (p.age > max_age) {
-                    double K_= mu_K_ + sigma_K_ * norm_distr(eng);
-                    p.clear(K_);
-                }
-            }
-        } else {
-            for (OnePatch& p : patches) {
-                if (p.age > max_age) p.clear();
-            }
-        }
-
-        return;
-    }
-    inline void clear_patches(const double& max_N,
-                              pcg32& eng) {
-        if (K_error) {
-            for (OnePatch& p : patches) {
-                double N = p.total_aphids();
-                if (N > max_N) {
-                    double K_= mu_K_ + sigma_K_ * norm_distr(eng);
-                    p.clear(K_);
-                }
-            }
-        } else {
-            for (OnePatch& p : patches) {
-                double N = p.total_aphids();
-                if (N > max_N) p.clear();
-            }
-        }
-        return;
-    }
+    void clear_patches(const uint32& max_age,
+                       pcg32& eng);
+    void clear_patches(const double& max_N,
+                       pcg32& eng);
 
 
 };
