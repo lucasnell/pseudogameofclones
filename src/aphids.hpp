@@ -248,7 +248,6 @@ public:
      Total aphids
      */
     inline double total_aphids() const {
-        if (extinct) return 0;
         return apterous.total_aphids() + alates.total_aphids();
     }
 

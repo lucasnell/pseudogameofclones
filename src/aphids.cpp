@@ -230,6 +230,10 @@ void AphidPop::update_pop(const OnePatch* patch,
                           pcg32& eng) {
 
 
+    // First subtract emigrants and add immigrants:
+    alates.X_t1 -= emigrants;
+    alates.X_t1 += immigrants;
+
     if (!extinct) {
 
         const double& z(patch->z);
@@ -237,9 +241,7 @@ void AphidPop::update_pop(const OnePatch* patch,
         const double& pred_rate(patch->pred_rate);
 
         // Basic updates for each:
-        apterous.X_t = apterous.X_t1;
         apterous.X_t1 = (1 - pred_rate) * S * (apterous.leslie_ * apterous.X_t);
-        alates.X_t = alates.X_t1;
         alates.X_t1 = (1 - pred_rate) * S * (alates.leslie_ * alates.X_t);
 
         // Process error
@@ -252,6 +254,7 @@ void AphidPop::update_pop(const OnePatch* patch,
             double lambda_ = apterous.alate_prop_ * apterous.X_t1.front();
             pois_distr.param(std::poisson_distribution<uint32>::param_type(lambda_));
             new_alates = static_cast<double>(pois_distr(eng));
+            if (new_alates > apterous.X_t1.front()) new_alates = apterous.X_t1.front();
         }
 
         /*
@@ -264,9 +267,8 @@ void AphidPop::update_pop(const OnePatch* patch,
 
     }
 
-    // Finally add immigrants and subtract emigrants
-    alates.X_t1 += immigrants;
-    alates.X_t1 -= emigrants;
+    apterous.X_t = apterous.X_t1;
+    alates.X_t = alates.X_t1;
 
     return;
 }
@@ -277,15 +279,17 @@ void AphidPop::update_pop(const OnePatch* patch,
                           const arma::vec& immigrants) {
 
 
+    // First subtract emigrants and add immigrants:
+    alates.X_t1 -= emigrants;
+    alates.X_t1 += immigrants;
+
     if (!extinct) {
 
         const double& S(patch->S);
         const double& pred_rate(patch->pred_rate);
 
         // Basic updates for each:
-        apterous.X_t = apterous.X_t1;
         apterous.X_t1 = (1 - pred_rate) * S * (apterous.leslie_ * apterous.X_t);
-        alates.X_t = alates.X_t1;
         alates.X_t1 = (1 - pred_rate) * S * (alates.leslie_ * alates.X_t);
         // # offspring from apterous aphids that are alates:
         double new_alates = apterous.alate_prop_ * apterous.X_t1.front();
@@ -300,9 +304,8 @@ void AphidPop::update_pop(const OnePatch* patch,
 
     }
 
-    // Finally add immigrants and subtract emigrants
-    alates.X_t1 += immigrants;
-    alates.X_t1 -= emigrants;
+    apterous.X_t = apterous.X_t1;
+    alates.X_t = alates.X_t1;
 
     return;
 }
