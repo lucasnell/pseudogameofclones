@@ -5,22 +5,29 @@
 #' They were done summer 2019.
 #'
 
-library(tidyverse)
-library(readxl)
+
+suppressPackageStartupMessages({
+    library(tidyverse)
+    library(readxl)
+    library(clonewars)
+    library(lme4)
+})
 
 
 source(".Rprofile")
 
+z_trans <- function(x) {
+    .sd <- sd(x, na.rm = TRUE)
+    if (.sd == 0 || is.na(.sd)) .sd <- 1
+    (x - mean(x, na.rm = TRUE)) / .sd
+}
+# z_inv_trans <- function(x, m, s) (x * s) + m
 
-# Lines in order they should appear in plots:
-lines_ <- c("R10", "WIA-5D", "WI-L4", "WI-L4Ø", "UT3", "WI-2016-593", "Clover-2017-2",
-            "Clover-2017-6")
 
 
-fn <- paste0("~/Dropbox/Aphid Project 2017/Lauren_competition/",
-             "competition_data_entry24July19.xlsx")
-
-alate_df <- read_excel(fn) %>%
+alate_df <- paste0("~/Dropbox/Aphid Project 2017/Lauren_competition/",
+                   "competition_data_entry24July19.xlsx") %>%
+    read_excel() %>%
     rename_all(~ tolower(.)) %>%
     filter(!is.na(green_line)) %>%
     mutate(date = as.Date(paste(year, month, day, sep = "-"), format = "%Y-%B-%d")) %>%
@@ -52,43 +59,17 @@ alate_df <- read_excel(fn) %>%
 # Remove short time series:
 alate_df <- alate_df %>%
     group_by(id) %>%
-    # filter(date <= min(date[N == max(N)])) %>%  # <-- to remove dates after peak N
-    mutate(n_obs = n()) %>%
+    filter(date <= min(date[N == max(N)])) %>%  # <-- to remove dates after peak N
+    mutate(date = difftime(date, min(date), units = "days") %>% as.integer()) %>%
+    mutate(n_obs = date %>% unique() %>% length()) %>%
     ungroup() %>%
-    filter(n_obs > 4, N > 0) %>%
+    filter(n_obs > 2, N > 0) %>%
     select(-n_obs) %>%
     arrange(id, line, date)
 
 
 
-alate_df %>%
-    ggplot(aes(lag_N, alates)) +
-    geom_point(aes(color = line), na.rm = TRUE) +
-    facet_wrap(~ line, nrow = 2) +
-    scale_x_continuous(trans = "log1p") +
-    scale_y_continuous(trans = "log1p") +
-    scale_color_brewer(palette = "Dark2", guide = FALSE) +
-    theme_classic() +
-    theme(strip.background = element_blank()) +
-    # coord_cartesian(ylim = c(0, NA)) +
-    NULL
-
-
-
-
-
-
-library(lme4)
-
-z_trans <- function(x) {
-    .sd <- sd(x, na.rm = TRUE)
-    if (.sd == 0 || is.na(.sd)) .sd <- 1
-    (x - mean(x, na.rm = TRUE)) / .sd
-}
-# z_inv_trans <- function(x, m, s) (x * s) + m
-
-
-
+# Including a bunch of variables for models:
 
 alate_mod_df <- alate_df %>%
     group_by(id, line) %>%
@@ -98,83 +79,51 @@ alate_mod_df <- alate_df %>%
            lag_p_N = lag(p_N),
            new_alates = alates - lag(alates),
            new_alates = ifelse(new_alates < 0, 0, new_alates),
+           new_alate_rate = new_alates / (date - lag(date)),
            new_apterous = apterous - lag(apterous),
            new_apterous = ifelse(new_apterous < 0, 0, new_apterous),
-           lag_apterous = lag(apterous)) %>%
+           new_apterous_rate = new_apterous / (date - lag(date)),
+           new_all = new_apterous + new_alates,
+           lag_apterous = lag(apterous),
+           is_alate = ifelse(new_alates == 0, 0, 1),
+           time = as.numeric(date - lag(date))) %>%
     group_by(id) %>%
     mutate(z_apterous = z_trans(apterous),
            z_alate = z_trans(alates)) %>%
     ungroup() %>%
     filter(!(is.na(new_alates) | is.na(lag_apterous) | is.na(p_N))) %>%
+    # Because I'm only interested in the ratio of new_alates to new_apterous, when they're
+    # both zero, this is uninformative:
+    filter(!(new_alates == 0 & new_apterous == 0)) %>%
     mutate(line = factor(line, levels = alate_df$line %>% unique() %>% sort()))
 
-alate_mod <- glmer(cbind(new_alates, new_apterous) ~ p_N + (p_N | line),
-                   alate_mod_df, family = binomial)
-
-summary(alate_mod)
-boot_fun <- function(.x) {
-    .dd <- ranef(.x)[['line']]
-    as.numeric(c(fixef(.x), .dd[[1]], .dd[[2]]))
-}
-
-# # Takes ~22 min
-# alate_boots <- bootMer(alate_mod, boot_fun, nsim = 2000, seed = 1086406336,
-#                        .progress = "txt")
-#
-# saveRDS(alate_boots, "under_constr/_assays/alate_mod_boots.rds")
-
-alate_boots <- readRDS("under_constr/_assays/alate_mod_boots.rds")
-
-cbind(
-apply(alate_boots$t, 2, median),
-apply(alate_boots$t, 2, quantile, probs = 0.025),
-apply(alate_boots$t, 2, quantile, probs = 0.975)
-)
 
 
 
-
-alate_mod <- glmer(cbind(new_alates, new_apterous) ~ lag_p_N + (1 + lag_p_N | line),
-                    alate_mod_df, family = binomial)
-
-
+# It's not obvious that any of these variables actually affect anything:
 alate_mod_df %>%
-    ggplot(aes(lag_z_N, new_alates / (new_alates + new_apterous))) +
-    geom_point(aes(color = line), na.rm = TRUE) +
+    ggplot(aes(lag_N, log(new_alates / new_all))) +
+    geom_jitter(aes(color = line), height = 0, width = 0.25) +
+    # stat_summary(fun.data = "mean_cl_boot", color = "dodgerblue") +
     facet_wrap(~ line, nrow = 2) +
-    stat_smooth(method = "loess", se = FALSE, color = "black") +
-    # scale_x_continuous(trans = "logit") +
-    # scale_y_continuous(trans = "asn") +
-    scale_color_brewer(palette = "Dark2", guide = FALSE) +
-    theme_classic() +
-    theme(strip.background = element_blank()) +
-    # coord_cartesian(ylim = c(0, NA)) +
     NULL
 
-alate_mod2 <- lm(log1p(alates) ~ lag_apterous * p_N, data = alate_mod_df)
-
-summary(alate_mod2)
 
 
+alate_mod <- glmer(cbind(new_alates, new_apterous) ~ (1 | line), data = alate_mod_df,
+                    family = binomial)
+fixef(alate_mod)
+ranef(alate_mod)
 
-nd <- crossing(lag_p_N = seq(0, 1, length.out = 100),
-               line = alate_mod_df$line %>% unique() %>% sort())
-
-
-nd %>%
-    mutate(y = predict(alate_mod2, newdata = nd)) %>%
-    ggplot(aes(x = lag_p_N)) +
-    geom_line(aes(y = gtools::inv.logit(y))) +
-    stat_smooth(data = alate_mod_df, na.rm = TRUE,
-                aes(y = new_alates / (new_alates + new_apterous)),
-                method = "loess", se = FALSE) +
-    geom_point(data = alate_mod_df, na.rm = TRUE,
-               aes(y = new_alates / (new_alates + new_apterous), color = line)) +
-    facet_wrap(~ line) +
-    scale_color_brewer(palette = "Dark2") +
-    theme_classic()
+predict(alate_mod, newdata = tibble(line = "WI-L4"), type = "response")
+inv_logit(-4.601386 + 0.3964972)
 
 
-
-
+# Seems to work okay:
+alate_mod_df %>%
+    mutate(obs = new_alates) %>%
+    select(line, new_all, obs) %>%
+    {mutate(., mod = new_all * predict(alate_mod, newdata = ., type = "response"))} %>%
+    group_by(line) %>%
+    summarize(obs = sum(obs), mod = sum(mod))
 
