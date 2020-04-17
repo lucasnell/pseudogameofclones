@@ -100,10 +100,13 @@ void AphidPop::calc_dispersal(const OnePatch* patch,
                               arma::mat& immigrants,
                               pcg32& eng) const {
 
+    return;
+
     const uint32& this_j(patch->this_j);
     const uint32& n_patches(patch->n_patches);
 
-    if (extinct || n_patches == 1 || alates.disp_rate() <= 0) return;
+    if ((alates.total_aphids() == 0 && apterous.total_aphids() == 0) ||
+        n_patches == 1 || alates.disp_rate() <= 0) return;
 
     // Abundance for alates. (Only adult alates can disperse.)
     const arma::vec& X_disp(alates.X_t);
@@ -187,7 +190,9 @@ void AphidPop::calc_dispersal(const OnePatch* patch,
     const uint32& this_j(patch->this_j);
     const uint32& n_patches(patch->n_patches);
 
-    if (extinct || n_patches == 1 || alates.disp_rate() <= 0) return;
+    if ((alates.total_aphids() == 0 && apterous.total_aphids() == 0) ||
+        n_patches == 1 || alates.disp_rate() <= 0) return;
+
 
     // Abundance for alates. (Only adult alates can disperse.)
     const arma::vec& X_disp(alates.X_t);
@@ -230,11 +235,11 @@ void AphidPop::update_pop(const OnePatch* patch,
                           pcg32& eng) {
 
 
-    // First subtract emigrants and add immigrants:
-    alates.X_t1 -= emigrants;
-    alates.X_t1 += immigrants;
+    // // First subtract emigrants and add immigrants:
+    // alates.X_t1 -= emigrants;
+    // alates.X_t1 += immigrants;
 
-    if (!extinct) {
+    if (alates.total_aphids() > 0 || apterous.total_aphids() > 0) {
 
         const double& z(patch->z);
         const double& S(patch->S);
@@ -279,11 +284,11 @@ void AphidPop::update_pop(const OnePatch* patch,
                           const arma::vec& immigrants) {
 
 
-    // First subtract emigrants and add immigrants:
-    alates.X_t1 -= emigrants;
-    alates.X_t1 += immigrants;
+    // // First subtract emigrants and add immigrants:
+    // alates.X_t1 -= emigrants;
+    // alates.X_t1 += immigrants;
 
-    if (!extinct) {
+    if (alates.total_aphids() > 0 || apterous.total_aphids() > 0) {
 
         const double& S(patch->S);
         const double& pred_rate(patch->pred_rate);

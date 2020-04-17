@@ -17,21 +17,122 @@ using namespace Rcpp;
 
 
 
+/*
+ Normal distribution truncated above zero.
+ Used for generating `K` bc we never want it to be < 0.
+*/
+class trunc_normal_distribution {
+
+    double mu;
+    double sigma;
+    double a_bar;
+    double p;
+
+public:
+
+    trunc_normal_distribution() : mu(0), sigma(1), a_bar((0 - mu) / sigma), p(1) {}
+    trunc_normal_distribution(const double& mu_, const double& sigma_)
+        : mu(mu_), sigma(sigma_), a_bar((0 - mu) / sigma),
+          p(R::pnorm5(a_bar, 0, 1, 1, 0)) {}
+    trunc_normal_distribution(const trunc_normal_distribution& other)
+        : mu(other.mu), sigma(other.sigma), a_bar((0 - mu) / sigma),
+          p(R::pnorm5(a_bar, 0, 1, 1, 0)) {}
+
+    trunc_normal_distribution& operator=(const trunc_normal_distribution& other) {
+        mu = other.mu;
+        sigma = other.sigma;
+        a_bar = (0 - mu) / sigma;
+        p = R::pnorm5(a_bar, 0, 1, 1, 0);
+        return *this;
+    }
+
+    double operator()(pcg32& eng) {
+
+        double u = runif_ab(eng, p, 1);
+
+        double x = R::qnorm5(u, 0, 1, 1, 0);
+        x = x * sigma + mu;
+
+        return x;
+    }
+
+
+};
+
+
+
+/*
+ Custom Beta distibution class
+ Idea for combining two gammas from https://stackoverflow.com/a/10359049
+ Used for generating plant-death-mortality growth-rate modifiers bc they should be
+ between 0 and 1.
+*/
+class beta_distribution {
+
+    std::gamma_distribution<double> X;
+    std::gamma_distribution<double> Y;
+    double x;
+    double y;
+    double z;
+
+public:
+
+    beta_distribution() : X(1, 1), Y(1, 1) {}
+    beta_distribution(const double& shape1, const double& shape2)
+        : X(shape1, 1), Y(shape2, 1) {}
+    beta_distribution(const beta_distribution& other)
+        : X(other.X), Y(other.Y) {}
+
+    beta_distribution& operator=(const beta_distribution& other) {
+        X = other.X;
+        Y = other.Y;
+        return *this;
+    }
+
+    double operator()(pcg32& eng) {
+
+        x = X(eng);
+        y = Y(eng);
+
+        z = x / (x + y);
+
+        return z;
+    }
+
+
+};
+
+
+
+
 // Info for clearing patches
 template <typename T>
 struct PatchClearingInfo {
 
     uint32 ind;
     double N;
+    bool wilted;
     T thresh_info; // age or # aphids
 
-    PatchClearingInfo(const uint32& ind_, const double& N_, const T& thresh_info_)
-        : ind(ind_), N(N_), thresh_info(thresh_info_) {}
+    PatchClearingInfo(const uint32& ind_,
+                      const double& N_,
+                      const bool& wilted_,
+                      const T& thresh_info_)
+        : ind(ind_), N(N_), wilted(wilted_), thresh_info(thresh_info_) {}
     PatchClearingInfo(const PatchClearingInfo<T>& other)
         : ind(other.ind), N(other.N), thresh_info(other.thresh_info) {}
 
+    // This returns true when `other` should be cleared first
     bool operator<(const PatchClearingInfo<T>& other) const {
-        return thresh_info > other.thresh_info; // using `>` to make it sort descending
+        if (other.wilted && !wilted) return true;
+        if (!other.wilted && wilted) return false;
+        return thresh_info < other.thresh_info;
+    }
+    // This returns true when `this` should be cleared first
+    bool operator>(const PatchClearingInfo<T>& other) const {
+        if (other.wilted && !wilted) return false;
+        if (!other.wilted && wilted) return true;
+        return thresh_info > other.thresh_info;
     }
 
 };
@@ -75,12 +176,14 @@ public:
     uint32 n_patches;               // total # patches
     uint32 this_j;                  // index for this patch
     uint32 age = 0;                 // age of this patch
+    uint32 death_age;               // age at which plant starts to die
+    double death_mort;              // growth-rate modifier once plants start dying
     double extinct_N;               // threshold for calling an aphid line extinct
 
 
     OnePatch()
         : aphids(), empty(true), pred_rate(0), K(0),
-          n_patches(1), this_j(0), extinct_N() {};
+          n_patches(1), this_j(0), death_age(0), death_mort(1), extinct_N() {};
 
     /*
      In `aphid_density_0` below, rows are aphid stages, columns are types (alate vs
@@ -91,6 +194,8 @@ public:
              const double& rho,
              const double& demog_mult,
              const double& K_,
+             const uint32& death_age_,
+             const double& death_mort_,
              const std::vector<std::string>& aphid_name,
              const std::vector<arma::cube>& leslie_mat,
              const arma::cube& aphid_density_0,
@@ -108,6 +213,8 @@ public:
           K(K_),
           n_patches(n_patches_),
           this_j(this_j_),
+          death_age(death_age_),
+          death_mort(death_mort_),
           extinct_N(extinct_N_) {
 
         uint32 n_lines = aphid_name.size();
@@ -133,7 +240,8 @@ public:
     OnePatch(const OnePatch& other)
         : aphids(other.aphids), empty(other.empty), pred_rate(other.pred_rate),
           K(other.K), z(other.z), S(other.S), n_patches(other.n_patches),
-          this_j(other.this_j), age(other.age), extinct_N(other.extinct_N) {};
+          this_j(other.this_j), age(other.age), death_age(other.death_age),
+          death_mort(other.death_mort), extinct_N(other.extinct_N) {};
 
     OnePatch& operator=(const OnePatch& other) {
         aphids = other.aphids;
@@ -145,6 +253,8 @@ public:
         n_patches = other.n_patches;
         this_j = other.this_j;
         age = other.age;
+        death_age = other.death_age;
+        death_mort = other.death_mort;
         extinct_N = other.extinct_N;
         return *this;
     }
@@ -161,29 +271,30 @@ public:
         return aphids[idx];
     }
 
+    const bool wilted() const {
+        return age > death_age;
+    }
+
     /*
      Clear to no aphids
      */
-    void clear() {
+    void clear(const uint32& death_age_,
+               const double& K_,
+               const double& death_mort_) {
         for (AphidPop& ap : aphids) ap.clear();
         empty = true;
         age = 0;
-        return;
-    }
-    // Same, then reset `K`
-    void clear(const double& K_) {
-        clear();
+        death_age = death_age_;
         K = K_;
+        death_mort = death_mort_;
         return;
     }
 
     // Total aphids on patch
     inline double total_aphids() const {
         double ta = 0;
-        if (!empty) {
-            for (const AphidPop& ap : aphids) {
-                ta += ap.total_aphids();
-            }
+        for (const AphidPop& ap : aphids) {
+            ta += ap.total_aphids();
         }
         return ta;
     }
@@ -234,6 +345,13 @@ public:
                                  immigrants.slice(i).col(this_j),
                                  eng);
 
+            if (age > death_age) {
+                aphids[i].apterous.X_t1 *= death_mort;
+                aphids[i].apterous.X_t *= death_mort;
+                aphids[i].alates.X_t1 *= death_mort;
+                aphids[i].alates.X_t *= death_mort;
+            }
+
             // Adjust for potential extinction or re-colonization:
             extinct_colonize(i);
 
@@ -256,10 +374,20 @@ public:
         empty = true;
 
         for (uint32 i = 0; i < aphids.size(); i++) {
+
             aphids[i].update_pop(this,
                                  emigrants.slice(i).col(this_j),
                                  immigrants.slice(i).col(this_j));
+
+            if (age > death_age) {
+                aphids[i].apterous.X_t1 *= death_mort;
+                aphids[i].apterous.X_t *= death_mort;
+                aphids[i].alates.X_t1 *= death_mort;
+                aphids[i].alates.X_t *= death_mort;
+            }
+
             extinct_colonize(i);
+
         }
 
         age++;
@@ -286,16 +414,57 @@ public:
 class AllPatches {
 
     // For new Ks if desired:
-    std::normal_distribution<double> norm_distr = std::normal_distribution<double>(0,1);
-    double mu_K_;       // mean of normal distribution of `K` for plants
-    double sigma_K_;    // sd of normal distribution of `K` for plants
-    bool K_error;       // whether to include stochasticity in `K`
+    trunc_normal_distribution tnorm_distr;
+
+    // For new death_ages if desired:
+    std::lognormal_distribution<double> lnorm_distr;
+
+    // For new death_morts if desired:
+    beta_distribution beta_distr;
+
+    double mean_K_;                 // mean of distribution of `K` for plants
+    double sd_K_;                   // sd of distribution of `K` for plants
+
+    double meanlog_death_age_;      // meanlog of distribution of `death_age` for plants
+    double sdlog_death_age_;        // sdlog of distribution of `death_age` for plants
+
+    double shape1_death_mort_;      // shape1 of distribution of `death_mort` for plants
+    double shape2_death_mort_;      // shape2 of distribution of `death_mort` for plants
+
+    double get_K(pcg32& eng) {
+        double K;
+        if (sd_K_ == 0) {
+            K = mean_K_;
+        } else {
+            K = tnorm_distr(eng);
+        }
+        return K;
+    }
+    uint32 get_death_age(pcg32& eng) {
+        uint32 death_age;
+        if (sdlog_death_age_ == 0) {
+            death_age = static_cast<uint32>(std::round(meanlog_death_age_));
+        } else {
+            death_age = static_cast<uint32>(std::round(lnorm_distr(eng)));
+        }
+        return death_age;
+    }
+    double get_death_mort(pcg32& eng) {
+        double death_mort;
+        if (shape2_death_mort_ == 0) {
+            death_mort = shape1_death_mort_;
+        } else {
+            death_mort = beta_distr(eng);
+        }
+        return death_mort;
+    }
 
 
     // Do the actual clearing of patches while avoiding extinction
     template <typename T>
     void do_clearing(std::vector<PatchClearingInfo<T>>& clear_patches,
                      double& remaining,
+                     std::vector<bool>& wilted,
                      pcg32& eng);
 
 
@@ -307,7 +476,10 @@ public:
 
 
     AllPatches()
-        : mu_K_(), sigma_K_(), patches(), emigrants(), immigrants() {};
+        : mean_K_(), sd_K_(),
+          meanlog_death_age_(), sdlog_death_age_(),
+          shape1_death_mort_(), shape2_death_mort_(),
+          patches(), emigrants(), immigrants() {};
 
     /*
      In `aphid_density_0` below, rows are aphid stages, columns are types (alate vs
@@ -317,8 +489,12 @@ public:
     AllPatches(const double& sigma,
                const double& rho,
                const double& demog_mult,
-               const double& mu_K,
-               const double& sigma_K,
+               const double& mean_K,
+               const double& sd_K,
+               const double& meanlog_death_age,
+               const double& sdlog_death_age,
+               const double& shape1_death_mort,
+               const double& shape2_death_mort,
                const std::vector<std::string>& aphid_name,
                const std::vector<arma::cube>& leslie_mat,
                const std::vector<arma::cube>& aphid_density_0,
@@ -329,22 +505,52 @@ public:
                const std::vector<double>& pred_rate,
                const double& extinct_N,
                pcg32& eng)
-        : mu_K_(mu_K), sigma_K_(sigma_K), K_error(true), patches(),
-          emigrants(), immigrants() {
+        : mean_K_(mean_K),
+          sd_K_(sd_K),
+          meanlog_death_age_(meanlog_death_age),
+          sdlog_death_age_(sdlog_death_age),
+          shape1_death_mort_(shape1_death_mort),
+          shape2_death_mort_(shape2_death_mort),
+          patches(),
+          emigrants(),
+          immigrants() {
 
-        if (sigma_K_ <= 0) {
-            sigma_K_ = 0;
-            K_error = false;
+        /*
+         None of these hyperparameters can be <= 0, so if they're <= then that makes
+         the associated parameter whose distribution it describes (e.g., K for `sd_K_`)
+         not have stochasticity.
+         This means that the first hyperparameter provided will be the value
+         used for ALL of that parameter WITHOUT BEING TRANSFORMED.
+         */
+        if (sd_K_ <= 0) {
+            sd_K_ = 0;
+        } else {
+            tnorm_distr = trunc_normal_distribution(mean_K_, sd_K_);
         }
+        if (sdlog_death_age_ <= 0) {
+            sdlog_death_age_ = 0;
+        } else {
+            lnorm_distr = std::lognormal_distribution<double>(meanlog_death_age_,
+                                                              sdlog_death_age_);
+        }
+        if (shape2_death_mort_ <= 0) {
+            shape2_death_mort_ = 0;
+        } else {
+            beta_distr = beta_distribution(shape1_death_mort_,
+                                           shape2_death_mort_);
+        }
+
         uint32 n_patches = std::min(aphid_density_0.size(), pred_rate.size());
         uint32 n_lines = aphid_name.size();
         uint32 n_stages = leslie_mat.front().n_rows;
 
         patches.reserve(n_patches);
         for (uint32 j = 0; j < n_patches; j++) {
-            double K = mu_K_;
-            if (K_error) K += sigma_K_ * norm_distr(eng);
-            OnePatch ap(sigma, rho, demog_mult, K, aphid_name, leslie_mat,
+            double K = get_K(eng);
+            uint32 death_age = get_death_age(eng);
+            double death_mort = get_death_mort(eng);
+            OnePatch ap(sigma, rho, demog_mult, K, death_age, death_mort,
+                        aphid_name, leslie_mat,
                         aphid_density_0[j], alate_prop, disp_rate, disp_mort,
                         disp_start, pred_rate[j], n_patches, j, extinct_N);
             patches.push_back(ap);
@@ -356,15 +562,23 @@ public:
     }
 
     AllPatches(const AllPatches& other)
-        : mu_K_(other.mu_K_),
-          sigma_K_(other.sigma_K_),
+        : mean_K_(other.mean_K_),
+          sd_K_(other.sd_K_),
+          meanlog_death_age_(other.meanlog_death_age_),
+          sdlog_death_age_(other.sdlog_death_age_),
+          shape1_death_mort_(other.shape1_death_mort_),
+          shape2_death_mort_(other.shape2_death_mort_),
           patches(other.patches),
           emigrants(other.emigrants),
           immigrants(other.immigrants) {};
 
     AllPatches& operator=(const AllPatches& other) {
-        mu_K_ = other.mu_K_;
-        sigma_K_ = other.sigma_K_;
+        mean_K_ = other.mean_K_;
+        sd_K_ = other.sd_K_;
+        meanlog_death_age_ = other.meanlog_death_age_;
+        sdlog_death_age_ = other.sdlog_death_age_;
+        shape1_death_mort_ = other.shape1_death_mort_;
+        shape2_death_mort_ = other.shape2_death_mort_;
         patches = other.patches;
         emigrants = other.emigrants;
         immigrants = other.immigrants;
@@ -384,6 +598,7 @@ public:
     }
 
     inline void calc_dispersal(pcg32& eng) {
+
         // Dispersal from previous generation
         emigrants.fill(0);
         immigrants.fill(0);

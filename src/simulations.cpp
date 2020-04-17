@@ -233,8 +233,12 @@ RepSummary one_rep__(const T& clear_threshold,
                      std::deque<uint32> check_for_clear,
                      const uint32& max_t,
                      const uint32& save_every,
-                     const double& sigma_K,
-                     const double& mu_K,
+                     const double& mean_K,
+                     const double& sd_K,
+                     const double& meanlog_death_age,
+                     const double& sdlog_death_age,
+                     const double& shape1_death_mort,
+                     const double& shape2_death_mort,
                      const bool& disp_error,
                      const bool& demog_error,
                      const double& sigma_x,
@@ -266,7 +270,9 @@ RepSummary one_rep__(const T& clear_threshold,
 
     uint32 iters = 0;
 
-    AllPatches patches(sigma_x, rho, demog_mult, mu_K, sigma_K,
+    AllPatches patches(sigma_x, rho, demog_mult, mean_K, sd_K,
+                       meanlog_death_age, sdlog_death_age,
+                       shape1_death_mort, shape2_death_mort,
                        aphid_name, leslie_mat, aphid_density_0, alate_prop,
                        disp_rate, disp_mort, disp_start, pred_rate, extinct_N, eng);
 
@@ -288,6 +294,18 @@ RepSummary one_rep__(const T& clear_threshold,
         } else patches.update_pops();
 
         if (t % save_every == 0 || t == max_t) summary.push_back(t, patches);
+
+        // If all patches are empty, then stop this rep.
+        // It's important to do this before clearing patches.
+        bool all_empty = true;
+        for (const OnePatch& p : patches.patches) {
+            if (!p.empty) {
+                all_empty = false;
+                break;
+            }
+        }
+        if (all_empty) break;
+
 
         if (!check_for_clear.empty() && t == check_for_clear.front()) {
             check_for_clear.pop_front();
@@ -311,8 +329,12 @@ DataFrame sim_clonewars_cpp(const uint32& n_reps,
                             const std::deque<uint32>& check_for_clear,
                             const uint32& max_t,
                             const uint32& save_every,
-                            const double& sigma_K,
-                            const double& mu_K,
+                            const double& mean_K,
+                            const double& sd_K,
+                            const double& meanlog_death_age,
+                            const double& sdlog_death_age,
+                            const double& shape1_death_mort,
+                            const double& shape2_death_mort,
                             const bool& disp_error,
                             const bool& demog_error,
                             const double& sigma_x,
@@ -400,7 +422,10 @@ DataFrame sim_clonewars_cpp(const uint32& n_reps,
         seed_pcg(eng, seeds[i]);
         if (max_plant_age > 0) {
             summaries[i] = one_rep__<uint32>(max_plant_age, i, check_for_clear, max_t,
-                                             save_every, sigma_K, mu_K, disp_error,
+                                             save_every, mean_K, sd_K,
+                                             meanlog_death_age, sdlog_death_age,
+                                             shape1_death_mort, shape2_death_mort,
+                                             disp_error,
                                              demog_error, sigma_x, rho, extinct_N,
                                              aphid_name, leslie_mat, aphid_density_0,
                                              alate_prop, disp_rate, disp_mort,
@@ -408,7 +433,10 @@ DataFrame sim_clonewars_cpp(const uint32& n_reps,
                                              status_code, eng);
         } else {
             summaries[i] = one_rep__<double>(max_N, i, check_for_clear, max_t,
-                                             save_every, sigma_K, mu_K, disp_error,
+                                             save_every, mean_K, sd_K,
+                                             meanlog_death_age, sdlog_death_age,
+                                             shape1_death_mort, shape2_death_mort,
+                                             disp_error,
                                              demog_error, sigma_x, rho, extinct_N,
                                              aphid_name, leslie_mat, aphid_density_0,
                                              alate_prop, disp_rate, disp_mort,
