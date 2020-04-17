@@ -116,8 +116,7 @@ fixef(alate_mod)
 ranef(alate_mod)
 
 predict(alate_mod, newdata = tibble(line = "WI-L4"), type = "response")
-inv_logit(-4.601386 + 0.3964972)
-
+inv_logit(fixef(alate_mod)[["(Intercept)"]] + ranef(alate_mod)[["line"]]["WI-L4",])
 
 # Seems to work okay:
 alate_mod_df %>%
@@ -127,3 +126,13 @@ alate_mod_df %>%
     group_by(line) %>%
     summarize(obs = sum(obs), mod = sum(mod))
 
+
+alate_probs <- alate_mod %>%
+    ranef() %>%
+    .[["line"]] %>%
+    rownames_to_column("line") %>%
+    rename(prob = `(Intercept)`) %>%
+    mutate(prob = prob + fixef(alate_mod)[["(Intercept)"]],
+           prob = inv_logit(prob))
+
+alate_probs

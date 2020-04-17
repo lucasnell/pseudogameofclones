@@ -118,7 +118,10 @@ fecunds %>%
 #'
 #' Object to use in the `leslie_matrix` function:
 #'
-fecunds %>%
+fecunds <- fecunds %>%
     split(.$line) %>%
     map(~ .x[["fecund"]])
+fecunds
+
+
 
