@@ -19,12 +19,12 @@ using namespace Rcpp;
  --------------
  */
 
-void logit__(const arma::vec& p, arma::vec& out) {
-    out = arma::log(p / (1-p));
+void logit__(const double& p, double& out) {
+    out = std::log(p / (1-p));
     return;
 }
-void inv_logit__(const arma::vec& a, arma::vec& out){
-    out = 1 / (1 + arma::exp(-a));
+void inv_logit__(const double& a, double& out){
+    out = 1 / (1 + std::exp(-a));
     return;
 }
 
@@ -41,9 +41,11 @@ void inv_logit__(const arma::vec& a, arma::vec& out){
 //'
 //[[Rcpp::export]]
 NumericVector logit(NumericVector p) {
-    arma::vec out;
-    logit__(as<arma::vec>(p), out);
-    return wrap(out);
+    NumericVector out(p.size());
+    for (uint32 i = 0; i < p.size(); i++) {
+        logit__(p[i], out[i]);
+    }
+    return out;
 }
 //' @describeIn logit
 //'
@@ -51,9 +53,11 @@ NumericVector logit(NumericVector p) {
 //'
 //[[Rcpp::export]]
 NumericVector inv_logit(NumericVector a){
-    arma::vec out;
-    inv_logit__(as<arma::vec>(a), out);
-    return wrap(out);
+    NumericVector out(a.size());
+    for (uint32 i = 0; i < a.size(); i++) {
+        inv_logit__(a[i], out[i]);
+    }
+    return out;
 }
 
 
