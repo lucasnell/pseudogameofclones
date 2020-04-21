@@ -100,13 +100,10 @@ void AphidPop::calc_dispersal(const OnePatch* patch,
                               arma::mat& immigrants,
                               pcg32& eng) const {
 
-    return;
-
     const uint32& this_j(patch->this_j);
     const uint32& n_patches(patch->n_patches);
 
-    if ((alates.total_aphids() == 0 && apterous.total_aphids() == 0) ||
-        n_patches == 1 || alates.disp_rate() <= 0) return;
+    if (arma::accu(alates.X_t) == 0 || n_patches == 1 || alates.disp_rate() <= 0) return;
 
     // Abundance for alates. (Only adult alates can disperse.)
     const arma::vec& X_disp(alates.X_t);
@@ -190,8 +187,7 @@ void AphidPop::calc_dispersal(const OnePatch* patch,
     const uint32& this_j(patch->this_j);
     const uint32& n_patches(patch->n_patches);
 
-    if ((alates.total_aphids() == 0 && apterous.total_aphids() == 0) ||
-        n_patches == 1 || alates.disp_rate() <= 0) return;
+    if (arma::accu(alates.X_t) == 0 || n_patches == 1 || alates.disp_rate() <= 0) return;
 
 
     // Abundance for alates. (Only adult alates can disperse.)
@@ -235,11 +231,11 @@ void AphidPop::update_pop(const OnePatch* patch,
                           pcg32& eng) {
 
 
-    // // First subtract emigrants and add immigrants:
-    // alates.X_t1 -= emigrants;
-    // alates.X_t1 += immigrants;
+    // First subtract emigrants and add immigrants:
+    alates.X_t -= emigrants;
+    alates.X_t += immigrants;
 
-    if (alates.total_aphids() > 0 || apterous.total_aphids() > 0) {
+    if (arma::accu(alates.X_t) > 0 || arma::accu(apterous.X_t) > 0) {
 
         const double& z(patch->z);
         const double& S(patch->S);
@@ -270,10 +266,15 @@ void AphidPop::update_pop(const OnePatch* patch,
         apterous.X_t1.front() += alates.X_t1.front();
         alates.X_t1.front() = new_alates;
 
-    }
+        apterous.X_t = apterous.X_t1;
+        alates.X_t = alates.X_t1;
 
-    apterous.X_t = apterous.X_t1;
-    alates.X_t = alates.X_t1;
+    } else {
+
+        apterous.X_t1 = apterous.X_t;
+        alates.X_t1 = alates.X_t;
+
+    }
 
     return;
 }
@@ -283,12 +284,11 @@ void AphidPop::update_pop(const OnePatch* patch,
                           const arma::vec& emigrants,
                           const arma::vec& immigrants) {
 
+    // First subtract emigrants and add immigrants:
+    alates.X_t -= emigrants;
+    alates.X_t += immigrants;
 
-    // // First subtract emigrants and add immigrants:
-    // alates.X_t1 -= emigrants;
-    // alates.X_t1 += immigrants;
-
-    if (alates.total_aphids() > 0 || apterous.total_aphids() > 0) {
+    if (arma::accu(alates.X_t) > 0 || arma::accu(apterous.X_t) > 0) {
 
         const double& S(patch->S);
         const double& pred_rate(patch->pred_rate);
@@ -299,6 +299,7 @@ void AphidPop::update_pop(const OnePatch* patch,
         // # offspring from apterous aphids that are alates:
         double new_alates = apterous.alate_prop_ * apterous.X_t1.front();
 
+
         /*
          All alate offspring are assumed to be apterous,
          so the only way to get new alates is from apterous aphids.
@@ -307,11 +308,18 @@ void AphidPop::update_pop(const OnePatch* patch,
         apterous.X_t1.front() += alates.X_t1.front();
         alates.X_t1.front() = new_alates;
 
+        apterous.X_t = apterous.X_t1;
+        alates.X_t = alates.X_t1;
+
+    } else {
+
+        apterous.X_t1 = apterous.X_t;
+        alates.X_t1 = alates.X_t;
+
     }
 
-    apterous.X_t = apterous.X_t1;
-    alates.X_t = alates.X_t1;
 
     return;
 }
+
 
