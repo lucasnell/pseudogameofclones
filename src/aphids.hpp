@@ -30,32 +30,28 @@ protected:
 
 public:
     // Changing through time
-    arma::vec X_t;                // Aphid density at time t
-    arma::vec X_t1;               // Aphid density at time t+1
+    arma::vec X;                // Aphid density
 
     /*
      Constructors
      */
-    AphidTypePop() : leslie_(), X_0_(), X_t(), X_t1() {};
+    AphidTypePop() : leslie_(), X_0_(), X() {};
     AphidTypePop(const arma::mat& leslie_mat,
                  const arma::vec& aphid_density_0)
         : leslie_(leslie_mat),
           X_0_(aphid_density_0),
-          X_t(aphid_density_0),
-          X_t1(aphid_density_0) {};
+          X(aphid_density_0) {};
 
     AphidTypePop(const AphidTypePop& other)
         : leslie_(other.leslie_),
           X_0_(other.X_0_),
-          X_t(other.X_t),
-          X_t1(other.X_t1) {};
+          X(other.X) {};
 
     AphidTypePop& operator=(const AphidTypePop& other) {
 
         leslie_ = other.leslie_;
         X_0_ = other.X_0_;
-        X_t = other.X_t;
-        X_t1 = other.X_t1;
+        X = other.X;
 
         return *this;
     }
@@ -65,13 +61,12 @@ public:
      Total aphids
      */
     inline double total_aphids() const {
-        return arma::accu(X_t1);
+        return arma::accu(X);
     }
 
     // Kill all aphids
     inline void clear() {
-        X_t.fill(0);
-        X_t1.fill(0);
+        X.fill(0);
         return;
     }
 

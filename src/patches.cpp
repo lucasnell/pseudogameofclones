@@ -64,10 +64,8 @@ void OnePatch::update_pops(const arma::cube& emigrants,
                              eng);
 
         if (age > death_age) {
-            aphids[i].apterous.X_t1 *= death_mort;
-            aphids[i].apterous.X_t *= death_mort;
-            aphids[i].alates.X_t1 *= death_mort;
-            aphids[i].alates.X_t *= death_mort;
+            aphids[i].apterous.X *= death_mort;
+            aphids[i].alates.X *= death_mort;
         }
 
         // Adjust for potential extinction or re-colonization:
@@ -98,10 +96,8 @@ void OnePatch::update_pops(const arma::cube& emigrants,
                              immigrants.slice(i).col(this_j));
 
         if (age > death_age) {
-            aphids[i].apterous.X_t1 *= death_mort;
-            aphids[i].apterous.X_t *= death_mort;
-            aphids[i].alates.X_t1 *= death_mort;
-            aphids[i].alates.X_t *= death_mort;
+            aphids[i].apterous.X *= death_mort;
+            aphids[i].alates.X *= death_mort;
         }
 
         extinct_colonize(i);
