@@ -269,14 +269,6 @@ void AphidPop::update_pop(const OnePatch* patch,
         apterous.X.front() += alates.X.front();
         alates.X.front() = new_alates;
 
-        /*
-         If, after all this, either alates or apterous are below the extinction
-         threshold, set them to zero.
-         */
-        if ((arma::accu(apterous.X) + arma::accu(alates.X)) < patch->extinct_N) {
-            clear();
-        }
-
     }
 
     return;
@@ -310,14 +302,6 @@ void AphidPop::update_pop(const OnePatch* patch,
         apterous.X.front() -= new_alates;
         apterous.X.front() += alates.X.front();
         alates.X.front() = new_alates;
-
-        /*
-         If, after all this, either alates or apterous are below the extinction
-         threshold, set them to zero.
-         */
-        if ((arma::accu(apterous.X) + arma::accu(alates.X)) < patch->extinct_N) {
-            clear();
-        }
 
     }
 

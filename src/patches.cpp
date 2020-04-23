@@ -22,17 +22,18 @@ using namespace Rcpp;
  Adjust for potential extinction or re-colonization:
  */
 void OnePatch::extinct_colonize(const uint32& i) {
+
     AphidPop& ap(aphids[i]);
+
     double N = ap.total_aphids();
-    if (N >= extinct_N) {
-        // Newly colonized:
-        if (empty) empty = false;
-        if (ap.extinct) ap.extinct = false;
-    }
-    // Newly extinct:
-    if (N < extinct_N && !ap.extinct) {
+
+    if (N < extinct_N) {
         ap.clear();
+    } else {
+        empty = false;
+        ap.extinct = false;
     }
+
     return;
 }
 
