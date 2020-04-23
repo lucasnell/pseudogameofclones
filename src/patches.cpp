@@ -14,6 +14,110 @@ using namespace Rcpp;
 
 
 
+
+
+
+
+/*
+ Adjust for potential extinction or re-colonization:
+ */
+void OnePatch::extinct_colonize(const uint32& i) {
+    AphidPop& ap(aphids[i]);
+    double N = ap.total_aphids();
+    if (N >= extinct_N) {
+        // Newly colonized:
+        if (empty) empty = false;
+        if (ap.extinct) ap.extinct = false;
+    }
+    // Newly extinct:
+    if (N < extinct_N && !ap.extinct) {
+        ap.clear();
+    }
+    return;
+}
+
+
+
+
+
+
+/*
+ Iterate one time step, after calculating dispersal numbers
+ */
+void OnePatch::update_pops(const arma::cube& emigrants,
+                           const arma::cube& immigrants,
+                           pcg32& eng) {
+
+    z = 0;
+    for (const AphidPop& ap : aphids) z += ap.total_aphids();
+
+    S = 1 / (1 + z / K);
+
+    empty = true;
+
+    for (uint32 i = 0; i < aphids.size(); i++) {
+
+        // Update population, including process error and dispersal:
+        aphids[i].update_pop(this,
+                             emigrants.slice(i).col(this_j),
+                             immigrants.slice(i).col(this_j),
+                             eng);
+
+        if (age > death_age) {
+            aphids[i].apterous.X_t1 *= death_mort;
+            aphids[i].apterous.X_t *= death_mort;
+            aphids[i].alates.X_t1 *= death_mort;
+            aphids[i].alates.X_t *= death_mort;
+        }
+
+        // Adjust for potential extinction or re-colonization:
+        extinct_colonize(i);
+
+    }
+
+    age++;
+
+    return;
+
+}
+// Same but minus stochasticity
+void OnePatch::update_pops(const arma::cube& emigrants,
+                           const arma::cube& immigrants) {
+
+    z = 0;
+    for (const AphidPop& ap : aphids) z += ap.total_aphids();
+
+    S = 1 / (1 + z / K);
+
+    empty = true;
+
+    for (uint32 i = 0; i < aphids.size(); i++) {
+
+        aphids[i].update_pop(this,
+                             emigrants.slice(i).col(this_j),
+                             immigrants.slice(i).col(this_j));
+
+        if (age > death_age) {
+            aphids[i].apterous.X_t1 *= death_mort;
+            aphids[i].apterous.X_t *= death_mort;
+            aphids[i].alates.X_t1 *= death_mort;
+            aphids[i].alates.X_t *= death_mort;
+        }
+
+        extinct_colonize(i);
+
+    }
+
+    age++;
+
+    return;
+
+}
+
+
+
+
+
 // Do the actual clearing of patches while avoiding extinction
 template <typename T>
 inline void AllPatches::do_clearing(std::vector<PatchClearingInfo<T>>& clear_patches,
