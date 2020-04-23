@@ -7,6 +7,7 @@
 #include <random>               // normal distribution
 #include <pcg/pcg_random.hpp>   // pcg prng
 #include "clonewars_types.hpp"  // integer types
+#include "math.hpp"             // distributions
 #include "aphids.hpp"           // aphid classes
 #include "pcg.hpp"              // runif_ fxns
 
@@ -14,93 +15,6 @@
 
 using namespace Rcpp;
 
-
-
-
-/*
- Normal distribution truncated above zero.
- Used for generating `K` bc we never want it to be < 0.
-*/
-class trunc_normal_distribution {
-
-    double mu;
-    double sigma;
-    double a_bar;
-    double p;
-
-public:
-
-    trunc_normal_distribution() : mu(0), sigma(1), a_bar((0 - mu) / sigma), p(1) {}
-    trunc_normal_distribution(const double& mu_, const double& sigma_)
-        : mu(mu_), sigma(sigma_), a_bar((0 - mu) / sigma),
-          p(R::pnorm5(a_bar, 0, 1, 1, 0)) {}
-    trunc_normal_distribution(const trunc_normal_distribution& other)
-        : mu(other.mu), sigma(other.sigma), a_bar((0 - mu) / sigma),
-          p(R::pnorm5(a_bar, 0, 1, 1, 0)) {}
-
-    trunc_normal_distribution& operator=(const trunc_normal_distribution& other) {
-        mu = other.mu;
-        sigma = other.sigma;
-        a_bar = (0 - mu) / sigma;
-        p = R::pnorm5(a_bar, 0, 1, 1, 0);
-        return *this;
-    }
-
-    double operator()(pcg32& eng) {
-
-        double u = runif_ab(eng, p, 1);
-
-        double x = R::qnorm5(u, 0, 1, 1, 0);
-        x = x * sigma + mu;
-
-        return x;
-    }
-
-
-};
-
-
-
-/*
- Custom Beta distibution class
- Idea for combining two gammas from https://stackoverflow.com/a/10359049
- Used for generating plant-death-mortality growth-rate modifiers bc they should be
- between 0 and 1.
-*/
-class beta_distribution {
-
-    std::gamma_distribution<double> X;
-    std::gamma_distribution<double> Y;
-    double x;
-    double y;
-    double z;
-
-public:
-
-    beta_distribution() : X(1, 1), Y(1, 1) {}
-    beta_distribution(const double& shape1, const double& shape2)
-        : X(shape1, 1), Y(shape2, 1) {}
-    beta_distribution(const beta_distribution& other)
-        : X(other.X), Y(other.Y) {}
-
-    beta_distribution& operator=(const beta_distribution& other) {
-        X = other.X;
-        Y = other.Y;
-        return *this;
-    }
-
-    double operator()(pcg32& eng) {
-
-        x = X(eng);
-        y = Y(eng);
-
-        z = x / (x + y);
-
-        return z;
-    }
-
-
-};
 
 
 

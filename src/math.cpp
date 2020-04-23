@@ -1,6 +1,7 @@
 #include <RcppArmadillo.h>
 #include <cmath>
 
+#include "math.hpp"
 #include "clonewars_types.hpp"
 
 using namespace Rcpp;
@@ -13,26 +14,6 @@ using namespace Rcpp;
  =====================================================================================
  */
 
-/*
- --------------
- C++ versions
- --------------
- */
-
-void logit__(const double& p, double& out) {
-    out = std::log(p / (1-p));
-    return;
-}
-void inv_logit__(const double& a, double& out){
-    out = 1 / (1 + std::exp(-a));
-    return;
-}
-
-/*
- --------------
- R versions
- --------------
-*/
 
 //' Logit and inverse logit functions.
 //'
@@ -70,37 +51,6 @@ NumericVector inv_logit(NumericVector a){
  =====================================================================================
  */
 
-/*
- --------------
- C++ versions
- --------------
- */
-
-void leslie_matrix__(const arma::uvec& instar_days, const double& surv_juv,
-                          const arma::vec& surv_adult, const arma::vec& repro,
-                          arma::mat& out) {
-    uint32 n_stages = arma::accu(instar_days);
-    arma::vec tmp;
-    uint32 juv_time = arma::accu(instar_days(arma::span(0, (instar_days.n_elem - 2))));
-    // Age-specific survivals
-    tmp = arma::vec(n_stages - 1);
-    tmp.head(juv_time).fill(surv_juv);
-    tmp.tail(n_stages-juv_time-1) = surv_adult(arma::span(0,(n_stages-juv_time-2)));
-    out = arma::diagmat(tmp, -1);
-    // Age-specific fecundities
-    out(0, arma::span(juv_time, juv_time + instar_days(instar_days.n_elem - 1) - 1)) =
-        repro(arma::span(0, instar_days(instar_days.n_elem - 1) - 1)).t();
-
-    return;
-}
-
-
-
-/*
- --------------
- R versions
- --------------
- */
 
 //' Create Leslie matrix from aphid info
 //'
@@ -133,31 +83,6 @@ NumericMatrix leslie_matrix(IntegerVector instar_days, const double& surv_juv,
  =====================================================================================
  =====================================================================================
  */
-
-// This computes the "stable age distribution" from the Leslie matrix, which is
-// the proportion of different classes that is required for the population to grow
-// exponentially
-void sad_leslie__(const arma::mat& L, arma::vec& out) {
-
-    arma::cx_vec r_cx;
-    arma::cx_mat SAD;
-
-    arma::eig_gen(r_cx, SAD, L);
-
-    arma::vec r = arma::abs(r_cx);
-
-    double rmax = arma::max(r);
-
-    arma::cx_mat SADdist = SAD.cols(arma::find(r == rmax));
-    arma::cx_double all_SAD = arma::accu(SADdist);
-    SADdist /= all_SAD;
-    SADdist.resize(SADdist.n_elem, 1);
-
-    out = arma::real(SADdist);
-
-    return;
-}
-
 
 
 
