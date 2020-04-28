@@ -161,7 +161,7 @@ void AphidPop::calc_dispersal(const OnePatch* patch,
          */
         if (alates.disp_mort() <= 0) {
             // If mortality is zero, then all emigrants survive:
-            immigrants.row(i) = n_leaving;
+            immigrants.row(i) += n_leaving;
         } else if (alates.disp_mort() < 1) {
             // If mortality is >0 and <1, then we have to sample for the # that survive:
             for (uint32 j = 0; j < n_patches; j++) {
@@ -211,9 +211,9 @@ void AphidPop::calc_dispersal(const OnePatch* patch,
         emigrants(i, this_j) = arma::accu(n_leaving);
 
         if (alates.disp_mort() <= 0) {
-            immigrants.row(i) = n_leaving;
+            immigrants.row(i) += n_leaving;
         } else if (alates.disp_mort() < 1) {
-            immigrants.row(i) = n_leaving * (1 - alates.disp_mort());
+            immigrants.row(i) += n_leaving * (1 - alates.disp_mort());
         }
 
     }
