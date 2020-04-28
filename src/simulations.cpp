@@ -285,13 +285,87 @@ RepSummary one_rep__(const T& clear_threshold,
             return summary;
         }
 
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        double N = -1;
+        for (uint32 i = 0; i < patches.patches.size(); i++) {
+            const OnePatch& p(patches.patches[i]);
+            if (N != -1 && p.total_aphids() != N) {
+                Rcout << "p.this_j = " << p.this_j << std::endl;
+                Rcout << "t = " << t << std::endl;
+                stop("\n\nWHY, GOD, WHY?? (#0) \n\n");
+            }
+            N = p.total_aphids();
+        }
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
         if (disp_error) {
             patches.calc_dispersal(eng);
         } else patches.calc_dispersal();
 
+
+
+
+
+        // // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        //
+        // patches.emigrants.fill(0);
+        // patches.immigrants.fill(0);
+        //
+        // // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+        // emigrants = arma::zeros<arma::cube>(n_stages, n_patches, n_lines);
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        arma::vec e_sum(n_patches);
+        arma::vec i_sum(n_patches);
+        for (uint32 i = 0; i < n_patches; i++) {
+            e_sum(i) = arma::accu(patches.emigrants.col(i));
+            i_sum(i) = arma::accu(patches.immigrants.col(i));
+        }
+        arma::vec e_unqs = arma::unique(e_sum);
+        arma::vec i_unqs = arma::unique(i_sum);
+        if (e_unqs.n_elem > 1 || i_unqs.n_elem > 1) {
+            Rcout << std::endl << "Emigrants:" << std::endl;
+            e_sum.print();
+            Rcout << std::endl;
+            Rcout << std::endl << "Immigrants:" << std::endl;
+            i_sum.print();
+            Rcout << std::endl;
+            stop("\n\nDuplicate E or I.\n\n");
+        }
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
         if (process_error) {
             patches.update_pops(eng);
         } else patches.update_pops();
+
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        N = -1;
+        for (uint32 i = 0; i < patches.patches.size(); i++) {
+            const OnePatch& p(patches.patches[i]);
+            if (N != -1 && p.total_aphids() != N) {
+                Rcout << "p.this_j = " << p.this_j << std::endl;
+                Rcout << "t = " << t << std::endl;
+                stop("\n\nWHY, GOD, WHY??\n\n");
+            }
+            N = p.total_aphids();
+        }
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 
         if (t % save_every == 0 || t == max_t) summary.push_back(t, patches);
 
