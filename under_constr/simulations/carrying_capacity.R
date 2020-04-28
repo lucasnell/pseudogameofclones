@@ -7,12 +7,14 @@
 
 library(clonewars)
 
-foo <- function(K) {
+sim_CC <- function(K, L = NULL) {
 
     S <- function(z) 1 / (1 + z / K)
 
-    L <- leslie_matrix(dev_times$instar_days$lowT, populations$surv_juv$high,
-                       populations$surv_adult$high, populations$repro$high)
+    if (is.null(L)) {
+        L <- leslie_matrix(dev_times$instar_days$lowT, populations$surv_juv$high,
+                           populations$surv_adult$high, populations$repro$high)
+    }
 
     N <- numeric(1+1000)
     X <- sad_leslie(L)
@@ -37,4 +39,8 @@ tibble(K = seq(500, 10e3, 500),
 
 
 # Predicted carrying capacity for Leslie matrix `L` and parameter `K`:
-CC <- function(K) (Re(eigen(L)$values[1]) - 1) * K
+CC <- function(K) {
+    (Re(eigen(L)$values[1]) - 1) * K * x
+}
+
+

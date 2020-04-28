@@ -18,6 +18,8 @@ using namespace Rcpp;
 
 
 
+
+
 /*
  Adjust for potential extinction or re-colonization:
  */
@@ -38,7 +40,67 @@ void OnePatch::extinct_colonize(const uint32& i) {
 }
 
 
+/*
+ Carrying capacity for patch.
+ It depends on the Leslie matrix for each line's apterous aphids.
+ I'm assuming apterous ones drive the carrying capacity, rather than alates, because
+ they should be much more numerous.
+ */
 
+double OnePatch::carrying_capacity() const {
+
+    arma::vec cc(aphids.size());
+    arma::vec Ns(aphids.size());
+    double total_N = 0;
+
+    arma::mat L;
+    arma::cx_vec eigval;
+    double ev;
+
+    for (uint32 i = 0; i < aphids.size(); i++) {
+
+        Ns[i] = aphids[i].total_aphids();
+
+        if (Ns[i] == 0) {
+            cc[i] = 0;
+            continue;
+        }
+
+        total_N += Ns[i];
+
+        combine_leslies(L,
+                        aphids[i].apterous.leslie(),
+                        aphids[i].alates.leslie(),
+                        aphids[i].apterous.alate_prop(),
+                        aphids[i].alates.disp_rate(),
+                        aphids[i].alates.disp_mort(),
+                        aphids[i].alates.disp_start());
+
+        eigval = arma::eig_gen( L );
+        ev = eigval(0).real();
+        cc[i] = (ev - 1) * K;
+    }
+
+    double avg_cc = arma::accu(cc % Ns / total_N);
+
+    return avg_cc;
+}
+
+
+
+
+
+void OnePatch::check_wilted() {
+
+    // Once it turns wilted, it stays that way until cleared
+    if (wilted_) return;
+
+    double CC = carrying_capacity();
+    double N = total_aphids();
+    wilted_ = N >= (CC * death_prop);
+
+    return;
+}
 
 
 
@@ -56,6 +118,9 @@ void OnePatch::update_pops(const arma::cube& emigrants,
 
     empty = true;
 
+    // Check to see if plant should be wilted based on abundances at last time step
+    check_wilted();
+
     for (uint32 i = 0; i < aphids.size(); i++) {
 
         // Update population, including process error and dispersal:
@@ -64,7 +129,7 @@ void OnePatch::update_pops(const arma::cube& emigrants,
                              immigrants.slice(i).col(this_j),
                              eng);
 
-        if (age > death_age) {
+        if (wilted_) {
             aphids[i].apterous.X *= death_mort;
             aphids[i].alates.X *= death_mort;
         }
@@ -90,13 +155,15 @@ void OnePatch::update_pops(const arma::cube& emigrants,
 
     empty = true;
 
+    check_wilted();
+
     for (uint32 i = 0; i < aphids.size(); i++) {
 
         aphids[i].update_pop(this,
                              emigrants.slice(i).col(this_j),
                              immigrants.slice(i).col(this_j));
 
-        if (age > death_age) {
+        if (wilted_) {
             aphids[i].apterous.X *= death_mort;
             aphids[i].alates.X *= death_mort;
         }
@@ -151,10 +218,9 @@ inline void AllPatches::do_clearing(std::vector<PatchClearingInfo<T>>& clear_pat
 
 
         double K = get_K(eng);
-        uint32 death_age = get_death_age(eng);
         double death_mort = get_death_mort(eng);
 
-        patches[clear_patches.front().ind].clear(K, death_age, death_mort);
+        patches[clear_patches.front().ind].clear(K, death_mort);
 
         return;
 
@@ -180,16 +246,14 @@ inline void AllPatches::do_clearing(std::vector<PatchClearingInfo<T>>& clear_pat
     }
 
     double K;
-    uint32 death_age;
     double death_mort;
 
     for (uint32 i = 0; i < clear_patches.size(); i++) {
 
         K = get_K(eng);
-        death_age = get_death_age(eng);
         death_mort = get_death_mort(eng);
 
-        patches[clear_patches[i].ind].clear(K, death_age, death_mort);
+        patches[clear_patches[i].ind].clear(K, death_mort);
     }
 
 
