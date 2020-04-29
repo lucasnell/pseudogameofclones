@@ -61,27 +61,34 @@ double OnePatch::carrying_capacity() const {
 
         Ns[i] = aphids[i].total_aphids();
 
-        if (Ns[i] == 0) {
-            cc[i] = 0;
-            continue;
-        }
-
         total_N += Ns[i];
 
-        combine_leslies(L,
-                        aphids[i].apterous.leslie(),
-                        aphids[i].alates.leslie(),
-                        aphids[i].apterous.alate_prop(),
-                        aphids[i].alates.disp_rate(),
-                        aphids[i].alates.disp_mort(),
-                        aphids[i].alates.disp_start());
+        /*
+         The line `aphids[i].apterous.alate_prop(z / CC),` means that the calculation
+         of the carrying capacity depends on its own value.
+         Unless I can come up with a different way of parameterizing this
+         that fixes this circularity, I'm only going to consider apterous aphids
+         for determining the carrying capacity.
+         */
+        // combine_leslies(L,
+        //                 aphids[i].apterous.leslie(),
+        //                 aphids[i].alates.leslie(),
+        //                 aphids[i].apterous.alate_prop(z / CC),
+        //                 aphids[i].alates.disp_rate(),
+        //                 aphids[i].alates.disp_mort(),
+        //                 aphids[i].alates.disp_start());
+        L = aphids[i].apterous.leslie();
 
         eigval = arma::eig_gen( L );
         ev = eigval(0).real();
         cc[i] = (ev - 1) * K;
     }
 
-    double avg_cc = arma::accu(cc % Ns / total_N);
+    double avg_cc;
+
+    if (total_N > 0) {
+        avg_cc = arma::accu(cc % Ns / total_N);
+    } else avg_cc = arma::mean(cc);
 
     return avg_cc;
 }
@@ -90,14 +97,15 @@ double OnePatch::carrying_capacity() const {
 
 
 
-void OnePatch::check_wilted() {
+void OnePatch::update_z_CC_wilted() {
+
+
+    z = total_aphids();
+    CC = carrying_capacity();
 
     // Once it turns wilted, it stays that way until cleared
     if (wilted_) return;
-
-    double CC = carrying_capacity();
-    double N = total_aphids();
-    wilted_ = N >= (CC * death_prop);
+    wilted_ = z >= (CC * death_prop);
 
     return;
 }
@@ -111,15 +119,11 @@ void OnePatch::update_pops(const arma::cube& emigrants,
                            const arma::cube& immigrants,
                            pcg32& eng) {
 
-    z = 0;
-    for (const AphidPop& ap : aphids) z += ap.total_aphids();
+    update_z_CC_wilted();
 
     S = 1 / (1 + z / K);
 
     empty = true;
-
-    // Check to see if plant should be wilted based on abundances at last time step
-    check_wilted();
 
     for (uint32 i = 0; i < aphids.size(); i++) {
 
@@ -127,6 +131,7 @@ void OnePatch::update_pops(const arma::cube& emigrants,
         aphids[i].update_pop(this,
                              emigrants.slice(i).col(this_j),
                              immigrants.slice(i).col(this_j),
+                             z / CC,
                              eng);
 
         if (wilted_) {
@@ -148,20 +153,18 @@ void OnePatch::update_pops(const arma::cube& emigrants,
 void OnePatch::update_pops(const arma::cube& emigrants,
                            const arma::cube& immigrants) {
 
-    z = 0;
-    for (const AphidPop& ap : aphids) z += ap.total_aphids();
+    update_z_CC_wilted();
 
     S = 1 / (1 + z / K);
 
     empty = true;
 
-    check_wilted();
-
     for (uint32 i = 0; i < aphids.size(); i++) {
 
         aphids[i].update_pop(this,
                              emigrants.slice(i).col(this_j),
-                             immigrants.slice(i).col(this_j));
+                             immigrants.slice(i).col(this_j),
+                             z / CC);
 
         if (wilted_) {
             aphids[i].apterous.X *= death_mort;

@@ -109,10 +109,12 @@ class OnePatch {
      */
     double carrying_capacity() const;
 
-    // Calculates `carrying_capacity` to see if plant should be wilted.
-    void check_wilted();
+    // Updateds total 3 aphids (`z`), carrying capacity (`CC`), and
+    // checks to see if plant should be wilted.
+    void update_z_CC_wilted();
 
     bool wilted_ = false;
+    double CC = 0;
 
 
 public:
@@ -149,7 +151,8 @@ public:
              const std::vector<std::string>& aphid_name,
              const std::vector<arma::cube>& leslie_mat,
              const arma::cube& aphid_density_0,
-             const std::vector<double>& alate_prop,
+             const std::vector<double>& alate_b0,
+             const std::vector<double>& alate_b1,
              const std::vector<double>& disp_rate,
              const std::vector<double>& disp_mort,
              const std::vector<uint32>& disp_start,
@@ -174,7 +177,7 @@ public:
         for (uint32 i = 0; i < n_lines; i++) {
             AphidPop ap(aphid_name[i], sigma, rho, demog_mult,
                         leslie_mat[i], aphid_density_0.slice(i),
-                        alate_prop[i], disp_rate[i], disp_mort[i],
+                        alate_b0[i], alate_b1[i], disp_rate[i], disp_mort[i],
                         disp_start[i]);
             aphids.push_back(ap);
             double N = aphids.back().total_aphids();
@@ -370,7 +373,8 @@ public:
                const std::vector<std::string>& aphid_name,
                const std::vector<arma::cube>& leslie_mat,
                const std::vector<arma::cube>& aphid_density_0,
-               const std::vector<double>& alate_prop,
+               const std::vector<double>& alate_b0,
+               const std::vector<double>& alate_b1,
                const std::vector<double>& disp_rate,
                const std::vector<double>& disp_mort,
                const std::vector<uint32>& disp_start,
@@ -416,7 +420,7 @@ public:
             double death_mort = get_death_mort(eng);
             OnePatch ap(sigma, rho, demog_mult, K, death_prop, death_mort,
                         aphid_name, leslie_mat,
-                        aphid_density_0[j], alate_prop, disp_rate, disp_mort,
+                        aphid_density_0[j], alate_b0, alate_b1, disp_rate, disp_mort,
                         disp_start, pred_rate[j], n_patches, j, extinct_N);
             patches.push_back(ap);
         }

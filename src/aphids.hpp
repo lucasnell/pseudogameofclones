@@ -6,6 +6,7 @@
 #include <random>               // normal distribution
 #include <pcg/pcg_random.hpp>   // pcg prng
 #include "clonewars_types.hpp"  // integer types
+#include "math.hpp"             // inv_logit__
 
 
 
@@ -91,29 +92,47 @@ class ApterousPop : public AphidTypePop {
 
     friend class AphidPop;
 
-    double alate_prop_;  // proportion of new offspring that are alates
+    // Parameters for logit(Pr(alates)) ~ b0 + b1 * (N / max(N) - 0.5)
+    double alate_b0_;
+    double alate_b1_;
 
 public:
 
-    ApterousPop() : AphidTypePop(), alate_prop_(0) {};
+    ApterousPop() : AphidTypePop(), alate_b0_(0) {};
     ApterousPop(const arma::mat& leslie_mat,
                 const arma::vec& aphid_density_0,
-                const double& alate_prop)
+                const double& alate_b0,
+                const double& alate_b1)
         : AphidTypePop(leslie_mat, aphid_density_0),
-          alate_prop_(alate_prop) {};
+          alate_b0_(alate_b0),
+          alate_b1_(alate_b1){};
 
     ApterousPop(const ApterousPop& other)
         : AphidTypePop(other),
-          alate_prop_(other.alate_prop_) {};
+          alate_b0_(other.alate_b0_),
+          alate_b1_(other.alate_b1_){};
 
     ApterousPop& operator=(const ApterousPop& other) {
         AphidTypePop::operator=(other);
-        alate_prop_ = other.alate_prop_;
+        alate_b0_ = other.alate_b0_;
+        alate_b1_ = other.alate_b1_;
         return *this;
     }
 
 
-    const double& alate_prop() const {return alate_prop_;}
+    const double& alate_b0() const {return alate_b0_;}
+    const double& alate_b1() const {return alate_b1_;}
+
+    // logit(Pr(alates)) ~ b0 + b1 * (z / CC - 0.5), where `z` is # aphids (all lines)
+    // in patch and `CC` is carrying capacity of patch
+    double alate_prop(const double& p_N) const {
+
+        const double lap = alate_b0_ + alate_b1_ * (p_N - 0.5);
+        double ap;
+        inv_logit__(lap, ap);
+        return ap;
+
+    }
 
 };
 // Aphid "type" population for alates of a particular clonal line
@@ -193,7 +212,8 @@ public:
              const double& demog_mult,
              const arma::cube& leslie_mat,
              const arma::mat& aphid_density_0,
-             const double& alate_prop,
+             const double& alate_b0,
+             const double& alate_b1,
              const double& disp_rate,
              const double& disp_mort,
              const uint32& disp_start)
@@ -204,7 +224,7 @@ public:
           pois_distr(1),
           bino_distr(1, 0.1),
           aphid_name(aphid_name_),
-          apterous(leslie_mat.slice(0), aphid_density_0.col(0), alate_prop),
+          apterous(leslie_mat.slice(0), aphid_density_0.col(0), alate_b0, alate_b1),
           alates(leslie_mat.slice(1), aphid_density_0.col(1), disp_rate, disp_mort,
                  disp_start),
           extinct(false) {};
@@ -272,11 +292,13 @@ public:
     void update_pop(const OnePatch* patch,
                     const arma::vec& emigrants,
                     const arma::vec& immigrants,
+                    const double& p_N,
                     pcg32& eng);
     // Same as above, but no randomness in alate production:
     void update_pop(const OnePatch* patch,
                     const arma::vec& emigrants,
-                    const arma::vec& immigrants);
+                    const arma::vec& immigrants,
+                    const double& p_N);
 
     const double& sigma() const {return sigma_;}
     const double& rho() const {return rho_;}

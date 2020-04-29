@@ -231,6 +231,7 @@ void AphidPop::calc_dispersal(const OnePatch* patch,
 void AphidPop::update_pop(const OnePatch* patch,
                           const arma::vec& emigrants,
                           const arma::vec& immigrants,
+                          const double& p_N,
                           pcg32& eng) {
 
 
@@ -254,8 +255,9 @@ void AphidPop::update_pop(const OnePatch* patch,
 
         // Sample for # offspring from apterous aphids that are alates:
         double new_alates = 0;
-        if (apterous.alate_prop_ > 0 && apterous.X.front() > 0) {
-            double lambda_ = apterous.alate_prop_ * apterous.X.front();
+        double alate_prop = apterous.alate_prop(p_N);
+        if (alate_prop > 0 && apterous.X.front() > 0) {
+            double lambda_ = alate_prop * apterous.X.front();
             pois_distr.param(std::poisson_distribution<uint32>::param_type(lambda_));
             new_alates = static_cast<double>(pois_distr(eng));
             if (new_alates > apterous.X.front()) new_alates = apterous.X.front();
@@ -277,7 +279,8 @@ void AphidPop::update_pop(const OnePatch* patch,
 // Same as above, but no randomness in alate production:
 void AphidPop::update_pop(const OnePatch* patch,
                           const arma::vec& emigrants,
-                          const arma::vec& immigrants) {
+                          const arma::vec& immigrants,
+                          const double& p_N) {
 
     // First subtract emigrants and add immigrants:
     alates.X -= emigrants;
@@ -292,7 +295,8 @@ void AphidPop::update_pop(const OnePatch* patch,
         apterous.X = (1 - pred_rate) * S * (apterous.leslie_ * apterous.X);
         alates.X = (1 - pred_rate) * S * (alates.leslie_ * alates.X);
         // # offspring from apterous aphids that are alates:
-        double new_alates = apterous.alate_prop_ * apterous.X.front();
+        double new_alates = apterous.alate_prop(p_N);
+        new_alates *= apterous.X.front();
 
 
         /*

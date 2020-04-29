@@ -246,7 +246,8 @@ RepSummary one_rep__(const T& clear_threshold,
                      const std::vector<std::string>& aphid_name,
                      const std::vector<arma::cube>& leslie_mat,
                      const std::vector<arma::cube>& aphid_density_0,
-                     const std::vector<double>& alate_prop,
+                     const std::vector<double>& alate_b0,
+                     const std::vector<double>& alate_b1,
                      const std::vector<double>& disp_rate,
                      const std::vector<double>& disp_mort,
                      const std::vector<uint32>& disp_start,
@@ -272,7 +273,7 @@ RepSummary one_rep__(const T& clear_threshold,
     AllPatches patches(sigma_x, rho, demog_mult, mean_K, sd_K,
                        death_prop,
                        shape1_death_mort, shape2_death_mort,
-                       aphid_name, leslie_mat, aphid_density_0, alate_prop,
+                       aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1,
                        disp_rate, disp_mort, disp_start, pred_rate, extinct_N, eng);
 
     summary.push_back(0, patches);
@@ -341,7 +342,8 @@ DataFrame sim_clonewars_cpp(const uint32& n_reps,
                             const std::vector<std::string>& aphid_name,
                             const std::vector<arma::cube>& leslie_mat,
                             const std::vector<arma::cube>& aphid_density_0,
-                            const std::vector<double>& alate_prop,
+                            const std::vector<double>& alate_b0,
+                            const std::vector<double>& alate_b1,
                             const std::vector<double>& disp_rate,
                             const std::vector<double>& disp_mort,
                             const std::vector<uint32>& disp_start,
@@ -361,8 +363,11 @@ DataFrame sim_clonewars_cpp(const uint32& n_reps,
     if (leslie_mat.size() != n_lines) {
         stop("\nERROR: leslie_mat.size() != n_lines\n");
     }
-    if (alate_prop.size() != n_lines) {
-        stop("\nERROR: alate_prop.size() != n_lines\n");
+    if (alate_b0.size() != n_lines) {
+        stop("\nERROR: alate_b0.size() != n_lines\n");
+    }
+    if (alate_b1.size() != n_lines) {
+        stop("\nERROR: alate_b1.size() != n_lines\n");
     }
     if (disp_rate.size() != n_lines) {
         stop("\nERROR: disp_rate.size() != n_lines\n");
@@ -426,7 +431,7 @@ DataFrame sim_clonewars_cpp(const uint32& n_reps,
                                              disp_error,
                                              demog_error, sigma_x, rho, extinct_N,
                                              aphid_name, leslie_mat, aphid_density_0,
-                                             alate_prop, disp_rate, disp_mort,
+                                             alate_b0, alate_b1, disp_rate, disp_mort,
                                              disp_start, pred_rate, prog_bar,
                                              status_code, eng);
         } else {
@@ -437,7 +442,7 @@ DataFrame sim_clonewars_cpp(const uint32& n_reps,
                                              disp_error,
                                              demog_error, sigma_x, rho, extinct_N,
                                              aphid_name, leslie_mat, aphid_density_0,
-                                             alate_prop, disp_rate, disp_mort,
+                                             alate_b0, alate_b1, disp_rate, disp_mort,
                                              disp_start, pred_rate, prog_bar,
                                              status_code, eng);
         }
