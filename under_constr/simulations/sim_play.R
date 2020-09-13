@@ -1,11 +1,12 @@
 
-# ======================================================================================
-# ======================================================================================
+
+# ======================================================================================`
+# ======================================================================================`
 
 # This file plays around with simulations.
 
-# ======================================================================================
-# ======================================================================================
+# ======================================================================================`
+# ======================================================================================`
 
 
 
@@ -20,7 +21,7 @@ if (.Platform[['GUI']] != "X11") source(".Rprofile")
 
 
 
-
+# parameters ----
 #'
 #' Fecundities for alates (from `mike_alate_fecundity.R`):
 #'
@@ -40,19 +41,22 @@ fecunds <- list(UT3 = c(0.00000000, 0.21232513, 1.20283952, 1.79183374, 2.085077
 
 
 #'
-#' Probabilities of alate production (from `alate_production_assays.R`):
+#' Parameters to generate the probabilities of alate production
+#' (from `alate_production_assays.R`):
 #'
 
-alate_prop_ <- c(UT3 = 0.008781396, `WI-L4` = 0.014703034)
+alate_b0_ <- c(UT3 = -5.480921, `WI-L4` = -1.075751)
+alate_b1_ <- c(UT3 = 0.0002434254, `WI-L4` = 0.0002434254)
 
 
 #'
 #' The rest of the dispersal parameters are the same:
 #'
 
-disp_rate_ = rep(0.75, 2)
-disp_mort_ = rep(0.75, 2)
+disp_rate_ = rep(0.8, 2)
+disp_mort_ = rep(0.4, 2)
 disp_start_ = rep(sum(head(dev_times$instar_days$lowT, -1)), 2)
+
 
 
 
@@ -100,8 +104,7 @@ sd_K_ <- sd_K_ / (Re(eigen(apterous, FALSE, TRUE)$values[[1]]) - 1)
 #' growth rates.
 #' See `under_constr/_assays/plant_death.R` for more info.
 #'
-meanlog_death_age_ <- 2.854908
-sdlog_death_age_ <- 0.214191
+death_prop_ <- 0.8
 shape1_death_mort_ <- 3.736386
 shape2_death_mort_ <- 5.777129
 
@@ -118,6 +121,9 @@ aphid_density_0_ <- replicate(n_patches, density_0, simplify = FALSE)
 
 
 
+
+# one-rep function ----
+
 sim_for_max_N <- function(.max_N, no_error = FALSE, ...) {
 
     args <- list(n_reps = 100,
@@ -128,8 +134,7 @@ sim_for_max_N <- function(.max_N, no_error = FALSE, ...) {
                  save_every = 1,
                  mean_K = mean_K_,
                  sd_K = sd_K_,
-                 meanlog_death_age = meanlog_death_age_,
-                 sdlog_death_age = sdlog_death_age_,
+                 death_prop = death_prop_,
                  shape1_death_mort = shape1_death_mort_,
                  shape2_death_mort = shape2_death_mort_,
                  disp_error = TRUE,
@@ -141,7 +146,8 @@ sim_for_max_N <- function(.max_N, no_error = FALSE, ...) {
                                 "disperser (WI_L4)"),
                  leslie_mat = as.name("leslie_mat_"),
                  aphid_density_0 = as.name("aphid_density_0_"),
-                 alate_prop = alate_prop_,
+                 alate_b0 = alate_b0_,
+                 alate_b1 = alate_b1_,
                  disp_rate = disp_rate_,
                  disp_mort = disp_mort_,
                  disp_start = disp_start_,
@@ -151,8 +157,6 @@ sim_for_max_N <- function(.max_N, no_error = FALSE, ...) {
 
     if (no_error) {
         args$sd_K <- 0
-        args$meanlog_death_age = exp(meanlog_death_age_ + sdlog_death_age_^2 / 2)
-        args$sdlog_death_age = 0
         args$shape1_death_mort = shape1_death_mort_ /
             (shape1_death_mort_ + shape2_death_mort_)
         args$shape2_death_mort = 0
@@ -174,6 +178,8 @@ sim_for_max_N <- function(.max_N, no_error = FALSE, ...) {
 }
 
 
+# actual simulations ----
+
 # set.seed(7890345)
 # sim_df <- map_dfr(seq(200, 2000, 100), sim_for_max_N) %>%
 #     select(max_N, everything()) %>%
@@ -181,10 +187,30 @@ sim_for_max_N <- function(.max_N, no_error = FALSE, ...) {
 
 
 
-Z <- sim_for_max_N(.max_N = 150, no_error = TRUE,  n_reps = 1)
+
+# # To check whether the last patch has different # of aphids on it,
+# # which shouldn't happen when everything's deterministic, starting densities
+# # are the same among patches, plants don't die, and there is no clearing of plants.
+# sim_for_max_N(.max_N = 1000, n_reps = 1,
+#               no_error = TRUE,
+#               max_t = 100,
+#               check_for_clear = integer(0),
+#               death_prop = 2,
+#               mean_K = mean_K_ * 5) %>%
+#     group_by(time, line) %>%
+#     summarize(N0 = sum(N[patch == 0]),
+#               N3 = sum(N[patch == 3]),
+#               dN = N3 - N0) %>%
+#     filter(dN != 0) %>%
+#     print()
+
+
+Z <- sim_for_max_N(.max_N = 2500, n_reps = 1,
+                   no_error = TRUE,
+                   max_t = 100,
+                   mean_K = mean_K_ * 5)
 
 Z %>%
-    # filter(time == max(time))
     # group_by(rep, time, patch, line) %>%
     # summarize(N = sum(N)) %>%
     # ungroup() %>%
@@ -192,7 +218,26 @@ Z %>%
     ggplot(aes(time, N, linetype = type, color = line)) +
     geom_line() +
     facet_wrap(~ patch) +
-    scale_color_manual(values = c("firebrick", "dodgerblue"))
+    scale_color_manual(values = c("firebrick", "dodgerblue")) +
+    scale_linetype_manual(values = 2:1)
+
+
+
+Z %>%
+    group_by(rep, time, patch) %>%
+    summarize(N = sum(N)) %>%
+    ungroup() %>%
+    ggplot(aes(time, N)) +
+    geom_line() +
+    facet_wrap(~ patch)
+
+
+
+
+
+
+
+
 
 
 
@@ -249,14 +294,14 @@ Z %>%
 #
 #
 #
-# # # =======================================================================================
-# # # =======================================================================================
-# # # =======================================================================================
-# # # =======================================================================================
-# # # =======================================================================================
-# # # =======================================================================================
-# # # =======================================================================================
-# # # =======================================================================================
+# # # =======================================================================================`
+# # # =======================================================================================`
+# # # =======================================================================================`
+# # # =======================================================================================`
+# # # =======================================================================================`
+# # # =======================================================================================`
+# # # =======================================================================================`
+# # # =======================================================================================`
 # #
 # #
 # #
