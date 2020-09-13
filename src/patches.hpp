@@ -109,7 +109,7 @@ class OnePatch {
      */
     double carrying_capacity() const;
 
-    // Updateds total 3 aphids (`z`), carrying capacity (`CC`), and
+    // Updates total # aphids (`z`), carrying capacity (`CC`), and
     // checks to see if plant should be wilted.
     void update_z_CC_wilted();
 

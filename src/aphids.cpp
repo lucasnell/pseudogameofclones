@@ -83,6 +83,18 @@ void AphidTypePop::process_error(const double& z,
 
 
 
+// logit(Pr(alates)) ~ b0 + b1 * z, where `z` is # aphids (all lines)
+// in patch and `CC` is carrying capacity of patch
+double ApterousPop::alate_prop(const OnePatch* patch) const {
+
+    const double lap = alate_b0_ + alate_b1_ * patch->z;
+    double ap;
+    inv_logit__(lap, ap);
+    return ap;
+
+}
+
+
 
 
 
@@ -231,7 +243,6 @@ void AphidPop::calc_dispersal(const OnePatch* patch,
 void AphidPop::update_pop(const OnePatch* patch,
                           const arma::vec& emigrants,
                           const arma::vec& immigrants,
-                          const double& p_N,
                           pcg32& eng) {
 
 
@@ -255,7 +266,7 @@ void AphidPop::update_pop(const OnePatch* patch,
 
         // Sample for # offspring from apterous aphids that are alates:
         double new_alates = 0;
-        double alate_prop = apterous.alate_prop(p_N);
+        double alate_prop = apterous.alate_prop(patch);
         if (alate_prop > 0 && apterous.X.front() > 0) {
             double lambda_ = alate_prop * apterous.X.front();
             pois_distr.param(std::poisson_distribution<uint32>::param_type(lambda_));
@@ -279,8 +290,7 @@ void AphidPop::update_pop(const OnePatch* patch,
 // Same as above, but no randomness in alate production:
 void AphidPop::update_pop(const OnePatch* patch,
                           const arma::vec& emigrants,
-                          const arma::vec& immigrants,
-                          const double& p_N) {
+                          const arma::vec& immigrants) {
 
     // First subtract emigrants and add immigrants:
     alates.X -= emigrants;
@@ -295,7 +305,7 @@ void AphidPop::update_pop(const OnePatch* patch,
         apterous.X = (1 - pred_rate) * S * (apterous.leslie_ * apterous.X);
         alates.X = (1 - pred_rate) * S * (alates.leslie_ * alates.X);
         // # offspring from apterous aphids that are alates:
-        double new_alates = apterous.alate_prop(p_N);
+        double new_alates = apterous.alate_prop(patch);
         new_alates *= apterous.X.front();
 
 

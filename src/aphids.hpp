@@ -13,7 +13,7 @@
 using namespace Rcpp;
 
 
-// This is necessary for dispersal methods
+// This is necessary for dispersal methods and ApterousPop::alate_prop
 class OnePatch;
 // Necessary here to declare friendship
 class AphidPop;
@@ -92,13 +92,13 @@ class ApterousPop : public AphidTypePop {
 
     friend class AphidPop;
 
-    // Parameters for logit(Pr(alates)) ~ b0 + b1 * (N / max(N) - 0.5)
+    // Parameters for logit(Pr(alates)) ~ b0 + b1 * N
     double alate_b0_;
     double alate_b1_;
 
 public:
 
-    ApterousPop() : AphidTypePop(), alate_b0_(0) {};
+    ApterousPop() : AphidTypePop(), alate_b0_(0), alate_b1_(0) {};
     ApterousPop(const arma::mat& leslie_mat,
                 const arma::vec& aphid_density_0,
                 const double& alate_b0,
@@ -123,16 +123,9 @@ public:
     const double& alate_b0() const {return alate_b0_;}
     const double& alate_b1() const {return alate_b1_;}
 
-    // logit(Pr(alates)) ~ b0 + b1 * (z / CC - 0.5), where `z` is # aphids (all lines)
+    // logit(Pr(alates)) ~ b0 + b1 * z, where `z` is # aphids (all lines)
     // in patch and `CC` is carrying capacity of patch
-    double alate_prop(const double& p_N) const {
-
-        const double lap = alate_b0_ + alate_b1_ * (p_N - 0.5);
-        double ap;
-        inv_logit__(lap, ap);
-        return ap;
-
-    }
+    double alate_prop(const OnePatch* patch) const;
 
 };
 // Aphid "type" population for alates of a particular clonal line
@@ -292,13 +285,11 @@ public:
     void update_pop(const OnePatch* patch,
                     const arma::vec& emigrants,
                     const arma::vec& immigrants,
-                    const double& p_N,
                     pcg32& eng);
     // Same as above, but no randomness in alate production:
     void update_pop(const OnePatch* patch,
                     const arma::vec& emigrants,
-                    const arma::vec& immigrants,
-                    const double& p_N);
+                    const arma::vec& immigrants);
 
     const double& sigma() const {return sigma_;}
     const double& rho() const {return rho_;}

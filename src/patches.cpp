@@ -63,21 +63,14 @@ double OnePatch::carrying_capacity() const {
 
         total_N += Ns[i];
 
-        /*
-         The line `aphids[i].apterous.alate_prop(z / CC),` means that the calculation
-         of the carrying capacity depends on its own value.
-         Unless I can come up with a different way of parameterizing this
-         that fixes this circularity, I'm only going to consider apterous aphids
-         for determining the carrying capacity.
-         */
-        // combine_leslies(L,
-        //                 aphids[i].apterous.leslie(),
-        //                 aphids[i].alates.leslie(),
-        //                 aphids[i].apterous.alate_prop(z / CC),
-        //                 aphids[i].alates.disp_rate(),
-        //                 aphids[i].alates.disp_mort(),
-        //                 aphids[i].alates.disp_start());
-        L = aphids[i].apterous.leslie();
+
+        combine_leslies(L,
+                        aphids[i].apterous.leslie(),
+                        aphids[i].alates.leslie(),
+                        aphids[i].apterous.alate_prop(this),
+                        aphids[i].alates.disp_rate(),
+                        aphids[i].alates.disp_mort(),
+                        aphids[i].alates.disp_start());
 
         eigval = arma::eig_gen( L );
         ev = eigval(0).real();
@@ -131,7 +124,6 @@ void OnePatch::update_pops(const arma::cube& emigrants,
         aphids[i].update_pop(this,
                              emigrants.slice(i).col(this_j),
                              immigrants.slice(i).col(this_j),
-                             z / CC,
                              eng);
 
         if (wilted_) {
@@ -163,8 +155,7 @@ void OnePatch::update_pops(const arma::cube& emigrants,
 
         aphids[i].update_pop(this,
                              emigrants.slice(i).col(this_j),
-                             immigrants.slice(i).col(this_j),
-                             z / CC);
+                             immigrants.slice(i).col(this_j));
 
         if (wilted_) {
             aphids[i].apterous.X *= death_mort;
