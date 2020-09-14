@@ -11,111 +11,143 @@
 suppressPackageStartupMessages({
     library(tidyverse)
     library(lme4)
-    library(clonewars)
 })
 
-source(".Rprofile")
+if (file.exists(".Rprofile")) source(".Rprofile")
+# ggplot theme:
+theme_set(theme_classic() %+replace%
+              theme(strip.background = element_blank(),
+                    strip.text = element_text(size = 11),
+                    legend.background = element_blank(),
+                    plot.title = element_text(size = 14, hjust = 0)))
 
 
 col_counts <- read_csv("~/Desktop/Colony alate counts DATA 08Sep2020.csv") %>%
     mutate(sample_date = as.Date(sample_date, "%m/%d/%Y"),
            date = as.Date(date, "%m/%d/%Y"),
-           age = difftime(sample_date, date, units = "days"),
-           id = interaction(line, date, sep = "__") %>% factor(),
+           age = as.numeric(difftime(sample_date, date, units = "days")),
+           z_age = (age - mean(age)) / sd(age),
            line = factor(line),
-           date_fct = factor(date),
-           date_int = difftime(date, mean(date), units = "days"),
-           total = apterous + alate) %>%
-    mutate(across(c("apterous", "alate", "age", "total", "date_int"), as.integer)) %>%
+           total = apterous + alate,
+           z_total = (total - mean(total)) / sd(total),
+           z_date = as.numeric(date),
+           z_date = (z_date - mean(z_date)) / sd(z_date),
+           pot = as.factor(paste0(line, "_", date)),
+           obs = 1:n()) %>%
     filter(total > 0)
 
 
+# Looks like there's an effect of date (due to thrips early on):
 col_counts %>%
-    ggplot(aes(date, alate / total)) +
-    geom_point(aes(color = line))
+    arrange(date) %>%
+    ggplot(aes(date, alate / total, color = line)) +
+    geom_point() +
+    stat_smooth(method = "lm", se = FALSE) +
+    facet_wrap(~ line)
 
 
 
-al_mod <- glmer(cbind(alate, apterous) ~ date_int + (total | line),
+# # Convergence issues:
+# z <- glmer(cbind(alate, apterous) ~ line + age + (1|pot) + (1|obs),
+#            family = binomial, data = col_counts)
+# z0 <- glmer(cbind(alate, apterous) ~ age + (1|pot) + (1|obs),
+#             family = binomial, data = col_counts)
+# summary(z)
+# anova(z,z0)
+
+# # Convergence issues:
+# z <- glmer(cbind(alate, apterous) ~ line + total + (1|pot) + (1|obs),
+#            family = binomial, data = col_counts)
+# z0 <- glmer(cbind(alate, apterous) ~ total + (1|pot) + (1|obs),
+#             family = binomial, data = col_counts)
+# summary(z)
+# anova(z,z0)
+
+# # Convergence issues:
+# z <- glmer(cbind(alate, apterous) ~ total + (1|obs) + (1|line),
+#            family = binomial, data = col_counts)
+# z0 <- glmer(cbind(alate, apterous) ~ total + (1|obs),
+#             family = binomial, data = col_counts)
+# summary(z)
+# anova(z,z0)
+
+
+z <- glm(cbind(alate, apterous) ~ line + age, data = col_counts, family = quasibinomial)
+z0 <- glm(cbind(alate, apterous) ~ age, data = col_counts, family = quasibinomial)
+summary(z)
+
+
+
+
+
+
+
+
+# Line is borderline here
+# I can't include it as a random effect bc I get `boundary (singular) fit`
+
+al_mod <- glmer(cbind(alate, apterous) ~ z_date + (1 | obs) + z_age + z_total + (1 | line),
+                control = glmerControl(optimizer = "bobyqa",
+                                       optCtrl = list(maxfun = 100e3)),
                 family = binomial, data = col_counts)
-al_mod %>% summary()
+al_mod0 <- glmer(cbind(alate, apterous) ~ z_date + (1 | obs) + z_age + z_total,
+                 family = binomial, data = col_counts)
 
-pred_data <- crossing(total = seq(1, 80, length.out = 11),
-                      line = levels(col_counts$line),
-                      date_int = 0)
+anova(al_mod, al_mod0)
+
+
+# To bootstrap predicted Pr(alate):
+pred_data <- map_dfr(levels(col_counts$line),
+                     function(.line) {
+                         .df <- filter(col_counts, line == .line)
+                         tibble(total = seq(min(.df$total), max(.df$total),
+                                            length.out = 11),
+                                line = .line)
+                     }) %>%
+    mutate(z_date = 0)
 
 boot_fun <- function(x) {
-    # z <- fixef(x)[["(Intercept)"]]
-    # c(z + ranef(x)[["line"]][["(Intercept)"]],
-    #   ranef(x)[["line"]][["total"]])
     predict(x, newdata = pred_data, type = "response")
 }
 
 
 
-
-
-# # Takes ~5 min
+# # Takes ~5 min on my machine using 3 threads
 # al_mod_boot <- bootMer(al_mod, boot_fun, 2000, seed = 96123392,
-#                        parallel = "multicore", ncpus = 3, use.u = TRUE)
+#                        # parallel = "multicore", ncpus = 3,
+#                        use.u = TRUE)
 # saveRDS(al_mod_boot, "al_mod_boot.rds")
 
 al_mod_boot <- readRDS("al_mod_boot.rds")
 
-al_boot_df <- al_mod_boot$t %>%
-    {map_dfr(1:nrow(.),
-             function(i) {
-                 mutate(pred_data, rep = i, p = .[i,])
-             })} %>%
+al_boot_df <- map_dfr(1:nrow(al_mod_boot$t),
+                      function(i) {
+                          mutate(pred_data, rep = i, p = al_mod_boot$t[i,])
+                      }) %>%
     select(rep, total, line, p) %>%
-    mutate(rep = factor(rep, levels = 1:2000))
+    mutate(rep = factor(rep, levels = 1:2000),
+           line_color = ifelse(line %in% c("R10", "WIA-5D", "WI-L4", "WI-L40",
+                                           "WI-2016-746"),
+                               "red", "green") %>%
+               factor(levels = c("red", "green")))
 
 
-
-
-#
-# al_boot_ci_df <- al_boot_df %>%
-#     group_by(total, line) %>%
-#     summarize(lo = quantile(p, 0.05),
-#               mid = median(p),
-#               hi = quantile(p, 0.95)) %>%
-#     ungroup()
-
-
-# red: #e41a1c
-# green: #4daf4a
 
 
 pred_data %>%
-    filter(!line %in% c("WI-48", "WI-2016-746")) %>%
-    mutate(p = predict(al_mod, type = "response", newdata = pred_data %>%
-                           filter(!line %in% c("WI-48", "WI-2016-746")))) %>%
+    mutate(p = predict(al_mod, type = "response", newdata = pred_data)) %>%
     ggplot(aes(total, p)) +
-    geom_line(data = al_boot_df %>% filter(!line %in% c("WI-48", "WI-2016-746")),
-              alpha = 0.02, aes(group = rep), color = "gray60") +
-    geom_line(size = 1, color = "dodgerblue") +
+    geom_line(data = al_boot_df,
+              alpha = 0.02, aes(group = rep, color = line_color)) +
+    geom_line(size = 1, color = "black") +
     geom_point(data = col_counts %>%
-                   filter(!line %in% c("WI-48", "WI-2016-746")) %>%
-                   mutate(p = inv_logit(logit(alate / total) - date_int *
-                                            fixef(al_mod)[["date_int"]]))) +
-                   # mutate(p = alate / total)) +
+                   # mutate(p = inv_logit(logit(alate / total) - z_date *
+                   #                          fixef(al_mod)[["z_date"]]))) +
+                   mutate(p = alate / total)) +
     facet_wrap(~ line) +
-    # scale_color_viridis_d(option = "D", end = 0.9, guide = FALSE) +
+    scale_color_manual(values = c(red = "#e41a1c", green = "#4daf4a"),
+                       guide = FALSE) +
     scale_y_continuous("Proportion alates") +
     xlab("Total aphids on plant")
-
-
-
-
-
-# col_counts %>%
-#     mutate(p = alate / total) %>%
-#     ggplot(aes(line, p)) +
-#     geom_point() +
-#     geom_point(data = tibble(line = col_counts$line %>% unique() %>% sort(),
-#                              date = col_counts$date[1],
-#                              ) %>%
-#                    mutate(p = predict(al_mod, newdata = ., type = "response")),
-#                color = "red")
 
 
