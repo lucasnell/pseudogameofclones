@@ -90,9 +90,8 @@ void OnePatch::extinct_colonize(const uint32& i) {
 
 
 
-void OnePatch::update_x_z_wilted() {
+void OnePatch::update_z_wilted() {
 
-    x = 0;
     z = 0;
     double tmp;
     for (const AphidPop& ap : aphids) {
@@ -118,7 +117,7 @@ void OnePatch::update(const arma::cube& emigrants,
                       const arma::cube& immigrants,
                       pcg32& eng) {
 
-    update_x_z_wilted();
+    update_z_wilted();
 
     S = 1 / (1 + z / K);
     S_y = 1 / (1 + z / K_y);
@@ -131,12 +130,9 @@ void OnePatch::update(const arma::cube& emigrants,
 
 
         // Update population, including process error and dispersal.
-        // Also return # newly parasitized from that line
-        nm += aphids[i].update(this,
-                               &wasps,
-                               emigrants.slice(i).col(this_j),
-                               immigrants.slice(i).col(this_j),
-                               eng);
+        // Also return # newly mummified from that line
+        nm += aphids[i].update(this, &wasps, emigrants.slice(i).col(this_j),
+                               immigrants.slice(i).col(this_j), eng);
 
         if (wilted_) {
             aphids[i].apterous.X *= death_mort;
@@ -149,7 +145,7 @@ void OnePatch::update(const arma::cube& emigrants,
 
     }
 
-    wasps.update(pred_rate, nm, eng);
+    mummies.update(pred_rate, nm);
 
     age++;
 
@@ -160,7 +156,7 @@ void OnePatch::update(const arma::cube& emigrants,
 void OnePatch::update(const arma::cube& emigrants,
                       const arma::cube& immigrants) {
 
-    update_x_z_wilted();
+    update_z_wilted();
 
     S = 1 / (1 + z / K);
     S_y = 1 / (1 + z / K_y);
@@ -169,21 +165,20 @@ void OnePatch::update(const arma::cube& emigrants,
 
     for (uint32 i = 0; i < aphids.size(); i++) {
 
-        aphids[i].update(this,
-                         &wasps,
-                         emigrants.slice(i).col(this_j),
+        aphids[i].update(this, &wasps, emigrants.slice(i).col(this_j),
                          immigrants.slice(i).col(this_j));
 
         if (wilted_) {
             aphids[i].apterous.X *= death_mort;
             aphids[i].alates.X *= death_mort;
+            aphids[i].paras.X *= death_mort;
         }
 
         extinct_colonize(i);
 
     }
 
-    wasps.update(pred_rate, nm);
+    mummies.update(pred_rate, nm);
 
     age++;
 

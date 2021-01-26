@@ -82,11 +82,58 @@ public:
 
 
 
-// Wasp population (+ mummies)
+// Mummy population
+class MummyPop {
+
+    arma::vec Y_0;          // initial mummy densities
+
+public:
+
+    // Changing through time
+    arma::vec Y;            // Mummy density
+
+    // Constructors
+    MummyPop() : Y_0(), Y() {};
+    MummyPop(const arma::vec& Y_0_) : Y_0(Y_0_), Y(Y_0_) {};
+    MummyPop(const MummyPop& other) : Y_0(other.Y_0), Y(other.Y) {};
+    MummyPop& operator=(const MummyPop& other) {
+        Y_0 = other.Y_0;
+        Y = other.Y;
+        return *this;
+    }
+
+
+    // Update # mummies
+    // `nm` is # aphids that are newly "mummified"
+    void update(const double& pred_rate,
+                const double& nm) {
+
+        if (Y.n_elem > 1) {
+            // Go backwards through stages to avoid conflicts...
+            for (uint32 i = Y.n_elem-1; i > 0; i--) Y(i) = pred_rate * Y(i-1);
+        }
+        // Newly mummified:
+        Y.front() = nm;
+
+        return;
+
+    }
+
+    // Clearing a patch kills all mummies
+    inline void clear() {
+        Y.fill(0);
+    }
+
+
+};
+
+
+
+// Adult wasp population
 class WaspPop {
 
     WaspAttack attack;      // info for attack rates
-    arma::vec Y_0;          // initial mummy and adult wasp densities
+    double Y_0;             // initial adult wasp density
     double sex_ratio;       // proportion of female wasps
     double s_y;             // parasitoid adult daily survival
 
@@ -95,15 +142,16 @@ class WaspPop {
 public:
 
     // Changing through time
-    arma::vec Y;            // Wasp and mummy density
+    double Y;               // Wasp density
+    double x;               // Total number of unparasitized aphids
 
     // Constructors
-    WaspPop() : attack(), Y_0(), sex_ratio(), s_y(), Y(), norm_distr() {};
+    WaspPop() : attack(), Y_0(), sex_ratio(), s_y(), norm_distr(), Y(), x() {};
     WaspPop(const arma::vec& rel_attack_,
             const double& a_,
             const double& k_,
             const double& h_,
-            const arma::vec& Y_0_,
+            const double& Y_0_,
             const double& sex_ratio_,
             const double& s_y_,
             const double& sigma_y)
@@ -111,78 +159,55 @@ public:
           Y_0(Y_0_),
           sex_ratio(sex_ratio_),
           s_y(s_y_),
+          norm_distr(0, sigma_y),
           Y(Y_0_),
-          norm_distr(0, sigma_y) {};
+          x(0) {};
     WaspPop(const WaspPop& other)
         : attack(other.attack),
           Y_0(other.Y_0),
           sex_ratio(other.sex_ratio),
           s_y(other.s_y),
+          norm_distr(other.norm_distr),
           Y(other.Y),
-          norm_distr(other.norm_distr) {};
+          x(other.x) {};
     WaspPop& operator=(const WaspPop& other) {
         attack = other.attack;
         Y_0 = other.Y_0;
         sex_ratio = other.sex_ratio;
         s_y = other.s_y;
-        Y = other.Y;
         norm_distr = other.norm_distr;
+        Y = other.Y;
+        x = other.x;
         return *this;
     }
 
-    // Total # mummies
-    double total_mummies() const {
-        return arma::accu(Y.head(Y.n_elem - 1));
-    }
-    // Total adult wasps
-    double total_wasps() const {
-        return Y.back();
-    }
 
+    arma::vec A(const arma::vec& attack_surv) const {
 
-    arma::vec A(const double& x,
-                const arma::vec& attack_surv) const {
-
-        arma::vec A_ = attack.A(Y.back(), x, attack_surv);
+        arma::vec A_ = attack.A(Y, x, attack_surv);
 
         return A_;
 
     }
 
-    // Update # mummies and adult wasps
-    // `nm` is # aphids that are newly "mummified"
-    void update(const double& pred_rate,
-                const double& nm,
+    /*
+     Update # adult wasps
+     `old_mums` is # mummies at time t that are in the last mummy stage
+     before merging
+     */
+    void update(const double& old_mums,
                 pcg32& eng) {
-
-        update(pred_rate, nm);
-
-        Y.back() *= std::exp(norm_distr(eng));
-
+        Y *= s_y;
+        Y += (sex_ratio * old_mums);
+        Y *= std::exp(norm_distr(eng));
         return;
-
     }
     // Same as above, but with no stochasticity
-    void update(const double& pred_rate,
-                const double& nm) {
-
-        // Go backwards through stages to avoid conflicts...
-        // adult wasps
-        Y.back() = s_y * Y.back() + sex_ratio * Y(Y.n_elem-2);
-        // mummies
-        for (uint32 t = 0; t < Y.n_elem-2; t++) Y(t+1) = pred_rate * Y(t);
-        // Newly mummified:
-        Y.front() = nm;
-
+    void update(const double& old_mums) {
+        Y *= s_y;
+        Y += (sex_ratio * old_mums);
         return;
-
     }
-
-    // Clearing a patch only kills mummies
-    inline void clear() {
-        Y.head(Y.n_elem-1).fill(0);
-    }
-
 
 };
 

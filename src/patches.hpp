@@ -103,9 +103,9 @@ class OnePatch {
     void extinct_colonize(const uint32& i);
 
 
-    // Updates total # unparasitized aphids (`x`), # living aphids (`z`), and
+    // Updates total # living aphids in this patch (`z`), and
     // checks to see if plant should be wilted.
-    void update_x_z_wilted();
+    void update_z_wilted();
 
     MEMBER(bool,wilted)
 
@@ -113,13 +113,12 @@ class OnePatch {
 public:
 
     std::vector<AphidPop> aphids;   // aphids in this patch
-    WaspPop wasps;                  // wasps in this patch
+    MummyPop mummies;               // mummies in this patch
     bool empty;                     // whether no aphids/wasps are on this patch
     double pred_rate;               // predation on aphids
     double K;                       // unparasitized aphid carrying capacity
     double K_y;                     // parasitized aphid carrying capacity
     double z = 0;                   // sum of all living aphids at time t
-    double x = 0;                   // Sum of unparasitized aphids at time t
     double S = 0;                   // effect of density dependence on aphids
     double S_y = 0;                 // effect of dd on parasitized aphids
     uint32 n_patches;               // total # patches
@@ -132,7 +131,7 @@ public:
 
 
     OnePatch()
-        : wilted_(false), aphids(), wasps(), empty(true), pred_rate(0), K(0), K_y(1),
+        : wilted_(false), aphids(), mummies(), empty(true), pred_rate(0), K(0), K_y(1),
           n_patches(1), this_j(0), death_prop(1), death_mort(1), extinct_N() {};
 
     /*
@@ -140,7 +139,7 @@ public:
      apterous), and slices are aphid lines.
      In `leslie_mat` below, items in vector are aphid lines, slices are alate/apterous.
      */
-    OnePatch(const double& sigma,
+    OnePatch(const double& sigma_x,
              const double& rho,
              const double& demog_mult,
              const std::vector<arma::vec>& attack_surv_,
@@ -160,19 +159,10 @@ public:
              const uint32& n_patches_,
              const uint32& this_j_,
              const double& extinct_N_,
-             const arma::vec& rel_attack_,
-             const double& a_,
-             const double& k_,
-             const double& h_,
-             const arma::uvec& mum_days_,
-             const double& wasp_density_0_,
-             const double& sex_ratio_,
-             const double& K_y_,
-             const double& s_y_)
+             const arma::vec& mum_density_0)
         : wilted_(false),
           aphids(),
-          wasps(rel_attack_, a_, k_, h_, mum_days_,
-                wasp_density_0_, sex_ratio_, K_y_, s_y_),
+          mummies(mum_density_0),
           empty(true),
           pred_rate(pred_rate_),
           K(K_),
@@ -188,7 +178,7 @@ public:
         aphids.reserve(n_lines);
 
         for (uint32 i = 0; i < n_lines; i++) {
-            AphidPop ap(aphid_name[i], sigma, rho, demog_mult, attack_surv_[i],
+            AphidPop ap(aphid_name[i], sigma_x, rho, demog_mult, attack_surv_[i],
                         leslie_mat[i], aphid_density_0.slice(i),
                         alate_b0[i], alate_b1[i], disp_rate[i], disp_mort[i],
                         disp_start[i]);
@@ -204,8 +194,9 @@ public:
 
 
     OnePatch(const OnePatch& other)
-        : wilted_(false), aphids(other.aphids), wasps(other.wasps), empty(other.empty), pred_rate(other.pred_rate),
-          K(other.K), K_y(other.K_y), z(other.z), x(other.x),
+        : wilted_(false), aphids(other.aphids), mummies(other.mummies),
+          empty(other.empty), pred_rate(other.pred_rate),
+          K(other.K), K_y(other.K_y), z(other.z),
           S(other.S), S_y(other.S_y), n_patches(other.n_patches),
           this_j(other.this_j), age(other.age), death_prop(other.death_prop),
           death_mort(other.death_mort), extinct_N(other.extinct_N) {};
@@ -213,13 +204,12 @@ public:
     OnePatch& operator=(const OnePatch& other) {
         wilted_ = other.wilted_;
         aphids = other.aphids;
-        wasps = other.wasps;
+        mummies = other.mummies;
         empty = other.empty;
         pred_rate = other.pred_rate;
         K = other.K;
         K_y = other.K_y;
         z = other.z;
-        x = other.x;
         S = other.S;
         S_y = other.S_y;
         n_patches = other.n_patches;
@@ -247,13 +237,13 @@ public:
 
 
     /*
-     Clear to no aphids or wasps
+     Clear to no aphids or mummies
      */
     void clear(const double& K_,
                const double& K_y_,
                const double& death_mort_) {
         for (AphidPop& ap : aphids) ap.clear();
-        wasps.clear();  // this kills mummies only
+        mummies.clear();
         empty = true;
         wilted_ = false;
         age = 0;
@@ -268,6 +258,14 @@ public:
         double ta = 0;
         for (const AphidPop& ap : aphids) {
             ta += ap.total_aphids();
+        }
+        return ta;
+    }
+    // Total UNparasitized aphids on patch
+    inline double total_unpar_aphids() const {
+        double ta = 0;
+        for (const AphidPop& ap : aphids) {
+            ta += ap.apterous.total_aphids() + ap.alates.total_aphids();
         }
         return ta;
     }
@@ -342,9 +340,6 @@ class AllPatches {
     double shape1_death_mort_;      // shape1 of distribution of `death_mort` for plants
     double shape2_death_mort_;      // shape2 of distribution of `death_mort` for plants
 
-    // wasp dispersal rate
-    double wasp_disp;
-
 
     // Set K and K_y
     void set_K(double& K, double& K_y, pcg32& eng) {
@@ -366,6 +361,16 @@ class AllPatches {
         return;
     }
 
+    inline void set_wasp_info(double& old_mums) {
+        wasps.x = 0;
+        old_mums = 0;
+        for (OnePatch& p : patches) {
+            wasps.x += p.total_unpar_aphids();
+            old_mums += p.mummies.Y.back();
+        }
+        return;
+    }
+
 
     // Do the actual clearing of patches while avoiding extinction
     template <typename T>
@@ -378,21 +383,23 @@ class AllPatches {
 public:
 
     std::vector<OnePatch> patches;
+    WaspPop wasps;
     arma::cube emigrants;
     arma::cube immigrants;
 
 
     AllPatches()
         : tnorm_distr(), beta_distr(), mean_K_(), sd_K_(), K_y_mult(),
-          shape1_death_mort_(), shape2_death_mort_(), wasp_disp(),
-          patches(), emigrants(), immigrants() {};
+          shape1_death_mort_(), shape2_death_mort_(),
+          patches(), wasps(), emigrants(), immigrants() {};
 
     /*
      In `aphid_density_0` below, rows are aphid stages, columns are types (alate vs
      apterous), and slices are aphid lines.
      In `leslie_mat` below, slices are aphid lines.
      */
-    AllPatches(const double& sigma,
+    AllPatches(const double& sigma_x,
+               const double& sigma_y,
                const double& rho,
                const double& demog_mult,
                const double& mean_K,
@@ -410,14 +417,12 @@ public:
                const std::vector<double>& disp_rate,
                const std::vector<double>& disp_mort,
                const std::vector<uint32>& disp_start,
-               const double& wasp_disp_,
                const std::vector<double>& pred_rate,
                const double& extinct_N,
                const arma::vec& rel_attack_,
                const double& a_,
                const double& k_,
                const double& h_,
-               const arma::uvec& mum_days_,
                const double& wasp_density_0_,
                const double& sex_ratio_,
                const double& K_y_,
@@ -430,8 +435,9 @@ public:
           K_y_mult(K_y_mult_),
           shape1_death_mort_(shape1_death_mort),
           shape2_death_mort_(shape2_death_mort),
-          wasp_disp(wasp_disp_),
           patches(),
+          wasps(rel_attack_, a_, k_, h_, wasp_density_0_,
+                sex_ratio_, s_y_, sigma_y),
           emigrants(),
           immigrants() {
 
@@ -465,7 +471,7 @@ public:
         for (uint32 j = 0; j < n_patches; j++) {
             set_K(K, K_y, eng);
             set_death_mort(death_mort, eng);
-            OnePatch ap(sigma, rho, demog_mult, attack_surv_, K, K_y, death_prop, death_mort,
+            OnePatch ap(sigma_x, rho, demog_mult, attack_surv_, K, K_y, death_prop, death_mort,
                         aphid_name, leslie_mat,
                         aphid_density_0[j], alate_b0, alate_b1, disp_rate, disp_mort,
                         disp_start, pred_rate[j], n_patches, j, extinct_N,
@@ -488,6 +494,7 @@ public:
           shape1_death_mort_(other.shape1_death_mort_),
           shape2_death_mort_(other.shape2_death_mort_),
           patches(other.patches),
+          wasps(other.wasps),
           emigrants(other.emigrants),
           immigrants(other.immigrants) {};
 
@@ -500,6 +507,7 @@ public:
         shape1_death_mort_ = other.shape1_death_mort_;
         shape2_death_mort_ = other.shape2_death_mort_;
         patches = other.patches;
+        wasps = other.wasps;
         emigrants = other.emigrants;
         immigrants = other.immigrants;
         return *this;
@@ -541,31 +549,24 @@ public:
          Once `calc_dispersal` has updated inside `emigrants` and `immigrants`, we
          can update the populations using those dispersal numbers.
          */
-        double mean_wasps = 0;
+        // First update info for wasps before iterating:
+        double old_mums;
+        set_wasp_info(old_mums);
+        // Then we can update aphids and mummies:
         for (OnePatch& p : patches) {
             p.update(emigrants, immigrants, eng);
-            mean_wasps += p.wasps.total_wasps();
         }
-        mean_wasps /= static_cast<double>(patches.size());
-        // dispersal of adult wasps comes last:
-        for (OnePatch& p : patches) {
-            p.wasps.Y.back() *= (1 - wasp_disp);
-            p.wasps.Y.back() += wasp_disp * mean_wasps;
-        }
+        // Lastly update adult wasps:
+        wasps.update(old_mums, eng);
         return;
     }
     inline void update() {
-        double mean_wasps = 0;
+        double old_mums;
+        set_wasp_info(old_mums);
         for (OnePatch& p : patches) {
             p.update(emigrants, immigrants);
-            mean_wasps += p.wasps.total_wasps();
         }
-        mean_wasps /= static_cast<double>(patches.size());
-        // dispersal of adult wasps comes last:
-        for (OnePatch& p : patches) {
-            p.wasps.Y.back() *= (1 - wasp_disp);
-            p.wasps.Y.back() += wasp_disp * mean_wasps;
-        }
+        wasps.update(old_mums);
         return;
     }
 
