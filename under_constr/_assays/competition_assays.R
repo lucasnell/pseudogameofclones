@@ -94,10 +94,11 @@ comp_plot <- function(.temp) {
         theme_classic()
 }
 
-# comp_plot(20) %>%
+comp_plot(20) %>%
+    identity()
 #     ggsave(filename = "~/Desktop/comp_20.pdf", height = 6, width = 6)
-comp_plot(27)
-# %>%
+# comp_plot(27) %>%
+#     identity()
 #     ggsave(filename = "~/Desktop/comp_27.pdf", height = 6, width = 6)
 
 

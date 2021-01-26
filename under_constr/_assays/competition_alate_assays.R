@@ -130,7 +130,8 @@ comp_plot <- function(.temp, .df = comp_df) {
         scale_y_continuous(expression("Scaled green" - "red"), breaks = c(-2, 0, 2)) +
         scale_x_continuous("Day", breaks = seq(0, 30, 10)) +
         theme(strip.text = element_text(size = 10)) +
-        theme_black()
+        theme_classic() +
+        NULL
 }
 
 # comp_plot(20)
