@@ -40,65 +40,71 @@ void OnePatch::extinct_colonize(const uint32& i) {
 }
 
 
-/*
- Carrying capacity for patch.
- It depends on the Leslie matrix for each line's apterous aphids.
- I'm assuming apterous ones drive the carrying capacity, rather than alates, because
- they should be much more numerous.
- */
+// /*
+//  Carrying capacity for patch.
+//  It depends on the Leslie matrix for each line's apterous aphids.
+//  I'm assuming apterous ones drive the carrying capacity, rather than alates, because
+//  they should be much more numerous.
+//  */
+//
+// double OnePatch::carrying_capacity() const {
+//
+//     arma::vec cc(aphids.size());
+//     arma::vec Ns(aphids.size());
+//     double total_N = 0;
+//
+//     arma::mat L;
+//     arma::cx_vec eigval;
+//     double ev;
+//
+//     for (uint32 i = 0; i < aphids.size(); i++) {
+//
+//         Ns[i] = aphids[i].total_aphids();
+//
+//         total_N += Ns[i];
+//
+//
+//         combine_leslies(L,
+//                         aphids[i].apterous.leslie(),
+//                         aphids[i].alates.leslie(),
+//                         aphids[i].apterous.alate_prop(this),
+//                         aphids[i].alates.disp_rate(),
+//                         aphids[i].alates.disp_mort(),
+//                         aphids[i].alates.disp_start());
+//
+//         eigval = arma::eig_gen( L );
+//         ev = eigval(0).real();
+//         cc[i] = (ev - 1) * K;
+//     }
+//
+//     double avg_cc;
+//
+//     if (total_N > 0) {
+//         avg_cc = arma::accu(cc % Ns / total_N);
+//     } else avg_cc = arma::mean(cc);
+//
+//     return avg_cc;
+// }
 
-double OnePatch::carrying_capacity() const {
-
-    arma::vec cc(aphids.size());
-    arma::vec Ns(aphids.size());
-    double total_N = 0;
-
-    arma::mat L;
-    arma::cx_vec eigval;
-    double ev;
-
-    for (uint32 i = 0; i < aphids.size(); i++) {
-
-        Ns[i] = aphids[i].total_aphids();
-
-        total_N += Ns[i];
 
 
-        combine_leslies(L,
-                        aphids[i].apterous.leslie(),
-                        aphids[i].alates.leslie(),
-                        aphids[i].apterous.alate_prop(this),
-                        aphids[i].alates.disp_rate(),
-                        aphids[i].alates.disp_mort(),
-                        aphids[i].alates.disp_start());
 
-        eigval = arma::eig_gen( L );
-        ev = eigval(0).real();
-        cc[i] = (ev - 1) * K;
+
+void OnePatch::update_x_z_wilted() {
+
+    x = 0;
+    z = 0;
+    double tmp;
+    for (const AphidPop& ap : aphids) {
+        tmp = ap.apterous.total_aphids() + ap.alates.total_aphids();
+        x += tmp;
+        z += tmp;
+        z += ap.paras.total_aphids();
     }
-
-    double avg_cc;
-
-    if (total_N > 0) {
-        avg_cc = arma::accu(cc % Ns / total_N);
-    } else avg_cc = arma::mean(cc);
-
-    return avg_cc;
-}
-
-
-
-
-
-void OnePatch::update_z_CC_wilted() {
-
-
-    z = total_aphids();
-    CC = carrying_capacity();
 
     // Once it turns wilted, it stays that way until cleared
     if (wilted_) return;
-    wilted_ = z >= (CC * death_prop);
+    wilted_ = z >= (K * death_prop);
 
     return;
 }
@@ -108,27 +114,34 @@ void OnePatch::update_z_CC_wilted() {
 /*
  Iterate one time step, after calculating dispersal numbers
  */
-void OnePatch::update_pops(const arma::cube& emigrants,
-                           const arma::cube& immigrants,
-                           pcg32& eng) {
+void OnePatch::update(const arma::cube& emigrants,
+                      const arma::cube& immigrants,
+                      pcg32& eng) {
 
-    update_z_CC_wilted();
+    update_x_z_wilted();
 
     S = 1 / (1 + z / K);
+    S_y = 1 / (1 + z / K_y);
 
     empty = true;
 
+    double nm = 0; // newly mummified
+
     for (uint32 i = 0; i < aphids.size(); i++) {
 
-        // Update population, including process error and dispersal:
-        aphids[i].update_pop(this,
-                             emigrants.slice(i).col(this_j),
-                             immigrants.slice(i).col(this_j),
-                             eng);
+
+        // Update population, including process error and dispersal.
+        // Also return # newly parasitized from that line
+        nm += aphids[i].update(this,
+                               &wasps,
+                               emigrants.slice(i).col(this_j),
+                               immigrants.slice(i).col(this_j),
+                               eng);
 
         if (wilted_) {
             aphids[i].apterous.X *= death_mort;
             aphids[i].alates.X *= death_mort;
+            aphids[i].paras.X *= death_mort;
         }
 
         // Adjust for potential extinction or re-colonization:
@@ -136,26 +149,30 @@ void OnePatch::update_pops(const arma::cube& emigrants,
 
     }
 
+    wasps.update(pred_rate, nm, eng);
+
     age++;
 
     return;
 
 }
 // Same but minus stochasticity
-void OnePatch::update_pops(const arma::cube& emigrants,
-                           const arma::cube& immigrants) {
+void OnePatch::update(const arma::cube& emigrants,
+                      const arma::cube& immigrants) {
 
-    update_z_CC_wilted();
+    update_x_z_wilted();
 
     S = 1 / (1 + z / K);
+    S_y = 1 / (1 + z / K_y);
 
     empty = true;
 
     for (uint32 i = 0; i < aphids.size(); i++) {
 
-        aphids[i].update_pop(this,
-                             emigrants.slice(i).col(this_j),
-                             immigrants.slice(i).col(this_j));
+        aphids[i].update(this,
+                         &wasps,
+                         emigrants.slice(i).col(this_j),
+                         immigrants.slice(i).col(this_j));
 
         if (wilted_) {
             aphids[i].apterous.X *= death_mort;
@@ -165,6 +182,8 @@ void OnePatch::update_pops(const arma::cube& emigrants,
         extinct_colonize(i);
 
     }
+
+    wasps.update(pred_rate, nm);
 
     age++;
 
@@ -185,6 +204,8 @@ inline void AllPatches::do_clearing(std::vector<PatchClearingInfo<T>>& clear_pat
 
     int n_patches = patches.size();
     int n_wilted = std::accumulate(wilted.begin(), wilted.end(), 0);
+
+    double K, K_y, death_mort;
 
     if (clear_patches.size() == 0 && n_wilted < n_patches) return;
 
@@ -211,10 +232,10 @@ inline void AllPatches::do_clearing(std::vector<PatchClearingInfo<T>>& clear_pat
         }
 
 
-        double K = get_K(eng);
-        double death_mort = get_death_mort(eng);
+        set_K(K, K_y, eng);
+        set_death_mort(death_mort, eng);
 
-        patches[clear_patches.front().ind].clear(K, death_mort);
+        patches[clear_patches.front().ind].clear(K, K_y, death_mort);
 
         return;
 
@@ -239,13 +260,10 @@ inline void AllPatches::do_clearing(std::vector<PatchClearingInfo<T>>& clear_pat
 
     }
 
-    double K;
-    double death_mort;
-
     for (uint32 i = 0; i < clear_patches.size(); i++) {
 
-        K = get_K(eng);
-        death_mort = get_death_mort(eng);
+        set_K(K, K_y, eng);
+        set_death_mort(death_mort, eng);
 
         patches[clear_patches[i].ind].clear(K, death_mort);
     }

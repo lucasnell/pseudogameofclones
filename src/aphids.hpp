@@ -6,6 +6,7 @@
 #include <random>               // normal distribution
 #include <pcg/pcg_random.hpp>   // pcg prng
 #include "clonewars_types.hpp"  // integer types
+#include "wasps.hpp"            // wasp classes
 #include "math.hpp"             // inv_logit__
 
 
@@ -73,7 +74,7 @@ public:
 
     // Add process error:
     void process_error(const double& z,
-                       const double& sigma,
+                       const double& sigma_x,
                        const double& rho,
                        const double& demog_mult,
                        std::normal_distribution<double>& norm_distr,
@@ -93,8 +94,8 @@ class ApterousPop : public AphidTypePop {
     friend class AphidPop;
 
     // Parameters for logit(Pr(alates)) ~ b0 + b1 * N
-    double alate_b0_;
-    double alate_b1_;
+    MEMBER(double, alate_b0)
+    MEMBER(double, alate_b1)
 
 public:
 
@@ -120,11 +121,7 @@ public:
     }
 
 
-    const double& alate_b0() const {return alate_b0_;}
-    const double& alate_b1() const {return alate_b1_;}
-
     // logit(Pr(alates)) ~ b0 + b1 * z, where `z` is # aphids (all lines)
-    // in patch and `CC` is carrying capacity of patch
     double alate_prop(const OnePatch* patch) const;
 
 };
@@ -133,9 +130,9 @@ class AlatePop : public AphidTypePop {
 
     friend class AphidPop;
 
-    double disp_rate_;      // rate at which they leave focal plant
-    double disp_mort_;      // mortality of dispersers
-    uint32 disp_start_;     // index for stage in which dispersal starts
+    MEMBER(double, disp_rate)      // rate at which they leave focal plant
+    MEMBER(double, disp_mort)      // mortality of dispersers
+    MEMBER(uint32, disp_start)     // index for stage in which dispersal starts
 
 public:
 
@@ -165,9 +162,37 @@ public:
     }
 
 
-    const double& disp_rate() const {return disp_rate_;}
-    const double& disp_mort() const {return disp_mort_;}
-    const uint32& disp_start() const {return disp_start_;}
+};
+
+// Aphid "type" population for parasitized (but alive) aphids
+class ParasitizedPop : public AphidTypePop {
+
+    friend class AphidPop;
+
+protected:
+
+     arma::vec s;    // vector of survival rates of parasitized aphids by day
+
+public:
+
+    ParasitizedPop() : AphidTypePop(), s(), {};
+    ParasitizedPop(const arma::mat& leslie_mat,
+                   const uint32& living_days)
+        : AphidTypePop(arma::mat(), arma::vec(living_days, arma::fill::zeros)),
+          s(arma::diagvec(leslie_mat, -1)) {
+            s.resize(living_days);
+    };
+    ParasitizedPop(const ParasitizedPop& other)
+        : AphidTypePop(other),
+          s(other.s) {};
+
+    ParasitizedPop& operator=(const ParasitizedPop& other) {
+        AphidTypePop::operator=(other);
+        s = other.s;
+        return *this;
+    }
+
+
 
 };
 
@@ -177,42 +202,55 @@ public:
 // Aphid population: both alates and apterous for one clonal line on a patch
 class AphidPop {
 
-    double sigma_;         // environmental standard deviation for aphids
-    double rho_;           // environmental correlation among instars
-    double demog_mult_;    // multiplier for demographic stochasticity
+    double sigma_x;          // environmental standard deviation for aphids
+    double rho;            // environmental correlation among instars
+    double demog_mult;     // multiplier for demographic stochasticity
+    /*
+     Vector of length 2 with survival rates of singly & multiply attacked
+     aphids, respectively:
+     */
+    arma::vec attack_surv;
+
     mutable std::normal_distribution<double> norm_distr;    // for process error
     mutable std::poisson_distribution<uint32> pois_distr;   // samples total dispersers
     mutable std::binomial_distribution<uint32> bino_distr;  // samples dead dispersers
+
 
 
 public:
     std::string aphid_name;    // unique identifying name for this aphid line
     ApterousPop apterous;
     AlatePop alates;
+    ParasitizedPop paras;
     bool extinct;
 
     /*
      Constructors.
      */
     AphidPop()
-        : sigma_(0), rho_(0), demog_mult_(0), norm_distr(0,1), pois_distr(1),
-          bino_distr(1, 0.1), aphid_name(""), apterous(), alates(), extinct(false) {};
+        : sigma_x(0), rho(0), demog_mult(0), attack_surv(2, arma::fill::zeros),
+          norm_distr(0,1), pois_distr(1),
+          bino_distr(1, 0.1), aphid_name(""), apterous(), alates(), paras(),
+          extinct(false) {};
 
     // Make sure `leslie_mat` has 2 slices and `aphid_density_0` has two columns!
     AphidPop(const std::string& aphid_name_,
-             const double& sigma,
-             const double& rho,
-             const double& demog_mult,
+             const double& sigma_x_,
+             const double& rho_,
+             const double& demog_mult_,
+             const arma::vec& attack_surv_,
              const arma::cube& leslie_mat,
              const arma::mat& aphid_density_0,
              const double& alate_b0,
              const double& alate_b1,
              const double& disp_rate,
              const double& disp_mort,
-             const uint32& disp_start)
-        : sigma_(sigma),
-          rho_(rho),
-          demog_mult_(demog_mult),
+             const uint32& disp_start,
+             const uint32& living_days)
+        : sigma_x(sigma_x_),
+          rho(rho_),
+          demog_mult(demog_mult_),
+          attack_surv(attack_surv_),
           norm_distr(0,1),
           pois_distr(1),
           bino_distr(1, 0.1),
@@ -220,31 +258,36 @@ public:
           apterous(leslie_mat.slice(0), aphid_density_0.col(0), alate_b0, alate_b1),
           alates(leslie_mat.slice(1), aphid_density_0.col(1), disp_rate, disp_mort,
                  disp_start),
+          paras(leslie_mat.slice(2), living_days),
           extinct(false) {};
 
     AphidPop(const AphidPop& other)
-        : sigma_(other.sigma_),
-          rho_(other.rho_),
-          demog_mult_(other.demog_mult_),
+        : sigma_x(other.sigma_x),
+          rho(other.rho),
+          demog_mult(other.demog_mult),
+          attack_surv(other.attack_surv),
           norm_distr(other.norm_distr),
           pois_distr(other.pois_distr),
           bino_distr(other.bino_distr),
           aphid_name(other.aphid_name),
           apterous(other.apterous),
           alates(other.alates),
+          paras(other.paras),
           extinct(other.extinct) {};
 
     AphidPop& operator=(const AphidPop& other) {
 
-        sigma_ = other.sigma_;
-        rho_ = other.rho_;
-        demog_mult_ = other.demog_mult_;
+        sigma_x = other.sigma_x;
+        rho = other.rho;
+        demog_mult = other.demog_mult;
+        attack_surv = other.attack_surv;
         norm_distr = other.norm_distr;
         pois_distr = other.pois_distr;
         bino_distr = other.bino_distr;
         aphid_name = other.aphid_name;
         apterous = other.apterous;
         alates = other.alates;
+        paras = other.paras;
         extinct = other.extinct;
 
         return *this;
@@ -256,13 +299,16 @@ public:
      Total aphids
      */
     inline double total_aphids() const {
-        return apterous.total_aphids() + alates.total_aphids();
+        double ta = apterous.total_aphids() + alates.total_aphids() +
+            paras.total_aphids();
+        return ta;
     }
 
     // Kill all aphids
     inline void clear() {
         apterous.clear();
         alates.clear();
+        paras.clear();
         extinct = true;
         return;
     }
@@ -281,19 +327,17 @@ public:
                         arma::mat& emigrants,
                         arma::mat& immigrants) const;
 
-    // Update new aphid abundances
-    void update_pop(const OnePatch* patch,
-                    const arma::vec& emigrants,
-                    const arma::vec& immigrants,
-                    pcg32& eng);
+    // Update new aphid abundances, return the # newly mummified aphids
+    double update(const OnePatch* patch,
+                  const WaspPop* wasps,
+                  const arma::vec& emigrants,
+                  const arma::vec& immigrants,
+                  pcg32& eng);
     // Same as above, but no randomness in alate production:
-    void update_pop(const OnePatch* patch,
-                    const arma::vec& emigrants,
-                    const arma::vec& immigrants);
-
-    const double& sigma() const {return sigma_;}
-    const double& rho() const {return rho_;}
-    const double& demog_mult() const {return demog_mult_;}
+    double update(const OnePatch* patch,
+                  const WaspPop* wasps,
+                  const arma::vec& emigrants,
+                  const arma::vec& immigrants);
 
 };
 

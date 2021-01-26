@@ -5,6 +5,7 @@
 #include <pcg/pcg_random.hpp>   // pcg prng
 #include "clonewars_types.hpp"  // integer types
 #include "aphids.hpp"           // aphid classes
+#include "wasps.hpp"            // wasp classes
 #include "patches.hpp"          // patch classes
 #include "pcg.hpp"              // runif_ fxns
 
@@ -18,13 +19,13 @@ using namespace Rcpp;
 
 // Add process error
 void AphidTypePop::process_error(const double& z,
-                                 const double& sigma,
+                                 const double& sigma_x,
                                  const double& rho,
                                  const double& demog_mult,
                                  std::normal_distribution<double>& norm_distr,
                                  pcg32& eng) {
 
-    if (demog_mult == 0 || sigma == 0) return;
+    if (demog_mult == 0 || sigma_x == 0) return;
 
     // If `X` is at time t+1, this is at time t. It's used at the very bottom of this fxn.
     arma::vec X_t = X;
@@ -33,7 +34,7 @@ void AphidTypePop::process_error(const double& z,
 
     arma::mat Se(n_stages, n_stages, arma::fill::zeros);
 
-    Se = (sigma*sigma + demog_mult * std::min(0.5, 1 / std::abs(1 + z))) *
+    Se = (sigma_x*sigma_x + demog_mult * std::min(0.5, 1 / std::abs(1 + z))) *
         (rho * arma::mat(n_stages,n_stages,arma::fill::ones) +
         (1-rho) * arma::mat(n_stages,n_stages,arma::fill::eye));
 
@@ -84,7 +85,6 @@ void AphidTypePop::process_error(const double& z,
 
 
 // logit(Pr(alates)) ~ b0 + b1 * z, where `z` is # aphids (all lines)
-// in patch and `CC` is carrying capacity of patch
 double ApterousPop::alate_prop(const OnePatch* patch) const {
 
     const double lap = alate_b0_ + alate_b1_ * patch->z;
@@ -237,32 +237,58 @@ void AphidPop::calc_dispersal(const OnePatch* patch,
 
 
 
+/*
+ Update living aphids (both parasitized and un-parasitized), then
+ return the number of newly mummified aphids,
+ to be added to the wasps.
+ */
 
-
-
-void AphidPop::update_pop(const OnePatch* patch,
-                          const arma::vec& emigrants,
-                          const arma::vec& immigrants,
-                          pcg32& eng) {
+double AphidPop::update(const OnePatch* patch,
+                        const WaspPop* wasps,
+                        const arma::vec& emigrants,
+                        const arma::vec& immigrants,
+                        pcg32& eng) {
 
 
     // First subtract emigrants and add immigrants:
     alates.X -= emigrants;
     alates.X += immigrants;
 
+    double nm = 0; // newly mummified
+
     if (arma::accu(alates.X) > 0 || arma::accu(apterous.X) > 0) {
 
         const double& z(patch->z);
         const double& S(patch->S);
-        const double& pred_rate(patch->pred_rate);
+        const double& S_y(patch->S_y);
+        arma::vec A = wasps->A(patch->x, attack_surv);
+        double pred_surv = 1 - patch->pred_rate;
 
-        // Basic updates for each:
-        apterous.X = (1 - pred_rate) * S * (apterous.leslie_ * apterous.X);
-        alates.X = (1 - pred_rate) * S * (alates.leslie_ * alates.X);
+
+        // Basic updates for non-parasitized aphids:
+        arma::mat LX_apt = apterous.leslie_ * apterous.X;
+        arma::mat LX_ala = alates.leslie_ * alates.X;
+        apterous.Xpr = pred_surv * S * A % LX_apt;
+        alates.X = pred_surv * S * A % LX_ala;
+
+        double np = 0; // newly parasitized
+        np += pred_surv * S_y * arma::as_scalar((1 - A).t() * LX_apt);
+        np += pred_surv * S_y * arma::as_scalar((1 - A).t() * LX_ala);
+
+        nm += pred_surv * paras.X.back();  // newly mummified
+
+        // alive but parasitized
+        for (uint32 i = 1; i < paras.X.n_elem; i++) {
+            paras.X(i) = pred_surv * s(i) * S_y * paras.X(i-1);
+        }
+        paras.X.front() = np;
+
 
         // Process error
-        apterous.process_error(z, sigma_, rho_, demog_mult_, norm_distr, eng);
-        alates.process_error(z, sigma_, rho_, demog_mult_, norm_distr, eng);
+        apterous.process_error(z, sigma_x, rho, demog_mult, norm_distr, eng);
+        alates.process_error(z, sigma_x, rho, demog_mult, norm_distr, eng);
+        paras.process_error(z, sigma_x, rho, demog_mult, norm_distr, eng);
+
 
         // Sample for # offspring from apterous aphids that are alates:
         double new_alates = 0;
@@ -279,31 +305,51 @@ void AphidPop::update_pop(const OnePatch* patch,
          so the only way to get new alates is from apterous aphids.
          */
         apterous.X.front() -= new_alates;
-        apterous.X.front() += alates.X.front();
+        apterous.X.front() += alates.X.front(); // <-- we assume alates make apterous
         alates.X.front() = new_alates;
 
     }
 
-    return;
+    return nm;
 }
 
 // Same as above, but no randomness in alate production:
-void AphidPop::update_pop(const OnePatch* patch,
-                          const arma::vec& emigrants,
-                          const arma::vec& immigrants) {
+double AphidPop::update(const OnePatch* patch,
+                        const WaspPop* wasps,
+                        const arma::vec& emigrants,
+                        const arma::vec& immigrants) {
 
     // First subtract emigrants and add immigrants:
     alates.X -= emigrants;
     alates.X += immigrants;
 
+    double nm = 0; // newly mummified
+
     if (arma::accu(alates.X) > 0 || arma::accu(apterous.X) > 0) {
 
         const double& S(patch->S);
-        const double& pred_rate(patch->pred_rate);
+        const double& S_y(patch->S_y);
+        arma::vec A = wasps->A(patch->x, attack_surv);
+        double pred_surv = 1 - patch->pred_rate;
 
-        // Basic updates for each:
-        apterous.X = (1 - pred_rate) * S * (apterous.leslie_ * apterous.X);
-        alates.X = (1 - pred_rate) * S * (alates.leslie_ * alates.X);
+        // Basic updates for unparasitized aphids:
+        arma::mat LX_apt = apterous.leslie_ * apterous.X;
+        arma::mat LX_ala = alates.leslie_ * alates.X;
+        apterous.X = (pred_surv * S * A) % LX_apt;
+        alates.X = (pred_surv * S * A) % LX_ala;
+
+        double np = 0; // newly parasitized
+        np += pred_surv * S_y * arma::as_scalar((1 - A).t() * LX_apt);
+        np += pred_surv * S_y * arma::as_scalar((1 - A).t() * LX_ala);
+
+        nm += pred_surv * paras.X.back();  // newly mummified
+
+        // alive but parasitized
+        for (uint32 i = 1; i < paras.X.n_elem; i++) {
+            paras.X(i) = pred_surv * s(i) * S_y * paras.X(i-1);
+        }
+        paras.X.front() = np;
+
         // # offspring from apterous aphids that are alates:
         double new_alates = apterous.alate_prop(patch);
         new_alates *= apterous.X.front();
@@ -314,13 +360,13 @@ void AphidPop::update_pop(const OnePatch* patch,
          so the only way to get new alates is from apterous aphids.
          */
         apterous.X.front() -= new_alates;
-        apterous.X.front() += alates.X.front();
+        apterous.X.front() += alates.X.front(); // <-- we assume alates make apterous
         alates.X.front() = new_alates;
 
     }
 
 
-    return;
+    return nm;
 }
 
 

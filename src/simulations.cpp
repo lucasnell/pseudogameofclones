@@ -290,8 +290,8 @@ RepSummary one_rep__(const T& clear_threshold,
         } else patches.calc_dispersal();
 
         if (process_error) {
-            patches.update_pops(eng);
-        } else patches.update_pops();
+            patches.update(eng);
+        } else patches.update();
 
         if (t % save_every == 0 || t == max_t) summary.push_back(t, patches);
 
