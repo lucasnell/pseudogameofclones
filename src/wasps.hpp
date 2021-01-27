@@ -182,12 +182,10 @@ public:
     }
 
 
+    // Return attack matrix
     arma::vec A(const arma::vec& attack_surv) const {
-
         arma::vec A_ = attack.A(Y, x, attack_surv);
-
         return A_;
-
     }
 
     /*
@@ -197,9 +195,11 @@ public:
      */
     void update(const double& old_mums,
                 pcg32& eng) {
+        double max_Y = old_mums + Y;
         Y *= s_y;
         Y += (sex_ratio * old_mums);
         Y *= std::exp(norm_distr(eng));
+        if (Y > max_Y) Y = max_Y; // make sure it doesn't exceed what's possible
         return;
     }
     // Same as above, but with no stochasticity

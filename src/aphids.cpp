@@ -261,14 +261,14 @@ double AphidPop::update(const OnePatch* patch,
         const double& z(patch->z);
         const double& S(patch->S);
         const double& S_y(patch->S_y);
-        arma::vec A = wasps->A(patch->x, attack_surv);
+        arma::vec A = wasps->A(attack_surv);
         double pred_surv = 1 - patch->pred_rate;
 
 
         // Basic updates for non-parasitized aphids:
         arma::mat LX_apt = apterous.leslie_ * apterous.X;
         arma::mat LX_ala = alates.leslie_ * alates.X;
-        apterous.Xpr = pred_surv * S * A % LX_apt;
+        apterous.X = pred_surv * S * A % LX_apt;
         alates.X = pred_surv * S * A % LX_ala;
 
         double np = 0; // newly parasitized
@@ -279,7 +279,7 @@ double AphidPop::update(const OnePatch* patch,
 
         // alive but parasitized
         for (uint32 i = 1; i < paras.X.n_elem; i++) {
-            paras.X(i) = pred_surv * s(i) * S_y * paras.X(i-1);
+            paras.X(i) = pred_surv * paras.s(i) * S_y * paras.X(i-1);
         }
         paras.X.front() = np;
 
@@ -329,7 +329,7 @@ double AphidPop::update(const OnePatch* patch,
 
         const double& S(patch->S);
         const double& S_y(patch->S_y);
-        arma::vec A = wasps->A(patch->x, attack_surv);
+        arma::vec A = wasps->A(attack_surv);
         double pred_surv = 1 - patch->pred_rate;
 
         // Basic updates for unparasitized aphids:
@@ -346,7 +346,7 @@ double AphidPop::update(const OnePatch* patch,
 
         // alive but parasitized
         for (uint32 i = 1; i < paras.X.n_elem; i++) {
-            paras.X(i) = pred_surv * s(i) * S_y * paras.X(i-1);
+            paras.X(i) = pred_surv * paras.s(i) * S_y * paras.X(i-1);
         }
         paras.X.front() = np;
 

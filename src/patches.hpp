@@ -114,7 +114,7 @@ public:
 
     std::vector<AphidPop> aphids;   // aphids in this patch
     MummyPop mummies;               // mummies in this patch
-    bool empty;                     // whether no aphids/wasps are on this patch
+    bool empty;                     // whether no aphids are on this patch
     double pred_rate;               // predation on aphids
     double K;                       // unparasitized aphid carrying capacity
     double K_y;                     // parasitized aphid carrying capacity
@@ -131,18 +131,20 @@ public:
 
 
     OnePatch()
-        : wilted_(false), aphids(), mummies(), empty(true), pred_rate(0), K(0), K_y(1),
+        : wilted_(false), aphids(), mummies(), empty(true), pred_rate(0),
+          K(0), K_y(1),
           n_patches(1), this_j(0), death_prop(1), death_mort(1), extinct_N() {};
 
     /*
      In `aphid_density_0` below, rows are aphid stages, columns are types (alate vs
      apterous), and slices are aphid lines.
-     In `leslie_mat` below, items in vector are aphid lines, slices are alate/apterous.
+     In `leslie_mat` below, items in vector are aphid lines, slices are
+     alate/apterous/parasitized.
      */
     OnePatch(const double& sigma_x,
              const double& rho,
              const double& demog_mult,
-             const std::vector<arma::vec>& attack_surv_,
+             const arma::mat& attack_surv_,
              const double& K_,
              const double& K_y_,
              const double& death_prop_,
@@ -155,6 +157,7 @@ public:
              const std::vector<double>& disp_rate,
              const std::vector<double>& disp_mort,
              const std::vector<uint32>& disp_start,
+             const std::vector<uint32>& living_days,
              const double& pred_rate_,
              const uint32& n_patches_,
              const uint32& this_j_,
@@ -178,10 +181,11 @@ public:
         aphids.reserve(n_lines);
 
         for (uint32 i = 0; i < n_lines; i++) {
-            AphidPop ap(aphid_name[i], sigma_x, rho, demog_mult, attack_surv_[i],
+            AphidPop ap(aphid_name[i], sigma_x, rho, demog_mult,
+                        attack_surv_.col(i),
                         leslie_mat[i], aphid_density_0.slice(i),
                         alate_b0[i], alate_b1[i], disp_rate[i], disp_mort[i],
-                        disp_start[i]);
+                        disp_start[i], living_days[i]);
             aphids.push_back(ap);
             double N = aphids.back().total_aphids();
             if (N < extinct_N) {
@@ -269,6 +273,11 @@ public:
         }
         return ta;
     }
+    // Total mummies on patch
+    inline double total_mummies() const {
+        double tm = arma::accu(mummies.Y);
+        return tm;
+    }
 
     /*
      Add dispersal info to `emigrants` and `immigrants` cubes.
@@ -301,10 +310,12 @@ public:
      */
     void update(const arma::cube& emigrants,
                 const arma::cube& immigrants,
+                const WaspPop* wasps,
                 pcg32& eng);
     // Same but minus stochasticity
     void update(const arma::cube& emigrants,
-                const arma::cube& immigrants);
+                const arma::cube& immigrants,
+                const WaspPop* wasps);
 
 
 };
@@ -408,7 +419,7 @@ public:
                const double& death_prop,
                const double& shape1_death_mort,
                const double& shape2_death_mort,
-               const std::vector<arma::vec>& attack_surv_,
+               const arma::mat& attack_surv_,
                const std::vector<std::string>& aphid_name,
                const std::vector<arma::cube>& leslie_mat,
                const std::vector<arma::cube>& aphid_density_0,
@@ -417,15 +428,16 @@ public:
                const std::vector<double>& disp_rate,
                const std::vector<double>& disp_mort,
                const std::vector<uint32>& disp_start,
+               const std::vector<uint32>& living_days,
                const std::vector<double>& pred_rate,
                const double& extinct_N,
+               const arma::mat& mum_density_0,
                const arma::vec& rel_attack_,
                const double& a_,
                const double& k_,
                const double& h_,
                const double& wasp_density_0_,
                const double& sex_ratio_,
-               const double& K_y_,
                const double& s_y_,
                pcg32& eng)
         : tnorm_distr(),
@@ -440,6 +452,7 @@ public:
                 sex_ratio_, s_y_, sigma_y),
           emigrants(),
           immigrants() {
+
 
         /*
          None of these hyperparameters can be <= 0, so if they're <= then that makes
@@ -471,12 +484,12 @@ public:
         for (uint32 j = 0; j < n_patches; j++) {
             set_K(K, K_y, eng);
             set_death_mort(death_mort, eng);
-            OnePatch ap(sigma_x, rho, demog_mult, attack_surv_, K, K_y, death_prop, death_mort,
+            OnePatch ap(sigma_x, rho, demog_mult, attack_surv_,
+                        K, K_y, death_prop, death_mort,
                         aphid_name, leslie_mat,
                         aphid_density_0[j], alate_b0, alate_b1, disp_rate, disp_mort,
-                        disp_start, pred_rate[j], n_patches, j, extinct_N,
-                        rel_attack_, a_, k_, h_, mum_days_,
-                        wasp_density_0_, sex_ratio_, K_y_, s_y_);
+                        disp_start, living_days, pred_rate[j], n_patches, j, extinct_N,
+                        mum_density_0.col(j));
             patches.push_back(ap);
         }
 
@@ -554,7 +567,7 @@ public:
         set_wasp_info(old_mums);
         // Then we can update aphids and mummies:
         for (OnePatch& p : patches) {
-            p.update(emigrants, immigrants, eng);
+            p.update(emigrants, immigrants, &wasps, eng);
         }
         // Lastly update adult wasps:
         wasps.update(old_mums, eng);
@@ -564,7 +577,7 @@ public:
         double old_mums;
         set_wasp_info(old_mums);
         for (OnePatch& p : patches) {
-            p.update(emigrants, immigrants);
+            p.update(emigrants, immigrants, &wasps);
         }
         wasps.update(old_mums);
         return;

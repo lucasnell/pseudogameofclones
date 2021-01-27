@@ -43,22 +43,6 @@ sad_leslie <- function(leslie) {
     .Call(`_clonewars_sad_leslie`, leslie)
 }
 
-#' Calculate the number of rows per rep.
-#'
-#' @noRd
-#'
-NULL
-
-#' Simulate multiple reps.
-#'
-#'
-#' @inheritParams sim_reps
-#'
-#' @noRd
-#'
-#'
-NULL
-
 #' Check that the number of threads doesn't exceed the number available, and change
 #' to 1 if OpenMP isn't enabled.
 #'
@@ -66,7 +50,7 @@ NULL
 #'
 NULL
 
-sim_clonewars_cpp <- function(n_reps, max_plant_age, max_N, check_for_clear, max_t, save_every, mean_K, sd_K, death_prop, shape1_death_mort, shape2_death_mort, disp_error, demog_error, sigma_x, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, disp_rate, disp_mort, disp_start, pred_rate, n_threads, show_progress) {
-    .Call(`_clonewars_sim_clonewars_cpp`, n_reps, max_plant_age, max_N, check_for_clear, max_t, save_every, mean_K, sd_K, death_prop, shape1_death_mort, shape2_death_mort, disp_error, demog_error, sigma_x, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, disp_rate, disp_mort, disp_start, pred_rate, n_threads, show_progress)
+sim_clonewars_cpp <- function(n_reps, max_plant_age, max_N, check_for_clear, max_t, save_every, mean_K, sd_K, K_y_mult, death_prop, shape1_death_mort, shape2_death_mort, attack_surv, disp_error, demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, disp_rate, disp_mort, disp_start, living_days, pred_rate, mum_density_0, rel_attack, a, k, h, wasp_density_0, sex_ratio, s_y, n_threads, show_progress) {
+    .Call(`_clonewars_sim_clonewars_cpp`, n_reps, max_plant_age, max_N, check_for_clear, max_t, save_every, mean_K, sd_K, K_y_mult, death_prop, shape1_death_mort, shape2_death_mort, attack_surv, disp_error, demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, disp_rate, disp_mort, disp_start, living_days, pred_rate, mum_density_0, rel_attack, a, k, h, wasp_density_0, sex_ratio, s_y, n_threads, show_progress)
 }
 

@@ -50,11 +50,9 @@ public:
           X(other.X) {};
 
     AphidTypePop& operator=(const AphidTypePop& other) {
-
         leslie_ = other.leslie_;
         X_0_ = other.X_0_;
         X = other.X;
-
         return *this;
     }
 
@@ -175,7 +173,7 @@ protected:
 
 public:
 
-    ParasitizedPop() : AphidTypePop(), s(), {};
+    ParasitizedPop() : AphidTypePop(), s() {};
     ParasitizedPop(const arma::mat& leslie_mat,
                    const uint32& living_days)
         : AphidTypePop(arma::mat(), arma::vec(living_days, arma::fill::zeros)),
@@ -210,10 +208,16 @@ class AphidPop {
      aphids, respectively:
      */
     arma::vec attack_surv;
+    // for process error:
+    mutable std::normal_distribution<double> norm_distr =
+        std::normal_distribution<double>(0, 1);
+    // samples total dispersers:
+    mutable std::poisson_distribution<uint32> pois_distr =
+        std::poisson_distribution<uint32>(1);
+    // samples dead dispersers:
+    mutable std::binomial_distribution<uint32> bino_distr =
+        std::binomial_distribution<uint32>(1, 0.1);
 
-    mutable std::normal_distribution<double> norm_distr;    // for process error
-    mutable std::poisson_distribution<uint32> pois_distr;   // samples total dispersers
-    mutable std::binomial_distribution<uint32> bino_distr;  // samples dead dispersers
 
 
 
@@ -229,11 +233,9 @@ public:
      */
     AphidPop()
         : sigma_x(0), rho(0), demog_mult(0), attack_surv(2, arma::fill::zeros),
-          norm_distr(0,1), pois_distr(1),
-          bino_distr(1, 0.1), aphid_name(""), apterous(), alates(), paras(),
-          extinct(false) {};
+          aphid_name(""), apterous(), alates(), paras(), extinct(false) {};
 
-    // Make sure `leslie_mat` has 2 slices and `aphid_density_0` has two columns!
+    // Make sure `leslie_mat` has 3 slices and `aphid_density_0` has two columns!
     AphidPop(const std::string& aphid_name_,
              const double& sigma_x_,
              const double& rho_,
@@ -251,9 +253,6 @@ public:
           rho(rho_),
           demog_mult(demog_mult_),
           attack_surv(attack_surv_),
-          norm_distr(0,1),
-          pois_distr(1),
-          bino_distr(1, 0.1),
           aphid_name(aphid_name_),
           apterous(leslie_mat.slice(0), aphid_density_0.col(0), alate_b0, alate_b1),
           alates(leslie_mat.slice(1), aphid_density_0.col(1), disp_rate, disp_mort,

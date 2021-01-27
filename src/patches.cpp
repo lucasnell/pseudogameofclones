@@ -93,12 +93,9 @@ void OnePatch::extinct_colonize(const uint32& i) {
 void OnePatch::update_z_wilted() {
 
     z = 0;
-    double tmp;
     for (const AphidPop& ap : aphids) {
-        tmp = ap.apterous.total_aphids() + ap.alates.total_aphids();
-        x += tmp;
-        z += tmp;
-        z += ap.paras.total_aphids();
+        z += ap.apterous.total_aphids() + ap.alates.total_aphids() +
+            ap.paras.total_aphids();
     }
 
     // Once it turns wilted, it stays that way until cleared
@@ -115,6 +112,7 @@ void OnePatch::update_z_wilted() {
  */
 void OnePatch::update(const arma::cube& emigrants,
                       const arma::cube& immigrants,
+                      const WaspPop* wasps,
                       pcg32& eng) {
 
     update_z_wilted();
@@ -131,7 +129,7 @@ void OnePatch::update(const arma::cube& emigrants,
 
         // Update population, including process error and dispersal.
         // Also return # newly mummified from that line
-        nm += aphids[i].update(this, &wasps, emigrants.slice(i).col(this_j),
+        nm += aphids[i].update(this, wasps, emigrants.slice(i).col(this_j),
                                immigrants.slice(i).col(this_j), eng);
 
         if (wilted_) {
@@ -154,7 +152,8 @@ void OnePatch::update(const arma::cube& emigrants,
 }
 // Same but minus stochasticity
 void OnePatch::update(const arma::cube& emigrants,
-                      const arma::cube& immigrants) {
+                      const arma::cube& immigrants,
+                      const WaspPop* wasps) {
 
     update_z_wilted();
 
@@ -163,10 +162,12 @@ void OnePatch::update(const arma::cube& emigrants,
 
     empty = true;
 
+    double nm = 0; // newly mummified
+
     for (uint32 i = 0; i < aphids.size(); i++) {
 
-        aphids[i].update(this, &wasps, emigrants.slice(i).col(this_j),
-                         immigrants.slice(i).col(this_j));
+        nm += aphids[i].update(this, wasps, emigrants.slice(i).col(this_j),
+                               immigrants.slice(i).col(this_j));
 
         if (wilted_) {
             aphids[i].apterous.X *= death_mort;
@@ -260,7 +261,7 @@ inline void AllPatches::do_clearing(std::vector<PatchClearingInfo<T>>& clear_pat
         set_K(K, K_y, eng);
         set_death_mort(death_mort, eng);
 
-        patches[clear_patches[i].ind].clear(K, death_mort);
+        patches[clear_patches[i].ind].clear(K, K_y, death_mort);
     }
 
 

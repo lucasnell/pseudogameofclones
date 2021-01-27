@@ -55,8 +55,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // sim_clonewars_cpp
-DataFrame sim_clonewars_cpp(const uint32& n_reps, const uint32& max_plant_age, const double& max_N, const std::deque<uint32>& check_for_clear, const uint32& max_t, const uint32& save_every, const double& mean_K, const double& sd_K, const double& death_prop, const double& shape1_death_mort, const double& shape2_death_mort, const bool& disp_error, const bool& demog_error, const double& sigma_x, const double& rho, const double& extinct_N, const std::vector<std::string>& aphid_name, const std::vector<arma::cube>& leslie_mat, const std::vector<arma::cube>& aphid_density_0, const std::vector<double>& alate_b0, const std::vector<double>& alate_b1, const std::vector<double>& disp_rate, const std::vector<double>& disp_mort, const std::vector<uint32>& disp_start, const std::vector<double>& pred_rate, uint32 n_threads, const bool& show_progress);
-RcppExport SEXP _clonewars_sim_clonewars_cpp(SEXP n_repsSEXP, SEXP max_plant_ageSEXP, SEXP max_NSEXP, SEXP check_for_clearSEXP, SEXP max_tSEXP, SEXP save_everySEXP, SEXP mean_KSEXP, SEXP sd_KSEXP, SEXP death_propSEXP, SEXP shape1_death_mortSEXP, SEXP shape2_death_mortSEXP, SEXP disp_errorSEXP, SEXP demog_errorSEXP, SEXP sigma_xSEXP, SEXP rhoSEXP, SEXP extinct_NSEXP, SEXP aphid_nameSEXP, SEXP leslie_matSEXP, SEXP aphid_density_0SEXP, SEXP alate_b0SEXP, SEXP alate_b1SEXP, SEXP disp_rateSEXP, SEXP disp_mortSEXP, SEXP disp_startSEXP, SEXP pred_rateSEXP, SEXP n_threadsSEXP, SEXP show_progressSEXP) {
+List sim_clonewars_cpp(const uint32& n_reps, const uint32& max_plant_age, const double& max_N, const std::deque<uint32>& check_for_clear, const uint32& max_t, const uint32& save_every, const double& mean_K, const double& sd_K, const double& K_y_mult, const double& death_prop, const double& shape1_death_mort, const double& shape2_death_mort, const arma::mat& attack_surv, const bool& disp_error, const bool& demog_error, const double& sigma_x, const double& sigma_y, const double& rho, const double& extinct_N, const std::vector<std::string>& aphid_name, const std::vector<arma::cube>& leslie_mat, const std::vector<arma::cube>& aphid_density_0, const std::vector<double>& alate_b0, const std::vector<double>& alate_b1, const std::vector<double>& disp_rate, const std::vector<double>& disp_mort, const std::vector<uint32>& disp_start, const std::vector<uint32>& living_days, const std::vector<double>& pred_rate, const arma::mat& mum_density_0, const arma::vec& rel_attack, const double& a, const double& k, const double& h, const double& wasp_density_0, const double& sex_ratio, const double& s_y, uint32 n_threads, const bool& show_progress);
+RcppExport SEXP _clonewars_sim_clonewars_cpp(SEXP n_repsSEXP, SEXP max_plant_ageSEXP, SEXP max_NSEXP, SEXP check_for_clearSEXP, SEXP max_tSEXP, SEXP save_everySEXP, SEXP mean_KSEXP, SEXP sd_KSEXP, SEXP K_y_multSEXP, SEXP death_propSEXP, SEXP shape1_death_mortSEXP, SEXP shape2_death_mortSEXP, SEXP attack_survSEXP, SEXP disp_errorSEXP, SEXP demog_errorSEXP, SEXP sigma_xSEXP, SEXP sigma_ySEXP, SEXP rhoSEXP, SEXP extinct_NSEXP, SEXP aphid_nameSEXP, SEXP leslie_matSEXP, SEXP aphid_density_0SEXP, SEXP alate_b0SEXP, SEXP alate_b1SEXP, SEXP disp_rateSEXP, SEXP disp_mortSEXP, SEXP disp_startSEXP, SEXP living_daysSEXP, SEXP pred_rateSEXP, SEXP mum_density_0SEXP, SEXP rel_attackSEXP, SEXP aSEXP, SEXP kSEXP, SEXP hSEXP, SEXP wasp_density_0SEXP, SEXP sex_ratioSEXP, SEXP s_ySEXP, SEXP n_threadsSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -68,12 +68,15 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const uint32& >::type save_every(save_everySEXP);
     Rcpp::traits::input_parameter< const double& >::type mean_K(mean_KSEXP);
     Rcpp::traits::input_parameter< const double& >::type sd_K(sd_KSEXP);
+    Rcpp::traits::input_parameter< const double& >::type K_y_mult(K_y_multSEXP);
     Rcpp::traits::input_parameter< const double& >::type death_prop(death_propSEXP);
     Rcpp::traits::input_parameter< const double& >::type shape1_death_mort(shape1_death_mortSEXP);
     Rcpp::traits::input_parameter< const double& >::type shape2_death_mort(shape2_death_mortSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type attack_surv(attack_survSEXP);
     Rcpp::traits::input_parameter< const bool& >::type disp_error(disp_errorSEXP);
     Rcpp::traits::input_parameter< const bool& >::type demog_error(demog_errorSEXP);
     Rcpp::traits::input_parameter< const double& >::type sigma_x(sigma_xSEXP);
+    Rcpp::traits::input_parameter< const double& >::type sigma_y(sigma_ySEXP);
     Rcpp::traits::input_parameter< const double& >::type rho(rhoSEXP);
     Rcpp::traits::input_parameter< const double& >::type extinct_N(extinct_NSEXP);
     Rcpp::traits::input_parameter< const std::vector<std::string>& >::type aphid_name(aphid_nameSEXP);
@@ -84,10 +87,19 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const std::vector<double>& >::type disp_rate(disp_rateSEXP);
     Rcpp::traits::input_parameter< const std::vector<double>& >::type disp_mort(disp_mortSEXP);
     Rcpp::traits::input_parameter< const std::vector<uint32>& >::type disp_start(disp_startSEXP);
+    Rcpp::traits::input_parameter< const std::vector<uint32>& >::type living_days(living_daysSEXP);
     Rcpp::traits::input_parameter< const std::vector<double>& >::type pred_rate(pred_rateSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type mum_density_0(mum_density_0SEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type rel_attack(rel_attackSEXP);
+    Rcpp::traits::input_parameter< const double& >::type a(aSEXP);
+    Rcpp::traits::input_parameter< const double& >::type k(kSEXP);
+    Rcpp::traits::input_parameter< const double& >::type h(hSEXP);
+    Rcpp::traits::input_parameter< const double& >::type wasp_density_0(wasp_density_0SEXP);
+    Rcpp::traits::input_parameter< const double& >::type sex_ratio(sex_ratioSEXP);
+    Rcpp::traits::input_parameter< const double& >::type s_y(s_ySEXP);
     Rcpp::traits::input_parameter< uint32 >::type n_threads(n_threadsSEXP);
     Rcpp::traits::input_parameter< const bool& >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(sim_clonewars_cpp(n_reps, max_plant_age, max_N, check_for_clear, max_t, save_every, mean_K, sd_K, death_prop, shape1_death_mort, shape2_death_mort, disp_error, demog_error, sigma_x, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, disp_rate, disp_mort, disp_start, pred_rate, n_threads, show_progress));
+    rcpp_result_gen = Rcpp::wrap(sim_clonewars_cpp(n_reps, max_plant_age, max_N, check_for_clear, max_t, save_every, mean_K, sd_K, K_y_mult, death_prop, shape1_death_mort, shape2_death_mort, attack_surv, disp_error, demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, disp_rate, disp_mort, disp_start, living_days, pred_rate, mum_density_0, rel_attack, a, k, h, wasp_density_0, sex_ratio, s_y, n_threads, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -97,7 +109,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_clonewars_inv_logit", (DL_FUNC) &_clonewars_inv_logit, 1},
     {"_clonewars_leslie_matrix", (DL_FUNC) &_clonewars_leslie_matrix, 4},
     {"_clonewars_sad_leslie", (DL_FUNC) &_clonewars_sad_leslie, 1},
-    {"_clonewars_sim_clonewars_cpp", (DL_FUNC) &_clonewars_sim_clonewars_cpp, 27},
+    {"_clonewars_sim_clonewars_cpp", (DL_FUNC) &_clonewars_sim_clonewars_cpp, 39},
     {NULL, NULL, 0}
 };
 
