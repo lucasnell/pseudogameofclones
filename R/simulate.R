@@ -1,5 +1,38 @@
+# Basic type checks ----
+uint_check <- function(x, n) {
+    if (!(is.numeric(x) && length(x) == 1 && x %% 1 == 0 && x >= 0)) {
+        stop(paste("\nERROR:", n, "cannot be properly cast as an",
+                   "unsigned integer.\n"))
+    }
+}
+uint_vec_check <- function(x, n) {
+    if (!(is.numeric(x) && all(x %% 1 == 0) && all(x >= 0))) {
+        stop(paste("\nERROR:", n, "cannot be properly cast as an",
+                   "unsigned integer vector.\n"))
+    }
+}
+dbl_check <- function(x, n) {
+    if (!(is.numeric(x) && length(x) == 1)) {
+        stop(paste("\nERROR:", n, "cannot be properly cast as a",
+                   "double.\n"))
+    }
+}
+dbl_mat_check <- function(x, n) {
+    if (!(is.numeric(x) && inherits(x, "matrix"))) {
+        stop(paste("\nERROR:", n, "cannot be properly cast as a",
+                   "numeric matrix.\n"))
+    }
+}
+cube_list_check <- function(x, n) {
+    if (!(inherits(x, "list") &&
+          all(sapply(x, inherits, what = "array")) &&
+          all(sapply(x, function(y) length(dim(y)) == 3)))) {
+        stop(paste("\nERROR:", n, "cannot be properly cast as a",
+                   "list of cubes.\n"))
+    }
+}
 
-
+# main fun docs ----
 
 #' Simulate multiple reps and simplify output.
 #'
@@ -43,9 +76,10 @@
 #' @export
 #'
 #'
-sim_reps <- function(n_reps,
+# main fun code ----
+sim_clonewars <- function(n_reps,
                      n_patches = 8,
-                     max_t = 1000,
+                     max_t = 100,
                      N0 = NULL,
                      R = NULL,
                      A = NULL,
@@ -110,6 +144,50 @@ sim_reps <- function(n_reps,
                       by_patch = by_patch,
                       n_cores = n_cores,
                       show_progress = show_progress)
+
+
+    uint_check(n_reps, "n_reps")
+    uint_check(max_plant_age, "max_plant_age")
+    dbl_check(max_N, "max_N")
+    uint_vec_check(check_for_clear, "check_for_clear")
+    uint_check(max_t, "max_t")
+    uint_check(save_every, "save_every")
+    dbl_check(mean_K, "mean_K")
+    dbl_check(sd_K, "sd_K")
+    dbl_check(K_y_mult, "K_y_mult")
+    dbl_check(death_prop, "death_prop")
+    dbl_check(shape1_death_mort, "shape1_death_mort")
+    dbl_check(shape2_death_mort, "shape2_death_mort")
+    dbl_mat_check(attack_surv, "attack_surv")
+    stopifnot(inherits(disp_error, "logical") && length(disp_error) == 1)
+    stopifnot(inherits(demog_error, "logical") && length(demog_error) == 1)
+    dbl_check(sigma_x, "sigma_x")
+    dbl_check(sigma_y, "sigma_y")
+    dbl_check(rho, "rho")
+    dbl_check(extinct_N, "extinct_N")
+    stopifnot(inherits(aphid_name, "character"))
+    cube_list_check(leslie_mat, "leslie_mat")
+    cube_list_check(aphid_density_0, "aphid_density_0")
+    stopifnot(inherits(alate_b0, "numeric"))
+    stopifnot(inherits(alate_b1, "numeric"))
+    stopifnot(inherits(disp_rate, "numeric"))
+    stopifnot(inherits(disp_mort, "numeric"))
+    uint_vec_check(disp_start, "disp_start")
+    uint_vec_check(living_days, "living_days")
+    stopifnot(inherits(pred_rate, "numeric"))
+    dbl_mat_check(mum_density_0, "mum_density_0")
+    stopifnot(inherits(rel_attack, "numeric"))
+    dbl_check(a, "a")
+    dbl_check(k, "k")
+    dbl_check(h, "h")
+    dbl_check(wasp_density_0, "wasp_density_0")
+    dbl_check(sex_ratio, "sex_ratio")
+    dbl_check(s_y, "s_y")
+    uint_check(n_threads, "n_threads")
+    stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
+
+
+    # sims <- sim_clonewars_cpp( n_reps, max_plant_age, max_N, check_for_clear, max_t, save_every, mean_K, sd_K, K_y_mult, death_prop, shape1_death_mort, shape2_death_mort, attack_surv, disp_error, demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, disp_rate, disp_mort, disp_start, living_days, pred_rate, mum_density_0, rel_attack, a, k, h, wasp_density_0, sex_ratio, s_y, n_threads, show_progress)
 
     sims <- as.data.frame(sims)
     sims <- as_tibble(sims)
