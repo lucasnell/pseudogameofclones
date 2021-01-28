@@ -144,6 +144,7 @@ void OnePatch::update(const arma::cube& emigrants,
     }
 
     mummies.update(pred_rate, nm);
+    if (arma::accu(mummies.Y) < extinct_N) mummies.Y.fill(0);
 
     age++;
 
@@ -180,6 +181,7 @@ void OnePatch::update(const arma::cube& emigrants,
     }
 
     mummies.update(pred_rate, nm);
+    if (arma::accu(mummies.Y) < extinct_N) mummies.Y.fill(0);
 
     age++;
 

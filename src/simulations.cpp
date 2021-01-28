@@ -113,9 +113,13 @@ struct RepSummary {
     std::vector<std::string> line;
     std::vector<std::string> type;
     std::vector<double> N;
+    std::vector<uint32> wasp_rep;
+    std::vector<uint32> wasp_time;
     std::vector<double> wasp_N;
 
-    RepSummary() : rep(), time(), patch(), line(), type(), N(), wasp_N(), r() {};
+    RepSummary()
+        : rep(), time(), patch(), line(), type(), N(),
+          wasp_rep(), wasp_time(), wasp_N(), r() {};
 
     void reserve(const uint32& rep_,
                  const uint32& max_t,
@@ -123,13 +127,16 @@ struct RepSummary {
                  const uint32& n_lines,
                  const uint32& n_patches) {
         uint32 n_rows, n_rows_wasps;
-        calc_rep_rows(n_rows, n_rows_wasps, max_t, save_every, n_lines, n_patches);
+        calc_rep_rows(n_rows, n_rows_wasps, max_t, save_every,
+                      n_lines, n_patches);
         rep.reserve(n_rows);
         time.reserve(n_rows);
         patch.reserve(n_rows);
         line.reserve(n_rows);
         type.reserve(n_rows);
         N.reserve(n_rows);
+        wasp_rep.reserve(n_rows_wasps);
+        wasp_time.reserve(n_rows_wasps);
         wasp_N.reserve(n_rows_wasps);
         r = rep_;
     }
@@ -142,7 +149,9 @@ struct RepSummary {
         line.reserve(n);
         type.reserve(n);
         N.reserve(n);
-        wasp_N.reserve(nw); // `nw` is for the wasp vector
+        wasp_rep.reserve(nw);
+        wasp_time.reserve(nw);
+        wasp_N.reserve(nw); // `nw` is for the wasp vectors
         return;
     }
 
@@ -161,6 +170,8 @@ struct RepSummary {
             append_mummies__(t, j, patch.total_mummies());
         }
 
+        wasp_rep.push_back(r);
+        wasp_time.push_back(t);
         wasp_N.push_back(patches.wasps.Y);
 
         return;
@@ -174,6 +185,8 @@ struct RepSummary {
         line.clear();
         type.clear();
         N.clear();
+        wasp_rep.clear();
+        wasp_time.clear();
         wasp_N.clear();
 
         // to clear memory:
@@ -182,6 +195,8 @@ struct RepSummary {
         line.shrink_to_fit();
         type.shrink_to_fit();
         N.shrink_to_fit();
+        wasp_rep.shrink_to_fit();
+        wasp_time.shrink_to_fit();
         wasp_N.shrink_to_fit();
     }
 
@@ -199,7 +214,13 @@ struct RepSummary {
 
         }
 
-        for (double& w : other.wasp_N) wasp_N.push_back(w);
+        for (uint32 i = 0; i < other.wasp_time.size(); i++) {
+
+            wasp_rep.push_back(other.wasp_rep[i]);
+            wasp_time.push_back(other.wasp_time[i]);
+            wasp_N.push_back(other.wasp_N[i]);
+
+        }
 
         other.clear();
 
@@ -568,6 +589,9 @@ void check_args(const uint32& n_reps,
     if (mum_density_0.n_cols != n_patches) {
         stop("\nERROR: mum_density_0.n_cols != n_patches\n");
     }
+    if (mum_density_0.n_rows == 0) {
+        stop("\nERROR: mum_density_0.n_rows == 0\n");
+    }
 
 
 
@@ -786,10 +810,6 @@ List sim_clonewars_cpp(const uint32& n_reps,
         }
     }
 
-    std::vector<uint32> unq_time = summ.time;
-    unq_time.erase(std::unique(unq_time.begin(), unq_time.end()),
-                   unq_time.end());
-
     List out = List::create(_["aphids"] = DataFrame::create(
                                 _["rep"] = summ.rep,
                                 _["time"] = summ.time,
@@ -798,7 +818,8 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                 _["type"] = summ.type,
                                 _["N"] = summ.N),
                             _["wasps"] = DataFrame::create(
-                                _["time"] = unq_time,
+                                _["rep"] = summ.wasp_rep,
+                                _["time"] = summ.wasp_time,
                                 _["wasps"] = summ.wasp_N));
 
     return out;

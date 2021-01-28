@@ -351,6 +351,8 @@ class AllPatches {
     double shape1_death_mort_;      // shape1 of distribution of `death_mort` for plants
     double shape2_death_mort_;      // shape2 of distribution of `death_mort` for plants
 
+    double extinct_N;               // used here for the wasps
+
 
     // Set K and K_y
     void set_K(double& K, double& K_y, pcg32& eng) {
@@ -401,7 +403,7 @@ public:
 
     AllPatches()
         : tnorm_distr(), beta_distr(), mean_K_(), sd_K_(), K_y_mult(),
-          shape1_death_mort_(), shape2_death_mort_(),
+          shape1_death_mort_(), shape2_death_mort_(), extinct_N(),
           patches(), wasps(), emigrants(), immigrants() {};
 
     /*
@@ -430,7 +432,7 @@ public:
                const std::vector<uint32>& disp_start,
                const std::vector<uint32>& living_days,
                const std::vector<double>& pred_rate,
-               const double& extinct_N,
+               const double& extinct_N_,
                const arma::mat& mum_density_0,
                const arma::vec& rel_attack_,
                const double& a_,
@@ -447,6 +449,7 @@ public:
           K_y_mult(K_y_mult_),
           shape1_death_mort_(shape1_death_mort),
           shape2_death_mort_(shape2_death_mort),
+          extinct_N(extinct_N_),
           patches(),
           wasps(rel_attack_, a_, k_, h_, wasp_density_0_,
                 sex_ratio_, s_y_, sigma_y),
@@ -488,7 +491,7 @@ public:
                         K, K_y, death_prop, death_mort,
                         aphid_name, leslie_mat,
                         aphid_density_0[j], alate_b0, alate_b1, disp_rate, disp_mort,
-                        disp_start, living_days, pred_rate[j], n_patches, j, extinct_N,
+                        disp_start, living_days, pred_rate[j], n_patches, j, extinct_N_,
                         mum_density_0.col(j));
             patches.push_back(ap);
         }
@@ -506,6 +509,7 @@ public:
           K_y_mult(other.K_y_mult),
           shape1_death_mort_(other.shape1_death_mort_),
           shape2_death_mort_(other.shape2_death_mort_),
+          extinct_N(other.extinct_N),
           patches(other.patches),
           wasps(other.wasps),
           emigrants(other.emigrants),
@@ -519,6 +523,7 @@ public:
         K_y_mult = other.K_y_mult;
         shape1_death_mort_ = other.shape1_death_mort_;
         shape2_death_mort_ = other.shape2_death_mort_;
+        extinct_N = other.extinct_N;
         patches = other.patches;
         wasps = other.wasps;
         emigrants = other.emigrants;
@@ -571,6 +576,7 @@ public:
         }
         // Lastly update adult wasps:
         wasps.update(old_mums, eng);
+        if (wasps.Y < extinct_N) wasps.Y = 0;
         return;
     }
     inline void update() {
@@ -580,6 +586,7 @@ public:
             p.update(emigrants, immigrants, &wasps);
         }
         wasps.update(old_mums);
+        if (wasps.Y < extinct_N) wasps.Y = 0;
         return;
     }
 
