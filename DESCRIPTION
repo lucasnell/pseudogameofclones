@@ -30,7 +30,7 @@ LinkingTo:
     RcppProgress
 SystemRequirements: GNU make, C++11
 NeedsCompilation: yes
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 URL: https://github.com/lucasnell/clonewars
 BugReports: https://github.com/lucasnell/clonewars/issues
 Suggests:
