@@ -165,13 +165,13 @@ alate_mod_df <- alate_df %>%
 
 
 
-# b_N seems to work okay:
-alate_mod_df %>%
-    ggplot(aes(b_N, asn_trans(new_alates / new_all))) +
-    geom_point(aes(color = line), shape = 1, alpha = 0.5) +
-    stat_smooth(method = "lm", formula = y ~ x, se = FALSE) +
-    facet_wrap(~ line, nrow = 2) +
-    NULL
+# # b_N seems to work okay:
+# alate_mod_df %>%
+#     ggplot(aes(b_N, asn_trans(new_alates / new_all))) +
+#     geom_point(aes(color = line), shape = 1, alpha = 0.5) +
+#     stat_smooth(method = "lm", formula = y ~ x, se = FALSE) +
+#     facet_wrap(~ line, nrow = 2) +
+#     NULL
 
 
 # Full model (`~ b_N + (1 | line) + (b_N | id)`): 345.7641
@@ -199,10 +199,10 @@ mods[[which(map_dbl(mods, ~ AIC(.x)) == min(map_dbl(mods, ~ AIC(.x))))]]
 
 # (If the anything changes, make sure the one below is the same as above)
 alate_mod <- glmer(cbind(new_alates, new_apterous) ~ b_N + (1 | line) +
-                       (b_N | plant),
+                       (b_N | id),
                    data = alate_mod_df, family = binomial)
 
-glmer(cbind(new_alates, new_apterous) ~ (1 | line) + (b_N | plant),
+glmer(cbind(new_alates, new_apterous) ~ (1 | line) + (b_N | id),
       data = alate_mod_df, family = binomial)
 
 
@@ -255,3 +255,46 @@ predict(alate_mod, newdata = tibble(line = "WI-L4", b_N = .b_N),
 
 
 
+
+
+alate_mod_df %>%
+  mutate(p = new_alates / new_all) %>%
+  select(plant, line, p) %>%
+  ggplot(aes(line, p, color = line)) +
+  geom_jitter(alpha = 0.5, width = 0.25) +
+  stat_summary(fun.data = mean_cl_boot)
+
+
+z <- glmer(cbind(new_alates, new_apterous) ~ (1 | line),
+           data = alate_mod_df, family = binomial)
+
+boot_fun <- function(x) {
+  cf <- coef(x)[["line"]]
+  b0 <- cf[,"(Intercept)"]
+  names(b0) <- rownames(cf)
+  return(b0)
+}
+
+
+# Takes 12.5 sec on my machine using 6 threads
+z_boot <- bootMer(z, boot_fun, 2000, seed = 435670,
+                  parallel = "multicore", ncpus = 6,
+                  re.form = ~ (1 | line))
+
+# Not exactly convincing they're all different
+confint(z_boot) %>%
+  as.data.frame() %>%
+  rownames_to_column("line") %>%
+  rename(lo = `2.5 %`, hi = `97.5 %`) %>%
+  mutate(est = apply(z_boot$t, 2, median)) %>%
+  ggplot(aes(line, est)) +
+  geom_pointrange(aes(ymin = lo, ymax = hi))
+
+glmer(cbind(new_alates, new_apterous) ~ 1 + (1 | plant),
+      data = alate_mod_df, family = binomial)
+glmer(cbind(new_alates, new_apterous) ~ b_N + (1 | plant),
+      data = alate_mod_df, family = binomial)
+# Best of the simple ones:
+glmer(cbind(new_alates, new_apterous) ~ 1 + (b_N | plant),
+      data = alate_mod_df, family = binomial) %>%
+  summary()
