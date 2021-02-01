@@ -193,6 +193,7 @@ template <typename T>
 inline void AllPatches::do_clearing(std::vector<PatchClearingInfo<T>>& clear_patches,
                                     double& remaining,
                                     std::vector<bool>& wilted,
+                                    const double& clear_surv,
                                     pcg32& eng) {
 
     int n_patches = patches.size();
@@ -228,7 +229,10 @@ inline void AllPatches::do_clearing(std::vector<PatchClearingInfo<T>>& clear_pat
         set_K(K, K_y, eng);
         set_death_mort(death_mort, eng);
 
-        patches[clear_patches.front().ind].clear(K, K_y, death_mort);
+        if (clear_surv > 0) {
+            patches[clear_patches.front().ind].clear(K, K_y, death_mort,
+                                        clear_surv);
+        } else patches[clear_patches.front().ind].clear(K, K_y, death_mort);
 
         return;
 
@@ -258,7 +262,11 @@ inline void AllPatches::do_clearing(std::vector<PatchClearingInfo<T>>& clear_pat
         set_K(K, K_y, eng);
         set_death_mort(death_mort, eng);
 
-        patches[clear_patches[i].ind].clear(K, K_y, death_mort);
+        if (clear_surv > 0) {
+            patches[clear_patches.front().ind].clear(K, K_y, death_mort,
+                                        clear_surv);
+        } else patches[clear_patches.front().ind].clear(K, K_y, death_mort);
+
     }
 
 
@@ -270,6 +278,7 @@ inline void AllPatches::do_clearing(std::vector<PatchClearingInfo<T>>& clear_pat
 
 // Clear patches by either a maximum age or total abundance
 void AllPatches::clear_patches(const uint32& max_age,
+                               const double& clear_surv,
                                pcg32& eng) {
 
     std::vector<PatchClearingInfo<uint32>> clear_patches;
@@ -291,13 +300,14 @@ void AllPatches::clear_patches(const uint32& max_age,
         } else remaining += N;
     }
 
-    do_clearing<uint32>(clear_patches, remaining, wilted, eng);
+    do_clearing<uint32>(clear_patches, remaining, wilted, clear_surv, eng);
 
     return;
 }
 
 
 void AllPatches::clear_patches(const double& max_N,
+                               const double& clear_surv,
                                pcg32& eng) {
 
     std::vector<PatchClearingInfo<double>> clear_patches;
@@ -317,7 +327,7 @@ void AllPatches::clear_patches(const double& max_N,
         } else remaining += N;
     }
 
-    do_clearing<double>(clear_patches, remaining, wilted, eng);
+    do_clearing<double>(clear_patches, remaining, wilted, clear_surv, eng);
 
     return;
 }

@@ -292,18 +292,18 @@ sim_clonewars <- function(n_reps,
                           max_t = 100,
                           plant_check_gaps = c(3, 4),
                           max_plant_age = 1000000,
+                          clear_surv = 0,
                           max_N = 0,
                           temp = "low",
-                          no_error = TRUE, # <-- this being TRUE overrides all others
-                          disp_error = TRUE,
-                          demog_error = TRUE,
-                          environ_error = TRUE,
-                          plant_K_error = TRUE,
-                          wither_effects_error = TRUE,
+                          no_error = FALSE, # <-- this being TRUE overrides all others
+                          disp_error = FALSE,
+                          environ_error = FALSE,
+                          plant_K_error = FALSE,
+                          wither_effects_error = FALSE,
                           sigma_x = environ$sigma_x,
                           sigma_y = environ$sigma_y,
-                          mean_K = 563.569,
-                          sd_K = 205.4591,
+                          mean_K = 1806.176,
+                          sd_K = 658.4736,
                           K_y_mult = 1 / 1.57,
                           death_prop = 0.8,
                           rho = environ$rho,
@@ -311,19 +311,22 @@ sim_clonewars <- function(n_reps,
                           k = wasp_attack$k,
                           h = wasp_attack$h,
                           wasp_density_0 = 4,
+                          wasp_delay = 0,
                           sex_ratio = populations$sex_ratio,
                           s_y = populations$s_y,
                           rel_attack = NULL,
                           mum_density_0 = 0,
                           pred_rate = 0,
-                          disp_rate = 0.8,
-                          disp_mort = 0.4,
-                          alate_b0 = -3.631,
+                          disp_rate = 1,
+                          disp_mort = 0,
+                          alate_b0 = -2.988,
                           alate_b1 = 0,
+                          shape1_death_mort = 3.736386,
+                          shape2_death_mort = 5.777129,
                           extinct_N = 1,
                           save_every = 1,
                           n_threads = max(parallel::detectCores()-2,1),
-                          show_progress = TRUE) {
+                          show_progress = FALSE) {
 
     if (!inherits(clonal_lines, "multiAphid")) {
         if (inherits(clonal_lines, "aphid")) {
@@ -342,22 +345,23 @@ sim_clonewars <- function(n_reps,
 
     if (no_error) {
         disp_error <- FALSE
-        demog_error <- FALSE
         environ_error <- FALSE
         plant_K_error <- FALSE
         wither_effects_error <- FALSE
     }
     if (!environ_error) {
+        demog_error <- FALSE
         sigma_x <- 0
         sigma_y <- 0
-    }
+    } else demog_error <- TRUE
     if (!plant_K_error) sd_K <- 0
-    shape1_death_mort <- 3.736386
-    shape2_death_mort <- 5.777129
+
     if (!wither_effects_error) {
-        shape1_death_mort <- shape1_death_mort /
-            (shape1_death_mort + shape2_death_mort)
-        shape2_death_mort <- 0
+        if (shape2_death_mort > 0) {
+            shape1_death_mort <- shape1_death_mort /
+                (shape1_death_mort + shape2_death_mort)
+            shape2_death_mort <- 0
+        }
     }
 
     if (length(pred_rate) == 1) pred_rate <- rep(pred_rate, n_patches)
@@ -409,6 +413,7 @@ sim_clonewars <- function(n_reps,
     uint_check(max_plant_age, "max_plant_age")
     dbl_check(max_N, "max_N")
     uint_vec_check(check_for_clear, "check_for_clear")
+    dbl_check(clear_surv, "clear_surv")
     uint_check(max_t, "max_t")
     uint_check(save_every, "save_every")
     dbl_check(mean_K, "mean_K")
@@ -440,13 +445,15 @@ sim_clonewars <- function(n_reps,
     dbl_check(k, "k")
     dbl_check(h, "h")
     dbl_check(wasp_density_0, "wasp_density_0")
+    uint_check(wasp_delay, "wasp_delay")
     dbl_check(sex_ratio, "sex_ratio")
     dbl_check(s_y, "s_y")
     uint_check(n_threads, "n_threads")
     stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
 
 
-    sims <- clonewars:::sim_clonewars_cpp(n_reps, max_plant_age, max_N, check_for_clear,
+    sims <- sim_clonewars_cpp(n_reps, max_plant_age, max_N, check_for_clear,
+                              clear_surv,
                               max_t, save_every, mean_K, sd_K, K_y_mult,
                               death_prop, shape1_death_mort, shape2_death_mort,
                               attack_surv, disp_error, demog_error, sigma_x,
@@ -454,7 +461,7 @@ sim_clonewars <- function(n_reps,
                               aphid_density_0, alate_b0, alate_b1, disp_rate,
                               disp_mort, disp_start, living_days, pred_rate,
                               mum_density_0, rel_attack, a, k, h,
-                              wasp_density_0, sex_ratio, s_y, n_threads,
+                              wasp_density_0, wasp_delay, sex_ratio, s_y, n_threads,
                               show_progress)
 
     sims <- lapply(sims, as_tibble)

@@ -284,6 +284,7 @@ template <typename T>
 RepSummary one_rep__(const T& clear_threshold,
                      const uint32& rep,
                      std::deque<uint32> check_for_clear,
+                     const double& clear_surv,
                      const uint32& max_t,
                      const uint32& save_every,
                      const double& mean_K,
@@ -315,6 +316,7 @@ RepSummary one_rep__(const T& clear_threshold,
                      const double& k,
                      const double& h,
                      const double& wasp_density_0,
+                     const uint32& wasp_delay,
                      const double& sex_ratio,
                      const double& s_y,
                      Progress& prog_bar,
@@ -341,7 +343,9 @@ RepSummary one_rep__(const T& clear_threshold,
                        aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1,
                        disp_rate, disp_mort, disp_start, living_days, pred_rate,
                        extinct_N, mum_density_0, rel_attack, a, k, h,
-                       wasp_density_0, sex_ratio, s_y, eng);
+                       0, sex_ratio, s_y, eng);
+
+    if (wasp_delay == 0) patches.wasps.Y += wasp_density_0;
 
     summary.push_back(0, patches);
 
@@ -360,6 +364,8 @@ RepSummary one_rep__(const T& clear_threshold,
             patches.update(eng);
         } else patches.update();
 
+        if (t == wasp_delay) patches.wasps.Y += wasp_density_0;
+
         if (t % save_every == 0 || t == max_t) summary.push_back(t, patches);
 
         // If all patches are empty, then stop this rep.
@@ -376,7 +382,7 @@ RepSummary one_rep__(const T& clear_threshold,
 
         if (!check_for_clear.empty() && t == check_for_clear.front()) {
             check_for_clear.pop_front();
-            patches.clear_patches(clear_threshold, eng);
+            patches.clear_patches(clear_threshold, clear_surv, eng);
         }
     }
 
@@ -464,6 +470,7 @@ void check_args(const uint32& n_reps,
                 const uint32& max_plant_age,
                 const double& max_N,
                 const std::deque<uint32>& check_for_clear,
+                const double& clear_surv,
                 const uint32& max_t,
                 const uint32& save_every,
                 const double& mean_K,
@@ -495,6 +502,7 @@ void check_args(const uint32& n_reps,
                 const double& k,
                 const double& h,
                 const double& wasp_density_0,
+                const uint32& wasp_delay,
                 const double& sex_ratio,
                 const double& s_y,
                 uint32& n_threads) {
@@ -635,6 +643,7 @@ void check_args(const uint32& n_reps,
     negative_check<arma::vec>(rel_attack, "rel_attack");
 
     // doubles that must be >= 0 and <= 1
+    one_non_prop_check(clear_surv, "clear_surv");
     one_non_prop_check(death_prop, "death_prop");
     one_non_prop_check(sex_ratio, "sex_ratio");
     one_non_prop_check(s_y, "s_y");
@@ -680,6 +689,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                        const uint32& max_plant_age,
                        const double& max_N,
                        const std::deque<uint32>& check_for_clear,
+                       const double& clear_surv,
                        const uint32& max_t,
                        const uint32& save_every,
                        const double& mean_K,
@@ -711,6 +721,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                        const double& k,
                        const double& h,
                        const double& wasp_density_0,
+                       const uint32& wasp_delay,
                        const double& sex_ratio,
                        const double& s_y,
                        uint32 n_threads,
@@ -720,7 +731,8 @@ List sim_clonewars_cpp(const uint32& n_reps,
     uint32 n_patches = aphid_density_0.size();
 
     check_args(n_reps, n_lines, n_patches,
-               max_plant_age, max_N, check_for_clear, max_t, save_every,
+               max_plant_age, max_N, check_for_clear, clear_surv,
+               max_t, save_every,
                mean_K, sd_K, K_y_mult, death_prop,
                shape1_death_mort, shape2_death_mort,
                attack_surv, disp_error, demog_error,
@@ -728,7 +740,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                leslie_mat, aphid_density_0, alate_b0, alate_b1,
                disp_rate, disp_mort, disp_start, living_days,
                pred_rate, mum_density_0, rel_attack, a, k, h,
-               wasp_density_0, sex_ratio, s_y, n_threads);
+               wasp_density_0, wasp_delay, sex_ratio, s_y, n_threads);
 
 
     Progress prog_bar(max_t * n_reps, show_progress);
@@ -763,7 +775,8 @@ List sim_clonewars_cpp(const uint32& n_reps,
         if (status_code != 0) continue;
         seed_pcg(eng, seeds[i]);
         if (max_plant_age > 0) {
-            summaries[i] = one_rep__<uint32>(max_plant_age, i, check_for_clear, max_t,
+            summaries[i] = one_rep__<uint32>(max_plant_age, i, check_for_clear,
+                                             clear_surv, max_t,
                                              save_every, mean_K, sd_K, K_y_mult,
                                              death_prop,
                                              shape1_death_mort, shape2_death_mort,
@@ -773,10 +786,11 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                              alate_b0, alate_b1, disp_rate, disp_mort,
                                              disp_start, living_days, pred_rate,
                                              mum_density_0, rel_attack, a, k,
-                                             h, wasp_density_0, sex_ratio, s_y,
+                                             h, wasp_density_0, wasp_delay, sex_ratio, s_y,
                                              prog_bar, status_code, eng);
         } else {
-            summaries[i] = one_rep__<double>(max_N, i, check_for_clear, max_t,
+            summaries[i] = one_rep__<double>(max_N, i, check_for_clear,
+                                             clear_surv, max_t,
                                              save_every, mean_K, sd_K, K_y_mult,
                                              death_prop,
                                              shape1_death_mort, shape2_death_mort,
@@ -786,7 +800,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                              alate_b0, alate_b1, disp_rate, disp_mort,
                                              disp_start, living_days, pred_rate,
                                              mum_density_0, rel_attack, a, k,
-                                             h, wasp_density_0, sex_ratio, s_y,
+                                             h, wasp_density_0, wasp_delay, sex_ratio, s_y,
                                              prog_bar, status_code, eng);
         }
     }

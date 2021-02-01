@@ -125,6 +125,10 @@ public:
     inline void clear() {
         Y.fill(0);
     }
+    // Clearing part of patch
+    inline void clear(const double& surv) {
+        Y *= surv;
+    }
 
 
 };

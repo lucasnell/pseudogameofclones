@@ -69,6 +69,11 @@ public:
         X.fill(0);
         return;
     }
+    // Kill some of aphids
+    inline void clear(const double& surv) {
+        X *= surv;
+        return;
+    }
 
     // Add process error:
     void process_error(const double& z,
@@ -317,6 +322,13 @@ public:
         alates.clear();
         paras.clear();
         extinct = true;
+        return;
+    }
+    // Kill some aphids
+    inline void clear(const double& surv) {
+        apterous.clear(surv);
+        alates.clear(surv);
+        paras.clear(surv);
         return;
     }
 

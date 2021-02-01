@@ -230,6 +230,33 @@ public:
         death_mort = death_mort_;
         return;
     }
+    /*
+     Clear some of the aphids and mummies
+     */
+    void clear(const double& K_,
+               const double& K_y_,
+               const double& death_mort_,
+               const double& surv) {
+        empty = true;
+        for (AphidPop& ap : aphids) {
+            ap.clear(surv);
+            double N = ap.total_aphids();
+            if (N < extinct_N) {
+                ap.clear();
+            } else {
+                empty = false;
+                ap.extinct = false;
+            }
+        }
+        mummies.clear(surv);
+        if (arma::accu(mummies.Y) < extinct_N) mummies.Y.fill(0);
+        wilted_ = false;
+        age = 0;
+        K = K_;
+        K_y = K_y_;
+        death_mort = death_mort_;
+        return;
+    }
 
     // Total (living) aphids on patch
     inline double total_aphids() const {
@@ -364,6 +391,7 @@ class AllPatches {
     void do_clearing(std::vector<PatchClearingInfo<T>>& clear_patches,
                      double& remaining,
                      std::vector<bool>& wilted,
+                     const double& clear_surv,
                      pcg32& eng);
 
 
@@ -567,8 +595,10 @@ public:
 
     // Clear patches by either a maximum age or total abundance
     void clear_patches(const uint32& max_age,
+                       const double& clear_surv,
                        pcg32& eng);
     void clear_patches(const double& max_N,
+                       const double& clear_surv,
                        pcg32& eng);
 
 
