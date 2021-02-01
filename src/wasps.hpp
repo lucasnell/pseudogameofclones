@@ -110,7 +110,9 @@ public:
 
         if (Y.n_elem > 1) {
             // Go backwards through stages to avoid conflicts...
-            for (uint32 i = Y.n_elem-1; i > 0; i--) Y(i) = pred_rate * Y(i-1);
+            for (uint32 i = Y.n_elem-1; i > 0; i--) {
+                Y(i) = (1 - pred_rate) * Y(i-1);
+            }
         }
         // Newly mummified:
         Y.front() = nm;
@@ -137,7 +139,9 @@ class WaspPop {
     double sex_ratio;       // proportion of female wasps
     double s_y;             // parasitoid adult daily survival
 
-    std::normal_distribution<double> norm_distr;    // for process error
+    // for process error:
+    std::normal_distribution<double> norm_distr;
+    double sigma_y;
 
 public:
 
@@ -146,7 +150,9 @@ public:
     double x;               // Total number of unparasitized aphids
 
     // Constructors
-    WaspPop() : attack(), Y_0(), sex_ratio(), s_y(), norm_distr(), Y(), x() {};
+    WaspPop()
+        : attack(), Y_0(), sex_ratio(), s_y(), norm_distr(),
+          sigma_y(), Y(), x() {};
     WaspPop(const arma::vec& rel_attack_,
             const double& a_,
             const double& k_,
@@ -154,12 +160,13 @@ public:
             const double& Y_0_,
             const double& sex_ratio_,
             const double& s_y_,
-            const double& sigma_y)
+            const double& sigma_y_)
         : attack(rel_attack_, a_, k_, h_),
           Y_0(Y_0_),
           sex_ratio(sex_ratio_),
           s_y(s_y_),
-          norm_distr(0, sigma_y),
+          norm_distr(0, 1),
+          sigma_y(sigma_y_),
           Y(Y_0_),
           x(0) {};
     WaspPop(const WaspPop& other)
@@ -168,6 +175,7 @@ public:
           sex_ratio(other.sex_ratio),
           s_y(other.s_y),
           norm_distr(other.norm_distr),
+          sigma_y(other.sigma_y),
           Y(other.Y),
           x(other.x) {};
     WaspPop& operator=(const WaspPop& other) {
@@ -176,6 +184,7 @@ public:
         sex_ratio = other.sex_ratio;
         s_y = other.s_y;
         norm_distr = other.norm_distr;
+        sigma_y = other.sigma_y;
         Y = other.Y;
         x = other.x;
         return *this;
@@ -196,14 +205,16 @@ public:
     void update(const double& old_mums,
                 pcg32& eng) {
         double max_Y = old_mums + Y;
+        if (max_Y == 0) return;
         Y *= s_y;
         Y += (sex_ratio * old_mums);
-        Y *= std::exp(norm_distr(eng));
+        Y *= std::exp(norm_distr(eng) * sigma_y);
         if (Y > max_Y) Y = max_Y; // make sure it doesn't exceed what's possible
         return;
     }
     // Same as above, but with no stochasticity
     void update(const double& old_mums) {
+        if (old_mums + Y == 0) return;
         Y *= s_y;
         Y += (sex_ratio * old_mums);
         return;

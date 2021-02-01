@@ -214,9 +214,17 @@ class AphidPop {
     // samples total dispersers:
     mutable std::poisson_distribution<uint32> pois_distr =
         std::poisson_distribution<uint32>(1);
-    // samples dead dispersers:
+    // samples dead dispersers and alates:
     mutable std::binomial_distribution<uint32> bino_distr =
         std::binomial_distribution<uint32>(1, 0.1);
+
+    // Process error for all stages, plus checks so that they don't exceed
+    // what's possible
+    void process_error(const arma::vec& apterous_Xt,
+                       const arma::vec& alates_Xt,
+                       const arma::vec& paras_Xt,
+                       const double& z,
+                       pcg32& eng);
 
 
 

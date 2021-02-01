@@ -27,9 +27,6 @@ void AphidTypePop::process_error(const double& z,
 
     if (demog_mult == 0 || sigma_x == 0) return;
 
-    // If `X` is at time t+1, this is at time t. It's used at the very bottom of this fxn.
-    arma::vec X_t = X;
-
     uint32 n_stages = X.n_elem;
 
     arma::mat Se(n_stages, n_stages, arma::fill::zeros);
@@ -62,6 +59,19 @@ void AphidTypePop::process_error(const double& z,
         X(non_zero(i)) *= std::exp(E(i));
     }
 
+    return;
+
+}
+
+void AphidPop::process_error(const arma::vec& apterous_Xt,
+                             const arma::vec& alates_Xt,
+                             const arma::vec& paras_Xt,
+                             const double& z,
+                             pcg32& eng) {
+
+    apterous.process_error(z, sigma_x, rho, demog_mult, norm_distr, eng);
+    alates.process_error(z, sigma_x, rho, demog_mult, norm_distr, eng);
+    paras.process_error(z, sigma_x, rho, demog_mult, norm_distr, eng);
 
     /*
      Because we used normal distributions to approximate demographic and environmental
@@ -71,8 +81,14 @@ void AphidTypePop::process_error(const double& z,
      on day t was not allowed to exceed the number in the preceding age class on
      day t – 1.
     */
-    for (uint32 i = 1; i < X.n_elem; i++) {
-        if (X(i) > X_t(i-1)) X(i) = X_t(i-1);
+    for (uint32 i = 1; i < apterous.X.n_elem; i++) {
+        if (apterous.X(i) > apterous_Xt(i-1)) apterous.X(i) = apterous_Xt(i-1);
+    }
+    for (uint32 i = 1; i < alates.X.n_elem; i++) {
+        if (alates.X(i) > alates_Xt(i-1)) alates.X(i) = alates_Xt(i-1);
+    }
+    for (uint32 i = 1; i < paras.X.n_elem; i++) {
+        if (paras.X(i) > paras_Xt(i-1)) paras.X(i) = paras_Xt(i-1);
     }
 
     return;
@@ -257,13 +273,18 @@ double AphidPop::update(const OnePatch* patch,
 
     double nm = 0; // newly mummified
 
-    if (arma::accu(alates.X) > 0 || arma::accu(apterous.X) > 0) {
+    if (total_aphids() > 0) {
 
         const double& z(patch->z);
         const double& S(patch->S);
         const double& S_y(patch->S_y);
         arma::vec A = wasps->A(attack_surv);
         double pred_surv = 1 - patch->pred_rate;
+
+        // Starting abundances (used in `process_error`):
+        arma::vec apterous_Xt = apterous.X;
+        arma::vec alates_Xt = alates.X;
+        arma::vec paras_Xt = paras.X;
 
 
         // Basic updates for non-parasitized aphids:
@@ -279,16 +300,16 @@ double AphidPop::update(const OnePatch* patch,
         nm += pred_surv * paras.X.back();  // newly mummified
 
         // alive but parasitized
-        for (uint32 i = 1; i < paras.X.n_elem; i++) {
-            paras.X(i) = pred_surv * paras.s(i) * S_y * paras.X(i-1);
+        if (paras.X.n_elem > 1) {
+            for (uint32 i = paras.X.n_elem - 1; i > 0; i--) {
+                paras.X(i) = pred_surv * paras.s(i) * S_y * paras.X(i-1);
+            }
         }
         paras.X.front() = np;
 
 
         // Process error
-        apterous.process_error(z, sigma_x, rho, demog_mult, norm_distr, eng);
-        alates.process_error(z, sigma_x, rho, demog_mult, norm_distr, eng);
-        paras.process_error(z, sigma_x, rho, demog_mult, norm_distr, eng);
+        process_error(apterous_Xt, alates_Xt, paras_Xt, z, eng);
 
 
         // Sample for # offspring from apterous aphids that are alates:
@@ -326,7 +347,7 @@ double AphidPop::update(const OnePatch* patch,
 
     double nm = 0; // newly mummified
 
-    if (arma::accu(alates.X) > 0 || arma::accu(apterous.X) > 0) {
+    if (total_aphids() > 0) {
 
         const double& S(patch->S);
         const double& S_y(patch->S_y);
@@ -346,8 +367,10 @@ double AphidPop::update(const OnePatch* patch,
         nm += pred_surv * paras.X.back();  // newly mummified
 
         // alive but parasitized
-        for (uint32 i = 1; i < paras.X.n_elem; i++) {
-            paras.X(i) = pred_surv * paras.s(i) * S_y * paras.X(i-1);
+        if (paras.X.n_elem > 1) {
+            for (uint32 i = paras.X.n_elem - 1; i > 0; i--) {
+                paras.X(i) = pred_surv * paras.s(i) * S_y * paras.X(i-1);
+            }
         }
         paras.X.front() = np;
 
