@@ -42,7 +42,8 @@ void AphidTypePop::process_error(const double& z,
     arma::uvec non_zero = arma::find(Se.diag() > 0);
 
     /*
-     Cholesky decomposition of Se so output has correct variance-covariance matrix
+     Cholesky decomposition of Se so output has correct variance-covariance
+     matrix:
        "a vector of independent normal random variables,
        when multiplied by the transpose of the Cholesky deposition of [Se] will
        have covariance matrix equal to [Se]."

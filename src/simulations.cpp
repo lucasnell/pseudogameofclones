@@ -323,8 +323,8 @@ RepSummary one_rep__(const T& clear_threshold,
 
     double demog_mult = 1;
     if (!demog_error) demog_mult = 0;
-    // either demographic or environmental error
-    bool process_error = demog_error || (sigma_x > 0) || (sigma_y > 0);
+    // either type of environmental error
+    bool process_error = (sigma_x > 0) || (sigma_y > 0);
 
     uint32 n_lines = aphid_name.size();
     uint32 n_patches = aphid_density_0.size();
@@ -649,7 +649,6 @@ void check_args(const uint32& n_reps,
     }
 
     // integers that must be > 0
-    one_positive_check(max_plant_age, "max_plant_age");
     one_positive_check(max_t, "max_t");
     positive_check<std::vector<uint32>>(living_days, "living_days");
 

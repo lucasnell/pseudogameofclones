@@ -3,6 +3,7 @@
 S3method(c,aphid)
 S3method(print,aphid)
 S3method(print,multiAphid)
+export(carrying_capacity)
 export(clonal_line)
 export(impute)
 export(inv_logit)

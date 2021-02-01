@@ -6,6 +6,7 @@
 #include <pcg/pcg_random.hpp>   // pcg prng
 #include "clonewars_types.hpp"  // integer types
 #include "patches.hpp"          // patch classes
+#include "math.hpp"             // combine_leslies fxn
 #include "pcg.hpp"              // runif_ fxns
 
 
@@ -40,51 +41,49 @@ void OnePatch::extinct_colonize(const uint32& i) {
 }
 
 
-// /*
-//  Carrying capacity for patch.
-//  It depends on the Leslie matrix for each line's apterous aphids.
-//  I'm assuming apterous ones drive the carrying capacity, rather than alates, because
-//  they should be much more numerous.
-//  */
-//
-// double OnePatch::carrying_capacity() const {
-//
-//     arma::vec cc(aphids.size());
-//     arma::vec Ns(aphids.size());
-//     double total_N = 0;
-//
-//     arma::mat L;
-//     arma::cx_vec eigval;
-//     double ev;
-//
-//     for (uint32 i = 0; i < aphids.size(); i++) {
-//
-//         Ns[i] = aphids[i].total_aphids();
-//
-//         total_N += Ns[i];
-//
-//
-//         combine_leslies(L,
-//                         aphids[i].apterous.leslie(),
-//                         aphids[i].alates.leslie(),
-//                         aphids[i].apterous.alate_prop(this),
-//                         aphids[i].alates.disp_rate(),
-//                         aphids[i].alates.disp_mort(),
-//                         aphids[i].alates.disp_start());
-//
-//         eigval = arma::eig_gen( L );
-//         ev = eigval(0).real();
-//         cc[i] = (ev - 1) * K;
-//     }
-//
-//     double avg_cc;
-//
-//     if (total_N > 0) {
-//         avg_cc = arma::accu(cc % Ns / total_N);
-//     } else avg_cc = arma::mean(cc);
-//
-//     return avg_cc;
-// }
+/*
+ Carrying capacity for patch.
+ It depends on the Leslie matrix for each line's apterous and alates.
+ (I'm not including parasitized aphids because they shouldn't be too numerous.)
+ The overall carrying capacity is weighted based on each line's abundance.
+ */
+double OnePatch::carrying_capacity() const {
+
+    arma::vec cc(aphids.size());
+    arma::vec Ns(aphids.size());
+    double total_N = 0;
+
+    arma::mat L;
+    arma::cx_vec eigval;
+    double ev;
+
+    for (uint32 i = 0; i < aphids.size(); i++) {
+
+        Ns[i] = aphids[i].total_aphids();
+
+        total_N += Ns[i];
+
+        combine_leslies(L,
+                        aphids[i].apterous.leslie(),
+                        aphids[i].alates.leslie(),
+                        aphids[i].apterous.alate_prop(this),
+                        aphids[i].alates.disp_rate(),
+                        aphids[i].alates.disp_mort(),
+                        aphids[i].alates.disp_start());
+
+        eigval = arma::eig_gen( L );
+        ev = eigval.max().real();
+        cc[i] = (ev - 1) * K;
+    }
+
+    double avg_cc;
+
+    if (total_N > 0) {
+        avg_cc = arma::accu(cc % Ns / total_N);
+    } else avg_cc = arma::mean(cc);
+
+    return avg_cc;
+}
 
 
 
@@ -92,15 +91,11 @@ void OnePatch::extinct_colonize(const uint32& i) {
 
 void OnePatch::update_z_wilted() {
 
-    z = 0;
-    for (const AphidPop& ap : aphids) {
-        z += ap.apterous.total_aphids() + ap.alates.total_aphids() +
-            ap.paras.total_aphids();
-    }
+    z = total_aphids();
 
     // Once it turns wilted, it stays that way until cleared
     if (wilted_) return;
-    wilted_ = z >= (K * death_prop);
+    wilted_ = carrying_capacity() >= (K * death_prop);
 
     return;
 }
@@ -290,7 +285,7 @@ void AllPatches::clear_patches(const uint32& max_age,
     for (const OnePatch& p : patches) {
         double N = p.total_aphids();
         wilted.push_back(p.wilted());
-        if (p.age > max_age || wilted.back()) {
+        if (p.age > max_age || p.wilted()) {
             clear_patches.push_back(PatchClearingInfo<uint32>(p.this_j, N, wilted.back(),
                                                               p.age));
         } else remaining += N;
@@ -316,7 +311,7 @@ void AllPatches::clear_patches(const double& max_N,
     for (const OnePatch& p : patches) {
         double N = p.total_aphids();
         wilted.push_back(p.wilted());
-        if (N > max_N || wilted.back()) {
+        if (N > max_N || p.wilted()) {
             clear_patches.push_back(PatchClearingInfo<double>(p.this_j, N, wilted.back(),
                                                               N));
         } else remaining += N;

@@ -17,40 +17,6 @@
 using namespace Rcpp;
 
 
-/*
- Combine Leslie matrices for apterous and alates into one matrix
- */
-inline void combine_leslies(arma::mat& L,
-                            const arma::mat& apterous,
-                            const arma::mat& alates,
-                            const double& alate_prop,
-                            const double& disp_rate,
-                            const double& disp_mort,
-                            const uint32& disp_start) {
-
-    // Should be the rows and columns for both matrices:
-    arma::uword n = apterous.n_rows;
-
-    L = arma::zeros<arma::mat>(2 * n, 2 * n);
-
-    L(arma::span(0, n - 1), arma::span(0, n - 1)) = apterous;
-    L(arma::span(n, 2 * n - 1), arma::span(n, 2 * n - 1)) = alates;
-
-    L.row(0).head(n) *= (1 - alate_prop);
-    L.row(n).head(n) = apterous.row(0) * alate_prop;
-
-    L.row(0).tail(n) = alates.row(0);
-    L.row(n).tail(n).fill(0);
-
-
-    for (uint32 i = disp_start; i < (n-1); i++) {
-        L(n+i+1, n+i) *= (1 - disp_mort * disp_rate);
-    }
-
-    return;
-}
-
-
 
 
 
@@ -95,6 +61,14 @@ struct PatchClearingInfo {
 One patch of continuous habitat.
 */
 class OnePatch {
+
+
+    /*
+     Carrying capacity for patch.
+     It depends on the Leslie matrix for each line's apterous and alates.
+     I'm not including parasitized aphids because they shouldn't be too numerous.
+     */
+    double carrying_capacity() const;
 
 
     /*
