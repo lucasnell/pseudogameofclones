@@ -1,0 +1,249 @@
+---
+title: "Simulating eco-evo experiments"
+author: "Lucas A. Nell"
+date: "2/1/2021"
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+urlcolor: blue
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, dev = "cairo_pdf", echo = FALSE, 
+                      fig.width = 5, fig.height = 3)
+suppressPackageStartupMessages({
+    library(tidyverse)
+    library(clonewars)
+})
+```
+
+
+These simulations are to see if doing eco-evo experiments will actually be
+interesting if one of the lines (UT3) is completely resistant to parasitism.
+I started with a model from a 
+[previous paper](http://doi.wiley.com/10.1890/13-1933.1)
+from Tony and others, then I edited it to conform to our conditions
+(most notably, it explicitly simulates alate production and plant death).
+
+Note that figures are at the end of the document.
+
+I'm simulating 100 days of interacting aphid and parasitoid wasp populations.
+There are 4 patches of plants, and each patch contains 4 plants.
+Every 25 days, we replace a plant from each patch, which causes mortality
+for any aphids or mummies on that plant.
+(Mummies are aphids that have been killed by being parasitized, and are
+about to have adult wasps emerge from their bodies.)
+Movement between patches must happen via alates (winged aphids), and 
+rates of alate production increase with the number of aphids on the patch.
+There are two aphid lines:
+The susceptible line is susceptible to parasitism but has a higher growth rate.
+The resistant line is resistant to parasitism but has a lower growth rate
+(attack by wasps induces some mortality, though).
+Shifts in relative frequencies of susceptible and resistant lines
+represents evolution in the aphid population.
+
+
+
+
+```{r args-setup}
+# This is constant:
+wia5d <- clonal_line("susceptible",
+                     density_0 = matrix(c(rep(0, 3), 16, rep(0, 6)), 5, 2),
+                     surv_juv_apterous = "high",
+                     surv_adult_apterous = "high",
+                     repro_apterous = "high")
+
+
+# The call to `sim_clonewars` can vary by the UT3 line plus
+# wasp mortality (`s_y`)
+#   * `.res` should be FALSE, TRUE, or c(1, 1)
+#   * `.sjp` should be "low" or 0
+#   * `.s_y` should probably be a multiple of `populations$s_y`
+do_sims <- function(.res, .sjp, .s_y, ...) {
+    .ut3 <- clonal_line("resistant",
+                        density_0 = matrix(c(rep(0, 3), 16, rep(0, 6)), 5, 2),
+                        resistant = .res,
+                        surv_juv_paras = .sjp,
+                        surv_juv_apterous = "low",
+                        surv_adult_apterous = "low",
+                        repro_apterous = "low")
+    sims <- sim_clonewars(n_reps = 1, 
+                          clonal_lines = c(.ut3, wia5d),
+                          s_y = .s_y,
+                          alate_b0 = -4, alate_b1 = 8/2000,
+                          max_N = 0, max_plant_age = 25,
+                          clear_surv = 0.5,
+                          mean_K = formals(sim_clonewars)$mean_K * 4,
+                          sd_K = formals(sim_clonewars)$sd_K * 4,
+                          no_error = TRUE,
+                          sex_ratio = 0.66,
+                          wasp_delay = 5,
+                          wasp_density_0 = 4, 
+                          ...)
+    sims[["mummies"]] <- sims %>%
+                  .[["aphids"]] %>%
+                  filter(type == "mummy") %>%
+                  group_by(rep, time) %>%
+                  summarize(N = sum(N), .groups = "drop")
+    sims[["aphids"]] <- sims %>%
+        .[["aphids"]] %>%
+        filter(type != "mummy") %>%
+        group_by(rep, time, line) %>%
+        summarize(N = sum(N), .groups = "drop")
+    
+    return(sims)
+}
+
+# For plotting:
+plot_sims <- function(.sims) {
+    
+    mod <- max(max(.sims$wasps$wasps), max(.sims$mummies$N)) / 
+        max(.sims$aphids$N)
+    
+    .sims %>%
+        .[["aphids"]] %>%
+        mutate(line = factor(line, levels = c("resistant", "susceptible"))) %>%
+        ggplot(aes(time, N)) +
+        geom_area(data = .sims %>%
+                      .[["mummies"]] %>%
+                      mutate(N = N / mod),
+                  fill = "gray70", color = NA) +
+        geom_area(data = .sims %>%
+                      .[["wasps"]] %>%
+                      mutate(N = wasps / mod),
+                  fill = "violetred", alpha = 0.5, color = NA) +
+        geom_line(aes(color = line), size = 1) +
+        scale_color_manual(NULL, values = c("chartreuse3", "firebrick")) +
+        scale_linetype_manual(values = c(1, 2)) +
+        scale_y_continuous("Aphid abundance",
+                           sec.axis = sec_axis(~ . * mod,
+                                               "Wasp & mummy abundance"))
+}
+
+fig1_cap <- paste("Aphids, mummies, and wasps over time. Gray shaded areas",
+                  "are mummies, pink shaded areas are adult wasps,",
+                  "and lines are aphids  (green for resistant, red for",
+                  "susceptible).")
+fig2_cap <- paste("Aphids, mummies, and wasps over time, with varying adult",
+                  "wasp survival.",
+                  "Sub-panels separate the adult wasp survival rates used,",
+                  "and labels above sub-panels indicate how they relate",
+                  "to the default value ($\\hat{s}_y$).",
+                  "Gray shaded areas",
+                  "are mummies, pink shaded areas are adult wasps,",
+                  "and lines are aphids (green for resistant, red for",
+                  "susceptible).")
+```
+
+
+With everything at their default values (other than those mentioned above),
+we get the results shown in Figure 1.
+The resistant line excludes the susceptible line and wasps go extinct
+after a brief period of substantial parasitism.
+This is the type of uninteresting results I was worried about.
+
+
+Past experiments have shown that wasps can decimate aphid populations in 
+closed systems.
+A potential solution to this problem is to reduce the amount of time
+that adults can spend parasitizing aphids.
+In the model, this can be implemented by reducing adult wasp survival.
+When we divide the default adult survival ($\hat{s}_y$) by some different 
+values, we get the results shown in Figure 2.
+
+
+This is much more interesting!
+In all cases, both lines coexist over the 100 days, but
+the resistant line becomes less dominant the more we decrease adult wasp
+survival.
+The nice thing about adult wasp survival is that it's easy to control,
+so this is quite encouraging.
+These results are also robust to wasp attack not causing the resistant line
+any mortality (not shown, but you can trust me).
+
+
+
+
+```{r og-sims, fig.cap=fig1_cap}
+#   * `.res` should be FALSE, TRUE, or c(1, 1)
+#   * `.sjp` should be "low" or 0
+#   * `.s_y` should probably be a multiple of `populations$s_y`
+sims <- do_sims(.res = TRUE, .sjp = 0, .s_y = populations$s_y)
+
+
+p <- plot_sims(sims) +
+    geom_text(data = tibble(line = factor(c("resistant", "susceptible"), 
+                                          levels = c("resistant", "susceptible")),
+                            time = 100, N = c(6000, 500)), 
+              aes(label = line, color = line), size = 10 / 2.8, hjust = 1) +
+    geom_text(data = tibble(line = "mummies", time = 22, N = 6000), 
+              aes(label = line), color = "gray50", size = 10 / 2.8, hjust = 1) +
+    geom_text(data = tibble(line = "wasps", time = 48, N = 1000),
+              aes(label = line), color = "violetred", size = 10 / 2.8, hjust = 0) +
+    theme(legend.position = "none")
+
+p
+
+# ggsave("~/Desktop/test.pdf", p, width = 5, height = 3)
+
+```
+
+
+
+```{r change-s_y, fig.height = 8, fig.cap=fig2_cap}
+
+sims <- map(c(4, 16, 64), function(.x) {
+    s <- do_sims(.res = TRUE, .sjp = 0, .s_y = populations$s_y / .x)
+    s[["aphids"]] <- mutate(s[["aphids"]], s_y = sprintf("hat(s)[y] / %i", .x))
+    s[["mummies"]] <- mutate(s[["mummies"]], s_y = sprintf("hat(s)[y] / %i", .x))
+    s[["wasps"]] <- mutate(s[["wasps"]], s_y = sprintf("hat(s)[y] / %i", .x))
+    return(s)
+    })
+aphids <- map_dfr(sims, ~ .x[["aphids"]]) %>% 
+    select(-rep) %>% 
+    mutate(s_y = factor(s_y, levels = sprintf("hat(s)[y] / %i", c(4, 16, 64))))
+mummies <- map_dfr(sims, ~ .x[["mummies"]]) %>% 
+    select(-rep) %>% 
+    mutate(s_y = factor(s_y, levels = sprintf("hat(s)[y] / %i", c(4, 16, 64))))
+wasps <- map_dfr(sims, ~ .x[["wasps"]]) %>% 
+    select(-rep) %>% 
+    mutate(s_y = factor(s_y, levels = sprintf("hat(s)[y] / %i", c(4, 16, 64))))
+
+
+mod <- max(max(wasps$wasps), max(mummies$N)) / max(aphids$N)
+
+p <- aphids %>%
+    mutate(line = factor(line, levels = c("resistant", "susceptible"))) %>%
+    ggplot(aes(time, N)) +
+    geom_area(data = mummies %>%
+                  mutate(N = N / mod),
+              fill = "gray70", color = NA) +
+    geom_area(data = wasps %>%
+                  mutate(N = wasps / mod),
+              fill = "violetred", alpha = 0.5, color = NA) +
+    geom_line(aes(color = line), size = 1) +
+    facet_wrap(~ s_y, labeller = label_parsed, ncol = 1) +
+    scale_color_manual(NULL, values = c("chartreuse3", "firebrick")) +
+    scale_linetype_manual(values = c(1, 2)) +
+    scale_y_continuous("Aphid abundance",
+                       sec.axis = sec_axis(~ . * mod,
+                                           "Wasp & mummy abundance")) +
+    theme(legend.position = "none")
+
+p
+
+# ggsave("~/Desktop/test.pdf", p, width = 5, height = 8)
+
+
+```
+
+
+
+
+```{r no-mort, eval=FALSE}
+
+do_sims(.res = TRUE, .sjp = 0, .s_y = populations$s_y / 16) %>% 
+    plot_sims()
+
+```
+

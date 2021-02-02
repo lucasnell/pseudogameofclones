@@ -17,3 +17,5 @@ host_shift
 
 ## Test files:
 under_constr/*/_test.*
+
+*.pdf
