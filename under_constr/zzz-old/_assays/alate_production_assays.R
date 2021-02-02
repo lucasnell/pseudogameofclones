@@ -58,7 +58,7 @@ alate_df <- paste0("~/Dropbox/Aphid Project 2017/Lauren_competition/",
     # Remove short time series:
     # --------
     group_by(id) %>%
-    # filter(date <= min(date[N == max(N)])) %>%  # <-- to remove dates after peak N
+    filter(date <= min(date[N == max(N)])) %>%  # <-- to remove dates after peak N
     mutate(date = difftime(date, min(date), units = "days") %>% as.integer()) %>%
     mutate(n_obs = date %>% unique() %>% length()) %>%
     ungroup() %>%
@@ -72,7 +72,6 @@ alate_df <- paste0("~/Dropbox/Aphid Project 2017/Lauren_competition/",
 
 # Impute N for all dates from the start of an assay rep
 impute_all_days <- function(N, date) {
-
 
     N <- c(N, rep(NA, sum(!(0:max(date) %in% date))))
     date <- c(date, (0:max(date))[!(0:max(date) %in% date)])
@@ -123,31 +122,37 @@ impute_all_days <- function(N, date) {
 
 
 
-# Find N on the day that new adults were born
+# Find total N on the day that new adults were born
 # Default `delay` is that between birth and adulthood (i.e., when alates are observed)
-born_N <- function(N, date,
+born_N <- function(z,
                    .delay = sum(head(dev_times$instar_days$lowT, -1)) - 1) {
 
-    N_all <- impute_all_days(N, date)
+  N_all <- z %>%
+    split(.$line) %>%
+    map_dfr(~ impute_all_days(.x$N, .x$date) %>%
+              mutate(line = .x$line[[1]])) %>%
+    group_by(date) %>%
+    summarize(N = sum(N), .groups = "drop")
 
     delay_lookup <- function(.d) {
         if (.d < .delay) return(NA_real_)
         N_all$N[N_all$date == (.d - .delay)]
     }
 
-    map_dbl(date, delay_lookup)
+    mutate(z, b_N = map_dbl(z$date, delay_lookup))
 
 }
 
 
 # Including a bunch of variables for models:
-
 alate_mod_df <- alate_df %>%
+    split(.$id) %>%
+    map_dfr(born_N) %>%
+    group_by(id) %>%
+    mutate(pb_N = b_N / (max(N) + 1),
+           pb_nc_N = pb_N - 0.5) %>%
     group_by(id, line) %>%
-    mutate(b_N = born_N(N, date),
-           pb_N = b_N / (max(N) + 1),
-           pb_nc_N = pb_N - 0.5,
-           new_alates = alates - lag(alates),
+    mutate(new_alates = alates - lag(alates),
            new_alates = ifelse(new_alates < 0, 0, new_alates),
            new_apterous = apterous - lag(apterous),
            new_apterous = ifelse(new_apterous < 0, 0, new_apterous),
@@ -160,7 +165,9 @@ alate_mod_df <- alate_df %>%
     filter(!(new_alates == 0 & new_apterous == 0)) %>%
     filter(!is.na(b_N)) %>%
     mutate(line = factor(line, levels = alate_df$line %>% unique() %>% sort()),
-           plant = factor(id) %>% as.integer() %>% factor())
+           plant = factor(id) %>% as.integer() %>% factor(),
+           obs = factor(1:n()))
+
 
 
 
@@ -174,16 +181,16 @@ alate_mod_df <- alate_df %>%
 #     NULL
 
 
-# Full model (`~ b_N + (1 | line) + (b_N | id)`): 345.7641
+# Full model (`~ b_N + (1 | line) + (b_N | plant)`): 345.7641
 
-forms <- list(cbind(new_alates, new_apterous) ~ b_N + (b_N | line) + (b_N | id),
-              cbind(new_alates, new_apterous) ~ b_N + (1 | line) + (b_N | id),
-              cbind(new_alates, new_apterous) ~ b_N + (b_N | line) + (1 | id),
-              cbind(new_alates, new_apterous) ~ b_N + (1 | line) + (1 | id),
+forms <- list(cbind(new_alates, new_apterous) ~ b_N + (b_N | line) + (b_N | plant),
+              cbind(new_alates, new_apterous) ~ b_N + (1 | line) + (b_N | plant),
+              cbind(new_alates, new_apterous) ~ b_N + (b_N | line) + (1 | plant),
+              cbind(new_alates, new_apterous) ~ b_N + (1 | line) + (1 | plant),
               cbind(new_alates, new_apterous) ~ b_N + (b_N | line),
               cbind(new_alates, new_apterous) ~ b_N + (1 | line),
-              cbind(new_alates, new_apterous) ~ b_N + (b_N | id),
-              cbind(new_alates, new_apterous) ~ b_N + (1 | id))
+              cbind(new_alates, new_apterous) ~ b_N + (b_N | plant),
+              cbind(new_alates, new_apterous) ~ b_N + (1 | plant))
 mods <- map(forms, ~ glmer(.x, data = alate_mod_df, family = binomial))
 
 # These didn't fit properly, so we remove them:
@@ -199,10 +206,10 @@ mods[[which(map_dbl(mods, ~ AIC(.x)) == min(map_dbl(mods, ~ AIC(.x))))]]
 
 # (If the anything changes, make sure the one below is the same as above)
 alate_mod <- glmer(cbind(new_alates, new_apterous) ~ b_N + (1 | line) +
-                       (b_N | id),
+                       (b_N | plant),
                    data = alate_mod_df, family = binomial)
 
-glmer(cbind(new_alates, new_apterous) ~ (1 | line) + (b_N | id),
+glmer(cbind(new_alates, new_apterous) ~ (1 | line) + (b_N | plant),
       data = alate_mod_df, family = binomial)
 
 
@@ -292,9 +299,71 @@ confint(z_boot) %>%
 
 glmer(cbind(new_alates, new_apterous) ~ 1 + (1 | plant),
       data = alate_mod_df, family = binomial)
-glmer(cbind(new_alates, new_apterous) ~ b_N + (1 | plant),
+glmer(cbind(new_alates, new_apterous) ~ b_N +  (1 | plant),
       data = alate_mod_df, family = binomial)
-# Best of the simple ones:
+glmer(cbind(new_alates, new_apterous) ~ lag_N + (1 | plant) + (1 | obs),
+      data = alate_mod_df, family = binomial)
 glmer(cbind(new_alates, new_apterous) ~ 1 + (b_N | plant),
-      data = alate_mod_df, family = binomial) %>%
-  summary()
+      data = alate_mod_df, family = binomial)
+
+
+# z <-
+glmer(new_alates ~ offset(log(new_all)) + 1 + (b_N | plant),
+           data = alate_mod_df, family = poisson)
+glm(new_alates ~ offset(log(new_all)) + b_N,
+           data = alate_mod_df, family = poisson)
+
+predict(z, newdata = tibble(new_all = 1), re.form = ~ 0, type = "response")
+
+alate_mod_df %>%
+    ggplot(aes(b_N, new_alates / new_all)) +
+    geom_point() +
+    facet_wrap(~ line)
+
+
+
+forms <- list(new_alates ~ offset(log(new_all)) + b_N + (b_N | line) + (b_N | plant),
+              new_alates ~ offset(log(new_all)) + b_N + (1 | line) + (b_N | plant),
+              new_alates ~ offset(log(new_all)) + b_N + (b_N | line) + (1 | plant),
+              new_alates ~ offset(log(new_all)) + b_N + (1 | line) + (1 | plant),
+              new_alates ~ offset(log(new_all)) + b_N + (b_N | line),
+              new_alates ~ offset(log(new_all)) + b_N + (1 | line),
+              new_alates ~ offset(log(new_all)) + b_N + (b_N | plant),
+              new_alates ~ offset(log(new_all)) + b_N + (1 | plant),
+              new_alates ~ offset(log(new_all)) + 1 + (b_N | line) + (b_N | plant),
+              new_alates ~ offset(log(new_all)) + 1 + (1 | line) + (b_N | plant),
+              new_alates ~ offset(log(new_all)) + 1 + (b_N | line) + (1 | plant),
+              new_alates ~ offset(log(new_all)) + 1 + (1 | line) + (1 | plant),
+              new_alates ~ offset(log(new_all)) + 1 + (b_N | line),
+              new_alates ~ offset(log(new_all)) + 1 + (1 | line),
+              new_alates ~ offset(log(new_all)) + 1 + (b_N | plant),
+              new_alates ~ offset(log(new_all)) + 1 + (1 | plant))
+mods <- map(forms, ~ glmer(.x, data = alate_mod_df, family = poisson))
+
+# These didn't fit properly, so we remove them:
+forms[map_lgl(mods, ~ isSingular(.x))]
+mods <- mods[map_lgl(mods, ~ !isSingular(.x))]
+
+# AICs for all non-singular model fits:
+map_dbl(mods, ~ AIC(.x))
+
+# This one's best:
+mod <- mods[[which(map_dbl(mods, ~ AIC(.x)) == min(map_dbl(mods, ~ AIC(.x))))]]
+
+coef(mod)[["line"]]
+
+# 235.6080
+glmer(new_alates ~ offset(log(new_all)) + 1 + (1 | line) + (b_N | plant),
+      data = alate_mod_df, family = poisson)
+
+mod <- glm(new_alates ~ offset(log(new_all)) + b_N + I(b_N^2),
+           data = alate_mod_df, family = poisson)
+alate_mod_df %>%
+    mutate(pred = predict(mod, type = "response")) %>%
+    ggplot(aes(b_N, new_alates / new_all)) +
+    geom_point() +
+    geom_line(aes(y = pred / new_all))
+
+
+glm(new_alates ~ offset(log(new_all)) + b_N,
+      data = alate_mod_df, family = poisson)
