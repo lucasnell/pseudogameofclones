@@ -20,6 +20,35 @@ using namespace Rcpp;
 
 
 
+// Info for a single perturbation (it happens to all patches)
+struct PerturbInfo {
+
+    // When to perturb.
+    uint32 time;
+    // Number to multiply abundance by.
+    double multiplier;
+    /*
+     Who to perturb.
+     Indices less than the # aphids points to the particular
+     aphid line, equal to the # aphids is mummies, and greater than
+     the # aphids is adult wasps.
+     */
+    uint32 index;
+
+    PerturbInfo() : time(), multiplier(), index() {}
+    PerturbInfo(const uint32& when, const uint32& who, const double& how)
+        : time(when), multiplier(how), index(who) {}
+    PerturbInfo& operator=(const PerturbInfo& other) {
+        time = other.time;
+        multiplier = other.multiplier;
+        index = other.index;
+        return *this;
+    }
+
+};
+
+
+
 
 // Info for clearing patches
 template <typename T>

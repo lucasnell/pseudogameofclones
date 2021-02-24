@@ -245,6 +245,12 @@ dbl_check <- function(x, n) {
                    "double.\n"))
     }
 }
+dbl_vec_check <- function(x, n) {
+    if (!(is.numeric(x) && is.null(dim(x)))) {
+        stop(paste("\nERROR:", n, "cannot be properly cast as a",
+                   "numeric vector.\n"))
+    }
+}
 dbl_mat_check <- function(x, n) {
     if (!(is.numeric(x) && inherits(x, "matrix"))) {
         stop(paste("\nERROR:", n, "cannot be properly cast as a",
@@ -345,7 +351,8 @@ sim_clonewars <- function(n_reps,
                           extinct_N = 1,
                           save_every = 1,
                           n_threads = max(parallel::detectCores()-2,1),
-                          show_progress = FALSE) {
+                          show_progress = FALSE,
+                          perturb = NULL) {
 
     if (!inherits(clonal_lines, "multiAphid")) {
         if (inherits(clonal_lines, "aphid")) {
@@ -426,7 +433,24 @@ sim_clonewars <- function(n_reps,
         rel_attack <- c(rel_attack, rep(tail(rel_attack, 1), new_attacks))
     }
 
-
+    if (is.null(perturb)) {
+        perturb_when = integer(0)
+        perturb_who = integer(0)
+        perturb_how = numeric(0)
+    } else {
+        stopifnot(inherits(perturb, "data.frame"))
+        stopifnot(identical(colnames(perturb), c("when", "who", "how")))
+        perturb_when <- perturb$when
+        perturb_how <- perturb$how
+        if (is.character(perturb$who)) {
+            stopifnot(all(perturb$who %in% c(aphid_names, "mummies", "wasps")))
+            perturb_who <- integer(length(perturb$who))
+            perturb_who[perturb$who %in% aphid_names] <- -1 +
+                match(perturb$who[perturb$who %in% aphid_names], aphid_names)
+            perturb_who[perturb$who == "mummies"] <- length(aphid_names)
+            perturb_who[perturb$who == "wasps"] <- length(aphid_names) + 1
+        } else perturb_who <- perturb$who
+    }
 
     uint_check(n_reps, "n_reps")
     uint_check(max_plant_age, "max_plant_age")
@@ -467,6 +491,10 @@ sim_clonewars <- function(n_reps,
     uint_check(wasp_delay, "wasp_delay")
     dbl_check(sex_ratio, "sex_ratio")
     dbl_check(s_y, "s_y")
+    uint_vec_check(perturb_when, "perturb_when")
+    uint_vec_check(perturb_who, "perturb_who")
+    stopifnot(inherits(perturb_how, c("numeric", "integer")) &&
+                  all(perturb_how >= 0))
     uint_check(n_threads, "n_threads")
     stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
 
@@ -480,8 +508,9 @@ sim_clonewars <- function(n_reps,
                               aphid_density_0, alate_b0, alate_b1, disp_rate,
                               disp_mort, disp_start, living_days, pred_rate,
                               mum_density_0, rel_attack, a, k, h,
-                              wasp_density_0, wasp_delay, sex_ratio, s_y, n_threads,
-                              show_progress)
+                              wasp_density_0, wasp_delay, sex_ratio, s_y,
+                              perturb_when, perturb_who, perturb_how,
+                              n_threads, show_progress)
 
     sims <- lapply(sims, as_tibble)
     sims[["aphids"]] <- sims[["aphids"]] %>%

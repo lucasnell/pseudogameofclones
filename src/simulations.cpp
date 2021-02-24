@@ -319,6 +319,9 @@ RepSummary one_rep__(const T& clear_threshold,
                      const uint32& wasp_delay,
                      const double& sex_ratio,
                      const double& s_y,
+                     const std::vector<uint32>& perturb_when,
+                     const std::vector<uint32>& perturb_who,
+                     const std::vector<double>& perturb_how,
                      Progress& prog_bar,
                      int& status_code,
                      pcg32& eng) {
@@ -345,6 +348,13 @@ RepSummary one_rep__(const T& clear_threshold,
                        extinct_N, mum_density_0, rel_attack, a, k, h,
                        0, sex_ratio, s_y, eng);
 
+    std::deque<PerturbInfo> perturbs(perturb_when.size());
+    for (uint32 i = 0; i < perturb_when.size(); i++) {
+        perturbs[i] = PerturbInfo(perturb_when[i], perturb_who[i],
+                                  perturb_how[i]);
+    }
+
+
     if (wasp_delay == 0) patches.wasps.Y += wasp_density_0;
 
     summary.push_back(0, patches);
@@ -354,6 +364,35 @@ RepSummary one_rep__(const T& clear_threshold,
         if (interrupt_check(iters, prog_bar)) {
             status_code = -1;
             return summary;
+        }
+
+        // Perturbations
+        if (!perturbs.empty() && t == perturbs.front().time) {
+            PerturbInfo& pert(perturbs.front());
+            if (pert.index < aphid_name.size()) { // aphids
+                for (OnePatch& p : patches.patches) {
+                    AphidPop& aphids(p.aphids[pert.index]);
+                    aphids.clear(pert.multiplier);
+                    if (aphids.total_aphids() < extinct_N) aphids.clear();
+                    if ((p.total_aphids() + p.total_mummies()) == 0) {
+                        p.empty = true;
+                    }
+                }
+            } else if (pert.index == aphid_name.size()) { // mummies
+                for (OnePatch& p : patches.patches) {
+                    p.mummies.clear(pert.multiplier);
+                    if (arma::accu(p.mummies.Y)<extinct_N) p.mummies.Y.fill(0);
+                }
+            } else { // adult wasps
+                if (patches.wasps.Y == 0) {
+                    // We want to wait until there are actually wasps!
+                    pert.time++;
+                } else {
+                    patches.wasps.Y *= pert.multiplier;
+                    if (patches.wasps.Y < extinct_N) patches.wasps.Y = 0;
+                }
+            }
+            if (t == pert.time) perturbs.pop_front();
         }
 
         if (disp_error) {
@@ -505,6 +544,9 @@ void check_args(const uint32& n_reps,
                 const uint32& wasp_delay,
                 const double& sex_ratio,
                 const double& s_y,
+                const std::vector<uint32>& perturb_when,
+                const std::vector<uint32>& perturb_who,
+                const std::vector<double>& perturb_how,
                 uint32& n_threads) {
 
 
@@ -599,6 +641,11 @@ void check_args(const uint32& n_reps,
     }
     if (mum_density_0.n_rows == 0) {
         stop("\nERROR: mum_density_0.n_rows == 0\n");
+    }
+
+    if (perturb_when.size() != perturb_who.size() ||
+        perturb_when.size() != perturb_how.size()) {
+        stop("\nERROR: perturb_* args not same size.");
     }
 
 
@@ -724,6 +771,9 @@ List sim_clonewars_cpp(const uint32& n_reps,
                        const uint32& wasp_delay,
                        const double& sex_ratio,
                        const double& s_y,
+                       const std::vector<uint32>& perturb_when,
+                       const std::vector<uint32>& perturb_who,
+                       const std::vector<double>& perturb_how,
                        uint32 n_threads,
                        const bool& show_progress) {
 
@@ -740,8 +790,8 @@ List sim_clonewars_cpp(const uint32& n_reps,
                leslie_mat, aphid_density_0, alate_b0, alate_b1,
                disp_rate, disp_mort, disp_start, living_days,
                pred_rate, mum_density_0, rel_attack, a, k, h,
-               wasp_density_0, wasp_delay, sex_ratio, s_y, n_threads);
-
+               wasp_density_0, wasp_delay, sex_ratio, s_y,
+               perturb_when, perturb_who, perturb_how, n_threads);
 
     Progress prog_bar(max_t * n_reps, show_progress);
     std::vector<int> status_codes(n_threads, 0);
@@ -787,6 +837,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                              disp_start, living_days, pred_rate,
                                              mum_density_0, rel_attack, a, k,
                                              h, wasp_density_0, wasp_delay, sex_ratio, s_y,
+                                             perturb_when, perturb_who, perturb_how,
                                              prog_bar, status_code, eng);
         } else {
             summaries[i] = one_rep__<double>(max_N, i, check_for_clear,
@@ -801,6 +852,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                              disp_start, living_days, pred_rate,
                                              mum_density_0, rel_attack, a, k,
                                              h, wasp_density_0, wasp_delay, sex_ratio, s_y,
+                                             perturb_when, perturb_who, perturb_how,
                                              prog_bar, status_code, eng);
         }
     }
