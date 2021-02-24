@@ -42,6 +42,9 @@
 #'     line.
 #' @param temp Single string specifying `"low"` (20º C) or `"high"` (27º C)
 #'     temperature. Defaults to `"low"`.
+#' @param p_instar_remain If you want to make not all 4th instar aphids
+#'     move to adulthood, then you can add the proportion that remain in the
+#'     same instar here. Defaults to `0.1`.
 #'
 #' @return A list with the necessary info to pass onto sim_clonewars.
 #'
@@ -59,7 +62,8 @@ clonal_line <- function(name,
                         surv_juv_paras = "low",
                         surv_adult_paras = "low",
                         repro_paras = "low",
-                        temp = "low") {
+                        temp = "low",
+                        p_instar_remain = 0.1) {
 
     temp <- match.arg(temp, c("low", "high"))
     temp <- paste0(temp, "T")
@@ -127,6 +131,18 @@ clonal_line <- function(name,
     leslie_array <- array(do.call(c, leslie), dim = c(dim(leslie[[1]]), 3))
     ns <- nrow(leslie_array)  # number of stages; used later
 
+    # If you want 4th instars to not always move to adulthood...
+    if (p_instar_remain > 0) {
+        stopifnot(p_instar_remain < 1)
+        i <- sum(head(dev_times$instar_days[[temp]], -1))
+        for (j in 1:(dim(leslie_array)[3])) {
+            z <- leslie_array[i+1,i,j]
+            leslie_array[i,i,j] <- z * p_instar_remain
+            leslie_array[i+1,i,j] <- z * (1 - p_instar_remain)
+        }
+    }
+
+
 
     # --------------*
     # Fill other info
@@ -137,7 +153,10 @@ clonal_line <- function(name,
     if (is.numeric(resistant) && length(resistant) == 2) attack_surv <- resistant
 
 
-    if (is.null(density_0)) density_0 <- matrix(0, 5, 2); density_0[4,1] <- 4
+    if (is.null(density_0)) {
+        density_0 <- matrix(0, 5, 2)
+        density_0[4,1] <- 4
+    }
     if (!is.matrix(density_0) || !is.numeric(density_0) ||
         !identical(dim(density_0), c(5L, 2L))) {
         stop("\nERROR: If not NULL, then the `density_0` arg to the ",
