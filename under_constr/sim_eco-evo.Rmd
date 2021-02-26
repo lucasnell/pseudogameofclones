@@ -11,6 +11,7 @@ urlcolor: blue
 ```{r setup, include=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE, dev = "cairo_pdf", echo = FALSE, 
                       fig.width = 5, fig.height = 3)
+knitr::opts_knit$set(root.dir = "../")
 suppressPackageStartupMessages({
     library(tidyverse)
     library(clonewars)
@@ -44,7 +45,6 @@ represents evolution in the aphid population.
 
 
 
-
 ```{r args-setup}
 # This is constant:
 wia5d <- clonal_line("susceptible",
@@ -74,10 +74,10 @@ do_sims <- function(.res, .sjp, .s_y, ...) {
                           max_N = 0, max_plant_age = 25,
                           clear_surv = 0.5,
                           mean_K = formals(sim_clonewars)$mean_K * 4,
-                          sd_K = formals(sim_clonewars)$sd_K * 4,
+                          sd_K = formals(sim_clonewars)$sd_K * 4, 
                           no_error = TRUE,
                           sex_ratio = 0.66,
-                          wasp_delay = 5,
+                          wasp_delay = 0,
                           wasp_density_0 = 4, 
                           ...)
     sims[["mummies"]] <- sims %>%
@@ -136,11 +136,45 @@ fig2_cap <- paste("Aphids, mummies, and wasps over time, with varying adult",
 ```
 
 
+
+### Standard simulations
+
 With everything at their default values (other than those mentioned above),
 we get the results shown in Figure 1.
 The resistant line excludes the susceptible line and wasps go extinct
 after a brief period of substantial parasitism.
 This is the type of uninteresting results I was worried about.
+
+
+
+
+
+```{r og-sims, fig.cap=fig1_cap}
+#   * `.res` should be FALSE, TRUE, or c(1, 1)
+#   * `.sjp` should be "low" or 0
+#   * `.s_y` should probably be a multiple of `populations$s_y`
+sims <- do_sims(.res = TRUE, .sjp = 0, .s_y = populations$s_y)
+
+
+p <- plot_sims(sims) +
+    geom_text(data = tibble(line = factor(c("resistant", "susceptible"),
+                                          levels = c("resistant", "susceptible")),
+                            time = 100, N = c(6000, 500)),
+              aes(label = line, color = line), size = 9 / 2.8, hjust = 1) +
+    geom_text(data = tibble(line = "mummies", time = 50, N = 6000), 
+              aes(label = line), color = "gray50", size = 9 / 2.8, hjust = 1) +
+    geom_text(data = tibble(line = "wasps", time = 75, N = 2000),
+              aes(label = line), color = "violetred", size = 9 / 2.8, hjust = 0) +
+    theme(legend.position = "none")
+
+p
+
+# ggsave("~/Desktop/basic_sims.pdf", p, width = 5, height = 3)
+
+```
+
+
+### Changing adult wasp survival
 
 
 Past experiments have shown that wasps can decimate aphid populations in 
@@ -163,76 +197,51 @@ any mortality (not shown, but you can trust me).
 
 
 
-
-```{r og-sims, fig.cap=fig1_cap}
-#   * `.res` should be FALSE, TRUE, or c(1, 1)
-#   * `.sjp` should be "low" or 0
-#   * `.s_y` should probably be a multiple of `populations$s_y`
-sims <- do_sims(.res = TRUE, .sjp = 0, .s_y = populations$s_y)
-
-
-p <- plot_sims(sims) +
-    geom_text(data = tibble(line = factor(c("resistant", "susceptible"), 
-                                          levels = c("resistant", "susceptible")),
-                            time = 100, N = c(6000, 500)), 
-              aes(label = line, color = line), size = 10 / 2.8, hjust = 1) +
-    geom_text(data = tibble(line = "mummies", time = 22, N = 6000), 
-              aes(label = line), color = "gray50", size = 10 / 2.8, hjust = 1) +
-    geom_text(data = tibble(line = "wasps", time = 48, N = 1000),
-              aes(label = line), color = "violetred", size = 10 / 2.8, hjust = 0) +
-    theme(legend.position = "none")
-
-p
-
-# ggsave("~/Desktop/test.pdf", p, width = 5, height = 3)
-
-```
-
-
-
 ```{r change-s_y, fig.height = 8, fig.cap=fig2_cap}
 
-sims <- map(c(4, 16, 64), function(.x) {
+lvls <- c(2, 10, 100)
+
+sy_sims <- map(lvls, function(.x) {
     s <- do_sims(.res = TRUE, .sjp = 0, .s_y = populations$s_y / .x)
     s[["aphids"]] <- mutate(s[["aphids"]], s_y = sprintf("hat(s)[y] / %i", .x))
     s[["mummies"]] <- mutate(s[["mummies"]], s_y = sprintf("hat(s)[y] / %i", .x))
     s[["wasps"]] <- mutate(s[["wasps"]], s_y = sprintf("hat(s)[y] / %i", .x))
     return(s)
     })
-aphids <- map_dfr(sims, ~ .x[["aphids"]]) %>% 
+sy_aphids <- map_dfr(sy_sims, ~ .x[["aphids"]]) %>% 
     select(-rep) %>% 
-    mutate(s_y = factor(s_y, levels = sprintf("hat(s)[y] / %i", c(4, 16, 64))))
-mummies <- map_dfr(sims, ~ .x[["mummies"]]) %>% 
+    mutate(s_y = factor(s_y, levels = sprintf("hat(s)[y] / %i", lvls)))
+sy_mummies <- map_dfr(sy_sims, ~ .x[["mummies"]]) %>% 
     select(-rep) %>% 
-    mutate(s_y = factor(s_y, levels = sprintf("hat(s)[y] / %i", c(4, 16, 64))))
-wasps <- map_dfr(sims, ~ .x[["wasps"]]) %>% 
+    mutate(s_y = factor(s_y, levels = sprintf("hat(s)[y] / %i", lvls)))
+sy_wasps <- map_dfr(sy_sims, ~ .x[["wasps"]]) %>% 
     select(-rep) %>% 
-    mutate(s_y = factor(s_y, levels = sprintf("hat(s)[y] / %i", c(4, 16, 64))))
+    mutate(s_y = factor(s_y, levels = sprintf("hat(s)[y] / %i", lvls)))
 
 
-mod <- max(max(wasps$wasps), max(mummies$N)) / max(aphids$N)
+sy_mod <- max(max(sy_wasps$wasps), max(sy_mummies$N)) / max(sy_aphids$N)
 
-p <- aphids %>%
+sy_p <- sy_aphids %>%
     mutate(line = factor(line, levels = c("resistant", "susceptible"))) %>%
     ggplot(aes(time, N)) +
-    geom_area(data = mummies %>%
-                  mutate(N = N / mod),
+    geom_area(data = sy_mummies %>%
+                  mutate(N = N / sy_mod),
               fill = "gray70", color = NA) +
-    geom_area(data = wasps %>%
-                  mutate(N = wasps / mod),
+    geom_area(data = sy_wasps %>%
+                  mutate(N = wasps / sy_mod),
               fill = "violetred", alpha = 0.5, color = NA) +
     geom_line(aes(color = line), size = 1) +
     facet_wrap(~ s_y, labeller = label_parsed, ncol = 1) +
     scale_color_manual(NULL, values = c("chartreuse3", "firebrick")) +
     scale_linetype_manual(values = c(1, 2)) +
     scale_y_continuous("Aphid abundance",
-                       sec.axis = sec_axis(~ . * mod,
+                       sec.axis = sec_axis(~ . * sy_mod,
                                            "Wasp & mummy abundance")) +
     theme(legend.position = "none")
 
-p
+sy_p
 
-# ggsave("~/Desktop/test.pdf", p, width = 5, height = 8)
+# ggsave("~/Desktop/vary_sy.pdf", sy_p, width = 5, height = 8)
 
 
 ```
@@ -240,10 +249,516 @@ p
 
 
 
-```{r no-mort, eval=FALSE}
 
-do_sims(.res = TRUE, .sjp = 0, .s_y = populations$s_y / 16) %>% 
-    plot_sims()
+### Stability to starting conditions
+
+Below shows that the coexistence results can be relatively stable
+to varying starting conditions, especially as adult wasp survival decreases.
+In this case, we're varying the proportion of starting aphids that are 
+resistant to parasitism ($p_res$).
+
+
+```{r stability-p_res-sims-caption}
+fig3_cap <- paste("Aphids and wasps over time, with varying adult",
+                  "wasp survival and starting proportion of aphids with",
+                  "resistance ($p_{res}$).",
+                  "Sub-panel columns separate the adult wasp survival rates used,",
+                  "and labels above indicate how they relate",
+                  "to the default value ($\\hat{s}_y$).",
+                  "Sub-panel rows separate starting proportions of aphid",
+                  "resistance.",
+                  "Gray lines are adult wasps, green are resistant aphids,",
+                  "and red are susceptible aphids.")
+```
+
+
+```{r stability-p_res-sims, fig.height=6.5, fig.width=6.5, fig.cap=fig3_cap}
+
+
+do_stable_sims <- function(.p_res, .s_y, ...) {
+    
+    # .p_res <- 0.5; .s_y <- populations$s_y * 0.8
+    
+    .res <- TRUE
+    .sjp <- 0
+    
+    .n <- 2 * wia5d$density_0[wia5d$density_0 > 0]
+    # .n <- 500
+    
+    .wia5d <- wia5d
+    .wia5d$density_0[.wia5d$density_0 > 0] <- .n * (1 - .p_res)
+    
+    .ut3 <- clonal_line("resistant",
+                        density_0 = matrix(c(rep(0, 3), .n * .p_res, 
+                                             rep(0, 6)), 5, 2),
+                        resistant = .res,
+                        surv_juv_paras = .sjp,
+                        surv_juv_apterous = "low",
+                        surv_adult_apterous = "low",
+                        repro_apterous = "low")
+    sims <- sim_clonewars(n_reps = 1, 
+                          clonal_lines = c(.ut3, .wia5d),
+                          s_y = .s_y,
+                          alate_b0 = -4, alate_b1 = 8/2000,
+                          max_N = 0, max_plant_age = 25,
+                          clear_surv = 0.5,
+                          mean_K = formals(sim_clonewars)$mean_K * 4,
+                          sd_K = formals(sim_clonewars)$sd_K * 4,
+                          no_error = TRUE,
+                          sex_ratio = 0.66,
+                          wasp_delay = 0,
+                          wasp_density_0 = 4, 
+                          ...)
+    sims[["mummies"]] <- sims %>%
+        .[["aphids"]] %>%
+        filter(type == "mummy") %>%
+        group_by(rep, time) %>%
+        summarize(N = sum(N), .groups = "drop") %>% 
+        mutate(s_y = .s_y, p_res = .p_res)
+    sims[["aphids"]] <- sims %>%
+        .[["aphids"]] %>%
+        filter(type != "mummy") %>%
+        group_by(rep, time, line) %>%
+        summarize(N = sum(N), .groups = "drop") %>% 
+        mutate(s_y = .s_y, p_res = .p_res)
+    sims[["wasps"]] <- sims %>%
+        .[["wasps"]] %>%
+        mutate(s_y = .s_y, p_res = .p_res)
+    
+    return(sims)
+}
+
+stable_lvls <- c(2, 8, 16, 32)
+stable_p_res <- seq(0.2, 0.8, 0.1)
+
+stable_fct <- function(.x) {
+    if ("s_y" %in% colnames(.x)) {
+        .x <- .x %>% 
+            mutate(s_y = factor(s_y, levels = populations$s_y / stable_lvls, 
+                                labels = sprintf("hat(s)[y] / %i", 
+                                                 stable_lvls)))
+    }
+    if ("pert" %in% colnames(.x)) {
+        .x <- .x %>% 
+            mutate(pert = factor(pert, levels = c("none", "susceptible", 
+                                                  "resistant", "wasps")))
+    }
+    if ("p_res" %in% colnames(.x)) {
+        .x <- .x %>% 
+            mutate(p_res = factor(p_res, levels = stable_p_res,
+                                  labels = sprintf("p[res] == %.1f", 
+                                                   stable_p_res)))
+    }
+    if ("line" %in% colnames(.x)) {
+        .x <- .x %>% 
+            mutate(line = factor(line, levels = c("resistant", "susceptible")))
+    }
+    
+    return(.x)
+}
+
+# Takes ~1 min
+stable_sims <- crossing(.p_res = stable_p_res,
+                        .s_y = populations$s_y / stable_lvls) %>%
+    # pmap(do_stable_sims, max_t = 1000,
+    #      h = 0,
+    #      rel_attack = wasp_attack$rel_attack$lowT * 0.1)
+    pmap(do_stable_sims, max_t = 1000, 
+         perturb = tibble(when = seq(4, 1000, 2) %>% round(),
+                          who = "wasps", how = 0.4))
+# saveRDS(stable_sims, "under_constr/stable_sims.rds")
+# 
+# stable_sims <- readRDS("under_constr/stable_sims.rds")
+
+
+stable_aphids <- map_dfr(stable_sims, ~ .x[["aphids"]]) %>%
+    select(-rep) %>% 
+    stable_fct()
+stable_mummies <- map_dfr(stable_sims, ~ .x[["mummies"]]) %>% 
+    select(-rep) %>% 
+    stable_fct()
+stable_wasps <- map_dfr(stable_sims, ~ .x[["wasps"]]) %>% 
+    select(-rep) %>% 
+    stable_fct()
+
+stable_mod <- max(stable_wasps$wasps) / max(stable_aphids$N)
+
+stab_p <- stable_aphids %>%
+    ggplot(aes(time, N)) +
+    geom_line(data = stable_wasps %>%
+                  mutate(N = wasps / stable_mod),
+              color = "gray70", size = 0.25) +
+    geom_line(aes(color = line), size = 0.25) +
+    geom_text(data = tibble(line = factor(c("resistant", "susceptible"),
+                                          levels = c("resistant", "susceptible")),
+                            s_y = populations$s_y / stable_lvls[1],
+                            p_res = stable_p_res[1],
+                            time = 1000, N = c(1500, 6000)) %>%
+                  stable_fct(),
+              aes(label = line, color = line), size = 10 / 2.8, hjust = 1, vjust = 0.5) +
+    # geom_text(data = tibble(s_y = populations$s_y / stable_lvls[3],
+    #                         p_res = stable_p_res[1],
+    #                         time = 100, N = 8000) %>%
+    #               stable_fct(),
+    #           label = "wasps", color = "gray50", size = 10 / 2.8, hjust = 0) +
+    facet_grid(p_res ~ s_y, labeller = label_parsed) +
+    scale_color_manual(NULL, values = c("chartreuse3", "firebrick")) +
+    scale_linetype_manual(values = c(1, 2)) +
+    scale_y_continuous("Aphid abundance", #breaks = 0:2 * 4000,
+                       sec.axis = sec_axis(~ . * stable_mod,
+                                           "Adult wasp abundance")) +
+    theme(legend.position = "none")
+
+
+
+stab_p
+
+stab_p + coord_cartesian(xlim = c(0, 100))
+
+
+# ggsave("~/Desktop/stability_plots.pdf", stab_p, width = 6.5, height = 6.5)
+
+
+```
+
+
+
+
+### Stability to perturbations
+
+Below shows that the coexistence results can be relatively stable
+to various perturbations, especially as adult wasp survival decreases.
+We perturbed the susceptible line, resistant line, and adult wasps.
+See captions for details.
+
+
+```{r pert-sims-captions}
+fig4_cap <- paste("Aphids and wasps over time, with varying adult",
+                  "wasp survival and perturbation types.",
+                  "Sub-panel columns separate the adult wasp survival rates used,",
+                  "and labels above indicate how they relate",
+                  "to the default value ($\\hat{s}_y$).",
+                  "Sub-panel rows separate the following perturbation types:",
+                  "'none' indicates no perturbation,",
+                  "'susceptible' indicates the susceptible line was reduced by 50\\%,",
+                  "'resistant' indicates the resistant line was reduced by 50\\%,",
+                  "and",
+                  "'wasps' indicates the wasps were reduced by 90\\%.",
+                  "The black arrows indicate when the perturbations occurred.",
+                  "Gray lines are adult wasps, green are resistant aphids,",
+                  "and red are susceptible aphids.")
+fig5_cap <- paste("Aphids and wasps over time, with varying perturbation types.",
+                  "Sub-panels separate the following perturbation types:",
+                  "'susceptible' indicates the susceptible line was reduced by 50\\%,",
+                  "and",
+                  "'resistant' indicates the resistant line was reduced by 50\\%.",
+                  "The black arrows indicate when the perturbations occurred.",
+                  "Gray lines are adult wasps, green are resistant aphids,",
+                  "and red are susceptible aphids.",
+                  "All used an adult survival rate of $\\hat{s}_y / 8$.")
+```
+
+
+```{r perturb-sims, fig.height=5, fig.width=6.5, fig.cap=fig4_cap}
+
+
+# # Each takes ~10 sec
+# pert_sims <- list()
+# pert_sims[["none"]] <- crossing(.p_res = 0.4,
+#                         .s_y = populations$s_y / stable_lvls) %>%
+#     pmap(do_stable_sims, max_t = 1000)
+# pert_sims[["resistant"]] <- crossing(.p_res = 0.4,
+#                        .s_y = populations$s_y / stable_lvls) %>%
+#     pmap(do_stable_sims, max_t = 1000,
+#          perturb = tibble(when = 500, who = "resistant", how = 0.5))
+# pert_sims[["susceptible"]] <- crossing(.p_res = 0.4,
+#                        .s_y = populations$s_y / stable_lvls) %>%
+#     pmap(do_stable_sims, max_t = 1000,
+#          perturb = tibble(when = 500, who = "susceptible", how = 0.5))
+# pert_sims[["wasps"]] <- crossing(.p_res = 0.4,
+#                        .s_y = populations$s_y / stable_lvls) %>%
+#     pmap(do_stable_sims, max_t = 1000,
+#          perturb = tibble(when = 500, who = "wasps", how = 0.1))
+# saveRDS(pert_sims, "under_constr/pert_sims.rds")
+
+pert_sims <- readRDS("under_constr/pert_sims.rds")
+
+
+pert_aphids <- map_dfr(names(pert_sims), 
+                       function(.z) {
+                           map_dfr(pert_sims[[.z]], ~ .x[["aphids"]]) %>%
+                               select(-rep, -p_res) %>% 
+                               mutate(pert = .z) %>% 
+                               stable_fct()
+                       })
+pert_mummies <- map_dfr(names(pert_sims), 
+                        function(.z) {
+                            map_dfr(pert_sims[[.z]], ~ .x[["mummies"]]) %>%
+                                select(-rep, -p_res) %>% 
+                                mutate(pert = .z) %>% 
+                                stable_fct()
+                        })
+pert_wasps <- map_dfr(names(pert_sims), 
+                      function(.z) {
+                          map_dfr(pert_sims[[.z]], ~ .x[["wasps"]]) %>%
+                              select(-rep, -p_res) %>% 
+                              mutate(pert = .z) %>% 
+                              stable_fct()
+                      })
+
+
+pert_mod <- max(pert_wasps$wasps) / max(pert_aphids$N)
+
+pert_p <- pert_aphids %>%
+    ggplot(aes(time, N)) +
+    geom_segment(data = pert_wasps %>%
+                   filter(pert != "none") %>%
+                   distinct(s_y, pert),
+               aes(x = 500, xend = 500, 
+                   y = max(pert_aphids$N), yend = max(pert_aphids$N) - 2000), 
+               arrow = arrow(length = unit(3, "pt"))) +
+    geom_line(data = pert_wasps %>%
+                  mutate(N = wasps / pert_mod),
+              color = "gray70", size = 0.25) +
+    geom_line(aes(color = line), size = 0.25) +
+    facet_grid(pert ~ s_y, labeller = label_parsed) +
+    scale_color_manual(NULL, values = c("chartreuse3", "firebrick")) +
+    scale_linetype_manual(values = c(1, 2)) +
+    scale_y_continuous("Aphid abundance", #breaks = 0:2 * 4000,
+                       sec.axis = sec_axis(~ . * pert_mod,
+                                           "Adult wasp abundance")) +
+    theme(legend.position = "none")
+
+# pert_p + coord_cartesian(xlim = c(0, 100))
+
+pert_p
+
+```
+
+
+
+
+In the one case where a perturbation caused exclusion of the wasps and 
+resistant line, this appears to be a case of timing of the perturbation.
+Below, we used only $\hat{s}_y / 5$ for adult wasp survival, then simulated
+the perturbations of the susceptible and resistant lines again, but 100 days
+later than in the previous figure.
+We chose 100 days because that puts the perturbation in the opposite
+phase of the fluctuations, when the resistant line is increasing and the
+susceptible is decreasing.
+
+
+
+```{r perturb-sims2, fig.height=3, fig.width=3, fig.cap=fig5_cap}
+
+.p_time <- 400
+
+# # Takes ~10 sec
+# pert_sims2 <- map(c("resistant", "susceptible"),
+#                   function(.x) {
+#                       do_stable_sims(.p_res = 0.4, .s_y = populations$s_y / 8,
+#                                      max_t = 1000,
+#                                      perturb = tibble(when = .p_time,
+#                                                       who = .x, how = 0.5))
+#                   })
+# names(pert_sims2) <- c("resistant", "susceptible")
+# saveRDS(pert_sims2, "under_constr/pert_sims2.rds")
+
+pert_sims2 <- readRDS("under_constr/pert_sims2.rds")
+
+
+
+pert_aphids2 <- map_dfr(names(pert_sims2), 
+                       function(.z) {
+                           pert_sims2[[.z]][["aphids"]] %>%
+                               select(-rep, -p_res, -s_y) %>% 
+                               mutate(pert = .z) %>% 
+                               stable_fct()
+                       })
+pert_wasps2 <- map_dfr(names(pert_sims2), 
+                      function(.z) {
+                          pert_sims2[[.z]][["wasps"]] %>%
+                              select(-rep, -p_res, -s_y) %>% 
+                              mutate(pert = .z) %>% 
+                              stable_fct()
+                      })
+
+
+pert_mod2 <- max(pert_wasps2$wasps) / max(pert_aphids2$N)
+
+pert_p2 <- pert_aphids2 %>% 
+    ggplot(aes(time, N)) +
+    geom_segment(x = .p_time, xend = .p_time, 
+                 y = max(pert_aphids2$N), yend = max(pert_aphids2$N) - 2000,
+               arrow = arrow(length = unit(3, "pt"))) +
+    geom_line(aes(color = line), size = 0.25) +
+    geom_line(data = pert_wasps2 %>%
+                  mutate(N = wasps / pert_mod2),
+              color = "gray70", size = 0.25) +
+    facet_wrap(~ pert, ncol = 1) +
+    scale_color_manual(NULL, values = c("chartreuse3", "firebrick")) +
+    scale_y_continuous("Aphid abundance", 
+                       sec.axis = sec_axis(~ . * pert_mod2,
+                                           "Adult wasp abundance")) +
+    theme(legend.position = "none")
+
+pert_p2
+
+```
+
+
+
+### Stabilizing mechanism
+
+The vector of abundances for the aphid stages at time $t+1$ ($\mathbf{X}(t+1)$) is
+
+$$
+\mathbf{X}(t+1) = S(z(t)) \cdot \mathbf{A}(x(t), Y_m(t)) \cdot (\mathbf{L} \, \mathbf{X}(t))
+$$
+
+where $S$ gives survival of aphids as it relates to the the total number of aphids $z$,
+$\mathbf{A}$ is a vector of the probabilities of the aphid stages surviving parasitism,
+$x$ is the total number of unparasitized aphids,
+$Y_m$ is the total number of adult wasps,
+and
+$\mathbf{L}$ is the aphid line's Leslie matrix.
+
+
+
+The probability of not being attacked by wasps 
+for a given aphid stage ($A_i$) is
+
+$$
+A_i = \left( 1 + \frac{a p_i Y_m}{k (h x + 1)} \right)^{-k}
+\textrm{.}
+$$
+
+Here, $a$ changes the overall attack rate,
+$p_i$ is the relative rate on stage $i$ aphids,
+$h$ is the handling time, and
+$k$ is the aggregation parameter of the negative binomial distribution.
+
+
+If we focus on one of the sub-panels from the stability simulations and
+plot the attack probabilities through time, we can see that it
+
+
+
+
+```{r stable-mechanism, eval=FALSE}
+
+a <- wasp_attack$a
+k <- wasp_attack$k
+h <- wasp_attack$h
+p_i <- wasp_attack$rel_attack[3] / 2
+K <- formals(sim_clonewars)$mean_K * 4
+A <- function(x, Y_m) (1 + (a * p_i * Y_m) / (k * (h * x + 1)))^(-k)
+S <- function(z) 1 / (1 + z / K)
+
+surv_p <- stable_aphids %>%
+    filter(s_y == "hat(s)[y] / 6", p_res == "p[res] == 0.4") %>% 
+    ggplot(aes(time, N)) +
+    geom_hline(yintercept = c(0, max(stable_aphids$N)), color = "gray70") +
+    geom_line(data = stable_aphids %>%
+                  filter(s_y == "hat(s)[y] / 6", p_res == "p[res] == 0.4") %>% 
+                  group_by(s_y, p_res, time) %>%
+                  summarize(N = sum(N), .groups = "drop") %>%
+                  left_join(stable_wasps, by = c("s_y", "p_res", "time")) %>%
+                  mutate(wasp_surv = A(N, wasps)) %>% 
+                  mutate(wasp_surv = wasp_surv * max(stable_aphids$N)),
+              aes(time, wasp_surv),
+              color = "dodgerblue", size = 0.25) +
+    geom_line(aes(color = line), size = 0.25) +
+    scale_color_manual(NULL, values = c("chartreuse3", "firebrick")) +
+    scale_linetype_manual(values = c(1, 2)) +
+    scale_y_continuous("Aphid abundance", #breaks = 0:2 * 4000,
+                       sec.axis = sec_axis(~ . / max(stable_aphids$N),
+                                           "Wasp survival")) +
+    theme(legend.position = "none")
+
+# surv_p + coord_cartesian(xlim = c(0, 100))
+surv_p
+
+
+ggsave("~/Desktop/wasp_survival.pdf", surv_p, width = 6, height = 4)
+
+
+curve(S(x) * A(x, 10), 1, 10e3, ylim = c(0, 0.6), ylab = "survival", xlab = "# aphids")
+curve(S(x) * A(x, 100), 1, 10e3, add = TRUE, col = "red")
+
+.n <- 10000
+curve((S(.n) * A(.n, 10)) - (S(.n*x) * A(.n*x, 10)), 0, 1, 
+      ylim = c(-0.2, 0.2), ylab = "survival", xlab = "proportion resistant")
+curve((S(.n) * A(.n, 100)) - (S(.n*x) * A(.n*x, 100)), 0, 1, 
+      add = TRUE, col = "red")
+abline(h = 0, lty = 2, col = "gray70")
+
+
+
+
+
+stable_aphids %>%
+    pivot_wider(names_from = line, values_from = N) %>% 
+    left_join(stable_wasps, by = c("s_y", "p_res", "time")) %>%
+    # Benefits conferred to susceptible line by resistant:
+    mutate(res_benefits = A(resistant + susceptible, wasps) -
+               A(susceptible, wasps)) %>%
+    mutate(res_benefits = res_benefits / max(res_benefits) * 
+                      max(max(resistant), max(susceptible))) %>% 
+    ggplot(aes(time)) +
+    geom_line(aes(y = res_benefits), color = "gray70") +
+    geom_line(aes(y = resistant), color = "chartreuse3") +
+    geom_line(aes(y = susceptible), color = "firebrick") +
+    # coord_cartesian(xlim = c(0, 100)) +
+    facet_grid(p_res ~ s_y, labeller = label_parsed)
+
+
+# ppp <- 
+stable_aphids %>%
+    pivot_wider(names_from = line, values_from = N) %>% 
+    left_join(stable_wasps, by = c("s_y", "p_res", "time")) %>%
+    filter(wasps > 0) %>% 
+    # Benefits conferred to susceptible line by resistant:
+    mutate(total = resistant + susceptible,
+           res_benefits = A(total, median(wasps)) - A(susceptible, median(wasps)),
+           p_res = resistant / total) %>%
+    filter(total > 3000) %>%
+    ggplot(aes(p_res, res_benefits)) +
+    geom_point(shape = 1, alpha = 0.4) +
+    ylab("Reduction in wasp mortality\nfor susceptible line") +
+    xlab("Proportion of aphids that are resistant") +
+    NULL
+
+ppp
+
+# ggsave("~/Desktop/benefits_from_resistant.pdf", ppp, width = 5, height = 3)
+
+
+
+
+
+
+
+
+# # Playing around with individual combinations:
+# z <- do_stable_sims(.p_res = 0, .s_y = populations$s_y / 1000,  max_t = 1000)
+# z$mod <- max(z$wasps$wasps) / max(z$aphids$N)
+# 
+# 
+# z$aphids %>%
+#     mutate(line = factor(line, levels = c("resistant", "susceptible"))) %>%
+#     ggplot(aes(time, N)) +
+#     geom_line(data = z$wasps %>%
+#                   mutate(N = wasps / z$mod),
+#               color = "gray70", size = 0.25) +
+#     geom_line(aes(color = line), size = 0.5) +
+#     scale_color_manual(NULL, values = c("chartreuse3", "firebrick")) +
+#     scale_linetype_manual(values = c(1, 2)) +
+#     scale_y_continuous("Aphid abundance", breaks = 0:2 * 4000,
+#                        sec.axis = sec_axis(~ . * z$mod,
+#                                            "Adult wasp abundance")) +
+#     theme(legend.position = "none")
+
 
 ```
 
