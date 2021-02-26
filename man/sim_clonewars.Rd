@@ -45,7 +45,8 @@ sim_clonewars(
   extinct_N = 1,
   save_every = 1,
   n_threads = max(parallel::detectCores() - 2, 1),
-  show_progress = FALSE
+  show_progress = FALSE,
+  perturb = NULL
 )
 }
 \arguments{

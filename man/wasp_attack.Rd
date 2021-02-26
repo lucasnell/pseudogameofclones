@@ -17,10 +17,8 @@ aggregation parameter of the negative binomial distribution
 parasitoid attack rate handling time
 }
 \item{rel_attack}{
-A list of length two, of
-relative attack rates on the different instars, converted from
-per-instar to per-day, based on the 20º (\code{lowT}) and 27ºC (\code{highT})
-development rates.
+A vector of length 5, giving  relative attack rates on the
+different instars.
 }
 \item{attack_surv}{
 A numeric vector of length two, of survivals of singly attacked and

@@ -367,8 +367,8 @@ RepSummary one_rep__(const T& clear_threshold,
         }
 
         // Perturbations
-        if (!perturbs.empty() && t == perturbs.front().time) {
-            PerturbInfo& pert(perturbs.front());
+        while (!perturbs.empty() && t == perturbs.front().time) {
+            const PerturbInfo& pert(perturbs.front());
             if (pert.index < aphid_name.size()) { // aphids
                 for (OnePatch& p : patches.patches) {
                     AphidPop& aphids(p.aphids[pert.index]);
@@ -384,15 +384,10 @@ RepSummary one_rep__(const T& clear_threshold,
                     if (arma::accu(p.mummies.Y)<extinct_N) p.mummies.Y.fill(0);
                 }
             } else { // adult wasps
-                if (patches.wasps.Y == 0) {
-                    // We want to wait until there are actually wasps!
-                    pert.time++;
-                } else {
-                    patches.wasps.Y *= pert.multiplier;
-                    if (patches.wasps.Y < extinct_N) patches.wasps.Y = 0;
-                }
+                patches.wasps.Y *= pert.multiplier;
+                if (patches.wasps.Y < extinct_N) patches.wasps.Y = 0;
             }
-            if (t == pert.time) perturbs.pop_front();
+            perturbs.pop_front();
         }
 
         if (disp_error) {

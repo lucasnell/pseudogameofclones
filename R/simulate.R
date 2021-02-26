@@ -450,6 +450,7 @@ sim_clonewars <- function(n_reps,
     } else {
         stopifnot(inherits(perturb, "data.frame"))
         stopifnot(identical(colnames(perturb), c("when", "who", "how")))
+        perturb <- dplyr::arrange(perturb, when)
         perturb_when <- perturb$when
         perturb_how <- perturb$how
         if (is.character(perturb$who)) {

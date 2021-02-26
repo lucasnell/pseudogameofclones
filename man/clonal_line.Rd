@@ -17,7 +17,8 @@ clonal_line(
   surv_juv_paras = "low",
   surv_adult_paras = "low",
   repro_paras = "low",
-  temp = "low"
+  temp = "low",
+  p_instar_remain = 0.1
 )
 }
 \arguments{
@@ -73,6 +74,10 @@ line.}
 
 \item{temp}{Single string specifying \code{"low"} (20º C) or \code{"high"} (27º C)
 temperature. Defaults to \code{"low"}.}
+
+\item{p_instar_remain}{If you want to make not all 4th instar aphids
+move to adulthood, then you can add the proportion that remain in the
+same instar here. Defaults to \code{0.1}.}
 }
 \value{
 A list with the necessary info to pass onto sim_clonewars.
