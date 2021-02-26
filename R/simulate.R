@@ -397,8 +397,9 @@ sim_clonewars <- function(n_reps,
     if (length(alate_b1) == 1) alate_b1 <- rep(alate_b1, n_lines)
 
     if (is.null(rel_attack)) {
-        rel_attack <- wasp_attack$rel_attack[[paste0(temp, "T")]]
-    }
+        rel_attack <- wasp_attack$rel_attack
+    } else stopifnot(length(rel_attack) == 5)
+
     if (length(mum_density_0) == 1) {
         mum_density_0 <- matrix(mum_density_0, dev_times$mum_days[2], n_patches)
     }
@@ -428,10 +429,19 @@ sim_clonewars <- function(n_reps,
 
     leslie_cubes <- lapply(clonal_lines, function(x) x$leslie)
 
-    if (length(rel_attack) < nrow(leslie_cubes[[1]])) {
-        new_attacks <- nrow(leslie_cubes[[1]]) - length(rel_attack)
-        rel_attack <- c(rel_attack, rep(tail(rel_attack, 1), new_attacks))
-    }
+    if (length(rel_attack) == 5) {
+        rel_attack <- rel_attack / sum(rel_attack)
+        dt <- dev_times$instar_days[[paste0(temp, "T")]]
+        n_adult_days <- nrow(leslie_cubes[[1]]) - sum(head(dt, -1))
+        stopifnot(n_adult_days >= 0)
+        if (tail(dt, 1) != n_adult_days) dt[length(dt)] <- n_adult_days
+        # Commented version isn't used bc it wasn't done this way when fitting
+        # the model.
+        # rel_attack__ <- mapply(function(.x, .y) rep(.x, .y) / .y,
+        #                        rel_attack,  dt)
+        rel_attack__ <- mapply(rep, rel_attack,  dt)
+        rel_attack <- do.call(c, rel_attack__)
+    } else stopifnot(length(rel_attack) == nrow(leslie_cubes[[1]]))
 
     if (is.null(perturb)) {
         perturb_when = integer(0)
