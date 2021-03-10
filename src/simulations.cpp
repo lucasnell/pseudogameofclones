@@ -275,6 +275,53 @@ private:
 
 
 
+
+inline void do_perturb(std::deque<PerturbInfo>& perturbs,
+                       AllPatches& patches,
+                       const uint32& t,
+                       const uint32& n_lines,
+                       const double& extinct_N,
+                       const bool& do_pop) {
+
+    if (perturbs.empty()) return;
+
+    uint32 i = 0;
+    while (i < perturbs.size()) {
+        const PerturbInfo& pert(perturbs[i]);
+        if (pert.time != t) break;
+        double mult = pert.multiplier;
+        if (pert.index < n_lines) { // aphids
+            for (OnePatch& p : patches.patches) {
+                AphidPop& aphids(p.aphids[pert.index]);
+                aphids.clear(mult);
+                if (aphids.total_aphids() < extinct_N) aphids.clear();
+                if ((p.total_aphids() + p.total_mummies()) == 0) {
+                    p.empty = true;
+                }
+            }
+        } else if (pert.index == n_lines) { // mummies
+            for (OnePatch& p : patches.patches) {
+                p.mummies.clear(mult);
+                if (arma::accu(p.mummies.Y) < extinct_N) p.mummies.Y.fill(0);
+            }
+        } else { // adult wasps
+            patches.wasps.Y *= mult;
+            if (patches.wasps.Y < extinct_N) patches.wasps.Y = 0;
+        }
+        i++;
+    }
+
+    if (do_pop && i > 0) {
+        perturbs.erase(perturbs.begin(), perturbs.begin() + i);
+    }
+
+    return;
+}
+
+
+
+
+
 /*
  `T` should be uint32 for using age to determine whether a patch gets cleared.
  It should be double for using aphid abundance to determine whether a patch gets cleared.
@@ -368,28 +415,8 @@ RepSummary one_rep__(const T& clear_threshold,
         }
 
         // Perturbations
-        while (!perturbs.empty() && t == perturbs.front().time) {
-            const PerturbInfo& pert(perturbs.front());
-            if (pert.index < aphid_name.size()) { // aphids
-                for (OnePatch& p : patches.patches) {
-                    AphidPop& aphids(p.aphids[pert.index]);
-                    aphids.clear(pert.multiplier);
-                    if (aphids.total_aphids() < extinct_N) aphids.clear();
-                    if ((p.total_aphids() + p.total_mummies()) == 0) {
-                        p.empty = true;
-                    }
-                }
-            } else if (pert.index == aphid_name.size()) { // mummies
-                for (OnePatch& p : patches.patches) {
-                    p.mummies.clear(pert.multiplier);
-                    if (arma::accu(p.mummies.Y)<extinct_N) p.mummies.Y.fill(0);
-                }
-            } else { // adult wasps
-                patches.wasps.Y *= pert.multiplier;
-                if (patches.wasps.Y < extinct_N) patches.wasps.Y = 0;
-            }
-            perturbs.pop_front();
-        }
+        do_perturb(perturbs, patches, t, aphid_name.size(), extinct_N, true);
+
 
         if (disp_error) {
             patches.calc_dispersal(eng);
