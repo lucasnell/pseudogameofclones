@@ -48,10 +48,10 @@ represents evolution in the aphid population.
 ```{r args-setup}
 # This is constant:
 wia5d <- clonal_line("susceptible",
-                     density_0 = matrix(c(rep(0, 3), 16, rep(0, 6)), 5, 2),
-                     surv_juv_apterous = "high",
-                     surv_adult_apterous = "high",
-                     repro_apterous = "high")
+                     density_0 = matrix(c(rep(0, 3), 16, rep(0, 6)), 5, 2))  #, 
+                     # surv_juv_apterous = "high", 
+                     # surv_adult_apterous = "high", 
+                     # repro_apterous = "high")
 
 
 # The call to `sim_clonewars` can vary by the UT3 line plus
@@ -63,7 +63,7 @@ do_sims <- function(.res, .sjp, .s_y, ...) {
     .ut3 <- clonal_line("resistant",
                         density_0 = matrix(c(rep(0, 3), 16, rep(0, 6)), 5, 2),
                         resistant = .res,
-                        surv_juv_paras = .sjp,
+                        surv_paras = .sjp,
                         surv_juv_apterous = "low",
                         surv_adult_apterous = "low",
                         repro_apterous = "low")
@@ -167,7 +167,7 @@ p <- plot_sims(sims) +
               aes(label = line), color = "violetred", size = 9 / 2.8, hjust = 0) +
     theme(legend.position = "none")
 
-p
+# p
 
 # ggsave("~/Desktop/basic_sims.pdf", p, width = 5, height = 3)
 
@@ -199,7 +199,7 @@ any mortality (not shown, but you can trust me).
 
 ```{r change-s_y, fig.height = 8, fig.cap=fig2_cap}
 
-lvls <- c(2, 10, 100)
+lvls <- c(4, 8, 16)
 
 sy_sims <- map(lvls, function(.x) {
     s <- do_sims(.res = TRUE, .sjp = 0, .s_y = populations$s_y / .x)
@@ -272,15 +272,17 @@ fig3_cap <- paste("Aphids and wasps over time, with varying adult",
 ```
 
 
+
+
+## LEFT OFF
+<!-- See line that starts `stable_sims <- ...` -->
+
 ```{r stability-p_res-sims, fig.height=6.5, fig.width=6.5, fig.cap=fig3_cap}
 
 
 do_stable_sims <- function(.p_res, .s_y, ...) {
     
     # .p_res <- 0.5; .s_y <- populations$s_y * 0.8
-    
-    .res <- TRUE
-    .sjp <- 0
     
     .n <- 2 * wia5d$density_0[wia5d$density_0 > 0]
     # .n <- 500
@@ -291,8 +293,8 @@ do_stable_sims <- function(.p_res, .s_y, ...) {
     .ut3 <- clonal_line("resistant",
                         density_0 = matrix(c(rep(0, 3), .n * .p_res, 
                                              rep(0, 6)), 5, 2),
-                        resistant = .res,
-                        surv_juv_paras = .sjp,
+                        resistant = TRUE,
+                        surv_paras = 0,
                         surv_juv_apterous = "low",
                         surv_adult_apterous = "low",
                         repro_apterous = "low")
@@ -328,8 +330,6 @@ do_stable_sims <- function(.p_res, .s_y, ...) {
     return(sims)
 }
 
-stable_lvls <- c(2, 8, 16, 32)
-stable_p_res <- seq(0.2, 0.8, 0.1)
 
 stable_fct <- function(.x) {
     if ("s_y" %in% colnames(.x)) {
@@ -357,31 +357,38 @@ stable_fct <- function(.x) {
     return(.x)
 }
 
+
+
+stable_lvls <- c(8, 16, 32)
+stable_p_res <- seq(0.2, 0.8, 0.1)
+
+
+
 # Takes ~1 min
 stable_sims <- crossing(.p_res = stable_p_res,
                         .s_y = populations$s_y / stable_lvls) %>%
     # pmap(do_stable_sims, max_t = 1000,
     #      h = 0,
     #      rel_attack = wasp_attack$rel_attack$lowT * 0.1)
-    pmap(do_stable_sims, max_t = 1000, 
-         perturb = tibble(when = seq(4, 1000, 2) %>% round(),
-                          who = "wasps", how = 0.4))
+    pmap(do_stable_sims, max_t = 1000)
+
 # saveRDS(stable_sims, "under_constr/stable_sims.rds")
 # 
 # stable_sims <- readRDS("under_constr/stable_sims.rds")
 
 
 stable_aphids <- map_dfr(stable_sims, ~ .x[["aphids"]]) %>%
-    select(-rep) %>% 
+    select(-rep) %>%
     stable_fct()
-stable_mummies <- map_dfr(stable_sims, ~ .x[["mummies"]]) %>% 
-    select(-rep) %>% 
+stable_mummies <- map_dfr(stable_sims, ~ .x[["mummies"]]) %>%
+    select(-rep) %>%
     stable_fct()
-stable_wasps <- map_dfr(stable_sims, ~ .x[["wasps"]]) %>% 
-    select(-rep) %>% 
+stable_wasps <- map_dfr(stable_sims, ~ .x[["wasps"]]) %>%
+    select(-rep) %>%
     stable_fct()
 
 stable_mod <- max(stable_wasps$wasps) / max(stable_aphids$N)
+
 
 stab_p <- stable_aphids %>%
     ggplot(aes(time, N)) +
@@ -409,14 +416,61 @@ stab_p <- stable_aphids %>%
                                            "Adult wasp abundance")) +
     theme(legend.position = "none")
 
-
-
 stab_p
-
 stab_p + coord_cartesian(xlim = c(0, 100))
 
 
-# ggsave("~/Desktop/stability_plots.pdf", stab_p, width = 6.5, height = 6.5)
+stable_sims2 <- c(crossing(.p_res = stable_p_res,
+                                   .s_y = populations$s_y) %>%
+                              pmap(do_stable_sims, max_t = 1000, 
+                                   max_mum_density = 10),
+                          crossing(.p_res = stable_p_res,
+                                   .s_y = populations$s_y / 16) %>%
+                              pmap(do_stable_sims, max_t = 1000))
+
+
+stable_aphids2 <- map_dfr(stable_sims2, ~ .x[["aphids"]]) %>%
+    mutate(sy = factor(s_y)) %>% 
+    select(-rep, -s_y) %>% 
+    stable_fct()
+stable_mummies2 <- map_dfr(stable_sims2, ~ .x[["mummies"]]) %>% 
+    mutate(sy = factor(s_y)) %>% 
+    select(-rep, -s_y) %>% 
+    stable_fct()
+stable_wasps2 <- map_dfr(stable_sims2, ~ .x[["wasps"]]) %>% 
+    mutate(sy = factor(s_y)) %>% 
+    select(-rep, -s_y) %>% 
+    stable_fct()
+
+stable_mod2 <- max(stable_wasps2$wasps) / max(stable_aphids2$N)
+
+stab_p2 <- stable_aphids2 %>%
+    ggplot(aes(time, N)) +
+    geom_line(data = stable_wasps2 %>%
+                  mutate(N = wasps / stable_mod2),
+              color = "gray70", size = 0.25) +
+    geom_line(aes(color = line), size = 0.25) +
+    facet_grid(p_res ~ sy, labeller = label_parsed) +
+    scale_color_manual(NULL, values = c("chartreuse3", "firebrick")) +
+    scale_linetype_manual(values = c(1, 2)) +
+    scale_y_continuous("Aphid abundance", #breaks = 0:2 * 4000,
+                       sec.axis = sec_axis(~ . * stable_mod2,
+                                           "Adult wasp abundance")) +
+    theme(legend.position = "none")
+
+
+
+stab_p2
+# stab_p2 + coord_cartesian(xlim = c(0, 100))
+
+
+stable_mummies2 %>% 
+    filter(p_res == "p[res] == 0.5") %>% 
+    ggplot(aes(time, N, color = sy)) +
+    geom_line()
+
+
+# ggsave("~/Desktop/stability_plots2.pdf", stab_p, width = 6.5, height = 6.5)
 
 
 ```
