@@ -93,8 +93,10 @@ public:
     arma::vec Y;            // Mummy density
 
     // Constructors
-    MummyPop() : Y_0(), Y() {};
-    MummyPop(const arma::vec& Y_0_) : Y_0(Y_0_), Y(Y_0_) {};
+    MummyPop() : Y_0(4, arma::fill::zeros), Y(4, arma::fill::zeros) {};
+    MummyPop(const arma::vec& Y_0_)
+        : Y_0(arma::join_vert(arma::vec(1, arma::fill::zeros), Y_0_)),
+          Y(arma::join_vert(arma::vec(1, arma::fill::zeros), Y_0_)) {};
     MummyPop(const MummyPop& other) : Y_0(other.Y_0), Y(other.Y) {};
     MummyPop& operator=(const MummyPop& other) {
         Y_0 = other.Y_0;
@@ -108,14 +110,15 @@ public:
     void update(const double& pred_rate,
                 const double& nm) {
 
-        if (Y.n_elem > 1) {
-            // Go backwards through stages to avoid conflicts...
-            for (uint32 i = Y.n_elem-1; i > 0; i--) {
-                Y(i) = (1 - pred_rate) * Y(i-1);
-            }
+        // Go backwards through stages to avoid conflicts...
+        for (uint32 i = Y.n_elem-1; i > 0; i--) {
+            Y(i) = (1 - pred_rate) * Y(i-1);
         }
-        // Newly mummified:
-        Y.front() = nm;
+
+        // Add newly mummified over three days:
+        Y(0) = nm * 0.25;
+        Y(1) += (nm * 0.5);
+        Y(2) += (nm * 0.25);
 
         return;
 
