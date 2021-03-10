@@ -2,6 +2,13 @@
 
 #' Organize clonal line information
 #'
+#' To smooth stage structure out over time,
+#' not all 4th instar aphids move to adulthood immediately.
+#' If adulthood starts on day `t`, then half of aphids at age `t-2` move to
+#' adulthood, and half at age `t-1` do, too.
+#' I adjusted age `t-2`, too, to avoid this affecting the growth rate too much.
+#'
+#'
 #' @param name String for clonal line name.
 #' @param density_0 A 5 x 2 matrix with the rows indicating aphid instar,
 #'     and column indicating apterous vs alate.
@@ -31,10 +38,7 @@
 #' @param repro_alates A vector of fecundities for for alates aphids.
 #'     Defaults to `"low"`, which results in estimates from a low-reproduction
 #'     line.
-#' @param surv_juv_paras A single number for the juvenile survival rate for
-#'     paras aphids. Defaults to `"low"`, which results in estimates
-#'     from a low-reproduction line.
-#' @param surv_adult_paras A vector of adult survival probabilities for
+#' @param surv_paras A single number for the juvenile survival rate for
 #'     paras aphids. Defaults to `"low"`, which results in estimates
 #'     from a low-reproduction line.
 #' @param repro_paras A vector of fecundities for for paras aphids.
@@ -42,9 +46,6 @@
 #'     line.
 #' @param temp Single string specifying `"low"` (20º C) or `"high"` (27º C)
 #'     temperature. Defaults to `"low"`.
-#' @param p_instar_remain If you want to make not all 4th instar aphids
-#'     move to adulthood, then you can add the proportion that remain in the
-#'     same instar here. Defaults to `0.1`.
 #'
 #' @return A list with the necessary info to pass onto sim_clonewars.
 #'
@@ -59,11 +60,10 @@ clonal_line <- function(name,
                         surv_juv_alates = "low",
                         surv_adult_alates = "low",
                         repro_alates = "low",
-                        surv_juv_paras = "low",
-                        surv_adult_paras = "low",
-                        repro_paras = "low",
+                        surv_paras = "low",
                         temp = "low",
-                        p_instar_remain = 0.1) {
+                        p_instar_smooth = 0.5) {
+
 
     temp <- match.arg(temp, c("low", "high"))
     temp <- paste0(temp, "T")
@@ -88,17 +88,16 @@ clonal_line <- function(name,
 
     inputs <- list(surv_juv_apterous,
                    surv_juv_alates,
-                   surv_juv_paras,
+                   surv_paras,
                    surv_adult_apterous,
                    surv_adult_alates,
-                   surv_adult_paras,
+                   surv_paras,
                    repro_apterous,
-                   repro_alates,
-                   repro_paras)
+                   repro_alates)
     names(inputs) <- c("surv_juv_apterous", "surv_juv_alates", "surv_juv_paras",
-                       "surv_adult_apterous", "surv_adult_alates",
-                       "surv_adult_paras", "repro_apterous",
-                       "repro_alates", "repro_paras")
+                       "surv_adult_apterous", "surv_adult_alates", "surv_adult_alates",
+                       "repro_apterous",
+                       "repro_alates")
 
     for (x in c("apterous", "alates", "paras")) {
         leslie_args <- def_L_args
@@ -131,14 +130,24 @@ clonal_line <- function(name,
     leslie_array <- array(do.call(c, leslie), dim = c(dim(leslie[[1]]), 3))
     ns <- nrow(leslie_array)  # number of stages; used later
 
-    # If you want 4th instars to not always move to adulthood...
-    if (p_instar_remain > 0) {
-        stopifnot(p_instar_remain < 1)
-        i <- sum(head(dev_times$instar_days[[temp]], -1))
-        for (j in 1:(dim(leslie_array)[3])) {
-            z <- leslie_array[i+1,i,j]
-            leslie_array[i,i,j] <- z * p_instar_remain
-            leslie_array[i+1,i,j] <- z * (1 - p_instar_remain)
+    # To make 4th instars not always move to adulthood at the same time:
+    if (p_instar_smooth > 0) {
+        .adult <- sum(head(dev_times$instar_days[[temp]], -1)) + 1
+        # I included `- 1` bc we don't to adjust the Leslie matrix for the
+        # parasitized aphids
+        for (j in 1:(dim(leslie_array)[3] - 1)) {
+            # Of the aphids that would've moved to adulthood, make
+            # `p_instar_smooth` remain as 4th instars of age `.adult-1` instead:
+            .t <- .adult - 1
+            surv_t <- leslie_array[.adult, .t, j]
+            leslie_array[.t, .t, j] <- surv_t * p_instar_smooth
+            leslie_array[.adult, .t, j] <- surv_t * (1 - p_instar_smooth)
+            # Of the aphids that would've moved to age `.adult-1`, make
+            # `p_instar_smooth` move to adulthood instead:
+            .t <- .adult - 2
+            surv_t <- leslie_array[.t+1, .t, j]
+            leslie_array[.adult, .t, j] <- surv_t * p_instar_smooth
+            leslie_array[.t+1, .t, j] <- surv_t * (1 - p_instar_smooth)
         }
     }
 
@@ -453,6 +462,10 @@ sim_clonewars <- function(n_reps,
     attack_surv <- do.call(cbind, lapply(clonal_lines, `[[`, i = "attack_surv"))
 
     leslie_cubes <- lapply(clonal_lines, function(x) x$leslie)
+
+    stopifnot(length(unique(sapply(leslie_cubes, nrow))) == 1)
+    stopifnot(length(unique(sapply(leslie_cubes, ncol))) == 1)
+    stopifnot(length(unique(sapply(leslie_cubes, function(x) dim(x)[3]))) == 1)
 
     if (length(rel_attack) == 5) {
         rel_attack <- rel_attack / sum(rel_attack)
