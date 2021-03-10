@@ -311,6 +311,7 @@ RepSummary one_rep__(const T& clear_threshold,
                      const std::vector<uint32>& living_days,
                      const std::vector<double>& pred_rate,
                      const arma::mat& mum_density_0,
+                     const double& max_mum_density,
                      const arma::vec& rel_attack,
                      const double& a,
                      const double& k,
@@ -345,7 +346,7 @@ RepSummary one_rep__(const T& clear_threshold,
                        shape1_death_mort, shape2_death_mort, attack_surv,
                        aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1,
                        disp_rate, disp_mort, disp_start, living_days, pred_rate,
-                       extinct_N, mum_density_0, rel_attack, a, k, h,
+                       extinct_N, mum_density_0, max_mum_density, rel_attack, a, k, h,
                        0, sex_ratio, s_y, eng);
 
     std::deque<PerturbInfo> perturbs(perturb_when.size());
@@ -398,6 +399,7 @@ RepSummary one_rep__(const T& clear_threshold,
             patches.update(eng);
         } else patches.update();
 
+
         if (t == wasp_delay) patches.wasps.Y += wasp_density_0;
 
         if (t % save_every == 0 || t == max_t) summary.push_back(t, patches);
@@ -413,11 +415,11 @@ RepSummary one_rep__(const T& clear_threshold,
         }
         if (all_empty) break;
 
-
         if (!check_for_clear.empty() && t == check_for_clear.front()) {
             check_for_clear.pop_front();
             patches.clear_patches(clear_threshold, clear_surv, eng);
         }
+
     }
 
 
@@ -758,6 +760,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                        const std::vector<uint32>& living_days,
                        const std::vector<double>& pred_rate,
                        const arma::mat& mum_density_0,
+                       const double& max_mum_density,
                        const arma::vec& rel_attack,
                        const double& a,
                        const double& k,
@@ -826,12 +829,15 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                              death_prop,
                                              shape1_death_mort, shape2_death_mort,
                                              attack_surv, disp_error,
-                                             demog_error, sigma_x, sigma_y, rho, extinct_N,
+                                             demog_error, sigma_x, sigma_y, rho,
+                                             extinct_N,
                                              aphid_name, leslie_mat, aphid_density_0,
                                              alate_b0, alate_b1, disp_rate, disp_mort,
                                              disp_start, living_days, pred_rate,
-                                             mum_density_0, rel_attack, a, k,
-                                             h, wasp_density_0, wasp_delay, sex_ratio, s_y,
+                                             mum_density_0, max_mum_density,
+                                             rel_attack, a, k,
+                                             h, wasp_density_0, wasp_delay,
+                                             sex_ratio, s_y,
                                              perturb_when, perturb_who, perturb_how,
                                              prog_bar, status_code, eng);
         } else {
@@ -841,12 +847,15 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                              death_prop,
                                              shape1_death_mort, shape2_death_mort,
                                              attack_surv, disp_error,
-                                             demog_error, sigma_x, sigma_y, rho, extinct_N,
+                                             demog_error, sigma_x, sigma_y, rho,
+                                             extinct_N,
                                              aphid_name, leslie_mat, aphid_density_0,
                                              alate_b0, alate_b1, disp_rate, disp_mort,
                                              disp_start, living_days, pred_rate,
-                                             mum_density_0, rel_attack, a, k,
-                                             h, wasp_density_0, wasp_delay, sex_ratio, s_y,
+                                             mum_density_0, max_mum_density,
+                                             rel_attack, a, k,
+                                             h, wasp_density_0, wasp_delay,
+                                             sex_ratio, s_y,
                                              perturb_when, perturb_who, perturb_how,
                                              prog_bar, status_code, eng);
         }

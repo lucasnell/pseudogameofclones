@@ -239,22 +239,46 @@ uint_vec_check <- function(x, n) {
                    "unsigned integer vector.\n"))
     }
 }
-dbl_check <- function(x, n) {
+dbl_check <- function(x, n, .max = NULL, .min = NULL) {
     if (!(is.numeric(x) && length(x) == 1)) {
         stop(paste("\nERROR:", n, "cannot be properly cast as a",
                    "double.\n"))
     }
+    if (!is.null(.min) && x < .min) {
+        stop(paste0("\nERROR: ", n, " is below the minimum allowed value (",
+                   .min, ").\n"))
+    }
+    if (!is.null(.max) && x > .max) {
+        stop(paste0("\nERROR: ", n, " is above the maximum allowed value (",
+                   .max, ").\n"))
+    }
 }
-dbl_vec_check <- function(x, n) {
+dbl_vec_check <- function(x, n, .max = NULL, .min = NULL) {
     if (!(is.numeric(x) && is.null(dim(x)))) {
         stop(paste("\nERROR:", n, "cannot be properly cast as a",
                    "numeric vector.\n"))
     }
+    if (!is.null(.min) && any(x < .min)) {
+        stop(paste0("\nERROR: ", n, " contains values below the minimum ",
+                    "allowed (", .min, ").\n"))
+    }
+    if (!is.null(.max) && any(x > .max)) {
+        stop(paste0("\nERROR: ", n, " contains values above the maximum ",
+                    "allowed (", .max, ").\n"))
+    }
 }
-dbl_mat_check <- function(x, n) {
+dbl_mat_check <- function(x, n, .max = NULL, .min = NULL) {
     if (!(is.numeric(x) && inherits(x, "matrix"))) {
         stop(paste("\nERROR:", n, "cannot be properly cast as a",
                    "numeric matrix.\n"))
+    }
+    if (!is.null(.min) && any(x < .min)) {
+        stop(paste0("\nERROR: ", n, " contains values below the minimum ",
+                    "allowed (", .min, ").\n"))
+    }
+    if (!is.null(.max) && any(x > .max)) {
+        stop(paste0("\nERROR: ", n, " contains values above the maximum ",
+                    "allowed (", .max, ").\n"))
     }
 }
 cube_list_check <- function(x, n) {
@@ -341,6 +365,7 @@ sim_clonewars <- function(n_reps,
                           s_y = populations$s_y,
                           rel_attack = NULL,
                           mum_density_0 = 0,
+                          max_mum_density = 0,
                           pred_rate = 0,
                           disp_rate = 1,
                           disp_mort = 0,
@@ -494,6 +519,7 @@ sim_clonewars <- function(n_reps,
     uint_vec_check(living_days, "living_days")
     stopifnot(inherits(pred_rate, "numeric"))
     dbl_mat_check(mum_density_0, "mum_density_0")
+    dbl_check(max_mum_density, "max_mum_density", .min = 0)
     stopifnot(inherits(rel_attack, "numeric"))
     dbl_check(a, "a")
     dbl_check(k, "k")
@@ -504,8 +530,7 @@ sim_clonewars <- function(n_reps,
     dbl_check(s_y, "s_y")
     uint_vec_check(perturb_when, "perturb_when")
     uint_vec_check(perturb_who, "perturb_who")
-    stopifnot(inherits(perturb_how, c("numeric", "integer")) &&
-                  all(perturb_how >= 0))
+    dbl_vec_check(perturb_how, "perturb_how", .min = 0)
     uint_check(n_threads, "n_threads")
     stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
 
@@ -518,7 +543,7 @@ sim_clonewars <- function(n_reps,
                               sigma_y, rho, extinct_N, aphid_names, leslie_cubes,
                               aphid_density_0, alate_b0, alate_b1, disp_rate,
                               disp_mort, disp_start, living_days, pred_rate,
-                              mum_density_0, rel_attack, a, k, h,
+                              mum_density_0, max_mum_density, rel_attack, a, k, h,
                               wasp_density_0, wasp_delay, sex_ratio, s_y,
                               perturb_when, perturb_who, perturb_how,
                               n_threads, show_progress)

@@ -130,6 +130,7 @@ public:
     double death_prop;              // proportion of carrying capacity that kills plant
     double death_mort;              // growth-rate modifier once plants start dying
     double extinct_N;               // threshold for calling an aphid line extinct
+    double max_mum_density;         // maximum mummy density (ignored if zero)
 
 
 
@@ -165,7 +166,8 @@ public:
              const uint32& n_patches_,
              const uint32& this_j_,
              const double& extinct_N_,
-             const arma::vec& mum_density_0)
+             const arma::vec& mum_density_0,
+             const double& max_mum_density_)
         : wilted_(false),
           aphids(),
           mummies(mum_density_0),
@@ -177,7 +179,8 @@ public:
           this_j(this_j_),
           death_prop(death_prop_),
           death_mort(death_mort_),
-          extinct_N(extinct_N_) {
+          extinct_N(extinct_N_),
+          max_mum_density(max_mum_density_) {
 
         uint32 n_lines = aphid_name.size();
 
@@ -206,7 +209,8 @@ public:
           K(other.K), K_y(other.K_y), z(other.z),
           S(other.S), S_y(other.S_y), n_patches(other.n_patches),
           this_j(other.this_j), age(other.age), death_prop(other.death_prop),
-          death_mort(other.death_mort), extinct_N(other.extinct_N) {};
+          death_mort(other.death_mort), extinct_N(other.extinct_N),
+          max_mum_density(other.max_mum_density) {};
 
     OnePatch& operator=(const OnePatch& other) {
         wilted_ = other.wilted_;
@@ -225,6 +229,7 @@ public:
         death_prop = other.death_prop;
         death_mort = other.death_mort;
         extinct_N = other.extinct_N;
+        max_mum_density = other.max_mum_density;
         return *this;
     }
 
@@ -465,6 +470,7 @@ public:
                const std::vector<double>& pred_rate,
                const double& extinct_N_,
                const arma::mat& mum_density_0,
+               const double& max_mum_density_,
                const arma::vec& rel_attack_,
                const double& a_,
                const double& k_,
@@ -523,7 +529,7 @@ public:
                         aphid_name, leslie_mat,
                         aphid_density_0[j], alate_b0, alate_b1, disp_rate, disp_mort,
                         disp_start, living_days, pred_rate[j], n_patches, j, extinct_N_,
-                        mum_density_0.col(j));
+                        mum_density_0.col(j), max_mum_density_);
             patches.push_back(ap);
         }
 
