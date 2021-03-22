@@ -72,13 +72,14 @@ void calc_rep_rows(uint32& n_rows,
                    const uint32& max_t,
                    const uint32& save_every,
                    const uint32& n_lines,
+                   const uint32& n_cages,
                    const uint32& n_patches) {
 
     // # time points you'll save:
     n_rows_wasps = (max_t / save_every) + 1;
     if (max_t % save_every > 0) n_rows_wasps++;
 
-    n_rows = n_patches * n_lines * n_rows_wasps;
+    n_rows = n_cages * n_patches * n_lines * n_rows_wasps;
     n_rows *= 2;  // `*2` for separate alate vs apterous
     n_rows += n_patches * n_rows_wasps;  // for mummies
 
@@ -109,34 +110,39 @@ struct RepSummary {
 
     std::vector<uint32> rep;
     std::vector<uint32> time;
+    std::vector<uint32> cage;
     std::vector<uint32> patch;
     std::vector<std::string> line;
     std::vector<std::string> type;
     std::vector<double> N;
     std::vector<uint32> wasp_rep;
     std::vector<uint32> wasp_time;
+    std::vector<uint32> wasp_cage;
     std::vector<double> wasp_N;
 
     RepSummary()
-        : rep(), time(), patch(), line(), type(), N(),
-          wasp_rep(), wasp_time(), wasp_N(), r() {};
+        : rep(), time(), cage(), patch(), line(), type(), N(),
+          wasp_rep(), wasp_time(), wasp_cage(), wasp_N(), r() {};
 
     void reserve(const uint32& rep_,
                  const uint32& max_t,
                  const uint32& save_every,
                  const uint32& n_lines,
+                 const uint32& n_cages,
                  const uint32& n_patches) {
         uint32 n_rows, n_rows_wasps;
         calc_rep_rows(n_rows, n_rows_wasps, max_t, save_every,
-                      n_lines, n_patches);
+                      n_lines, n_cages, n_patches);
         rep.reserve(n_rows);
         time.reserve(n_rows);
+        cage.reserve(n_rows);
         patch.reserve(n_rows);
         line.reserve(n_rows);
         type.reserve(n_rows);
         N.reserve(n_rows);
         wasp_rep.reserve(n_rows_wasps);
         wasp_time.reserve(n_rows_wasps);
+        wasp_cage.reserve(n_rows_wasps);
         wasp_N.reserve(n_rows_wasps);
         r = rep_;
     }
@@ -145,34 +151,43 @@ struct RepSummary {
     void reserve(const uint32& n, const uint32& nw) {
         rep.reserve(n);
         time.reserve(n);
+        cage.reserve(n);
         patch.reserve(n);
         line.reserve(n);
         type.reserve(n);
         N.reserve(n);
         wasp_rep.reserve(nw);
         wasp_time.reserve(nw);
+        wasp_cage.reserve(nw);
         wasp_N.reserve(nw); // `nw` is for the wasp vectors
         return;
     }
 
+
     void push_back(const uint32& t,
-                   const AllPatches& patches) {
+                   const std::vector<OneCage>& cages) {
 
-        // Everything but wasps:
-        for (uint32 j = 0; j < patches.size(); j++) {
-            const OnePatch& patch(patches[j]);
-            for (uint32 i = 0; i < patch.size(); i++) {
-                const AphidPop& aphid(patch[i]);
-                append_living_aphids__(t, j, aphid.aphid_name,
-                                       aphid.alates.total_aphids(),
-                                       aphid.apterous.total_aphids());
+        for (uint32 k = 0; k < cages.size(); k++) {
+
+            const OneCage& cage(cages[k]);
+
+            // Everything but wasps:
+            for (uint32 j = 0; j < cage.size(); j++) {
+                const OnePatch& patch(cage[j]);
+                for (uint32 i = 0; i < patch.size(); i++) {
+                    const AphidPop& aphid(patch[i]);
+                    append_living_aphids__(t, k, j, aphid.aphid_name,
+                                           aphid.alates.total_aphids(),
+                                           aphid.apterous.total_aphids());
+                }
+                append_mummies__(t, k, j, patch.total_mummies());
             }
-            append_mummies__(t, j, patch.total_mummies());
-        }
 
-        wasp_rep.push_back(r);
-        wasp_time.push_back(t);
-        wasp_N.push_back(patches.wasps.Y);
+            wasp_rep.push_back(r);
+            wasp_time.push_back(t);
+            wasp_cage.push_back(k);
+            wasp_N.push_back(cage.wasps.Y);
+        }
 
         return;
     }
@@ -181,22 +196,26 @@ struct RepSummary {
     void clear() {
 
         time.clear();
+        cage.clear();
         patch.clear();
         line.clear();
         type.clear();
         N.clear();
         wasp_rep.clear();
         wasp_time.clear();
+        wasp_cage.clear();
         wasp_N.clear();
 
         // to clear memory:
         time.shrink_to_fit();
+        cage.shrink_to_fit();
         patch.shrink_to_fit();
         line.shrink_to_fit();
         type.shrink_to_fit();
         N.shrink_to_fit();
         wasp_rep.shrink_to_fit();
         wasp_time.shrink_to_fit();
+        wasp_cage.shrink_to_fit();
         wasp_N.shrink_to_fit();
     }
 
@@ -207,6 +226,7 @@ struct RepSummary {
 
             rep.push_back(other.rep[i]);
             time.push_back(other.time[i]);
+            cage.push_back(other.cage[i]);
             patch.push_back(other.patch[i]);
             line.push_back(other.line[i]);
             type.push_back(other.type[i]);
@@ -218,6 +238,7 @@ struct RepSummary {
 
             wasp_rep.push_back(other.wasp_rep[i]);
             wasp_time.push_back(other.wasp_time[i]);
+            wasp_cage.push_back(other.wasp_cage[i]);
             wasp_N.push_back(other.wasp_N[i]);
 
         }
@@ -234,6 +255,7 @@ private:
     uint32 r;
 
     inline void append_living_aphids__(const uint32& t,
+                                       const uint32& c,
                                        const uint32& p,
                                        const std::string& l,
                                        const double& N_ala,
@@ -244,6 +266,9 @@ private:
 
         time.push_back(t);
         time.push_back(t);
+
+        cage.push_back(c);
+        cage.push_back(c);
 
         patch.push_back(p);
         patch.push_back(p);
@@ -261,10 +286,12 @@ private:
     }
 
     inline void append_mummies__(const uint32& t,
+                                 const uint32& c,
                                  const uint32& p,
                                  const double& N_mum) {
         rep.push_back(r);
         time.push_back(t);
+        cage.push_back(c);
         patch.push_back(p);
         line.push_back("");
         type.push_back("mummy");
@@ -277,7 +304,7 @@ private:
 
 
 inline void do_perturb(std::deque<PerturbInfo>& perturbs,
-                       AllPatches& patches,
+                       std::vector<OneCage>& cages,
                        const uint32& t,
                        const uint32& n_lines,
                        const double& extinct_N,
@@ -291,22 +318,28 @@ inline void do_perturb(std::deque<PerturbInfo>& perturbs,
         if (pert.time != t) break;
         double mult = pert.multiplier;
         if (pert.index < n_lines) { // aphids
-            for (OnePatch& p : patches.patches) {
-                AphidPop& aphids(p.aphids[pert.index]);
-                aphids.clear(mult);
-                if (aphids.total_aphids() < extinct_N) aphids.clear();
-                if ((p.total_aphids() + p.total_mummies()) == 0) {
-                    p.empty = true;
+            for (OneCage& cage : cages) {
+                for (OnePatch& p : cage.patches) {
+                    AphidPop& aphids(p.aphids[pert.index]);
+                    aphids.clear(mult);
+                    if (aphids.total_aphids() < extinct_N) aphids.clear();
+                    if ((p.total_aphids() + p.total_mummies()) == 0) {
+                        p.empty = true;
+                    }
                 }
             }
         } else if (pert.index == n_lines) { // mummies
-            for (OnePatch& p : patches.patches) {
-                p.mummies.clear(mult);
-                if (arma::accu(p.mummies.Y) < extinct_N) p.mummies.Y.fill(0);
+            for (OneCage& cage : cages) {
+                for (OnePatch& p : cage.patches) {
+                    p.mummies.clear(mult);
+                    if (arma::accu(p.mummies.Y) < extinct_N) p.mummies.Y.fill(0);
+                }
             }
         } else { // adult wasps
-            patches.wasps.Y *= mult;
-            if (patches.wasps.Y < extinct_N) patches.wasps.Y = 0;
+            for (OneCage& cage : cages) {
+                cage.wasps.Y *= mult;
+                if (cage.wasps.Y < extinct_N) cage.wasps.Y = 0;
+            }
         }
         i++;
     }
@@ -330,6 +363,7 @@ inline void do_perturb(std::deque<PerturbInfo>& perturbs,
 template <typename T>
 RepSummary one_rep__(const T& clear_threshold,
                      const uint32& rep,
+                     const uint32& n_cages,
                      std::deque<uint32> check_for_clear,
                      const double& clear_surv,
                      const uint32& max_t,
@@ -352,6 +386,7 @@ RepSummary one_rep__(const T& clear_threshold,
                      const std::vector<arma::cube>& aphid_density_0,
                      const std::vector<double>& alate_b0,
                      const std::vector<double>& alate_b1,
+                     const double& alate_disp_prop,
                      const std::vector<double>& disp_rate,
                      const std::vector<double>& disp_mort,
                      const std::vector<uint32>& disp_start,
@@ -363,7 +398,7 @@ RepSummary one_rep__(const T& clear_threshold,
                      const double& a,
                      const double& k,
                      const double& h,
-                     const double& wasp_density_0,
+                     const std::vector<double>& wasp_density_0,
                      const uint32& wasp_delay,
                      const double& sex_ratio,
                      const double& s_y,
@@ -384,17 +419,25 @@ RepSummary one_rep__(const T& clear_threshold,
 
     RepSummary summary;
 
-    summary.reserve(rep, max_t, save_every, n_lines, n_patches);
+    summary.reserve(rep, max_t, save_every, n_lines, n_cages, n_patches);
 
     uint32 iters = 0;
 
-    AllPatches patches(sigma_x, sigma_y, rho, demog_mult, mean_K, sd_K, K_y_mult,
-                       death_prop,
-                       shape1_death_mort, shape2_death_mort, attack_surv,
-                       aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1,
-                       disp_rate, disp_mort, disp_start, living_days, pred_rate,
-                       extinct_N, mum_density_0, max_mum_density, rel_attack, a, k, h,
-                       0, sex_ratio, s_y, eng);
+    std::vector<OneCage> cages;
+    cages.reserve(n_cages);
+    for (uint32 i = 0; i < n_cages; i++) {
+        cages.push_back(
+            OneCage(sigma_x, sigma_y, rho, demog_mult, mean_K, sd_K, K_y_mult,
+                    death_prop,
+                    shape1_death_mort, shape2_death_mort, attack_surv,
+                    aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1,
+                    disp_rate, disp_mort, disp_start, living_days, pred_rate,
+                    extinct_N, mum_density_0, max_mum_density,
+                    rel_attack, a, k, h, 0, sex_ratio, s_y, eng));
+        if (wasp_delay == 0) cages.back().wasps.Y = wasp_density_0[i];
+    }
+
+
 
     std::deque<PerturbInfo> perturbs(perturb_when.size());
     for (uint32 i = 0; i < perturb_when.size(); i++) {
@@ -403,9 +446,7 @@ RepSummary one_rep__(const T& clear_threshold,
     }
 
 
-    if (wasp_delay == 0) patches.wasps.Y += wasp_density_0;
-
-    summary.push_back(0, patches);
+    summary.push_back(0, cages);
 
     for (uint32 t = 1; t <= max_t; t++) {
 
@@ -415,37 +456,60 @@ RepSummary one_rep__(const T& clear_threshold,
         }
 
         // Perturbations
-        do_perturb(perturbs, patches, t, aphid_name.size(), extinct_N, true);
+        do_perturb(perturbs, cages, t, aphid_name.size(), extinct_N, true);
+
+        if (n_cages > 1 && alate_disp_prop > 0 &&
+            !check_for_clear.empty() && t == check_for_clear.front()) {
+
+            arma::mat D = cages.front().remove_dispersers(alate_disp_prop);
+            for (uint32 i = 1; i < cages.size(); i++) {
+                D += cages[i].remove_dispersers(alate_disp_prop);
+            }
+            D /= static_cast<double>(n_cages);
+            for (OneCage& c : cages) c.add_dispersers(D);
+
+        }
+
+        for (uint32 i = 0; i < n_cages; i++) {
+
+            OneCage& cage(cages[i]);
+
+            if (disp_error) {
+                cage.calc_dispersal(eng);
+            } else cage.calc_dispersal();
+
+            if (process_error) {
+                cage.update(eng);
+            } else cage.update();
 
 
-        if (disp_error) {
-            patches.calc_dispersal(eng);
-        } else patches.calc_dispersal();
+            if (t == wasp_delay) cage.wasps.Y += wasp_density_0[i];
 
-        if (process_error) {
-            patches.update(eng);
-        } else patches.update();
+        }
 
+        if (t % save_every == 0 || t == max_t) summary.push_back(t, cages);
 
-        if (t == wasp_delay) patches.wasps.Y += wasp_density_0;
-
-        if (t % save_every == 0 || t == max_t) summary.push_back(t, patches);
-
-        // If all patches are empty, then stop this rep.
+        // If all cages are empty, then stop this rep.
         // It's important to do this before clearing patches.
         bool all_empty = true;
-        for (const OnePatch& p : patches.patches) {
-            if (!p.empty) {
-                all_empty = false;
-                break;
+        for (uint32 i = 0; i < n_cages; i++) {
+            for (const OnePatch& p : cages[i].patches) {
+                if (!p.empty) {
+                    all_empty = false;
+                    break;
+                }
             }
+            if (!all_empty) break;
         }
         if (all_empty) break;
 
         if (!check_for_clear.empty() && t == check_for_clear.front()) {
             check_for_clear.pop_front();
-            patches.clear_patches(clear_threshold, clear_surv, eng);
+            for (uint32 i = 0; i < n_cages; i++) {
+                cages[i].clear_patches(clear_threshold, clear_surv, eng);
+            }
         }
+
 
     }
 
@@ -529,6 +593,7 @@ void one_positive_check(const uint32& input, const std::string& name) {
 
 void check_args(const uint32& n_reps,
                 const uint32& n_lines,
+                const uint32& n_cages,
                 const uint32& n_patches,
                 const uint32& max_plant_age,
                 const double& max_N,
@@ -564,7 +629,7 @@ void check_args(const uint32& n_reps,
                 const double& a,
                 const double& k,
                 const double& h,
-                const double& wasp_density_0,
+                const std::vector<double>& wasp_density_0,
                 const uint32& wasp_delay,
                 const double& sex_ratio,
                 const double& s_y,
@@ -583,6 +648,7 @@ void check_args(const uint32& n_reps,
 
     if (n_reps == 0) stop("\nERROR: n_reps == 0\n");
     if (n_lines == 0) stop("\nERROR: n_lines == 0\n");
+    if (n_cages == 0) stop("\nERROR: n_cages == 0\n");
     if (n_patches == 0) stop("\nERROR: n_patches == 0\n");
     if (n_stages == 0) stop("\nERROR: n_stages == 0\n");
 
@@ -657,6 +723,10 @@ void check_args(const uint32& n_reps,
         stop("\nERROR: rel_attack.n_elem != n_stages\n");
     }
 
+    if (wasp_density_0.size() != n_cages) {
+        stop("\nERROR: wasp_density_0.size() != n_cages\n");
+    }
+
     if (pred_rate.size() != n_patches) {
         stop("\nERROR: pred_rate.size() != n_patches\n");
     }
@@ -697,7 +767,6 @@ void check_args(const uint32& n_reps,
     one_negative_check(a, "a");
     one_negative_check(k, "k");
     one_negative_check(h, "h");
-    one_negative_check(wasp_density_0, "wasp_density_0");
 
     // objects containing doubles that must be >= 0
     negative_check<arma::mat>(attack_surv, "attack_surv");
@@ -712,6 +781,7 @@ void check_args(const uint32& n_reps,
     negative_check<std::vector<double>>(pred_rate, "pred_rate");
     negative_check<arma::mat>(mum_density_0, "mum_density_0");
     negative_check<arma::vec>(rel_attack, "rel_attack");
+    negative_check<std::vector<double>>(wasp_density_0, "wasp_density_0");
 
     // doubles that must be >= 0 and <= 1
     one_non_prop_check(clear_surv, "clear_surv");
@@ -757,6 +827,7 @@ void check_args(const uint32& n_reps,
 
 //[[Rcpp::export]]
 List sim_clonewars_cpp(const uint32& n_reps,
+                       const uint32& n_cages,
                        const uint32& max_plant_age,
                        const double& max_N,
                        const std::deque<uint32>& check_for_clear,
@@ -781,6 +852,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                        const std::vector<arma::cube>& aphid_density_0,
                        const std::vector<double>& alate_b0,
                        const std::vector<double>& alate_b1,
+                       const double& alate_disp_prop,
                        const std::vector<double>& disp_rate,
                        const std::vector<double>& disp_mort,
                        const std::vector<uint32>& disp_start,
@@ -792,7 +864,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                        const double& a,
                        const double& k,
                        const double& h,
-                       const double& wasp_density_0,
+                       const std::vector<double>& wasp_density_0,
                        const uint32& wasp_delay,
                        const double& sex_ratio,
                        const double& s_y,
@@ -805,7 +877,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
     uint32 n_lines = aphid_name.size();
     uint32 n_patches = aphid_density_0.size();
 
-    check_args(n_reps, n_lines, n_patches,
+    check_args(n_reps, n_lines, n_cages, n_patches,
                max_plant_age, max_N, check_for_clear, clear_surv,
                max_t, save_every,
                mean_K, sd_K, K_y_mult, death_prop,
@@ -850,7 +922,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
         if (status_code != 0) continue;
         seed_pcg(eng, seeds[i]);
         if (max_plant_age > 0) {
-            summaries[i] = one_rep__<uint32>(max_plant_age, i, check_for_clear,
+            summaries[i] = one_rep__<uint32>(max_plant_age, i, n_cages, check_for_clear,
                                              clear_surv, max_t,
                                              save_every, mean_K, sd_K, K_y_mult,
                                              death_prop,
@@ -859,7 +931,9 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                              demog_error, sigma_x, sigma_y, rho,
                                              extinct_N,
                                              aphid_name, leslie_mat, aphid_density_0,
-                                             alate_b0, alate_b1, disp_rate, disp_mort,
+                                             alate_b0, alate_b1,
+                                             alate_disp_prop,
+                                             disp_rate, disp_mort,
                                              disp_start, living_days, pred_rate,
                                              mum_density_0, max_mum_density,
                                              rel_attack, a, k,
@@ -868,7 +942,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                              perturb_when, perturb_who, perturb_how,
                                              prog_bar, status_code, eng);
         } else {
-            summaries[i] = one_rep__<double>(max_N, i, check_for_clear,
+            summaries[i] = one_rep__<double>(max_N, i, n_cages, check_for_clear,
                                              clear_surv, max_t,
                                              save_every, mean_K, sd_K, K_y_mult,
                                              death_prop,
@@ -877,7 +951,9 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                              demog_error, sigma_x, sigma_y, rho,
                                              extinct_N,
                                              aphid_name, leslie_mat, aphid_density_0,
-                                             alate_b0, alate_b1, disp_rate, disp_mort,
+                                             alate_b0, alate_b1,
+                                             alate_disp_prop,
+                                             disp_rate, disp_mort,
                                              disp_start, living_days, pred_rate,
                                              mum_density_0, max_mum_density,
                                              rel_attack, a, k,
@@ -909,6 +985,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
     List out = List::create(_["aphids"] = DataFrame::create(
                                 _["rep"] = summ.rep,
                                 _["time"] = summ.time,
+                                _["cage"] = summ.cage,
                                 _["patch"] = summ.patch,
                                 _["line"] = summ.line,
                                 _["type"] = summ.type,
@@ -916,6 +993,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                             _["wasps"] = DataFrame::create(
                                 _["rep"] = summ.wasp_rep,
                                 _["time"] = summ.wasp_time,
+                                _["cage"] = summ.wasp_cage,
                                 _["wasps"] = summ.wasp_N));
 
     return out;

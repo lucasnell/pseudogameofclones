@@ -116,9 +116,9 @@ public:
         }
 
         // Add newly mummified over three days:
-        Y(0) = nm * 0.25;
-        Y(1) += (nm * 0.5);
-        Y(2) += (nm * 0.25);
+        Y(0) = nm / 3;
+        Y(1) += (nm / 3);
+        Y(2) += (nm / 3);
 
         return;
 

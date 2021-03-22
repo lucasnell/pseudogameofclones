@@ -165,6 +165,7 @@ public:
     }
 
 
+
 };
 
 // Aphid "type" population for parasitized (but alive) aphids
@@ -315,6 +316,28 @@ public:
             paras.total_aphids();
         return ta;
     }
+
+    /*
+     Returns vector of abundances of adults that would be moved between cages,
+     given that `disp_prop` is the proportion of winged adults that will be
+     moved.
+     */
+    arma::vec remove_dispersers(const double& disp_prop) {
+        arma::vec D = alates.X;
+        uint32 ds = alates.disp_start();
+        D.head(ds).fill(0);
+        /*
+         Uncomment below if you want to assume that only young adult alates
+         are moved.
+         This could be because older ones are already settled on plants, and
+         so that the same alates aren't being moved back and forth.
+         */
+        // for (uint32 i = (ds + 7); i < D.n_elem; i++) D(i) = 0;
+        D *= disp_prop;
+        alates.X -= D;
+        return D;
+    }
+
 
     // Kill all aphids
     inline void clear() {

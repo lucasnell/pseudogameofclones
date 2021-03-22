@@ -346,6 +346,7 @@ cube_list_check <- function(x, n) {
 # main fun code ----
 sim_clonewars <- function(n_reps,
                           clonal_lines,
+                          n_cages = 1,
                           n_patches = 4,
                           max_t = 100,
                           plant_check_gaps = c(3, 4),
@@ -380,6 +381,7 @@ sim_clonewars <- function(n_reps,
                           disp_mort = 0,
                           alate_b0 = -2.988,
                           alate_b1 = 0,
+                          alate_disp_prop = 0.75,
                           shape1_death_mort = 3.736386,
                           shape2_death_mort = 5.777129,
                           extinct_N = 1,
@@ -429,6 +431,8 @@ sim_clonewars <- function(n_reps,
     if (length(disp_mort) == 1) disp_mort <- rep(disp_mort, n_lines)
     if (length(alate_b0) == 1) alate_b0 <- rep(alate_b0, n_lines)
     if (length(alate_b1) == 1) alate_b1 <- rep(alate_b1, n_lines)
+    if (length(wasp_density_0) == 1) wasp_density_0 <- rep(wasp_density_0,
+                                                           n_cages)
 
     if (is.null(rel_attack)) {
         rel_attack <- wasp_attack$rel_attack
@@ -502,6 +506,7 @@ sim_clonewars <- function(n_reps,
     }
 
     uint_check(n_reps, "n_reps")
+    uint_check(n_cages, "n_cages")
     uint_check(max_plant_age, "max_plant_age")
     dbl_check(max_N, "max_N")
     uint_vec_check(check_for_clear, "check_for_clear")
@@ -526,6 +531,7 @@ sim_clonewars <- function(n_reps,
     cube_list_check(aphid_density_0, "aphid_density_0")
     stopifnot(inherits(alate_b0, "numeric"))
     stopifnot(inherits(alate_b1, "numeric"))
+    dbl_check(alate_disp_prop, "alate_disp_prop")
     stopifnot(inherits(disp_rate, "numeric"))
     stopifnot(inherits(disp_mort, "numeric"))
     uint_vec_check(disp_start, "disp_start")
@@ -537,7 +543,7 @@ sim_clonewars <- function(n_reps,
     dbl_check(a, "a")
     dbl_check(k, "k")
     dbl_check(h, "h")
-    dbl_check(wasp_density_0, "wasp_density_0")
+    dbl_vec_check(wasp_density_0, "wasp_density_0")
     uint_check(wasp_delay, "wasp_delay")
     dbl_check(sex_ratio, "sex_ratio")
     dbl_check(s_y, "s_y")
@@ -548,14 +554,15 @@ sim_clonewars <- function(n_reps,
     stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
 
 
-    sims <- sim_clonewars_cpp(n_reps, max_plant_age, max_N, check_for_clear,
+    sims <- sim_clonewars_cpp(n_reps, n_cages, max_plant_age, max_N, check_for_clear,
                               clear_surv,
                               max_t, save_every, mean_K, sd_K, K_y_mult,
                               death_prop, shape1_death_mort, shape2_death_mort,
                               attack_surv, disp_error, demog_error, sigma_x,
                               sigma_y, rho, extinct_N, aphid_names, leslie_cubes,
-                              aphid_density_0, alate_b0, alate_b1, disp_rate,
-                              disp_mort, disp_start, living_days, pred_rate,
+                              aphid_density_0, alate_b0, alate_b1,
+                              alate_disp_prop,
+                              disp_rate, disp_mort, disp_start, living_days, pred_rate,
                               mum_density_0, max_mum_density, rel_attack, a, k, h,
                               wasp_density_0, wasp_delay, sex_ratio, s_y,
                               perturb_when, perturb_who, perturb_how,

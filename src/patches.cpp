@@ -198,7 +198,7 @@ void OnePatch::update(const arma::cube& emigrants,
 
 // Do the actual clearing of patches while avoiding extinction
 template <typename T>
-inline void AllPatches::do_clearing(std::vector<PatchClearingInfo<T>>& clear_patches,
+inline void OneCage::do_clearing(std::vector<PatchClearingInfo<T>>& clear_patches,
                                     double& remaining,
                                     std::vector<bool>& wilted,
                                     const double& clear_surv,
@@ -285,7 +285,7 @@ inline void AllPatches::do_clearing(std::vector<PatchClearingInfo<T>>& clear_pat
 
 
 // Clear patches by either a maximum age or total abundance
-void AllPatches::clear_patches(const uint32& max_age,
+void OneCage::clear_patches(const uint32& max_age,
                                const double& clear_surv,
                                pcg32& eng) {
 
@@ -314,7 +314,7 @@ void AllPatches::clear_patches(const uint32& max_age,
 }
 
 
-void AllPatches::clear_patches(const double& max_N,
+void OneCage::clear_patches(const double& max_N,
                                const double& clear_surv,
                                pcg32& eng) {
 

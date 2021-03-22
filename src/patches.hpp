@@ -368,7 +368,7 @@ public:
 
  */
 
-class AllPatches {
+class OneCage {
 
     // For new Ks if desired:
     trunc_normal_distribution tnorm_distr;
@@ -437,7 +437,7 @@ public:
     arma::cube immigrants;
 
 
-    AllPatches()
+    OneCage()
         : tnorm_distr(), beta_distr(), mean_K_(), sd_K_(), K_y_mult(),
           shape1_death_mort_(), shape2_death_mort_(), extinct_N(),
           patches(), wasps(), emigrants(), immigrants() {};
@@ -447,7 +447,7 @@ public:
      apterous), and slices are aphid lines.
      In `leslie_mat` below, slices are aphid lines.
      */
-    AllPatches(const double& sigma_x,
+    OneCage(const double& sigma_x,
                const double& sigma_y,
                const double& rho,
                const double& demog_mult,
@@ -538,7 +538,7 @@ public:
 
     }
 
-    AllPatches(const AllPatches& other)
+    OneCage(const OneCage& other)
         : tnorm_distr(other.tnorm_distr),
           beta_distr(other.beta_distr),
           mean_K_(other.mean_K_),
@@ -552,7 +552,7 @@ public:
           emigrants(other.emigrants),
           immigrants(other.immigrants) {};
 
-    AllPatches& operator=(const AllPatches& other) {
+    OneCage& operator=(const OneCage& other) {
         tnorm_distr = other.tnorm_distr;
         beta_distr = other.beta_distr;
         mean_K_ = other.mean_K_;
@@ -578,6 +578,44 @@ public:
     }
     const OnePatch& operator[](const uint32& idx) const {
         return patches[idx];
+    }
+
+    // Remove dispersers from this cage:
+    arma::mat remove_dispersers(const double& disp_prop) {
+
+        uint32 n_lines = patches[0].aphids.size();
+        uint32 n_stages = patches[0].aphids[0].alates.X.n_elem;
+
+        arma::mat D = arma::zeros<arma::mat>(n_stages, n_lines);
+
+        arma::vec Di;
+        for (OnePatch& p : patches) {
+            for (uint32 i = 0; i < n_lines; i++) {
+                Di = p.aphids[i].remove_dispersers(disp_prop);
+                D.col(i) += Di;
+            }
+        }
+
+        return D;
+
+    }
+
+    // Add dispersers from another cage:
+    void add_dispersers(const arma::mat& D) {
+
+        uint32 n_lines = patches[0].aphids.size();
+
+        double n_patches = static_cast<double>(patches.size());
+
+        for (uint32 i = 0; i < n_lines; i++) {
+            arma::vec DD = D.col(i) / n_patches;
+            for (OnePatch& p : patches) {
+                p.aphids[i].alates.X += DD;
+            }
+        }
+
+        return;
+
     }
 
     inline void calc_dispersal(pcg32& eng) {
