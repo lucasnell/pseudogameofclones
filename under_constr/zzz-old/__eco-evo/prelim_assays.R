@@ -1,6 +1,4 @@
 
-
-
 #'
 #' This file looks for differences between lines WIA-5D and UT3 so they
 #' can (hopefully) be used for eco-evo experiments.
@@ -11,6 +9,7 @@
 
 
 suppressPackageStartupMessages({
+    library(grid)
     library(tidyverse)
     library(readxl)
     library(clonewars)
@@ -39,6 +38,7 @@ pop_df <- read_excel("~/Box Sync/2020/aphids/eco-evo-prelims.xlsx",
     mutate(extinct = factor(sum(num) == 0)) %>%
     ungroup()
 
+
 sc_pop_p <- pop_df %>%
     group_by(rep) %>%
     mutate(num = (num - mean(num)) / sd(num)) %>%
@@ -46,23 +46,25 @@ sc_pop_p <- pop_df %>%
     pivot_wider(names_from = "line", values_from = "num") %>%
     mutate(diff_z = `WIA-5D` - `UT3`) %>%
     ggplot(aes(date, diff_z)) +
-    geom_hline(yintercept = 0, linetype = 2, color = "gray70") +
+    geom_hline(yintercept = 0, linetype = 2, color = "gray70", size = 1) +
     geom_line(aes(group = rep), color = "gray50") +
     geom_point(aes(fill = diff_z, shape = extinct), color = "gray40", size = 2) +
-    scale_fill_gradient2(low = "firebrick", high = "chartreuse", mid = "gray60",
+    scale_fill_gradient2(low = "chartreuse", high = "firebrick", mid = "gray60",
                          midpoint = 0, guide = FALSE) +
     scale_shape_manual(values = c(21, 4), guide = FALSE) +
-    scale_y_continuous(expression("Scaled green" - "red"), breaks = c(-2, 0, 2)) +
+    scale_y_continuous(expression("Scaled red" - "green"), breaks = c(-2, 0, 2)) +
     scale_x_continuous("Days after start") +
+    coord_cartesian(ylim = c(-1,1) * 3.6705) +
     NULL
 
 # sc_pop_p
 
-ggsave("~/Desktop/scaled_pop_comp.pdf", sc_pop_p, width = 5, height = 3)
+# ggsave("~/Desktop/scaled_pop_comp.pdf", sc_pop_p, width = 5, height = 3)
 
 
 pop_p <- pop_df %>%
-    mutate(line = factor(line, levels = c("UT3", "WIA-5D")),
+    mutate(line = factor(line, levels = c("UT3", "WIA-5D"),
+                         labels = c("resistant", "susceptible")),
            zero = factor(num == 0)) %>%
     ggplot(aes(date, num, color = line)) +
     geom_line() +
@@ -74,7 +76,7 @@ pop_p <- pop_df %>%
     scale_x_continuous("Days after start") +
     NULL
 
-# pop_p
+pop_p
 
 ggsave("~/Desktop/pop_comp.pdf", pop_p, width = 5, height = 3)
 
@@ -149,47 +151,59 @@ wasp_df <- read_excel("~/Box Sync/2020/aphids/eco-evo-prelims.xlsx",
 
 mummy_p <- wasp_df %>%
     mutate(p_mummies = mummies / `juv-assayed`,
-           line = factor(line, levels = c("UT3", "WIA-5D")),
+           line = factor(line, levels = c("UT3", "WIA-5D"),
+                         labels = c("resistant", "susceptible")),
            zero = factor(p_mummies == 0)) %>%
-    ggplot(aes(line, p_mummies, color = line, shape = zero)) +
+    ggplot(aes(line, p_mummies, color = line)) +
     geom_hline(yintercept = 0, color = "gray70") +
-    geom_jitter(height = 0, width = 0.25) +
+    geom_jitter(aes(shape = zero), height = 0, width = 0.25) +
+    stat_summary(fun.data = "mean_cl_boot", color = "black") +
     scale_color_manual(values = c("chartreuse", "firebrick"), guide = FALSE) +
     scale_shape_manual(values = c(19, 4), guide = FALSE) +
     ylab("Mummy proportion") +
+    theme(axis.text.x = element_text(size = 11, color = "black"),
+          axis.title.x = element_blank()) +
     NULL
 
-ggsave("~/Desktop/mummy.pdf", mummy_p, width = 3, height = 3)
+ggsave("~/Desktop/mummy.pdf", mummy_p, width = 3, height = 2.5)
 
 
 juv_p <- wasp_df %>%
-    mutate(line = factor(line, levels = c("UT3", "WIA-5D")),
+    mutate(line = factor(line, levels = c("UT3", "WIA-5D"),
+                         labels = c("resistant", "susceptible")),
            zero = factor(juvenile == 0)) %>%
-    ggplot(aes(line, juvenile, color = line, shape = zero)) +
+    ggplot(aes(line, juvenile, color = line)) +
     geom_hline(yintercept = 0, color = "gray70") +
-    geom_jitter(height = 0, width = 0.25) +
+    geom_jitter(aes(shape = zero), height = 0, width = 0.25) +
+    stat_summary(fun.data = "mean_cl_boot", color = "black") +
     scale_color_manual(values = c("chartreuse", "firebrick"), guide = FALSE) +
     scale_shape_manual(values = c(19, 4), guide = FALSE) +
     ylab("Number of juveniles") +
+    theme(axis.text.x = element_text(size = 11, color = "black"),
+          axis.title.x = element_blank()) +
     NULL
 
-ggsave("~/Desktop/juveniles.pdf", juv_p, width = 3, height = 3)
+ggsave("~/Desktop/juveniles.pdf", juv_p, width = 3, height = 2.5)
 
 
 
 surv_p <- wasp_df %>%
-    mutate(line = factor(line, levels = c("UT3", "WIA-5D")),
+    mutate(line = factor(line, levels = c("UT3", "WIA-5D"),
+                         labels = c("resistant", "susceptible")),
            zero = factor(surv == 0)) %>%
-    ggplot(aes(line, surv, color = line, shape = zero)) +
+    ggplot(aes(line, surv, color = line)) +
     geom_hline(yintercept = 0, color = "gray70") +
-    geom_jitter(height = 0, width = 0.25) +
+    geom_jitter(aes(shape = zero), height = 0, width = 0.25) +
+    stat_summary(fun.data = "mean_cl_boot", color = "black") +
     scale_color_manual(values = c("chartreuse", "firebrick"), guide = FALSE) +
     scale_shape_manual(values = c(19, 4), guide = FALSE) +
     ylab("Survival proportion") +
+    theme(axis.text.x = element_text(size = 11, color = "black"),
+          axis.title.x = element_blank()) +
     NULL
 
 
-ggsave("~/Desktop/survival.pdf", surv_p, width = 3, height = 3)
+ggsave("~/Desktop/survival.pdf", surv_p, width = 3, height = 2.5)
 
 
 
