@@ -18,16 +18,14 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 This vignette outlines the internal data present in `clonewars`. 
 These data inform the default parameters (see `vignette("parameters", "clonewars")`).
-Note that they also include parameters for related to parasitoid wasps and aphid
-resistance to them.
-Waps aren't (yet) included in the simulations, but I left the parameters here in 
-case they're useful later.
 
 
 The code was initially set up for 2 clones that have different life histories.
 The life histories are taken from lab experiments and correspond to
 demographic parameters at 20º and 27º C. See 
 [Meisner et al. (2014)](http://doi.wiley.com/10.1890/13-1933.1).
+They also include parameters related to parasitoid wasps and aphid
+resistance to them.
 
 
 Parameters from this document are saved into 4 lists present as exported 
@@ -45,12 +43,13 @@ Parameters were wrapped into lists to avoid namespace conflicts and to allow me
 to use the same names as those in the paper.
 
 
-
 # Development times
 
-Number of days per instar (for low and high temperatures (20º and 27º C)) and
-number of days per stage of an aphid being parasitized: living and dead ("mummy"), 
-respectively.
+* `instar_days`: number of days per instar, for low (20º C, `lowT`) and 
+  high (27º C, `highT`) temperatures
+* `mum_days`: number of days per stage of an aphid being parasitized:
+  living and dead ("mummy"), respectively.
+
 
 ```{r instar_mum_days}
 dev_times <- list(
@@ -64,14 +63,19 @@ dev_times <- list(
 
 # Populations
 
-Juvenile and adult aphid survival are separated, and all the parameters below have
-separate values for clones with high and low survival/reproduction.
+These are the stage-structured parameters that specify demographic rates 
+by aphid age.
+
+* `surv_juv`: juvenile (instar 1-4) daily survival; same for all juvenile ages.
+* `surv_adult`: adult survival; different by day. Data are from two clones, 
+  one with a high population growth rate, and another with a low rate.
+* `repro`: daily fecundity for adults of the two clones, one with a high 
+  population growth rate, and another with a low rate.
+
 
 ```{r population1}
 populations <- list(
-    # juvenile survival
     surv_juv = list(low = 0.9745, high = 0.9849),
-    # adult survival
     surv_adult = list(
         low = rbind(c(1.0000, 0.9949, 0.9818, 0.9534, 0.8805, 0.8367, 0.8532, 0.8786, 
                       0.8823, 0.8748, 0.8636, 0.8394, 0.8118, 0.8096, 0.8240, 0.8333, 
@@ -79,7 +83,6 @@ populations <- list(
         high = rbind(c(1.0000, 0.9986, 0.9951, 0.9874, 0.9675, 0.9552, 0.9550, 0.9549, 
                        0.9462, 0.8992, 0.8571, 0.8408, 0.8281, 0.8062, 0.7699, 0.7500, 
                        0.7559, 0.7649, 0.7240, 0.4367, rep(0, 180)))),
-    # reproduction
     repro = list(
         low = rbind(c(0, 2.5925, 4.4312, 5.1403, 5.5190, 5.6633, 5.6010, 5.4577, 5.2904, 
                       5.0613, 4.6970, 3.3577, 1.5946, 1.0817, 0.9666, 0.8333, 0.4689, 
@@ -91,18 +94,30 @@ populations <- list(
 ```
 
 
+## Other parameters:
+
+These are other population-level parameters for both aphids and wasps.
 Parameters `K`, `K_y`, and `s_y` are directly from the paper; `sex_ratio` was 
 "hard-coded" into the paper's model but is allowed to change here.
 The rest were chosen as reasonable starting values for experiments.
 
+* `K`: aphid density dependence
+* `K_y`: parasitized aphid density dependence
+* `s_y`: parasitoid adult daily survival
+* `sex_ratio`: proportion of female wasps
+* `aphids_0`: initial density of aphids
+* `wasps_0`: initial densities of wasps
+* `prop_resist`: proportion of resistant clones
+
+
 ```{r population2}
-populations[["K"]] <- 4.67e-4        # aphid density dependence
-populations[["K_y"]] <- 7.33e-4      # parasitized aphid density dependence
-populations[["s_y"]] <- 0.69         # parasitoid adult daily survival
-populations[["sex_ratio"]] <- 0.5    # proportion of female wasps
-populations[["aphids_0"]] <- 20      # initial density of aphids
-populations[["wasps_0"]] <- 1        # initial densities of wasps
-populations[["prop_resist"]] <- 0.05 # proportion of resistant clones
+populations[["K"]] <- 4.67e-4
+populations[["K_y"]] <- 7.33e-4
+populations[["s_y"]] <- 0.69
+populations[["sex_ratio"]] <- 0.5
+populations[["aphids_0"]] <- 20
+populations[["wasps_0"]] <- 1
+populations[["prop_resist"]] <- 0.05
 ```
 
 
@@ -110,39 +125,38 @@ populations[["prop_resist"]] <- 0.05 # proportion of resistant clones
 
 # Wasp attack
 
-
 These parameters are from equation 6 in Meisner et al. (2014).
-
-```{r attack_akh}
-wasp_attack <- list(
-    a = 2.32,       # parasitoid attack rate
-    k = 0.35,       # aggregation parameter of the negative binomial distribution
-    h = 0.008       # parasitoid attack rate handling time
-)
-```
-
 Relative attack rates on the different instars from 
 [Ives et al (1999)](http://www.journals.uchicago.edu/doi/10.1086/303269).
-The code `c(mapply(..., FUN = rep), recursive = TRUE)` converts these values from
-per-instar to per-day, based on the 20º and 27ºC development rates.
+The code `c(mapply(..., FUN = rep), recursive = TRUE)` converts these values 
+from per-instar to per-day, based on the 20º and 27ºC development rates.
+The survivals of attacked, resistant aphids is from unpublished code by
+Anthony Ives.
+This will obviously differ significantly among clones, but was considered a
+good starting point for a resistant line.
 
-```{r rel_attack}
-wasp_attack[["rel_attack"]] <- list(
-    lowT = c(mapply(c(0.12, 0.27, 0.39, 0.16, 0.06), 
-                    dev_times$instar_days$lowT, FUN = rep), 
-             recursive = TRUE),
-    highT = c(mapply(c(0.12, 0.27, 0.39, 0.16, 0.06), 
-                     dev_times$instar_days$highT, FUN = rep), 
-              recursive = TRUE))
-```
+* `a`: parasitoid attack rate
+* `k`: aggregation parameter of the negative binomial distribution
+* `h`: parasitoid attack rate handling time
+* `rel_attack`: relative attack rate for low (20º C; `lowT`) and 
+  high (27º C; `highT`) temperatures
+* `attack_surv`: the survivals of singly attacked and multiply attacked
+  resistant aphids
 
-
-Lastly I have the survivals of singly attacked and multiply attacked
-resistant aphids.
-This is not from the paper, but from unpublished code by Anthony Ives.
-
-```{r attack_surv}
-wasp_attack[["attack_surv"]] <- c(0.9, 0.6)
+```{r attack_akh_rel}
+wasp_attack <- list(
+    a = 2.32,
+    k = 0.35,
+    h = 0.008,
+    rel_attack = list(
+        lowT = c(mapply(c(0.12, 0.27, 0.39, 0.16, 0.06), 
+                        dev_times$instar_days$lowT, FUN = rep), 
+                 recursive = TRUE),
+        highT = c(mapply(c(0.12, 0.27, 0.39, 0.16, 0.06), 
+                         dev_times$instar_days$highT, FUN = rep), 
+                  recursive = TRUE)),
+    attack_surv = c(0.9, 0.6)
+)
 ```
 
 
@@ -152,32 +166,41 @@ wasp_attack[["attack_surv"]] <- c(0.9, 0.6)
 # Environment
 
 Parameters associated with environmental effects.
+It's assumed that alates (winged aphids) are the primary mode of disperal 
+among patches, and alates' wings aren't fully developed until adulthood.
+So, the day at which aphids can begin dispersing unsurprisingly depends on 
+how quickly the aphids are developing.
+
+* `harvest_surv`: aphid survival rate at harvesting
+* `disp_aphid`: dispersal rates between fields for aphids, adult wasps
+* `disp_wasp`: dispersal rates between fields for aphids, adult wasps
+* `pred_rate`: predation rate for aphids and non-adult wasps
+* `cycle_length`: time between harvests (typical for alfalfa)
+* `disp_start`: when aphids disperse by flying, for low (20º C; `lowT`) and 
+  high (27º C; `highT`) temperatures
+
 
 ```{r environ}
 environ <- list(
-    harvest_surv = 0.05,  # aphid survival rate at harvesting
-    disp_aphid = 0.05,    # dispersal rates between fields for aphids, adult wasps
-    disp_wasp = 1,        # dispersal rates between fields for aphids, adult wasps
-    pred_rate = 0.8,      # predation rate for aphids and non-adult wasps
-    cycle_length = 30     # time between harvests (typical for alfalfa)
+    harvest_surv = 0.05,
+    disp_aphid = 0.05,
+    disp_wasp = 1,
+    pred_rate = 0.8,
+    cycle_length = 30,
+    disp_start = list(
+        lowT = sum(dev_times$instar_days$lowT[1:4]) + 1, 
+        highT = sum(dev_times$instar_days$highT[1:4]) + 1)
 )
 ```
 
 
-For fields, it's assumed that only adults are dispersing, but the day at which this 
-occurs depends on how quickly the aphids are developing.
-
-```{r disp_start}
-environ[["disp_start"]] <-  list(
-    lowT = sum(dev_times$instar_days$lowT[1:4]) + 1, 
-    highT = sum(dev_times$instar_days$highT[1:4]) + 1)
-```
 
 Parameters associated with environmental stochasticity.
 
 `rho` was estimated at 1.0 in Meisner et al. (2014), but that estimate
 "... was largely an artifact of the fitting procedure" (p 468).
-The number here is from unpublished code by Anthony Ives.
+The number here is from unpublished code by Anthony Ives that works to
+simulate the cages we are using for experiments.
 
 For their simulations, Meisner et al. (2014) multiplied the original estimated 
 values of `sigma_x` and `sigma_y` by half to "emphasize the demographic 
@@ -185,10 +208,14 @@ stochasticity".
 The values below are the original estimated values, not those used for their 
 simulations.
 
+* `sigma_x`: environmental std dev for aphids
+* `sigma_y`: environmental std dev for wasps
+* `rho`: environmental correlation among instars
+
 ```{r process_error}
-environ[["sigma_x"]] <- 0.44              # environmental std dev for aphids
-environ[["sigma_y"]] <- 0.70              # environmental std dev for wasps
-environ[["rho"]] <- signif(               # environmental correlation among instars
+environ[["sigma_x"]] <- 0.44
+environ[["sigma_y"]] <- 0.70
+environ[["rho"]] <- signif(
     2/(1+exp(-environ[["sigma_y"]]))-1, 2)
 ```
 

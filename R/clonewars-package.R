@@ -1,7 +1,7 @@
 #' The 'clonewars' package.
 #'
-#' @description Analyses and simulations related to repeated aphid clonal
-#'     evolution experiments.
+#' @description Analyses and simulations related to aphid--parasitoid
+#'     eco-evo dynamics experiments.
 #'
 #' @docType package
 #' @name clonewars-package

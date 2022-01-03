@@ -3,6 +3,8 @@
 
 #' Development times for aphids and wasps.
 #'
+#' See `vignette("internals", "clonewars")` for the exact values here.
+#'
 #'
 #' @format A list with two items:
 #' \describe{
@@ -18,6 +20,9 @@
 
 
 #' Population rates and starting values for aphids and wasps.
+#'
+#' See `vignette("internals", "clonewars")` for more information and
+#' for the exact values used.
 #'
 #'
 #' @format A list with ten items:
@@ -69,6 +74,9 @@
 
 #' Wasp attack rate parameters.
 #'
+#' See `vignette("internals", "clonewars")` for more information and
+#' for the exact values used.
+#'
 #'
 #' @format A list with five items:
 #' \describe{
@@ -100,6 +108,9 @@
 
 
 #' Parameters associated with environmental effects and stochasticity.
+#'
+#' See `vignette("internals", "clonewars")` for more information and
+#' for the exact values used.
 #'
 #'
 #' @format A list of length 9:
