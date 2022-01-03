@@ -7,7 +7,6 @@
 #include "clonewars_types.hpp"  // integer types
 #include "patches.hpp"          // patch classes
 #include "math.hpp"             // combine_leslies fxn
-#include "pcg.hpp"              // runif_ fxns
 
 
 

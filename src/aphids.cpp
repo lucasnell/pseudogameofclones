@@ -7,7 +7,8 @@
 #include "aphids.hpp"           // aphid classes
 #include "wasps.hpp"            // wasp classes
 #include "patches.hpp"          // patch classes
-#include "pcg.hpp"              // runif_ fxns
+#include "pcg.hpp"              // runif_01 fxn
+#include "math.hpp"             // inv_logit__ fxn
 
 
 

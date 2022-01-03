@@ -23,20 +23,31 @@ namespace pcg {
 
 
 /*
-========================
+ ========================
 
-Seeding
+ Seeding
 
-========================
-*/
+ ========================
+ */
 
+/*
+ For consistent results from multi-thread operations, you should call `mt_seeds`
+ when outside multi-thread mode, then create a PRNG (`pcg32` object) once
+ inside multi-thread mode, one PRNG per thread.
+ For each simulation rep, use a `std::vector<uint64>` vector (from inside
+ the object output from `mt_seeds`) to seed the PRNG using `seed_pcg`.
+ Using seeds for each rep (not thread) means that if you run `set.seed(999)`
+ in R before running a process that can be run across multiple threads,
+ you'll get the same output no matter how many threads you use.
+ */
 
-// To sample for seeds before multi-core operations
+// To sample for seeds before multi-thread operations
 inline std::vector<std::vector<uint64>> mt_seeds(const uint32& n_reps) {
 
     std::vector<std::vector<uint64>> sub_seeds(n_reps, std::vector<uint64>(4));
 
     for (uint32 i = 0; i < n_reps; i++) {
+        // These are 32-bit integers cast as 64-bit for downstream compatibility
         sub_seeds[i] = as<std::vector<uint64>>(Rcpp::runif(4,0,4294967296));
     }
 
@@ -44,161 +55,36 @@ inline std::vector<std::vector<uint64>> mt_seeds(const uint32& n_reps) {
 }
 
 
-// Fill two 64-bit seeds from four 32-bit seeds (casted to 64-bit)
-inline void fill_seeds(const std::vector<uint64>& sub_seeds,
-                       uint64& seed1, uint64& seed2) {
-    // Converting to two 64-bit seeds for pcg32
-    seed1 = (sub_seeds[0]<<32) + sub_seeds[1];
-    seed2 = (sub_seeds[2]<<32) + sub_seeds[3];
-}
-
-/*
-For single-core operations, you can use R's RNG for 32-bit random number generation.
-*/
-inline pcg32 seeded_pcg() {
-
-    // Four 32-bit seeds from unif_rand
-    std::vector<uint64> sub_seeds = as<std::vector<uint64>>(Rcpp::runif(4,0,4294967296));
-
-    uint64 seed1;
-    uint64 seed2;
-    fill_seeds(sub_seeds, seed1, seed2);
-
-    pcg32 out(seed1, seed2);
-    return out;
-}
-
-/*
-For multi-core operations, you should call `mt_seeds` when outside multi-core mode,
-then input an inner `std::vector<uint32>` (from inside the object output from `mt_seeds`)
-to this function when in multi-core mode to seed the PRNG.
-*/
-// sub_seeds needs to be at least 4-long!
-inline pcg32 seeded_pcg(const std::vector<uint64>& sub_seeds) {
-
-    uint64 seed1;
-    uint64 seed2;
-    fill_seeds(sub_seeds, seed1, seed2);
-
-    pcg32 out(seed1, seed2);
-    return out;
-}
-
-// Change seed of existing rng
+// Change seed of existing rng from four 32-bit seeds (casted to 64-bit)
 inline void seed_pcg(pcg32& eng, const std::vector<uint64>& sub_seeds) {
 
     uint64 seed1;
     uint64 seed2;
-    fill_seeds(sub_seeds, seed1, seed2);
+    // Converting to two 64-bit seeds for pcg32
+    seed1 = (sub_seeds[0]<<32) + sub_seeds[1];
+    seed2 = (sub_seeds[2]<<32) + sub_seeds[3];
 
     eng.seed(seed1, seed2);
 
     return;
 }
 
-/*
------------
-64-bit versions
-These require twice as many 32-bit integers bc they're seeded from two 128-bit integers
------------
-*/
-
-// To sample for seeds before multi-core operations
-inline std::vector<std::vector<uint64>> mt_seeds64(const uint32& n_cores) {
-
-    std::vector<std::vector<uint64>> sub_seeds(n_cores, std::vector<uint64>(8));
-
-    for (uint32 i = 0; i < n_cores; i++) {
-        sub_seeds[i] = as<std::vector<uint64>>(Rcpp::runif(8,0,4294967296));
-    }
-
-    return sub_seeds;
-}
-
-inline void fill_seeds64(const std::vector<uint64>& sub_seeds,
-                         uint128& seed1, uint128& seed2) {
-
-    uint128 seed64_1 = (sub_seeds[0]<<32) + sub_seeds[1];
-    uint128 seed64_2 = (sub_seeds[2]<<32) + sub_seeds[3];
-    uint128 seed64_3 = (sub_seeds[4]<<32) + sub_seeds[5];
-    uint128 seed64_4 = (sub_seeds[6]<<32) + sub_seeds[7];
-
-    seed1 = (seed64_1<<64) + seed64_2;
-    seed2 = (seed64_3<<64) + seed64_4;
-
-    return;
-}
-
-inline pcg64 seeded_pcg64() {
-
-    // 32-bit seeds from unif_rand
-    std::vector<uint64> sub_seeds = as<std::vector<uint64>>(Rcpp::runif(8,0,4294967296));
-    uint128 seed1;
-    uint128 seed2;
-
-    fill_seeds64(sub_seeds, seed1, seed2);
-
-    pcg64 out(seed1, seed2);
-    return out;
-}
-
-// sub_seeds needs to be at least 8-long!
-inline pcg64 seeded_pcg64(const std::vector<uint64>& sub_seeds) {
-
-    uint128 seed1;
-    uint128 seed2;
-    fill_seeds64(sub_seeds, seed1, seed2);
-
-    pcg64 out(seed1, seed2);
-
-    return out;
-}
-
 
 /*
-========================
+ ========================
+ Number generation
+ ========================
+ */
 
-Number generation
-
-========================
-*/
-
-// uniform in range [0,1]
-inline double runif_0011(pcg32& eng) {
-    return static_cast<double>(eng()) / pcg::max;
-}
-inline long double runif_0011(pcg64& eng) {
-    return static_cast<long double>(eng()) / pcg::max64;
-}
-// uniform in range [0,1)
-inline double runif_001(pcg32& eng) {
-    return static_cast<double>(eng()) / (pcg::max + 1);
-}
-inline long double runif_001(pcg64& eng) {
-    return static_cast<long double>(eng()) / (pcg::max64 + 1);
-}
 // uniform in range (0,1)
 inline double runif_01(pcg32& eng) {
     return (static_cast<double>(eng()) + 1) / (pcg::max + 2);
 }
-inline long double runif_01(pcg64& eng) {
-    return (static_cast<long double>(eng()) + 1) / (pcg::max64 + 2);
-}
+
 // uniform in range (a,b)
 inline double runif_ab(pcg32& eng, const double& a, const double& b) {
     return a + ((static_cast<double>(eng()) + 1) / (pcg::max + 2)) * (b - a);
 }
-inline long double runif_ab(pcg64& eng, const long double& a, const long double& b) {
-    return a + ((static_cast<long double>(eng()) + 1) / (pcg::max64 + 2)) * (b - a);
-}
-// uniform in range [a,b]
-inline uint32 runif_aabb(pcg32& eng, const uint32& a, const uint32& b) {
-    return a + (static_cast<double>(eng()) / (pcg::max + 1)) * (b - a + 1);
-}
-inline uint64 runif_aabb(pcg64& eng, const uint64& a, const uint64& b) {
-    return a + (static_cast<long double>(eng()) / (pcg::max64 + 1)) * (b - a + 1);
-}
-
 
 
 #endif

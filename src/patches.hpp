@@ -10,7 +10,6 @@
 #include "math.hpp"             // distributions
 #include "aphids.hpp"           // aphid classes
 #include "wasps.hpp"            // wasp classes
-#include "pcg.hpp"              // runif_ fxns
 
 
 

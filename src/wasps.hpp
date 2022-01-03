@@ -9,7 +9,6 @@
 #include <cstdint>              // integer types
 #include <algorithm>            // find
 #include <pcg/pcg_random.hpp>   // pcg prng
-#include "pcg.hpp"              // runif_ fxns
 #include "clonewars_types.hpp"  // integer types
 
 

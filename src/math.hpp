@@ -8,7 +8,7 @@
 
 #include <pcg/pcg_random.hpp>   // pcg prng
 #include "clonewars_types.hpp"
-#include "pcg.hpp"              // runif_ fxns
+#include "pcg.hpp"              // runif_ab fxn
 
 
 using namespace Rcpp;

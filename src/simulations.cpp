@@ -23,7 +23,7 @@
 #include "clonewars_types.hpp"  // integer types
 #include "aphids.hpp"           // aphid classes
 #include "patches.hpp"          // patch classes
-#include "pcg.hpp"              // runif_ fxns
+#include "pcg.hpp"              // mt_seeds seed_pcg fxns
 
 
 //' Check that the number of threads doesn't exceed the number available, and change

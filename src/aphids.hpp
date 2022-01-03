@@ -7,7 +7,6 @@
 #include <pcg/pcg_random.hpp>   // pcg prng
 #include "clonewars_types.hpp"  // integer types
 #include "wasps.hpp"            // wasp classes
-#include "math.hpp"             // inv_logit__
 
 
 
