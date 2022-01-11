@@ -7,7 +7,7 @@ source(".Rprofile")
 
 
 # Date of most recent downloaded datasheet:
-.date <- "2021-12-27"
+.date <- "2022-01-06"
 
 #'
 #' Reps to exclude from plot.
@@ -50,11 +50,16 @@ exp_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
                                 lex.order = TRUE)) %>%
     select(cage_id, trt_id, everything(), -start_date, -red_line,
            -green_line) %>%
-    # To show when an experiment was terminated:
-    group_by(trt_id) %>%
-    mutate(terminated = date == max(date)) %>%
+    # To show when an experimental cage was terminated:
+    group_by(cage_id) %>%
+    mutate(terminated = date == max(date[plant1_red >= 0])) %>%
     ungroup() %>%
-    mutate(terminated = terminated & date < max(date))
+    # Using 2nd latest date to prevent all cages that weren't sampled on the
+    # latest date from returning TRUE here
+    mutate(terminated = (terminated & date < sort(unique(date),
+                                                  decreasing = TRUE)[2]))
+
+
 
 # Should be zero!
 exp_df %>%
@@ -72,7 +77,7 @@ nrow(distinct(exp_df, treatment, rep)) == nrow(distinct(exp_df, rep))
 wasp_cage_df <- exp_df %>%
     select(cage_id, trt_id, treatment, rep, cage, days, wasps, mummies,
            wasps_removed) %>%
-    filter(wasps > -1)
+    filter(wasps >= 0)
 
 
 
@@ -116,7 +121,7 @@ alate_cage_df <- exp_df %>%
 aphid_y <- "aphids"
 
 wasp_mod <- max(aphid_cage_df[[aphid_y]], na.rm = TRUE) /
-    max(max(wasp_cage_df$wasps), max(alate_cage_df$alates_in))
+    max(max(wasp_cage_df$wasps), max(alate_cage_df$alates_in, na.rm = TRUE))
 
 # Use col `Y` when facet scales are free, `Z` when they're not
 lab_df <- aphid_cage_df %>%
@@ -127,7 +132,8 @@ lab_df <- aphid_cage_df %>%
             filter(trt_id == .d$trt_id[1])
         .da <- alate_cage_df %>%
             filter(trt_id == .d$trt_id[1])
-        max_y2 <- max(max(.dw$wasps), max(.da$alates_in)) * wasp_mod
+        max_y2 <- max(max(.dw$wasps, na.rm = TRUE),
+                      max(.da$alates_in, na.rm = TRUE)) * wasp_mod
         .d %>%
             filter(cage == "wasp", days == 0) %>%
             distinct(trt_id, cage, days) %>%
