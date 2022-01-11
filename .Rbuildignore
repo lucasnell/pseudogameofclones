@@ -9,3 +9,4 @@
 ^figs$
 ^README\.
 ^.*\.svg$
+^_results$
