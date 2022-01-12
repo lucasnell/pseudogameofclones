@@ -31,6 +31,8 @@ par_df <- list(
         map_dfr(read_csv, show_col_types = FALSE) %>%
         # I can't find this one in any of the Arlington maps...
         filter(Field != "N1902") %>%
+        # This one had clover for part of it, but where isn't clear
+        filter(Field != "349 Clover") %>%
         rename_with(tolower) %>%
         select(field, cycle, date, starts_with("diss")) %>%
         rename_with(function(.x) gsub("^diss_", "", gsub("\\+", "_", .x))) %>%
@@ -48,8 +50,6 @@ par_df <- list(
                                 class = class(date2))) %>%
         select(-date1, -date2) %>%
         mutate(field = paste(field),
-               # Cleaning up some field names
-               field = ifelse(field == "349 Clover", "349", field),
                field = ifelse(field == "506SE", "506S", field),
                year = year(date),
                day = yday(date) - 1)  # <- previous years set Jan 1 as day 0
@@ -57,11 +57,20 @@ par_df <- list(
     do.call(what = bind_rows) %>%
     # Not sure why, but there's a 2020 data point in the 2019 dataset:
     filter(year != 2020) %>%
+    # We need to have at least 10 aphids dissected:
+    filter(para_n >= 10) %>%
     mutate(cycle = floor(cycle),
            harvest = lead(cycle, default = tail(cycle, 1)) - cycle > 0 |
                # This is to force the first cell be `1`
                c(TRUE, rep(FALSE, n()-1)),
-           year = factor(year, levels = sort(unique(year))))
+           year = factor(year, levels = sort(unique(year)))) %>%
+    #'
+    #' I found that these dates have the same exact numbers for all fields
+    #' on dates two days before.
+    #' These must be duplicates, so I'm removing them.
+    #'
+    filter(!date %in% as.Date(c("2011-07-14", "2011-07-21", "2011-08-26",
+                                "2012-08-17", "2012-07-11", "2012-06-14")))
 
 
 
