@@ -339,21 +339,6 @@ wi_bounds %>%
 
 
 
-library(ggmap)
-
-
-ph_basemap <- get_map(location=c(lon = -89.353169, lat = 43.309247), zoom=13,
-                      maptype = "satellite", source = "google")
-
-
-
-ggmap(ph_basemap) +
-    coord_sf(crs = st_crs(3857)) + # force the ggplot2 map to be in 3857
-    geom_sf(data = st_read(paste0("~/Box Sync/eco-evo_experiments/field-data/",
-                                  "arlington-fields/Arlington.gpkg")) %>%
-                mutate(geom = st_centroid(geom)) %>% .[1,],
-            inherit.aes = FALSE, color = "red", size = 5)
-
 
 
 # ============================================================================*
