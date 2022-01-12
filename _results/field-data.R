@@ -78,6 +78,27 @@ par_df <- list(
 
 
 
+#' Observation dates to use for maps.
+#' We need to define these here to show them in the time series plots.
+#' See "maps" section below for more.
+maps_dates <- c(
+    "2011-10-12",
+    "2012-06-07",
+    # "2013-08-09",
+    "2014-07-01",
+    "2015-06-12",
+    "2016-06-14",
+    # "2017-05-22",
+    "2018-07-26",
+    # "2019-07-01"
+    NULL
+) %>%
+    as.Date()
+
+
+
+
+
 # Time series plot ----
 
 #'
@@ -98,19 +119,26 @@ par_ts_p <- par_df %>%
            plot_date = as.Date(day, origin = "2022-01-01")) %>%
     ggplot(aes(plot_date, para)) +
     geom_hline(yintercept = 0, color = "gray70", size = 0.5) +
+    geom_vline(data = tibble(plot_date = yday(maps_dates) %>%
+                                 as.Date(origin = "2021-12-31"),
+                             year = year(maps_dates) %>% factor(),
+                             para = 0.9),
+               aes(xintercept = plot_date),
+               linetype = 1, color = "gray80", size = 0.5) +
     geom_point(aes(color = field_col), alpha = 0.5, size = 1) +
-    facet_wrap(~ year, ncol = 1) +
+    facet_wrap(~ year, ncol = 3) +
     scale_color_manual(values = viridis(10, begin = 0.1, end = 0.8) %>%
                            .[do.call(c, map(5:1, ~ c(.x, .x + 5)))],
                        guide = "none") +
     scale_x_date(date_breaks = "1 month", date_labels = "%b") +
-    scale_y_continuous("Proportion aphids parasitized", breaks = 0.4*0:2) +
+    scale_y_continuous("Parasitism", breaks = 0.4*0:2) +
     theme(axis.title.x = element_blank(),
-          axis.text.x = element_text(color = "black"),
+          axis.text.x = element_text(color = "black", size = 8),
           strip.text = element_text(size = 9)) +
     NULL
 
 # par_ts_p
+
 
 
 
@@ -211,19 +239,6 @@ obs_par_df <- obs_par_df %>%
 # maps ----
 
 
-# obs_dates to use for maps:
-maps_dates <- c("2011-10-12",
-                "2012-06-07",
-                "2013-08-09",
-                "2014-07-01",
-                "2015-06-12",
-                "2016-06-14",
-                "2017-05-22",
-                "2018-07-26",
-                "2019-07-01") %>%
-    as.Date()
-
-
 
 fields_sf <- st_read(paste0("~/Box Sync/eco-evo_experiments/field-data/",
                             "arlington-fields/Arlington.gpkg")) %>%
@@ -246,7 +261,11 @@ obs_fields_par <- obs_par_df %>%
         .f$obs_date <- .d$obs_date
         return(.f)
     }) %>%
-    do.call(what = rbind)
+    do.call(what = rbind) %>%
+    mutate(plot_date = factor(paste(obs_date),
+                              levels = paste(sort(unique(obs_date))),
+                              labels = format(sort(unique(obs_date)),
+                                              "%e %b %Y")))
 
 
 xy_lims <- st_bbox(obs_fields_par) %>% as.list()
@@ -255,60 +274,53 @@ xy_lims$xmax <- xy_lims$xmax + 400
 xy_lims$ymin <- xy_lims$ymin - 400
 xy_lims$ymax <- xy_lims$ymax + 400
 
-fields_par_p_list <- map(
-    sort(unique(obs_fields_par$obs_date)),
-    function(.o) {
-        obs_fields_par %>%
-            filter(obs_date == .o) %>%
-            ggplot() +
-            geom_rect(xmin = xy_lims$xmin, xmax = xy_lims$xmax,
-                      ymin = xy_lims$ymin, ymax = xy_lims$ymax,
-                      fill = NA, color = "black") +
-            # geom_sf(aes(size = para, fill = para), shape = 21, color = "black") +
-            geom_sf(aes(size = para, color = para), shape = 16) +
-            scale_fill_viridis_c("parasitism", option = "inferno",
-                                 limits = c(0, 0.85), begin = 0.1, end = 0.9,
-                                 aesthetics = c("color", "fill"),
-                                 breaks = 0.2 * 0:4) +
-            scale_size("parasitism", limits = c(0, 0.85), range = c(0.5, 8),
-                       breaks = 0.2 * 0:4) +
-            guides(fill = guide_legend(),
-                   color = guide_legend(),
-                   size = guide_legend()) +
-            coord_sf(datum = st_crs(32616),
-                     xlim = as.numeric(xy_lims[c("xmin", "xmax")]),
-                     ylim = as.numeric(xy_lims[c("ymin", "ymax")])) +
-            labs(title = format(.o, "%e %b %Y")) +
-            theme_void() +
-            theme(plot.title = element_text(size = 10)) +
-            # theme(legend.position = "none") +
-            NULL
-    })
+fields_par_p <- obs_fields_par %>%
+    ggplot() +
+    geom_rect(xmin = xy_lims$xmin, xmax = xy_lims$xmax,
+              ymin = xy_lims$ymin, ymax = xy_lims$ymax,
+              fill = NA, color = "black", size = 0.5) +
+    geom_sf(aes(size = para, color = para), shape = 16) +
+    scale_fill_viridis_c("Parasitism", option = "inferno",
+                         limits = c(0, 0.85), begin = 0.1, end = 0.9,
+                         aesthetics = c("color", "fill"),
+                         breaks = 0.2 * 0:4) +
+    scale_size("Parasitism", limits = c(0, 0.85), range = c(0.5, 8),
+               breaks = 0.2 * 0:4) +
+    guides(fill = guide_legend(),
+           color = guide_legend(),
+           size = guide_legend()) +
+    coord_sf(datum = st_crs(32616),
+             xlim = as.numeric(xy_lims[c("xmin", "xmax")]),
+             ylim = as.numeric(xy_lims[c("ymin", "ymax")])) +
+    facet_wrap(~ plot_date, nrow = 2) +
+    theme_void() +
+    theme(plot.title = element_text(size = 8, margin = margin(0,0,0,t=3))) +
+    theme(strip.text = element_text(size = 8, margin = margin(0,0,0,t=3))) +
+    scalebar(data = obs_fields_par,
+             dist = 1, dist_unit = "km", transform = FALSE,
+             border.size = 0.5, st.dist = 0.06,
+             st.size = 3, height = 0.025, location = "topleft",
+             x.min = xy_lims$xmin + 400, x.max = xy_lims$xmax,
+             y.min = xy_lims$ymin, y.max = xy_lims$ymax - 600,
+             facet.var = "plot_date", facet.lev = "12 Oct 2011") +
+    NULL
 
 
 
-# fields_par_p_list[[1]] <-
-fields_par_p_list[[1]] +
-    scalebar(dist = 0.5, dist_unit = "km", transform = FALSE,
-             border.size = 0.5, st.dist = 0.05,
-             st.size = 3, height = 0.01, location = "topleft",
-             x.min = xy_lims$xmin + 200, x.max = xy_lims$xmax,
-             y.min = xy_lims$ymin, y.max = xy_lims$ymax - 200)
 
 
-fields_par_p <- wrap_plots(fields_par_p_list) +
-    plot_layout(guides = "collect")
-fields_par_p
+mosaic_p <- par_ts_p + fields_par_p +
+    plot_annotation(tag_levels = "A") +
+    plot_layout(nrow = 2, heights = c(1, 1.5))
 
-fields_par_p_list[[1]] +
-    scalebar(dist = 500, dist_unit = "m", transform = FALSE,
-             border.size = 0.5,
-             st.size = 3, height = 0.01, location = "topleft",
-             x.min = xy_lims$xmin, x.max = xy_lims$xmax,
-             y.min = xy_lims$ymin, y.max = xy_lims$ymax) +
-    north(location = "topleft", symbol = 10,
-             x.min = xy_lims$xmin, x.max = xy_lims$xmax,
-             y.min = xy_lims$ymin, y.max = xy_lims$ymax)
+
+
+# ggsave("~/Desktop/mosaic.pdf", mosaic_p, width = 7, height = 7)
+
+
+
+
+
 
 
 
@@ -320,22 +332,46 @@ wi_bounds <- paste0("~/Box Sync/eco-evo_experiments/field-data/",
 wi_xy_lims <- st_bbox(wi_bounds) %>% as.list()
 
 
-wi_bounds %>%
+wi_inset <- wi_bounds %>%
     ggplot() +
     geom_sf(size = 0.25) +
-    geom_rect(xmin = xy_lims$xmin, xmax = xy_lims$xmax,
-              ymin = xy_lims$ymin, ymax = xy_lims$ymax, fill = "red", color = NA) +
+    # geom_rect(xmin = xy_lims$xmin, xmax = xy_lims$xmax,
+    #           ymin = xy_lims$ymin, ymax = xy_lims$ymax,
+    #           fill = "black", color = NA) +
+    geom_point(x = (xy_lims$xmin + xy_lims$xmax) / 2,
+               y = (xy_lims$ymin + xy_lims$ymax) / 2,
+               color = "black", shape = 20, size  = 4) +
     coord_sf(datum = st_crs(32616)) +
-    scalebar(dist = 50, dist_unit = "km", transform = FALSE,
-             border.size = 0.5,
-             st.size = 3, height = 0.01, location = "topleft",
-             x.min = wi_xy_lims$xmin, x.max = wi_xy_lims$xmax,
-             y.min = wi_xy_lims$ymin, y.max = wi_xy_lims$ymax) +
-    north(location = "topright", symbol = 10,
+    # scalebar(dist = 100, dist_unit = "km", transform = FALSE,
+    #          border.size = 0.5, st.dist = 0.05,
+    #          st.size = 3, height = 0.02, location = "topleft",
+    #          x.min = wi_xy_lims$xmin, x.max = wi_xy_lims$xmax,
+    #          y.min = wi_xy_lims$ymin, y.max = wi_xy_lims$ymax + 50e3) +
+    north(location = "bottomleft", symbol = 10, scale = 0.2,
           x.min = wi_xy_lims$xmin, x.max = wi_xy_lims$xmax,
           y.min = wi_xy_lims$ymin, y.max = wi_xy_lims$ymax) +
     theme_void() +
     NULL
+
+# wi_inset
+
+
+
+fig1bc <- fields_par_p
+
+# wi_inset + fields_par_p +
+#     plot_layout(design = c(area(1, 1, 2, 2),
+#                            area(1, 2, 10, 10)))
+
+
+
+fig1a + (fig1bc) +
+    plot_layout(nrow = 1, widths = c(1, 1.5)) +
+    plot_annotation(tag_levels = list(c("A", "B")))
+
+
+
+
 
 
 
