@@ -4,9 +4,11 @@ library(readxl)
 library(lubridate)
 library(clonewars)
 library(viridisLite)
+library(sf)
+library(s2)
+library(transformr)
 
 source(".Rprofile")
-
 
 
 
@@ -74,116 +76,38 @@ par_df <- list(
 
 
 
+#'
+#' This essentially replicates (and updates) Nature E&E paper.
+#'
+#' I'm not using lines here bc I think points illustrate my point better,
+#' and because code I used to separate by cycle for years 2011--2016 doesn't
+#' appear to work for 2017--2019.
+#'
 
-# This essentially replicates Nature E&E paper:
-par_df %>%
-    mutate(cycle_grp = interaction(year, field, cycle, drop = TRUE)) %>%
+par_ts_p <- par_df %>%
     split(.$year) %>%
     map_dfr(~ mutate(.x, field_col = factor(field) %>% as.integer())) %>%
-    mutate(field_col = factor(field_col)) %>%
-    ggplot(aes(day, para)) +
+    mutate(field_col = factor(field_col),
+           # So they show as dates but can be plotted on same scale:
+           plot_date = as.Date(day, origin = "2022-01-01")) %>%
+    ggplot(aes(plot_date, para)) +
     geom_hline(yintercept = 0, color = "gray70", size = 0.5) +
-    # geom_line(aes(color = field_col, group = cycle_grp)) +
     geom_point(aes(color = field_col), alpha = 0.5, size = 1) +
     facet_wrap(~ year, ncol = 1) +
-    scale_color_manual(values = viridis(10, begin = 0.2, end = 0.9) %>%
+    scale_color_manual(values = viridis(10, begin = 0.1, end = 0.8) %>%
                            .[do.call(c, map(5:1, ~ c(.x, .x + 5)))],
                        guide = "none") +
-    # scale_x_date(date_breaks = "1 month", date_labels = "%b") +
-    # theme(axis.title.x = element_blank(),
-    #       axis.text.x = element_text(size = 10, color = "black",
-    #                                  angle = 45, hjust = 0.7)) +
-    theme(strip.text = element_text(size = 8)) +
-    xlab("Day of year") +
-    ylab("Parasitism") +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+    scale_y_continuous("Proportion aphids parasitized", breaks = 0.4*0:2) +
+    theme(axis.title.x = element_blank(),
+          axis.text.x = element_text(color = "black"),
+          strip.text = element_text(size = 9)) +
     NULL
 
-
-
-# Looking at effects of different periods of time to split by:
-map_dfr(c("3 days", "1 week", "2 weeks", "3 weeks"),
-        function(f) {
-            par_df %>%
-                mutate(period = cut.Date(date, breaks = f)) %>%
-                group_by(year, period, field) %>%
-                summarize(para = mean(para), .groups = "drop") %>%
-                group_by(year) %>%
-                mutate(total_f = length(unique(field))) %>%
-                group_by(year, period) %>%
-                summarize(obs_p = length(unique(field)) / total_f[1],
-                          .groups = "drop") %>%
-                group_by(year) %>%
-                summarize(n_all = sum(obs_p == 1), .groups = "drop") %>%
-                mutate(period = gsub(" ", "_", f))
-        }) %>%
-    pivot_wider(id_cols = c(year, period), names_from = period, values_from = n_all)
-
-
-# Splitting into averages over 2-week period:
-
-par_df %>%
-    mutate(period = cut.Date(date, breaks = "2 weeks")) %>%
-    group_by(year, period, field) %>%
-    summarize(para = mean(para), .groups = "drop") %>%
-    group_by(year) %>%
-    mutate(total_f = length(unique(field))) %>%
-    group_by(year, period) %>%
-    summarize(obs_p = length(unique(field)) / total_f[1],
-              .groups = "drop") %>%
-    mutate(period = period %>% paste() %>% as.Date(),
-           days = yday(period) - 1,
-           year = year(period) %>% factor()) %>%
-    ggplot(aes(days, obs_f / total_f)) +
-    geom_point(alpha = 0.5, size = 1) +
-    facet_wrap(~ year, ncol = 1) +
-    theme(strip.text = element_text(size = 8)) +
-    xlab("Day of year") +
-    scale_y_continuous("Proportion of fields", breaks = 0.2 * 0:5)  +
-    theme(panel.grid.major.y = element_line(color = "gray80"))
-
-
-par_df %>%
-    mutate(cycle_grp = interaction(year, field, cycle, drop = TRUE)) %>%
-    split(.$year) %>%
-    map_dfr(~ mutate(.x, field_col = factor(field) %>% as.integer())) %>%
-    mutate(field_col = factor(field_col)) %>%
-    mutate(week2 = cut.Date(date, breaks = "2 weeks")) %>%
-    group_by(year, week2, field) %>%
-    summarize(para = mean(para), .groups = "drop") %>%
-    mutate(week2 = week2 %>% paste() %>% as.Date(),
-           days = yday(week2) - 1) %>%
-    split(.$year) %>%
-    map_dfr(~ mutate(.x, field_col = factor(field) %>% as.integer())) %>%
-    mutate(field_col = factor(field_col)) %>%
-    ggplot(aes(days, para)) +
-    geom_hline(yintercept = 0, color = "gray70", size = 0.5) +
-    # geom_line(aes(color = field_col, group = cycle_grp)) +
-    geom_point(aes(color = field_col), alpha = 0.5, size = 1) +
-    facet_wrap(~ year, ncol = 1) +
-    scale_color_manual(values = viridis(10, begin = 0.2, end = 0.9) %>%
-                           .[do.call(c, map(5:1, ~ c(.x, .x + 5)))],
-                       guide = "none") +
-    # scale_x_date(date_breaks = "1 month", date_labels = "%b") +
-    # theme(axis.title.x = element_blank(),
-    #       axis.text.x = element_text(size = 10, color = "black",
-    #                                  angle = 45, hjust = 0.7)) +
-    theme(strip.text = element_text(size = 8)) +
-    xlab("Day of year") +
-    ylab("Parasitism") +
-    NULL
+# par_ts_p
 
 
 
-
-
-library(sf)
-library(gganimate)
-library(gifski)
-library(transformr)
-
-fields_sf <- st_read(paste0("~/Box Sync/eco-evo_experiments/field-data/",
-                         "arlington-fields/Arlington.gpkg")) %>%
-    st_transform(st_crs(32616))
 
 
 #'
@@ -202,12 +126,23 @@ obs_par_df <- par_df %>%
 #' so I split them up further.
 #'
 #' ```
-#' 1 2014    371
-#' 2 2015    495
-#' 3 2016    609
-#' 4 2016    623
-#' 5 2016    637
+#' obs_par_df %>%
+#'     group_by(obs) %>%
+#'     mutate(repeats = any(duplicated(field))) %>%
+#'     ungroup() %>%
+#'     filter(repeats) %>%
+#'     distinct(year, obs)
+#'
+#' # # A tibble: 5 × 2
+#' #   year    obs
+#' #   <fct> <dbl>
+#' # 1 2014    371
+#' # 2 2015    495
+#' # 3 2016    609
+#' # 4 2016    623
+#' # 5 2016    637
 #' ```
+#'
 
 obs_par_df <- obs_par_df %>%
     group_by(obs) %>%
@@ -226,6 +161,11 @@ obs_par_df <- obs_par_df %>%
         return(.dd)
     }) %>%
     select(-repeats) %>%
+    # Plus I'm going to manually combine these dates because it's clear that
+    # half the fields were sampled one day, half the next.
+    mutate(obs = ifelse(date %in% as.Date(c("2016-06-13", "2016-06-14")),
+                        mean(obs[date %in% as.Date(c("2016-06-13", "2016-06-14"))]),
+                        obs)) %>%
     mutate(obs = factor(obs)) %>%
     # I'm going to want to filter out groups that only sampled few fields:
     group_by(year) %>%
@@ -233,7 +173,7 @@ obs_par_df <- obs_par_df %>%
     group_by(year, obs) %>%
     mutate(obs_n = n()) %>%
     # To simplify plotting by having a single obs number by the obs
-    mutate(obs_date = mean(date),
+    mutate(obs_date = round(mean(date)),
            obs_day = mean(day)) %>%
     ungroup()
 
@@ -243,25 +183,46 @@ obs_par_df <- obs_par_df %>%
 #' Looks like the splitting worked well.
 #'
 # obs_par_df %>%
-#     ggplot(aes(day, para)) +
+#     mutate(plot_date = as.Date(day, origin = "2022-01-01")) %>%
+#     ggplot(aes(plot_date, para)) +
 #     geom_hline(yintercept = 0, color = "gray70", size = 0.5) +
 #     geom_point(aes(color = obs), alpha = 0.5, size = 1) +
 #     facet_wrap(~ year, ncol = 1) +
-#     scale_color_manual(values = rep(c("green", "blue", "red"), 50),
+#     scale_color_manual(values = rep(c("#1b9e77", "#d95f02", "#7570b3"), 100),
 #                        guide = "none") +
-#     theme(strip.text = element_text(size = 8)) +
-#     xlab("Day of year") +
-#     ylab("Parasitism") +
+#     scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+#     scale_y_continuous("Proportion aphids parasitized", breaks = 0.4*0:2) +
+#     theme(axis.title.x = element_blank(),
+#           axis.text.x = element_text(color = "black"),
+#           panel.grid.major.x = element_line(color = "gray80"),
+#           strip.text = element_text(size = 9)) +
 #     NULL
 
 
-#'
-#' Now I can combine them:
-#'
 
-fields_par <- obs_par_df %>%
-    filter(obs_n >= n_fields / 2) %>%
-    # filter(obs_n == n_fields) %>%
+
+# obs_dates to use for maps:
+maps_dates <- c("2011-10-12",
+                "2012-06-07",
+                "2013-08-09",
+                "2014-07-01",
+                "2015-06-12",
+                "2016-06-14",
+                "2017-05-22",
+                "2018-07-26",
+                "2019-07-01") %>%
+    as.Date()
+
+
+
+fields_sf <- st_read(paste0("~/Box Sync/eco-evo_experiments/field-data/",
+                            "arlington-fields/Arlington.gpkg")) %>%
+    st_transform(st_crs(32616))
+
+
+obs_fields_par <- obs_par_df %>%
+    filter(obs_date %in% maps_dates) %>%
+    mutate(obs = obs %>% fct_drop()) %>%
     split(1:nrow(.)) %>%
     map(function(.d) {
         stopifnot(nrow(.d) == 1)
@@ -269,16 +230,279 @@ fields_par <- obs_par_df %>%
         stopifnot(nrow(.f) == 1)
         .f$year <- .d$year
         .f$date <- .d$date
+        .f$para <- .d$para
         .f$obs <- .d$obs
         .f$obs_date <- .d$obs_date
-        .f$obs_day <- .d$obs_day
+        return(.f)
+    }) %>%
+    do.call(what = rbind)
+
+
+xy_lims <- cbind(
+    map(obs_fields_par$geom, ~ apply(.x[[1]], 2, max)) %>%
+        do.call(what = rbind) %>%
+        apply(2, max),
+    map(obs_fields_par$geom, ~ apply(.x[[1]], 2, min)) %>%
+        do.call(what = rbind) %>%
+        apply(2, min))
+
+
+fields_par_p_list <- map(
+    levels(obs_fields_par$obs),
+    function(.o) {
+        obs_fields_par %>%
+            filter(obs == .o) %>%
+            ggplot() +
+            geom_sf(aes(fill = para, color = para)) +
+            scale_fill_viridis_c(limits = c(0, 0.85), begin = 0.2, end = 0.9,
+                                 aesthetics = c("color", "fill")) +
+            coord_sf(datum = st_crs(32616),
+                     xlim = xy_lims[1,], ylim = xy_lims[2,]) +
+            labs(title = format(filter(obs_fields_par, obs == .o)$obs_date[1],
+                                "%d %b %Y")) +
+            theme(plot.title = element_text(size = 10),
+                  axis.text = element_blank(),
+                  axis.ticks = element_blank()) +
+            theme(legend.position = "none") +
+            NULL
+    })
+
+
+egg::ggarrange(plots = fields_par_p_list, nrow = 3)
+
+
+obs_pts_par <- obs_fields_par %>%
+    mutate(geom = st_centroid(geom))
+
+.o <- levels(obs_pts_par$obs)[8]
+
+obs_pts_par %>%
+    filter(obs == .o) %>%
+    ggplot() +
+    # geom_sf(aes(fill = para, color = para), size = 2) +
+    geom_sf(aes(size = para)) +
+    # scale_fill_viridis_c(limits = c(0, 0.85), begin = 0.2, end = 0.9,
+    #                      aesthetics = c("color", "fill")) +
+    scale_size("parasitism", limits = c(0, 0.85), range = c(0.5, 8)) +
+    coord_sf(datum = st_crs(32616),
+             xlim = xy_lims[1,], ylim = xy_lims[2,]) +
+    labs(title = format(filter(obs_pts_par, obs == .o)$obs_date[1],
+                        "%d %b %Y")) +
+    theme(plot.title = element_text(size = 10),
+          axis.text = element_blank(),
+          axis.ticks = element_blank()) +
+    # theme(legend.position = "none") +
+    NULL
+
+
+
+
+
+# ============================================================================*
+# ============================================================================*
+# ============================================================================*
+# ============================================================================*
+
+# par_df %>%
+#     group_by(year) %>%
+#     mutate(total_fields = length(unique(field))) %>%
+#     ungroup() %>%
+#     arrange(date) %>%
+#     mutate(period = cut.Date(date, breaks = "1 week")) %>%
+#     group_by(year, period, field) %>%
+#     summarize(para = mean(para),
+#               date = mean(date),
+#               n_obs = n(),
+#               total_fields = total_fields[1],
+#               .groups = "drop") %>%
+#     split(.$year) %>%
+#     map_dfr(~ mutate(.x, field_col = factor(field) %>% as.integer())) %>%
+#     mutate(field_col = factor(field_col),
+#            # So they show as dates but can be plotted on same scale:
+#            plot_date = as.Date(yday(date) - 1, origin = "2022-01-01")) %>%
+#     ggplot(aes(plot_date, para)) +
+#     geom_hline(yintercept = 0, color = "gray70", size = 0.5) +
+#     geom_point(aes(color = field_col), alpha = 0.5, size = 1) +
+#     facet_wrap(~ year, ncol = 1) +
+#     scale_color_manual(values = viridis(10, begin = 0.1, end = 0.8) %>%
+#                            .[do.call(c, map(5:1, ~ c(.x, .x + 5)))],
+#                        guide = "none") +
+#     scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+#     theme(axis.title.x = element_blank(),
+#           axis.text.x = element_text(color = "black")) +
+#     theme(strip.text = element_text(size = 9)) +
+#     scale_y_continuous("Proportion aphids parasitized", breaks = 0.4*0:2) +
+#     NULL
+#
+# # Weekly average, only for weeks that contain all fields for that year:
+# week_par_df <- par_df %>%
+#     group_by(year) %>%
+#     mutate(total_fields = length(unique(field))) %>%
+#     ungroup() %>%
+#     arrange(date) %>%
+#     mutate(period = cut.Date(date, breaks = "1 week")) %>%
+#     group_by(year, period, field) %>%
+#     summarize(para = mean(para),
+#               date = mean(date),
+#               n_obs = n(),
+#               total_fields = total_fields[1],
+#               .groups = "drop") %>%
+#     group_by(year, period) %>%
+#     mutate(p_fields = length(unique(field)) / total_fields[1]) %>%
+#     ungroup() %>%
+#     filter(p_fields == 1) %>%
+#     select(-p_fields, -total_fields)
+#
+#
+# week_fields_par <- week_par_df %>%
+#     split(1:nrow(.)) %>%
+#     map(function(.d) {
+#         stopifnot(nrow(.d) == 1)
+#         .f <- fields_sf %>% filter(Name == .d$field)
+#         stopifnot(nrow(.f) == 1)
+#         .f$year <- .d$year
+#         .f$period <- .d$period
+#         .f$date <- .d$date
+#         .f$day <- yday(.d$date) - 1
+#         .f$para <- .d$para
+#         return(.f)
+#     }) %>%
+#     do.call(what = rbind)
+#
+#
+# xy_lims <- cbind(
+#     map(week_fields_par$geom, ~ apply(.x[[1]], 2, max)) %>%
+#         do.call(what = rbind) %>%
+#         apply(2, max),
+#     map(week_fields_par$geom, ~ apply(.x[[1]], 2, min)) %>%
+#         do.call(what = rbind) %>%
+#         apply(2, min))
+#
+#
+#
+# week_par_df %>%
+#     group_by(year, period) %>%
+#     summarize(par = max(para), .groups = "drop") %>%
+#     split(.$year)
+#
+#
+#
+#
+# week_fields_par %>%
+#     filter(year == 2011) %>%
+#     filter(day == max(day)) %>%
+#     ggplot() +
+#     geom_sf(aes(fill = para), color = NA) +
+#     scale_fill_viridis_c(limits = c(0, 0.75), begin = 0.2, end = 0.9) +
+#     theme_void() +
+#     coord_sf(datum = st_crs(32616), xlim = xy_lims[1,], ylim = xy_lims[2,]) +
+#     # labs(title = "Year: 2011", subtitle = "Date: 13 Jun") +
+#     NULL
+
+
+
+
+
+# ============================================================================*
+# ============================================================================*
+
+# MAKING GIFS
+
+# ============================================================================*
+# ============================================================================*
+
+library(gganimate)
+library(gifski)
+
+
+
+# Looking at effects of different periods of time to split by:
+map_dfr(c("3 days", "1 week", "2 weeks", "3 weeks"),
+        function(f) {
+            par_df %>%
+                arrange(date) %>%
+                mutate(period = cut.Date(date, breaks = f)) %>%
+                group_by(year, period, field) %>%
+                summarize(para = mean(para), .groups = "drop") %>%
+                group_by(year) %>%
+                mutate(total_f = length(unique(field))) %>%
+                group_by(year, period) %>%
+                summarize(obs_p = length(unique(field)) / total_f[1],
+                          .groups = "drop") %>%
+                group_by(year) %>%
+                summarize(n_all = sum(obs_p == 1), .groups = "drop") %>%
+                mutate(period = gsub(" ", "_", f))
+        }) %>%
+    pivot_wider(id_cols = c(year, period), names_from = period, values_from = n_all)
+
+#'
+#' To combine the field polygons with the parasitism data, I first need to
+#' prepare the parasitism data for plotting by 2-week intervals:
+#'
+period_par_df <- par_df %>%
+    arrange(date) %>%
+    mutate(period = cut.Date(date, breaks = "2 weeks")) %>%
+    group_by(year, period, field) %>%
+    summarize(para = mean(para), .groups = "drop") %>%
+    group_by(year) %>%
+    mutate(total_f = length(unique(field))) %>%
+    group_by(year, period) %>%
+    mutate(period_p = length(unique(field)) / total_f[1]) %>%
+    ungroup() %>%
+    filter(period_p == 1) %>%
+    select(-total_f, -period_p) %>%
+    mutate(period = period %>% fct_drop(),
+           date = period %>% paste() %>% as.Date(),
+           day = yday(date) - 1)
+
+
+
+#'
+#' Now I can combine the parasitism date with the field polygons:
+#'
+
+fields_par <- period_par_df %>%
+    split(1:nrow(.)) %>%
+    map(function(.d) {
+        stopifnot(nrow(.d) == 1)
+        .f <- fields_sf %>% filter(Name == .d$field)
+        stopifnot(nrow(.f) == 1)
+        .f$year <- .d$year
+        .f$period <- .d$period
+        .f$date <- .d$date
+        .f$day <- .d$day
         .f$para <- .d$para
         return(.f)
     }) %>%
     do.call(what = rbind)
 
 fields_par %>% head()
-fields_par %>% nrow()
+nrow(fields_par) == nrow(period_par_df)
+
+
+
+xy_lims <- cbind(
+    map(fields_par$geom, ~ apply(.x[[1]], 2, max)) %>%
+        do.call(what = rbind) %>%
+        apply(2, max),
+    map(fields_par$geom, ~ apply(.x[[1]], 2, min)) %>%
+        do.call(what = rbind) %>%
+        apply(2, min))
+
+gif_p <- fields_par %>%
+    ggplot() +
+    geom_sf(aes(fill = para), color = NA) +
+    scale_fill_viridis_c(limits = c(0, 0.75), begin = 0.2, end = 0.9) +
+    theme_void() +
+    coord_sf(datum = st_crs(32616), xlim = xy_lims[1,], ylim = xy_lims[2,]) +
+    ggtitle("Year: {year(as.Date(paste(current_frame)))}") +
+    # Here comes the gganimate specific bits
+    labs(subtitle = "Date: {format(as.Date(paste(current_frame)), '%d %b')}") +
+    transition_manual(period) +
+    NULL
+
+animate(gif_p, renderer = gifski_renderer(),
+        nframes = length(levels(fields_par$period)), fps = 1)
 
 
 
