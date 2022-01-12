@@ -76,6 +76,10 @@ par_df <- list(
 
 
 
+# Time series plot ----
+
+#'
+#'
 #'
 #' This essentially replicates (and updates) Nature E&E paper.
 #'
@@ -110,6 +114,8 @@ par_ts_p <- par_df %>%
 
 
 
+
+# splitting into periods ----
 #'
 #' To combine the field polygons with the parasitism data, I first need to
 #' prepare the parasitism data for plotting by observation date, where
@@ -219,6 +225,9 @@ fields_sf <- st_read(paste0("~/Box Sync/eco-evo_experiments/field-data/",
                             "arlington-fields/Arlington.gpkg")) %>%
     st_transform(st_crs(32616))
 
+pts_sf <- fields_sf %>%
+    mutate(geom = st_centroid(fields_sf$geom))
+
 
 obs_fields_par <- obs_par_df %>%
     filter(obs_date %in% maps_dates) %>%
@@ -271,28 +280,47 @@ fields_par_p_list <- map(
 egg::ggarrange(plots = fields_par_p_list, nrow = 3)
 
 
-obs_pts_par <- obs_fields_par %>%
-    mutate(geom = st_centroid(geom))
+obs_pts_par <- obs_par_df %>%
+    filter(obs_date %in% maps_dates) %>%
+    mutate(obs = obs %>% fct_drop()) %>%
+    split(1:nrow(.)) %>%
+    map(function(.d) {
+        stopifnot(nrow(.d) == 1)
+        .f <- pts_sf %>% filter(Name == .d$field)
+        stopifnot(nrow(.f) == 1)
+        .f$year <- .d$year
+        .f$date <- .d$date
+        .f$para <- .d$para
+        .f$obs <- .d$obs
+        .f$obs_date <- .d$obs_date
+        return(.f)
+    }) %>%
+    do.call(what = rbind)
 
-.o <- levels(obs_pts_par$obs)[8]
+pts_par_p_list <- map(
+    levels(obs_pts_par$obs),
+    function(.o) {
+        obs_pts_par %>%
+            filter(obs == .o) %>%
+            ggplot() +
+            geom_sf(aes(size = para, color = para)) +
+            scale_fill_viridis_c(limits = c(0, 0.85), begin = 0.2, end = 0.9,
+                                 aesthetics = c("color", "fill")) +
+            scale_size("parasitism", limits = c(0, 0.85), range = c(0.5, 8)) +
+            coord_sf(datum = st_crs(32616),
+                     xlim = xy_lims[1,], ylim = xy_lims[2,]) +
+            labs(title = format(filter(obs_pts_par, obs == .o)$obs_date[1],
+                                "%d %b %Y")) +
+            theme(plot.title = element_text(size = 10),
+                  axis.text = element_blank(),
+                  axis.ticks = element_blank()) +
+            theme(legend.position = "none") +
+            NULL
+    })
 
-obs_pts_par %>%
-    filter(obs == .o) %>%
-    ggplot() +
-    # geom_sf(aes(fill = para, color = para), size = 2) +
-    geom_sf(aes(size = para)) +
-    # scale_fill_viridis_c(limits = c(0, 0.85), begin = 0.2, end = 0.9,
-    #                      aesthetics = c("color", "fill")) +
-    scale_size("parasitism", limits = c(0, 0.85), range = c(0.5, 8)) +
-    coord_sf(datum = st_crs(32616),
-             xlim = xy_lims[1,], ylim = xy_lims[2,]) +
-    labs(title = format(filter(obs_pts_par, obs == .o)$obs_date[1],
-                        "%d %b %Y")) +
-    theme(plot.title = element_text(size = 10),
-          axis.text = element_blank(),
-          axis.ticks = element_blank()) +
-    # theme(legend.position = "none") +
-    NULL
+
+egg::ggarrange(plots = pts_par_p_list, nrow = 3)
+
 
 
 
@@ -406,13 +434,15 @@ obs_pts_par %>%
 # ============================================================================*
 # ============================================================================*
 
-# MAKING GIFS
+# MAKING GIFS ----
 
 # ============================================================================*
 # ============================================================================*
 
 library(gganimate)
 library(gifski)
+
+
 
 
 
@@ -439,21 +469,8 @@ map_dfr(c("3 days", "1 week", "2 weeks", "3 weeks"),
 #' To combine the field polygons with the parasitism data, I first need to
 #' prepare the parasitism data for plotting by 2-week intervals:
 #'
-period_par_df <- par_df %>%
-    arrange(date) %>%
-    mutate(period = cut.Date(date, breaks = "2 weeks")) %>%
-    group_by(year, period, field) %>%
-    summarize(para = mean(para), .groups = "drop") %>%
-    group_by(year) %>%
-    mutate(total_f = length(unique(field))) %>%
-    group_by(year, period) %>%
-    mutate(period_p = length(unique(field)) / total_f[1]) %>%
-    ungroup() %>%
-    filter(period_p == 1) %>%
-    select(-total_f, -period_p) %>%
-    mutate(period = period %>% fct_drop(),
-           date = period %>% paste() %>% as.Date(),
-           day = yday(date) - 1)
+gif_par_df <- obs_par_df %>%
+    filter(obs_n >= 5)
 
 
 
@@ -461,78 +478,90 @@ period_par_df <- par_df %>%
 #' Now I can combine the parasitism date with the field polygons:
 #'
 
-fields_par <- period_par_df %>%
+gif_pts_par <- gif_par_df %>%
     split(1:nrow(.)) %>%
     map(function(.d) {
         stopifnot(nrow(.d) == 1)
-        .f <- fields_sf %>% filter(Name == .d$field)
+        .f <- pts_sf %>% filter(Name == .d$field)
         stopifnot(nrow(.f) == 1)
         .f$year <- .d$year
-        .f$period <- .d$period
+        .f$obs <- .d$obs
         .f$date <- .d$date
-        .f$day <- .d$day
+        .f$obs_date <- .d$obs_date
         .f$para <- .d$para
         return(.f)
     }) %>%
     do.call(what = rbind)
 
-fields_par %>% head()
-nrow(fields_par) == nrow(period_par_df)
+gif_pts_par
+nrow(gif_pts_par) == nrow(gif_par_df)
 
 
 
-xy_lims <- cbind(
-    map(fields_par$geom, ~ apply(.x[[1]], 2, max)) %>%
-        do.call(what = rbind) %>%
-        apply(2, max),
-    map(fields_par$geom, ~ apply(.x[[1]], 2, min)) %>%
-        do.call(what = rbind) %>%
-        apply(2, min))
 
-gif_p <- fields_par %>%
+
+
+
+
+gif_xy_lims <- rbind(
+    map_dbl(gif_pts_par$geom, ~ .x[[1]]) %>% range(),
+    map_dbl(gif_pts_par$geom, ~ .x[[2]]) %>% range())
+
+gif_all_p <- gif_pts_par %>%
     ggplot() +
-    geom_sf(aes(fill = para), color = NA) +
-    scale_fill_viridis_c(limits = c(0, 0.75), begin = 0.2, end = 0.9) +
-    theme_void() +
-    coord_sf(datum = st_crs(32616), xlim = xy_lims[1,], ylim = xy_lims[2,]) +
+    geom_sf(aes(size = para, color = para)) +
+    scale_fill_viridis_c(limits = c(0, 0.85), begin = 0.2, end = 0.9,
+                          aesthetics = c("color", "fill")) +
+    scale_size("parasitism", limits = c(0, 0.85), range = c(0.5, 8)) +
+    coord_sf(datum = st_crs(32616),
+             xlim = gif_xy_lims[1,], ylim = gif_xy_lims[2,]) +
     ggtitle("Year: {year(as.Date(paste(current_frame)))}") +
+    theme(plot.title = element_text(size = 10),
+          legend.position = "none",
+          axis.text = element_blank(),
+          axis.ticks = element_blank()) +
     # Here comes the gganimate specific bits
     labs(subtitle = "Date: {format(as.Date(paste(current_frame)), '%d %b')}") +
-    transition_manual(period) +
+    transition_manual(obs_date) +
     NULL
 
-animate(gif_p, renderer = gifski_renderer(),
-        nframes = length(levels(fields_par$period)), fps = 1)
 
+
+animate(gif_all_p, renderer = gifski_renderer(),
+        nframes = length(levels(gif_pts_par$obs)), fps = 10)
+
+anim_save("~/Desktop/field_gifs/fields_2011--2019.gif",
+          animate(gif_all_p, renderer = gifski_renderer(),
+                  nframes = length(levels(gif_pts_par$obs)), fps = 10))
 
 
 
 # gifs by year:
-for (y in levels(fields_par$year)) {
+for (y in levels(gif_pts_par$year)) {
 
-    .d <- fields_par %>%
+    .d <- gif_pts_par %>%
         filter(year == y) %>%
         mutate(obs_int = obs %>% fct_drop() %>% as.integer())
 
-    xy_lims <- cbind(
-        map(.d$geom, ~ apply(.x[[1]], 2, max)) %>%
-            do.call(what = rbind) %>%
-            apply(2, max),
-        map(.d$geom, ~ apply(.x[[1]], 2, min)) %>%
-            do.call(what = rbind) %>%
-            apply(2, min))
+    gif_xy_lims_y <- rbind(map_dbl(.d$geom, ~ .x[[1]]) %>% range(),
+                           map_dbl(.d$geom, ~ .x[[2]]) %>% range())
 
     gif_p <- .d %>%
         ggplot() +
-        geom_sf(aes(fill = para), color = NA) +
-        scale_fill_viridis_c(limits = c(0, 0.85), begin = 0.2, end = 0.9) +
-        # theme(axis.text = element_blank(), axis.ticks = element_blank()) +
-        theme_void() +
-        coord_sf(datum = st_crs(32616), xlim = xy_lims[1,], ylim = xy_lims[2,]) +
+        geom_sf(aes(size = para, color = para)) +
+        scale_fill_viridis_c(limits = c(0, 0.85), begin = 0.2, end = 0.9,
+                             aesthetics = c("color", "fill")) +
+        scale_size("parasitism", limits = c(0, 0.85), range = c(0.5, 8)) +
+        coord_sf(datum = st_crs(32616),
+                 xlim = gif_xy_lims[1,], ylim = gif_xy_lims[2,]) +
         ggtitle(paste("Year:", y)) +
+        theme(plot.title = element_text(size = 10),
+              legend.position = "none",
+              axis.text = element_blank(),
+              axis.ticks = element_blank()) +
         # Here comes the gganimate specific bits
-        labs(subtitle = "Observation: {current_frame}") +
-        transition_manual(obs_int) +
+        labs(subtitle = "Date: {format(as.Date(paste(current_frame)), '%d %b')}") +
+        transition_manual(obs_date) +
         NULL
 
     anim_save(sprintf("~/Desktop/field_gifs/fields_%s.gif", y),
@@ -541,7 +570,7 @@ for (y in levels(fields_par$year)) {
 
     cat(sprintf("%s done\n", y))
 
-}; rm(y, .d, xy_lims, gif_p)
+}; rm(y, .d, gif_xy_lims_y, gif_p)
 
 
 
