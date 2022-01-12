@@ -4,9 +4,11 @@ library(readxl)
 library(lubridate)
 library(clonewars)
 library(viridisLite)
+library(patchwork)
 library(sf)
 library(s2)
 library(transformr)
+library(ggsn)
 
 source(".Rprofile")
 
@@ -206,6 +208,8 @@ obs_par_df <- obs_par_df %>%
 
 
 
+# maps ----
+
 
 # obs_dates to use for maps:
 maps_dates <- c("2011-10-12",
@@ -223,9 +227,7 @@ maps_dates <- c("2011-10-12",
 
 fields_sf <- st_read(paste0("~/Box Sync/eco-evo_experiments/field-data/",
                             "arlington-fields/Arlington.gpkg")) %>%
-    st_transform(st_crs(32616))
-
-pts_sf <- fields_sf %>%
+    st_transform(st_crs(32616)) %>%
     mutate(geom = st_centroid(fields_sf$geom))
 
 
@@ -247,185 +249,93 @@ obs_fields_par <- obs_par_df %>%
     do.call(what = rbind)
 
 
-xy_lims <- cbind(
-    map(obs_fields_par$geom, ~ apply(.x[[1]], 2, max)) %>%
-        do.call(what = rbind) %>%
-        apply(2, max),
-    map(obs_fields_par$geom, ~ apply(.x[[1]], 2, min)) %>%
-        do.call(what = rbind) %>%
-        apply(2, min))
-
+xy_lims <- st_bbox(obs_fields_par) %>% as.list()
+xy_lims$xmin <- xy_lims$xmin - 400
+xy_lims$xmax <- xy_lims$xmax + 400
+xy_lims$ymin <- xy_lims$ymin - 400
+xy_lims$ymax <- xy_lims$ymax + 400
 
 fields_par_p_list <- map(
-    levels(obs_fields_par$obs),
+    sort(unique(obs_fields_par$obs_date)),
     function(.o) {
         obs_fields_par %>%
-            filter(obs == .o) %>%
+            filter(obs_date == .o) %>%
             ggplot() +
-            geom_sf(aes(fill = para, color = para)) +
-            scale_fill_viridis_c(limits = c(0, 0.85), begin = 0.2, end = 0.9,
-                                 aesthetics = c("color", "fill")) +
+            geom_rect(xmin = xy_lims$xmin, xmax = xy_lims$xmax,
+                      ymin = xy_lims$ymin, ymax = xy_lims$ymax,
+                      fill = NA, color = "black") +
+            # geom_sf(aes(size = para, fill = para), shape = 21, color = "black") +
+            geom_sf(aes(size = para, color = para), shape = 16) +
+            scale_fill_viridis_c("parasitism", option = "inferno",
+                                 limits = c(0, 0.85), begin = 0.1, end = 0.9,
+                                 aesthetics = c("color", "fill"),
+                                 breaks = 0.2 * 0:4) +
+            scale_size("parasitism", limits = c(0, 0.85), range = c(0.5, 8),
+                       breaks = 0.2 * 0:4) +
+            guides(fill = guide_legend(),
+                   color = guide_legend(),
+                   size = guide_legend()) +
             coord_sf(datum = st_crs(32616),
-                     xlim = xy_lims[1,], ylim = xy_lims[2,]) +
-            labs(title = format(filter(obs_fields_par, obs == .o)$obs_date[1],
-                                "%d %b %Y")) +
-            theme(plot.title = element_text(size = 10),
-                  axis.text = element_blank(),
-                  axis.ticks = element_blank()) +
-            theme(legend.position = "none") +
+                     xlim = as.numeric(xy_lims[c("xmin", "xmax")]),
+                     ylim = as.numeric(xy_lims[c("ymin", "ymax")])) +
+            labs(title = format(.o, "%e %b %Y")) +
+            theme_void() +
+            theme(plot.title = element_text(size = 10)) +
+            # theme(legend.position = "none") +
             NULL
     })
 
 
-egg::ggarrange(plots = fields_par_p_list, nrow = 3)
+
+# fields_par_p_list[[1]] <-
+fields_par_p_list[[1]] +
+    scalebar(dist = 0.5, dist_unit = "km", transform = FALSE,
+             border.size = 0.5, st.dist = 0.05,
+             st.size = 3, height = 0.01, location = "topleft",
+             x.min = xy_lims$xmin + 200, x.max = xy_lims$xmax,
+             y.min = xy_lims$ymin, y.max = xy_lims$ymax - 200)
 
 
-obs_pts_par <- obs_par_df %>%
-    filter(obs_date %in% maps_dates) %>%
-    mutate(obs = obs %>% fct_drop()) %>%
-    split(1:nrow(.)) %>%
-    map(function(.d) {
-        stopifnot(nrow(.d) == 1)
-        .f <- pts_sf %>% filter(Name == .d$field)
-        stopifnot(nrow(.f) == 1)
-        .f$year <- .d$year
-        .f$date <- .d$date
-        .f$para <- .d$para
-        .f$obs <- .d$obs
-        .f$obs_date <- .d$obs_date
-        return(.f)
-    }) %>%
-    do.call(what = rbind)
+fields_par_p <- wrap_plots(fields_par_p_list) +
+    plot_layout(guides = "collect")
+fields_par_p
 
-pts_par_p_list <- map(
-    levels(obs_pts_par$obs),
-    function(.o) {
-        obs_pts_par %>%
-            filter(obs == .o) %>%
-            ggplot() +
-            geom_sf(aes(size = para, color = para)) +
-            scale_fill_viridis_c(limits = c(0, 0.85), begin = 0.2, end = 0.9,
-                                 aesthetics = c("color", "fill")) +
-            scale_size("parasitism", limits = c(0, 0.85), range = c(0.5, 8)) +
-            coord_sf(datum = st_crs(32616),
-                     xlim = xy_lims[1,], ylim = xy_lims[2,]) +
-            labs(title = format(filter(obs_pts_par, obs == .o)$obs_date[1],
-                                "%d %b %Y")) +
-            theme(plot.title = element_text(size = 10),
-                  axis.text = element_blank(),
-                  axis.ticks = element_blank()) +
-            theme(legend.position = "none") +
-            NULL
-    })
-
-
-egg::ggarrange(plots = pts_par_p_list, nrow = 3)
+fields_par_p_list[[1]] +
+    scalebar(dist = 500, dist_unit = "m", transform = FALSE,
+             border.size = 0.5,
+             st.size = 3, height = 0.01, location = "topleft",
+             x.min = xy_lims$xmin, x.max = xy_lims$xmax,
+             y.min = xy_lims$ymin, y.max = xy_lims$ymax) +
+    north(location = "topleft", symbol = 10,
+             x.min = xy_lims$xmin, x.max = xy_lims$xmax,
+             y.min = xy_lims$ymin, y.max = xy_lims$ymax)
 
 
 
 
+wi_bounds <- paste0("~/Box Sync/eco-evo_experiments/field-data/",
+                    "WI-boundary/Wisconsin_State_Boundary_24K.gpkg") %>%
+    st_read() %>%
+    st_transform(st_crs(32616))
+wi_xy_lims <- st_bbox(wi_bounds) %>% as.list()
 
 
-# ============================================================================*
-# ============================================================================*
-# ============================================================================*
-# ============================================================================*
-
-# par_df %>%
-#     group_by(year) %>%
-#     mutate(total_fields = length(unique(field))) %>%
-#     ungroup() %>%
-#     arrange(date) %>%
-#     mutate(period = cut.Date(date, breaks = "1 week")) %>%
-#     group_by(year, period, field) %>%
-#     summarize(para = mean(para),
-#               date = mean(date),
-#               n_obs = n(),
-#               total_fields = total_fields[1],
-#               .groups = "drop") %>%
-#     split(.$year) %>%
-#     map_dfr(~ mutate(.x, field_col = factor(field) %>% as.integer())) %>%
-#     mutate(field_col = factor(field_col),
-#            # So they show as dates but can be plotted on same scale:
-#            plot_date = as.Date(yday(date) - 1, origin = "2022-01-01")) %>%
-#     ggplot(aes(plot_date, para)) +
-#     geom_hline(yintercept = 0, color = "gray70", size = 0.5) +
-#     geom_point(aes(color = field_col), alpha = 0.5, size = 1) +
-#     facet_wrap(~ year, ncol = 1) +
-#     scale_color_manual(values = viridis(10, begin = 0.1, end = 0.8) %>%
-#                            .[do.call(c, map(5:1, ~ c(.x, .x + 5)))],
-#                        guide = "none") +
-#     scale_x_date(date_breaks = "1 month", date_labels = "%b") +
-#     theme(axis.title.x = element_blank(),
-#           axis.text.x = element_text(color = "black")) +
-#     theme(strip.text = element_text(size = 9)) +
-#     scale_y_continuous("Proportion aphids parasitized", breaks = 0.4*0:2) +
-#     NULL
-#
-# # Weekly average, only for weeks that contain all fields for that year:
-# week_par_df <- par_df %>%
-#     group_by(year) %>%
-#     mutate(total_fields = length(unique(field))) %>%
-#     ungroup() %>%
-#     arrange(date) %>%
-#     mutate(period = cut.Date(date, breaks = "1 week")) %>%
-#     group_by(year, period, field) %>%
-#     summarize(para = mean(para),
-#               date = mean(date),
-#               n_obs = n(),
-#               total_fields = total_fields[1],
-#               .groups = "drop") %>%
-#     group_by(year, period) %>%
-#     mutate(p_fields = length(unique(field)) / total_fields[1]) %>%
-#     ungroup() %>%
-#     filter(p_fields == 1) %>%
-#     select(-p_fields, -total_fields)
-#
-#
-# week_fields_par <- week_par_df %>%
-#     split(1:nrow(.)) %>%
-#     map(function(.d) {
-#         stopifnot(nrow(.d) == 1)
-#         .f <- fields_sf %>% filter(Name == .d$field)
-#         stopifnot(nrow(.f) == 1)
-#         .f$year <- .d$year
-#         .f$period <- .d$period
-#         .f$date <- .d$date
-#         .f$day <- yday(.d$date) - 1
-#         .f$para <- .d$para
-#         return(.f)
-#     }) %>%
-#     do.call(what = rbind)
-#
-#
-# xy_lims <- cbind(
-#     map(week_fields_par$geom, ~ apply(.x[[1]], 2, max)) %>%
-#         do.call(what = rbind) %>%
-#         apply(2, max),
-#     map(week_fields_par$geom, ~ apply(.x[[1]], 2, min)) %>%
-#         do.call(what = rbind) %>%
-#         apply(2, min))
-#
-#
-#
-# week_par_df %>%
-#     group_by(year, period) %>%
-#     summarize(par = max(para), .groups = "drop") %>%
-#     split(.$year)
-#
-#
-#
-#
-# week_fields_par %>%
-#     filter(year == 2011) %>%
-#     filter(day == max(day)) %>%
-#     ggplot() +
-#     geom_sf(aes(fill = para), color = NA) +
-#     scale_fill_viridis_c(limits = c(0, 0.75), begin = 0.2, end = 0.9) +
-#     theme_void() +
-#     coord_sf(datum = st_crs(32616), xlim = xy_lims[1,], ylim = xy_lims[2,]) +
-#     # labs(title = "Year: 2011", subtitle = "Date: 13 Jun") +
-#     NULL
+wi_bounds %>%
+    ggplot() +
+    geom_sf(size = 0.25) +
+    geom_rect(xmin = xy_lims$xmin, xmax = xy_lims$xmax,
+              ymin = xy_lims$ymin, ymax = xy_lims$ymax, fill = "red", color = NA) +
+    coord_sf(datum = st_crs(32616)) +
+    scalebar(dist = 50, dist_unit = "km", transform = FALSE,
+             border.size = 0.5,
+             st.size = 3, height = 0.01, location = "topleft",
+             x.min = wi_xy_lims$xmin, x.max = wi_xy_lims$xmax,
+             y.min = wi_xy_lims$ymin, y.max = wi_xy_lims$ymax) +
+    north(location = "topright", symbol = 10,
+          x.min = wi_xy_lims$xmin, x.max = wi_xy_lims$xmax,
+          y.min = wi_xy_lims$ymin, y.max = wi_xy_lims$ymax) +
+    theme_void() +
+    NULL
 
 
 
@@ -478,11 +388,11 @@ gif_par_df <- obs_par_df %>%
 #' Now I can combine the parasitism date with the field polygons:
 #'
 
-gif_pts_par <- gif_par_df %>%
+gif_fields_par <- gif_par_df %>%
     split(1:nrow(.)) %>%
     map(function(.d) {
         stopifnot(nrow(.d) == 1)
-        .f <- pts_sf %>% filter(Name == .d$field)
+        .f <- fields_sf %>% filter(Name == .d$field)
         stopifnot(nrow(.f) == 1)
         .f$year <- .d$year
         .f$obs <- .d$obs
@@ -493,8 +403,8 @@ gif_pts_par <- gif_par_df %>%
     }) %>%
     do.call(what = rbind)
 
-gif_pts_par
-nrow(gif_pts_par) == nrow(gif_par_df)
+gif_fields_par
+nrow(gif_fields_par) == nrow(gif_par_df)
 
 
 
@@ -504,22 +414,25 @@ nrow(gif_pts_par) == nrow(gif_par_df)
 
 
 gif_xy_lims <- rbind(
-    map_dbl(gif_pts_par$geom, ~ .x[[1]]) %>% range(),
-    map_dbl(gif_pts_par$geom, ~ .x[[2]]) %>% range())
+    map_dbl(gif_fields_par$geom, ~ .x[[1]]) %>% range(),
+    map_dbl(gif_fields_par$geom, ~ .x[[2]]) %>% range())
 
-gif_all_p <- gif_pts_par %>%
+gif_all_p <- gif_fields_par %>%
     ggplot() +
     geom_sf(aes(size = para, color = para)) +
-    scale_fill_viridis_c(limits = c(0, 0.85), begin = 0.2, end = 0.9,
-                          aesthetics = c("color", "fill")) +
-    scale_size("parasitism", limits = c(0, 0.85), range = c(0.5, 8)) +
+    scale_color_viridis_c("parasitism",
+                          limits = c(0, 0.85), begin = 0.2, end = 0.9,
+                          breaks = 0.2 * 0:4) +
+    scale_size("parasitism", limits = c(0, 0.85), range = c(0.5, 8),
+               breaks = 0.2 * 0:4) +
     coord_sf(datum = st_crs(32616),
              xlim = gif_xy_lims[1,], ylim = gif_xy_lims[2,]) +
     ggtitle("Year: {year(as.Date(paste(current_frame)))}") +
     theme(plot.title = element_text(size = 10),
-          legend.position = "none",
+          # legend.position = "none",
           axis.text = element_blank(),
           axis.ticks = element_blank()) +
+    guides(color = guide_legend(), size = guide_legend()) +
     # Here comes the gganimate specific bits
     labs(subtitle = "Date: {format(as.Date(paste(current_frame)), '%d %b')}") +
     transition_manual(obs_date) +
@@ -528,18 +441,18 @@ gif_all_p <- gif_pts_par %>%
 
 
 animate(gif_all_p, renderer = gifski_renderer(),
-        nframes = length(levels(gif_pts_par$obs)), fps = 10)
+        nframes = length(levels(gif_fields_par$obs)), fps = 10)
 
 anim_save("~/Desktop/field_gifs/fields_2011--2019.gif",
           animate(gif_all_p, renderer = gifski_renderer(),
-                  nframes = length(levels(gif_pts_par$obs)), fps = 10))
+                  nframes = length(levels(gif_fields_par$obs)), fps = 10))
 
 
 
 # gifs by year:
-for (y in levels(gif_pts_par$year)) {
+for (y in levels(gif_fields_par$year)) {
 
-    .d <- gif_pts_par %>%
+    .d <- gif_fields_par %>%
         filter(year == y) %>%
         mutate(obs_int = obs %>% fct_drop() %>% as.integer())
 
@@ -549,16 +462,19 @@ for (y in levels(gif_pts_par$year)) {
     gif_p <- .d %>%
         ggplot() +
         geom_sf(aes(size = para, color = para)) +
-        scale_fill_viridis_c(limits = c(0, 0.85), begin = 0.2, end = 0.9,
-                             aesthetics = c("color", "fill")) +
-        scale_size("parasitism", limits = c(0, 0.85), range = c(0.5, 8)) +
+        scale_color_viridis_c("parasitism",
+                              limits = c(0, 0.85), begin = 0.2, end = 0.9,
+                              breaks = 0.2 * 0:4) +
+        scale_size("parasitism", limits = c(0, 0.85), range = c(0.5, 8),
+                   breaks = 0.2 * 0:4) +
         coord_sf(datum = st_crs(32616),
                  xlim = gif_xy_lims[1,], ylim = gif_xy_lims[2,]) +
         ggtitle(paste("Year:", y)) +
         theme(plot.title = element_text(size = 10),
-              legend.position = "none",
+              # legend.position = "none",
               axis.text = element_blank(),
               axis.ticks = element_blank()) +
+        guides(color = guide_legend(), size = guide_legend()) +
         # Here comes the gganimate specific bits
         labs(subtitle = "Date: {format(as.Date(paste(current_frame)), '%d %b')}") +
         transition_manual(obs_date) +
