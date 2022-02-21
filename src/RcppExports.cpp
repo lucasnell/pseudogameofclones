@@ -7,6 +7,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // logit
 NumericVector logit(NumericVector p);
 RcppExport SEXP _clonewars_logit(SEXP pSEXP) {
@@ -68,6 +73,16 @@ BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericMatrix >::type leslie(leslieSEXP);
     rcpp_result_gen = Rcpp::wrap(sad_leslie(leslie));
+    return rcpp_result_gen;
+END_RCPP
+}
+// using_openmp
+bool using_openmp();
+RcppExport SEXP _clonewars_using_openmp() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(using_openmp());
     return rcpp_result_gen;
 END_RCPP
 }
@@ -135,6 +150,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_clonewars_leslie_matrix", (DL_FUNC) &_clonewars_leslie_matrix, 4},
     {"_clonewars_carrying_capacity", (DL_FUNC) &_clonewars_carrying_capacity, 7},
     {"_clonewars_sad_leslie", (DL_FUNC) &_clonewars_sad_leslie, 1},
+    {"_clonewars_using_openmp", (DL_FUNC) &_clonewars_using_openmp, 0},
     {"_clonewars_sim_clonewars_cpp", (DL_FUNC) &_clonewars_sim_clonewars_cpp, 47},
     {NULL, NULL, 0}
 };

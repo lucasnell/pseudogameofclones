@@ -26,6 +26,22 @@
 #include "pcg.hpp"              // mt_seeds seed_pcg fxns
 
 
+
+/*
+ Allows you to verify that you're able to use multiple threads.
+ */
+//[[Rcpp::export]]
+bool using_openmp() {
+    bool out = false;
+#ifdef _OPENMP
+    out = true;
+#endif
+    return out;
+}
+
+
+
+
 //' Check that the number of threads doesn't exceed the number available, and change
 //' to 1 if OpenMP isn't enabled.
 //'
