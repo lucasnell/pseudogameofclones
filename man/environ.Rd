@@ -49,6 +49,7 @@ Numeric vector of length 1, indicating environmental correlation among instars.
 environ
 }
 \description{
-Parameters associated with environmental effects and stochasticity.
+See \code{vignette("internals", "clonewars")} for more information and
+for the exact values used.
 }
 \keyword{datasets}

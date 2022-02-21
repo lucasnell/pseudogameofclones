@@ -54,6 +54,7 @@ A single number representing proportion of resistant clones.
 populations
 }
 \description{
-Population rates and starting values for aphids and wasps.
+See \code{vignette("internals", "clonewars")} for more information and
+for the exact values used.
 }
 \keyword{datasets}

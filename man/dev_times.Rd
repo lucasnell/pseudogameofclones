@@ -20,6 +20,6 @@ being parasitized: living and dead ("mummy"), respectively.}
 dev_times
 }
 \description{
-Development times for aphids and wasps.
+See \code{vignette("internals", "clonewars")} for the exact values here.
 }
 \keyword{datasets}

@@ -19,11 +19,13 @@ using namespace Rcpp;
 
 
 
-// Info for a single perturbation (it happens to all patches)
+// Info for a single perturbation (it happens to all patches within a cage)
 struct PerturbInfo {
 
     // When to perturb.
     uint32 time;
+    // Where to perturb.
+    uint32 cage;
     // Number to multiply abundance by.
     double multiplier;
     /*
@@ -34,11 +36,13 @@ struct PerturbInfo {
      */
     uint32 index;
 
-    PerturbInfo() : time(), multiplier(), index() {}
-    PerturbInfo(const uint32& when, const uint32& who, const double& how)
-        : time(when), multiplier(how), index(who) {}
+    PerturbInfo() : time(), cage(), multiplier(), index() {}
+    PerturbInfo(const uint32& when, const uint32& where,
+                const uint32& who, const double& how)
+        : time(when), cage(where), multiplier(how), index(who) {}
     PerturbInfo& operator=(const PerturbInfo& other) {
         time = other.time;
+        cage = other.cage;
         multiplier = other.multiplier;
         index = other.index;
         return *this;

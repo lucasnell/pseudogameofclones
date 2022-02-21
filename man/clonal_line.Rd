@@ -14,11 +14,9 @@ clonal_line(
   surv_juv_alates = "low",
   surv_adult_alates = "low",
   repro_alates = "low",
-  surv_juv_paras = "low",
-  surv_adult_paras = "low",
-  repro_paras = "low",
+  surv_paras = "low",
   temp = "low",
-  p_instar_remain = 0.1
+  p_instar_smooth = 0.5
 )
 }
 \arguments{
@@ -60,28 +58,29 @@ from a low-reproduction line.}
 Defaults to \code{"low"}, which results in estimates from a low-reproduction
 line.}
 
-\item{surv_juv_paras}{A single number for the juvenile survival rate for
-paras aphids. Defaults to \code{"low"}, which results in estimates
+\item{surv_paras}{A single number for the juvenile survival rate for
+parasitized aphids. Defaults to \code{"low"}, which results in estimates
 from a low-reproduction line.}
-
-\item{surv_adult_paras}{A vector of adult survival probabilities for
-paras aphids. Defaults to \code{"low"}, which results in estimates
-from a low-reproduction line.}
-
-\item{repro_paras}{A vector of fecundities for for paras aphids.
-Defaults to \code{"low"}, which results in estimates from a low-reproduction
-line.}
 
 \item{temp}{Single string specifying \code{"low"} (20º C) or \code{"high"} (27º C)
 temperature. Defaults to \code{"low"}.}
 
-\item{p_instar_remain}{If you want to make not all 4th instar aphids
-move to adulthood, then you can add the proportion that remain in the
-same instar here. Defaults to \code{0.1}.}
+\item{p_instar_smooth}{A value greater than zero here makes not all 4th
+instar aphids go to the adult stage at the same time.
+Of the 4th instars that would've moved to adulthood, \code{p_instar_smooth}
+remain as 4th instars.
+To keep the growth rate approximately equal, for the aphids that
+would've transitioned to 4th instar, \code{p_instar_smooth} move to
+adulthood instead.
+Defaults to \code{0.5}.}
 }
 \value{
 A list with the necessary info to pass onto sim_clonewars.
 }
 \description{
-Organize clonal line information
+To smooth stage structure out over time,
+not all 4th instar aphids move to adulthood immediately.
+If adulthood starts on day \code{t}, then half of aphids at age \code{t-2} move to
+adulthood, and half at age \code{t-1} do, too.
+I adjusted age \code{t-2}, too, to avoid this affecting the growth rate too much.
 }

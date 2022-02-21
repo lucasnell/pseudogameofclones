@@ -6,6 +6,6 @@
 \alias{clonewars}
 \title{The 'clonewars' package.}
 \description{
-Analyses and simulations related to repeated aphid clonal
-evolution experiments.
+Analyses and simulations related to aphid--parasitoid
+eco-evo dynamics experiments.
 }

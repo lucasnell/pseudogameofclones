@@ -37,6 +37,7 @@ Anthony Ives.
 wasp_attack
 }
 \description{
-Wasp attack rate parameters.
+See \code{vignette("internals", "clonewars")} for more information and
+for the exact values used.
 }
 \keyword{datasets}

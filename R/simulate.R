@@ -39,13 +39,18 @@
 #'     Defaults to `"low"`, which results in estimates from a low-reproduction
 #'     line.
 #' @param surv_paras A single number for the juvenile survival rate for
-#'     paras aphids. Defaults to `"low"`, which results in estimates
+#'     parasitized aphids. Defaults to `"low"`, which results in estimates
 #'     from a low-reproduction line.
-#' @param repro_paras A vector of fecundities for for paras aphids.
-#'     Defaults to `"low"`, which results in estimates from a low-reproduction
-#'     line.
 #' @param temp Single string specifying `"low"` (20º C) or `"high"` (27º C)
 #'     temperature. Defaults to `"low"`.
+#' @param p_instar_smooth A value greater than zero here makes not all 4th
+#'     instar aphids go to the adult stage at the same time.
+#'     Of the 4th instars that would've moved to adulthood, `p_instar_smooth`
+#'     remain as 4th instars.
+#'     To keep the growth rate approximately equal, for the aphids that
+#'     would've transitioned to 4th instar, `p_instar_smooth` move to
+#'     adulthood instead.
+#'     Defaults to `0.5`.
 #'
 #' @return A list with the necessary info to pass onto sim_clonewars.
 #'
@@ -379,7 +384,7 @@ sim_clonewars <- function(n_reps,
                           pred_rate = 0,
                           disp_rate = 1,
                           disp_mort = 0,
-                          alate_b0 = -2.988,
+                          alate_b0 = logit(0.093),
                           alate_b1 = 0,
                           alate_disp_prop = 0.75,
                           shape1_death_mort = 3.736386,
@@ -487,13 +492,16 @@ sim_clonewars <- function(n_reps,
 
     if (is.null(perturb)) {
         perturb_when = integer(0)
+        perturb_where = integer(0)
         perturb_who = integer(0)
         perturb_how = numeric(0)
     } else {
         stopifnot(inherits(perturb, "data.frame"))
-        stopifnot(identical(colnames(perturb), c("when", "who", "how")))
+        stopifnot(identical(colnames(perturb), c("when", "where", "who", "how")))
         perturb <- dplyr::arrange(perturb, when)
         perturb_when <- perturb$when
+        stopifnot(all(perturb$where <= n_cages & perturb$where > 0))
+        perturb_where <- perturb$where - 1
         perturb_how <- perturb$how
         if (is.character(perturb$who)) {
             stopifnot(all(perturb$who %in% c(aphid_names, "mummies", "wasps")))
@@ -502,7 +510,10 @@ sim_clonewars <- function(n_reps,
                 match(perturb$who[perturb$who %in% aphid_names], aphid_names)
             perturb_who[perturb$who == "mummies"] <- length(aphid_names)
             perturb_who[perturb$who == "wasps"] <- length(aphid_names) + 1
-        } else perturb_who <- perturb$who
+        } else {
+            stopifnot(all(perturb$who <= (n_lines+2) & perturb$who > 0))
+            perturb_who <- perturb$who - 1
+        }
     }
 
     uint_check(n_reps, "n_reps")
@@ -548,6 +559,7 @@ sim_clonewars <- function(n_reps,
     dbl_check(sex_ratio, "sex_ratio")
     dbl_check(s_y, "s_y")
     uint_vec_check(perturb_when, "perturb_when")
+    uint_vec_check(perturb_where, "perturb_where")
     uint_vec_check(perturb_who, "perturb_who")
     dbl_vec_check(perturb_how, "perturb_how", .min = 0)
     uint_check(n_threads, "n_threads")
@@ -565,7 +577,7 @@ sim_clonewars <- function(n_reps,
                               disp_rate, disp_mort, disp_start, living_days, pred_rate,
                               mum_density_0, max_mum_density, rel_attack, a, k, h,
                               wasp_density_0, wasp_delay, sex_ratio, s_y,
-                              perturb_when, perturb_who, perturb_how,
+                              perturb_when, perturb_where, perturb_who, perturb_how,
                               n_threads, show_progress)
 
     sims <- lapply(sims, as_tibble)

@@ -333,29 +333,32 @@ inline void do_perturb(std::deque<PerturbInfo>& perturbs,
         const PerturbInfo& pert(perturbs[i]);
         if (pert.time != t) break;
         double mult = pert.multiplier;
-        if (pert.index < n_lines) { // aphids
-            for (OneCage& cage : cages) {
-                for (OnePatch& p : cage.patches) {
-                    AphidPop& aphids(p.aphids[pert.index]);
-                    aphids.clear(mult);
-                    if (aphids.total_aphids() < extinct_N) aphids.clear();
-                    if ((p.total_aphids() + p.total_mummies()) == 0) {
-                        p.empty = true;
-                    }
+        OneCage& cage(cages[pert.cage]);
+        if (pert.index < n_lines) { // aphids (non-parasitized)
+            for (OnePatch& p : cage.patches) {
+                AphidPop& aphids(p.aphids[pert.index]);
+                aphids.apterous.clear(mult);
+                aphids.alates.clear(mult);
+                if (aphids.total_aphids() < extinct_N) aphids.clear();
+                if ((p.total_aphids() + p.total_mummies()) == 0) {
+                    p.empty = true;
                 }
             }
-        } else if (pert.index == n_lines) { // mummies
-            for (OneCage& cage : cages) {
-                for (OnePatch& p : cage.patches) {
-                    p.mummies.clear(mult);
-                    if (arma::accu(p.mummies.Y) < extinct_N) p.mummies.Y.fill(0);
+        } else if (pert.index == n_lines) { // mummies + parasitized aphids
+            for (OnePatch& p : cage.patches) {
+                p.mummies.clear(mult);
+                if (arma::accu(p.mummies.Y) < extinct_N) p.mummies.Y.fill(0);
+                for (AphidPop& aphids : p.aphids) {
+                    aphids.paras.clear(mult);
+                    if (aphids.total_aphids() < extinct_N) aphids.clear();
+                }
+                if ((p.total_aphids() + p.total_mummies()) == 0) {
+                    p.empty = true;
                 }
             }
         } else { // adult wasps
-            for (OneCage& cage : cages) {
-                cage.wasps.Y *= mult;
-                if (cage.wasps.Y < extinct_N) cage.wasps.Y = 0;
-            }
+            cage.wasps.Y *= mult;
+            if (cage.wasps.Y < extinct_N) cage.wasps.Y = 0;
         }
         i++;
     }
@@ -419,6 +422,7 @@ RepSummary one_rep__(const T& clear_threshold,
                      const double& sex_ratio,
                      const double& s_y,
                      const std::vector<uint32>& perturb_when,
+                     const std::vector<uint32>& perturb_where,
                      const std::vector<uint32>& perturb_who,
                      const std::vector<double>& perturb_how,
                      Progress& prog_bar,
@@ -457,8 +461,8 @@ RepSummary one_rep__(const T& clear_threshold,
 
     std::deque<PerturbInfo> perturbs(perturb_when.size());
     for (uint32 i = 0; i < perturb_when.size(); i++) {
-        perturbs[i] = PerturbInfo(perturb_when[i], perturb_who[i],
-                                  perturb_how[i]);
+        perturbs[i] = PerturbInfo(perturb_when[i], perturb_where[i],
+                                  perturb_who[i], perturb_how[i]);
     }
 
 
@@ -650,6 +654,7 @@ void check_args(const uint32& n_reps,
                 const double& sex_ratio,
                 const double& s_y,
                 const std::vector<uint32>& perturb_when,
+                const std::vector<uint32>& perturb_where,
                 const std::vector<uint32>& perturb_who,
                 const std::vector<double>& perturb_how,
                 uint32& n_threads) {
@@ -753,7 +758,8 @@ void check_args(const uint32& n_reps,
         stop("\nERROR: mum_density_0.n_rows == 0\n");
     }
 
-    if (perturb_when.size() != perturb_who.size() ||
+    if (perturb_when.size() != perturb_where.size() ||
+        perturb_when.size() != perturb_who.size() ||
         perturb_when.size() != perturb_how.size()) {
         stop("\nERROR: perturb_* args not same size.");
     }
@@ -885,6 +891,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                        const double& sex_ratio,
                        const double& s_y,
                        const std::vector<uint32>& perturb_when,
+                       const std::vector<uint32>& perturb_where,
                        const std::vector<uint32>& perturb_who,
                        const std::vector<double>& perturb_how,
                        uint32 n_threads,
@@ -904,7 +911,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                disp_rate, disp_mort, disp_start, living_days,
                pred_rate, mum_density_0, rel_attack, a, k, h,
                wasp_density_0, wasp_delay, sex_ratio, s_y,
-               perturb_when, perturb_who, perturb_how, n_threads);
+               perturb_when, perturb_where, perturb_who, perturb_how, n_threads);
 
     Progress prog_bar(max_t * n_reps, show_progress);
     std::vector<int> status_codes(n_threads, 0);
@@ -955,7 +962,8 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                              rel_attack, a, k,
                                              h, wasp_density_0, wasp_delay,
                                              sex_ratio, s_y,
-                                             perturb_when, perturb_who, perturb_how,
+                                             perturb_when, perturb_where,
+                                             perturb_who, perturb_how,
                                              prog_bar, status_code, eng);
         } else {
             summaries[i] = one_rep__<double>(max_N, i, n_cages, check_for_clear,
@@ -975,7 +983,8 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                              rel_attack, a, k,
                                              h, wasp_density_0, wasp_delay,
                                              sex_ratio, s_y,
-                                             perturb_when, perturb_who, perturb_how,
+                                             perturb_when, perturb_where,
+                                             perturb_who, perturb_how,
                                              prog_bar, status_code, eng);
         }
     }
