@@ -1,20 +1,17 @@
-
 library(tidyverse)
 library(clonewars)
-
 
 source(".Rprofile")
 
 
 # Date of most recent downloaded datasheet:
-.date <- "2022-01-06"
+.date <- "2022-02-10"
 
 #'
 #' Reps to exclude from plot.
-#' - Rep 7 failed bc wasps got into the cage
+#' - Rep 7 failed bc wasps got into the no-wasp cage, and we didn't
+#'   adequately respond to this.
 #'
-#'
-
 .exclude_reps <- c(7)
 
 exp_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
@@ -44,14 +41,12 @@ exp_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
                tolower() %>%
                factor(levels = c("wasp", "no wasp")),
            rep = factor(rep, levels = sort(unique(rep))),
-           cage_id = interaction(treatment, rep, cage, drop = TRUE, sep = "__",
-                                 lex.order = TRUE),
            trt_id = interaction(treatment, rep, drop = TRUE, sep = ", rep ",
                                 lex.order = TRUE)) %>%
-    select(cage_id, trt_id, everything(), -start_date, -red_line,
+    select(trt_id, everything(), -start_date, -red_line,
            -green_line) %>%
     # To show when an experimental cage was terminated:
-    group_by(cage_id) %>%
+    group_by(treatment, rep, cage) %>%
     mutate(terminated = date == max(date[plant1_red >= 0])) %>%
     ungroup() %>%
     # Using 2nd latest date to prevent all cages that weren't sampled on the
@@ -71,13 +66,71 @@ nrow(distinct(exp_df, treatment, rep)) == nrow(distinct(exp_df, rep))
 
 
 
+# "Pesky" wasps - wasps that made it into no-wasp cages:
 
+# Get date for latest pesky wasp datasheet:
+.pesky_date <- "~/Box Sync/eco-evo_experiments/results_csv/" %>%
+    list.files("pesky-wasps.csv") %>%
+    str_split("_") %>%
+    map_chr(~ .x[[1]]) %>%
+    as.Date() %>%
+    max()
+
+
+pesky_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
+                            .pesky_date, "_pesky-wasps.csv"),
+                     col_types = cols()) %>%
+    select(rep, date, mummies, starts_with("adult")) %>%
+    rename(females = `adult females`, males = `adult males`, unsexed = `adults unk.`) %>%
+    mutate(wasps = females + males + unsexed,
+           date = as.Date(date, "%d-%b-%y")) %>%
+    select(rep, date, mummies, wasps, everything()) %>%
+    group_by(date, rep) %>%
+    summarize_all(sum) %>%
+    ungroup() %>%
+    # These are changed to make it join easier with the other wasp data:
+    mutate(rep = factor(rep, levels = levels(exp_df$rep)),
+           cage = factor("no wasp", levels = levels(exp_df$cage)),
+           treatment = ifelse(rep %in% c(6,8,10,11),"dispersal","isolated") %>%
+               factor(levels = levels(exp_df$treatment)),
+           trt_id = paste(treatment, rep, sep = ", rep ") %>%
+               factor(levels = levels(exp_df$trt_id)),
+           start_date = map_chr(rep, ~ filter(exp_df, rep == .x) %>%
+                                    .[["date"]] %>% min() %>% paste()) %>%
+               as.Date(),
+           days = difftime(date, start_date, units = "days") %>%
+               as.integer()) %>%
+    select(-start_date)
+
+
+
+
+# ============================================================================*
+# ============================================================================*
+
+# Summarize by cage ----
+
+# ============================================================================*
+# ============================================================================*
 
 # Cage-level wasp/mummy data:
 wasp_cage_df <- exp_df %>%
-    select(cage_id, trt_id, treatment, rep, cage, days, wasps, mummies,
-           wasps_removed) %>%
-    filter(wasps >= 0)
+    # We don't want to include dates from pesky wasps bc it's redundant:
+    filter(!interaction(rep, date, cage, drop = TRUE) %in%
+               interaction(pesky_df$rep, pesky_df$date, pesky_df$cage,
+                           drop = TRUE)) %>%
+    select(trt_id, treatment, rep, cage, days, date, wasps, mummies, wasps_rm, mumm_rm) %>%
+    filter(wasps >= 0) %>%
+    mutate(pesky = 0) %>%
+    bind_rows(pesky_df %>%
+                  select(trt_id, treatment, rep, cage, days, date, wasps, mummies) %>%
+                  mutate(wasps_rm = wasps, mumm_rm = mummies,
+                         pesky = 1)) %>%
+    mutate(pesky = factor(pesky, levels = 0:1))
+
+
+
+
 
 
 
@@ -95,7 +148,7 @@ aphid_cage_df <- exp_df %>%
                factor(levels = c("resistant", "susceptible"))) %>%
     filter(aphids >= 0) %>%
     mutate(log_aphids = log1p(aphids)) %>%
-    select(cage_id, trt_id, treatment, rep, cage, days, line, aphids,
+    select(trt_id, treatment, rep, cage, days, line, aphids,
            log_aphids, terminated)
 
 
@@ -105,7 +158,7 @@ alate_cage_df <- exp_df %>%
     mutate(n_replaced = replaced_plants %>%
                str_split(",") %>%
                map_int(length)) %>%
-    select(cage_id, trt_id, treatment, rep, cage, days,
+    select(trt_id, treatment, rep, cage, days,
            starts_with("alates_"), n_replaced) %>%
     pivot_longer(starts_with("alates_total_"), names_to = "line",
                  values_to = "alates_total") %>%
@@ -114,8 +167,17 @@ alate_cage_df <- exp_df %>%
            line = case_when(line == "red" ~ "susceptible",
                             line == "green" ~ "resistant") %>%
                factor(levels = c("resistant", "susceptible"))) %>%
-    select(cage_id, trt_id, treatment, rep, cage, days, line,
+    select(trt_id, treatment, rep, cage, days, line,
            alates_total, alates_in, n_replaced)
+
+
+# ============================================================================*
+# ============================================================================*
+
+# Main plot ----
+
+# ============================================================================*
+# ============================================================================*
 
 
 aphid_y <- "aphids"
@@ -170,7 +232,7 @@ aphid_cage_p <- aphid_cage_df %>%
                                             as.Date("2021-06-14"),
                                             units = "days") %>% as.integer()),
                aes(y = max(aphid_cage_df[[aphid_y]]) * 0.9),
-               shape = 8, size = 3) +
+               shape = 8, size = 2.5) +
     geom_point(data = aphid_cage_df %>%
                      filter(rep == 8, cage == "wasp") %>%
                      distinct(trt_id, cage) %>%
@@ -178,7 +240,7 @@ aphid_cage_p <- aphid_cage_df %>%
                                             as.Date("2021-06-14"),
                                             units = "days") %>% as.integer()),
                aes(y = max(aphid_cage_df[[aphid_y]]) * 0.9),
-               shape = 3, size = 3) +
+               shape = 3, size = 2.5) +
     # # Points for number of plants replaced:
     # geom_point(data = alate_cage_df %>%
     #                filter(line == "resistant", n_replaced > 0),
@@ -223,8 +285,19 @@ aphid_cage_p
 
 if (!file.exists(sprintf("~/Desktop/eco-evo_cages__%s.pdf", .date))) {
     ggsave(sprintf("~/Desktop/eco-evo_cages__%s.pdf", .date),
-           aphid_cage_p, width = 6.5, height = 8)
+           aphid_cage_p, width = 7, height = 8)
 }
+
+
+
+
+# ============================================================================*
+# ============================================================================*
+
+# Misc. other plots ----
+
+# ============================================================================*
+# ============================================================================*
 
 
 
@@ -237,7 +310,7 @@ aphid_cage_df %>%
 
 
 
-#  alates ----
+#  __alates ----
 
 # Alate production decreasing?
 # alate_p <-
@@ -276,7 +349,7 @@ ggsave(sprintf("~/Desktop/eco-evo_alates__%s.pdf", .date),
 
 
 
-# observer differences ----
+# __observer differences ----
 
 
 

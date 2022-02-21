@@ -4,6 +4,9 @@
 #' This file uses the alate data from when we were looking at competition among lines.
 #' They were done summer 2019.
 #'
+#' UPDATE 2022-02-15: The analyses here aren't convincing and seem like
+#' they're full of issues. I'm abandoning this.
+#'
 
 
 suppressPackageStartupMessages({
@@ -21,7 +24,6 @@ z_trans <- function(x) {
     if (.sd == 0 || is.na(.sd)) .sd <- 1
     (x - mean(x, na.rm = TRUE)) / .sd
 }
-# z_inv_trans <- function(x, m, s) (x * s) + m
 
 asn_trans <- function(x) 2 * asin(sqrt(x))
 
@@ -80,7 +82,7 @@ impute_all_days <- function(N, date) {
     date <- date[order(date)]
 
     # Fixed version of `zoo::na.StructTS`
-    # with an extra checks for length 1 and for all-identical non-NAs
+    # with extra checks for length 1 and for all-identical non-NAs
     zoo__na.StructTS <- function (object) {
 
         na.rm = FALSE; maxgap = Inf
@@ -172,13 +174,13 @@ alate_mod_df <- alate_df %>%
 
 
 
-# # b_N seems to work okay:
-# alate_mod_df %>%
-#     ggplot(aes(b_N, asn_trans(new_alates / new_all))) +
-#     geom_point(aes(color = line), shape = 1, alpha = 0.5) +
-#     stat_smooth(method = "lm", formula = y ~ x, se = FALSE) +
-#     facet_wrap(~ line, nrow = 2) +
-#     NULL
+# b_N seems to work okay:
+alate_mod_df %>%
+    ggplot(aes(pcg, (new_alates / new_all))) +
+    geom_point(aes(color = line), shape = 1, alpha = 0.5) +
+    # stat_smooth(method = "lm", formula = y ~ x, se = FALSE) +
+    # facet_wrap(~ line, nrow = 2) +
+    NULL
 
 
 # Full model (`~ b_N + (1 | line) + (b_N | plant)`): 345.7641
@@ -190,12 +192,21 @@ forms <- list(cbind(new_alates, new_apterous) ~ b_N + (b_N | line) + (b_N | plan
               cbind(new_alates, new_apterous) ~ b_N + (b_N | line),
               cbind(new_alates, new_apterous) ~ b_N + (1 | line),
               cbind(new_alates, new_apterous) ~ b_N + (b_N | plant),
-              cbind(new_alates, new_apterous) ~ b_N + (1 | plant))
-mods <- map(forms, ~ glmer(.x, data = alate_mod_df, family = binomial))
+              cbind(new_alates, new_apterous) ~ b_N + (1 | plant),
+              cbind(new_alates, new_apterous) ~ (b_N | line) + (b_N | plant),
+              cbind(new_alates, new_apterous) ~ (1 | line) + (b_N | plant),
+              cbind(new_alates, new_apterous) ~ (b_N | line) + (1 | plant),
+              cbind(new_alates, new_apterous) ~ (1 | line) + (1 | plant),
+              cbind(new_alates, new_apterous) ~ (b_N | line),
+              cbind(new_alates, new_apterous) ~ (1 | line),
+              cbind(new_alates, new_apterous) ~ (b_N | plant),
+              cbind(new_alates, new_apterous) ~ (1 | plant))
+mods <- map(forms, ~ glmer(.x, data = alate_mod_df, family = binomial,
+                           control = glmerControl(optCtrl = list(maxfun = 100e3))))
 
 # These didn't fit properly, so we remove them:
-forms[map_lgl(mods, ~ isSingular(.x))]
-mods <- mods[map_lgl(mods, ~ !isSingular(.x))]
+forms[map_lgl(mods, ~ length(.x@optinfo$conv$lme4) != 0)]
+mods <- mods[map_lgl(mods, ~ length(.x@optinfo$conv$lme4) == 0)]
 
 # AICs for all non-singular model fits:
 map_dbl(mods, ~ AIC(.x))
@@ -205,12 +216,11 @@ mods[[which(map_dbl(mods, ~ AIC(.x)) == min(map_dbl(mods, ~ AIC(.x))))]]
 
 
 # (If the anything changes, make sure the one below is the same as above)
-alate_mod <- glmer(cbind(new_alates, new_apterous) ~ b_N + (1 | line) +
-                       (b_N | plant),
-                   data = alate_mod_df, family = binomial)
+alate_mod <- glmer(cbind(new_alates, new_apterous) ~ (1 | line) + (b_N | plant),
+                   data = alate_mod_df, family = binomial,
+                   control = glmerControl(optCtrl = list(maxfun = 100e3)))
 
-glmer(cbind(new_alates, new_apterous) ~ (1 | line) + (b_N | plant),
-      data = alate_mod_df, family = binomial)
+
 
 
 fixef(alate_mod)
@@ -224,8 +234,7 @@ predict(alate_mod, newdata = tibble(line = "WI-L4", b_N = 10, plant = 1),
 b0 <- fixef(alate_mod)[["(Intercept)"]] +
     ranef(alate_mod)[["line"]]["WI-L4","(Intercept)"] +
     ranef(alate_mod)[["plant"]]["1","(Intercept)"]
-b1 <- fixef(alate_mod)[["b_N"]] +
-    ranef(alate_mod)[["plant"]]["1","b_N"]
+b1 <- ranef(alate_mod)[["plant"]]["1","b_N"]
 inv_logit(b0 + 10 * b1)
 
 

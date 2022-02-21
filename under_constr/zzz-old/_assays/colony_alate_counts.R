@@ -8,24 +8,15 @@
 #'
 
 
-suppressPackageStartupMessages({
-    library(tidyverse)
-    library(lme4)
-})
-
-inv_logit <- clonewars::inv_logit
-logit <- clonewars::logit
+library(lme4)
+library(car)
+library(tidyverse)
+library(clonewars)
 
 if (file.exists(".Rprofile")) source(".Rprofile")
-# ggplot theme:
-theme_set(theme_classic() %+replace%
-              theme(strip.background = element_blank(),
-                    strip.text = element_text(size = 11),
-                    legend.background = element_blank(),
-                    plot.title = element_text(size = 14, hjust = 0)))
 
 
-col_counts <- paste0("~/Box Sync/Aphid Project/Colony alate counts/",
+col_counts <- paste0("~/Box Sync/eco-evo_experiments/prelim_assays/alates/",
                      "Colony alate counts DATA 25Oct2020.csv") %>%
     read_csv(col_types = cols()) %>%
     mutate(sample_date = as.Date(sample_date, "%m/%d/%Y"),
@@ -49,14 +40,15 @@ col_counts <- paste0("~/Box Sync/Aphid Project/Colony alate counts/",
 
 col_counts %>%
     mutate(p = alate / total) %>%
-    ggplot(aes(age, p)) +
+    ggplot(aes(total, p)) +
     geom_point(aes(color = line)) +
-    facet_wrap(~ line) +
-    scale_color_manual(guide = FALSE,
+    # facet_wrap(~ line) +
+    scale_color_manual(guide = "none",
                        values = viridisLite::viridis(10) %>%
                            .[do.call(c, map(1:5, ~ .x + c(0,5)))]) +
     scale_y_continuous("Proportion alates") +
-    xlab("Pot age")
+    # xlab("Pot age")
+    xlab("Total aphids")
 
 # # Looks like there's an effect of date (due to thrips early on):
 # col_counts %>%
@@ -71,13 +63,13 @@ col_counts %>%
 
 
 
-# # # Convergence issues:
-# # z <- glmer(cbind(alate, apterous) ~ line + age + (1|pot) + (1|obs),
-# #            family = binomial, data = col_counts)
-# # z0 <- glmer(cbind(alate, apterous) ~ age + (1|pot) + (1|obs),
-# #             family = binomial, data = col_counts)
-# # summary(z)
-# # anova(z,z0)
+# # Convergence issues:
+# z <- glmer(cbind(alate, apterous) ~ line + age + (1|pot) + (1|obs),
+#            family = binomial, data = col_counts)
+# z0 <- glmer(cbind(alate, apterous) ~ age + (1|pot) + (1|obs),
+#             family = binomial, data = col_counts)
+# summary(z)
+# anova(z,z0)
 #
 # # # Convergence issues:
 # # z <- glmer(cbind(alate, apterous) ~ line + total + (1|pot) + (1|obs),
@@ -98,18 +90,10 @@ col_counts %>%
 
 z <- glm(cbind(alate, apterous) ~ line + age, data = col_counts, family = quasibinomial)
 z0 <- glm(cbind(alate, apterous) ~ age, data = col_counts, family = quasibinomial)
-summary(z)
+Anova(z)
 
 
 
-
-
-# "z_date", "(1 | obs)", "z_age", "z_total", "(1 | line)"
-
-
-
-# Line is non-significant here
-# I can't include it as a random effect bc I get `boundary (singular) fit`
 
 al_mod <- glmer(cbind(alate, apterous) ~ (1 | obs) + z_age + z_date + (1 | line),
                 control = glmerControl(optimizer = "bobyqa",
@@ -144,19 +128,16 @@ boot_fun <- function(x) {
 }
 
 
-# # Takes ~1.3 min on my machine using 3 threads
-# al_mod_boot <- bootMer(al_mod, boot_fun, 2000, seed = 96123392,
-#                        parallel = "multicore", ncpus = 3,
-#                        re.form = ~ (1 | line))
-# saveRDS(al_mod_boot, "al_mod_boot.rds")
+# Takes ~13 sec on my machine using 6 threads
+al_mod_boot <- bootMer(al_mod, boot_fun, 2000, seed = 96123392,
+                       parallel = "multicore",
+                       ncpus = max(1, parallel::detectCores()-2),
+                       re.form = ~ (1 | line))
 
 
-al_mod_boot <- readRDS("al_mod_boot.rds")
-
-
-# fortify.merMod(al_mod) %>%
-#     ggplot(aes(.fitted, .resid)) +
-#     geom_point()
+fortify.merMod(al_mod) %>%
+    ggplot(aes(.fitted, .resid)) +
+    geom_point()
 
 
 
@@ -190,7 +171,7 @@ pred_data %>%
                    mutate(p = alate / total)) +
     facet_wrap(~ line) +
     scale_color_manual(values = c(red = "#e41a1c", green = "#4daf4a"),
-                       guide = FALSE) +
+                       guide = "none") +
     scale_y_continuous("Proportion alates") +
     xlab("Pot age")
 
@@ -207,7 +188,7 @@ pred_data %>%
                    mutate(p = logit(alate / total))) +
     facet_wrap(~ line) +
     scale_color_manual(values = c(red = "#e41a1c", green = "#4daf4a"),
-                       guide = FALSE) +
+                       guide = "none") +
     scale_y_continuous("Proportion alates") +
     xlab("Pot age")
 

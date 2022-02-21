@@ -10,7 +10,8 @@ source(".Rprofile")
 #' * Both Clover-2017-2 and WI-L4 show response to crowding
 #' * WI-L4 has much higher alate production in both treatments
 #'
-df1 <- read_csv("~/Desktop/alateproductionassays/AlateProduction_02Jul2019.csv") %>%
+df1 <- read_csv(paste0("~/Box Sync/eco-evo_experiments/prelim_assays/alates/",
+                       "from_MikeBosch/AlateProduction_02Jul2019.csv")) %>%
     rename_all(tolower)
 df1 %>%
     group_by(line, type) %>%
@@ -28,7 +29,8 @@ green <- c("Clover-2017-2", "Clover-2017-6", "UT3", "WI-2016-593")
 #' * R10 (red) is low
 #' * WI-L4Ø (red) is pretty high (but not as much as in my plant assays)
 #'
-df2 <- read_csv("~/Desktop/alateproductionassays/AlateProduction_07Aug2019.csv") %>%
+df2 <- read_csv(paste0("~/Box Sync/eco-evo_experiments/prelim_assays/alates/",
+                       "from_MikeBosch/AlateProduction_07Aug2019.csv")) %>%
     rename_all(tolower) %>%
     filter(!is.na(al), !is.na(ap)) %>%
     mutate(prop = al / (al + ap),
@@ -40,18 +42,17 @@ df2_p <- df2 %>%
     ggplot(aes(line, prop, color = color, shape = treat)) +
     geom_point(size = 2) +
     ylab("Alate offspring proportion") +
-    scale_color_manual(values = RColorBrewer::brewer.pal(3,"Dark2")[c(1, 2)], guide = FALSE) +
+    scale_color_manual(values = RColorBrewer::brewer.pal(3,"Dark2")[c(1, 2)], guide = "none") +
     scale_shape_manual(NULL, values = c(1, 2)) +
     theme_classic() +
     theme(legend.position = c(0.5, 0.9))
 
-df2_p %>%
-    ggsave(filename = "~/Desktop/mike_data.pdf", width = 6, height = 3)
+df2_p
 
 df2 %>%
     ggplot(aes(line, al, color = color, shape = treat)) +
     geom_point() +
-    scale_color_manual(values = c("green", "red"), guide = FALSE) +
+    scale_color_manual(values = c("green", "red"), guide = "none") +
     scale_shape_manual(NULL, values = c(1, 17)) +
     theme_classic() +
     theme(legend.position = c(0.5, 0.9))

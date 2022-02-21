@@ -16,6 +16,9 @@ suppressPackageStartupMessages({
 })
 
 
+assay_excel_file <- paste0("~/Box Sync/eco-evo_experiments/prelim_assays/",
+                           "eco-evo-prelims.xlsx")
+
 
 # ========================================================================
 # ========================================================================
@@ -27,7 +30,7 @@ suppressPackageStartupMessages({
 
 
 
-pop_df <- read_excel("~/Box Sync/2020/aphids/eco-evo-prelims.xlsx",
+pop_df <- read_excel(assay_excel_file,
                      sheet = "population-growth") %>%
     mutate(date = as.Date(paste(year, month, day, sep = "-")),
            rep = factor(rep)) %>%
@@ -120,7 +123,7 @@ abline(v = obs_diff, lty = 2, col = "red")
 # ========================================================================
 
 
-wasp_df <- read_excel("~/Box Sync/2020/aphids/eco-evo-prelims.xlsx",
+wasp_df <- read_excel(assay_excel_file,
                       sheet = "wasp-resistance_1") %>%
     # mutate(start = as.Date(paste(`start-year`, `start-month`, `start-day`, sep = "-")),
     #        end = as.Date(paste(`end-year`, `end-month`, `end-day`, sep = "-")),

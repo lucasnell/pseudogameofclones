@@ -7,7 +7,7 @@ library(viridisLite)
 
 source(".Rprofile")
 
-files <- sprintf("~/Box Sync/2020/aphids/alate_fecundity/%s.csv",
+files <- sprintf("~/Box Sync/zzz-archive/2020/alate_fecundity/%s.csv",
                  c("Al_Fecundity_ClonalLines_v1_29Mar2019",
                    "Fecundity_v2_22Apr19"))
 
@@ -91,7 +91,7 @@ fecunds <- boot_fecund %>%
     mutate(prop = map2_dbl(day, avg, ~ .y / avg_fecund[.x])) %>%
     filter(!is.nan(prop)) %>%
     split(.$line) %>%
-    map(~ lm(prop ~ I(gtools::inv.logit(day)), .x)) %>%
+    map(~ lm(prop ~ I(clonewars:::inv_logit(day)), .x)) %>%
     map_dfr(~ tibble(day = 1:length(avg_fecund),
                      fecund = avg_fecund *
                          predict(.x, newdata = tibble(day = 1:length(avg_fecund))))) %>%
