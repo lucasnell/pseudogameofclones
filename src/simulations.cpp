@@ -94,9 +94,10 @@ void calc_rep_rows(uint32& n_rows,
     // # time points you'll save:
     n_rows_wasps = (max_t / save_every) + 1;
     if (max_t % save_every > 0) n_rows_wasps++;
+    n_rows_wasps *= n_cages;
 
-    n_rows = n_cages * n_patches * n_lines * n_rows_wasps;
-    n_rows *= 2;  // `*2` for separate alate vs apterous
+    n_rows = n_patches * n_lines * n_rows_wasps;
+    n_rows *= 3;  // `*3` for separate alate vs apterous vs parasitized
     n_rows += n_patches * n_rows_wasps;  // for mummies
 
     return;
@@ -194,7 +195,8 @@ struct RepSummary {
                     const AphidPop& aphid(patch[i]);
                     append_living_aphids__(t, k, j, aphid.aphid_name,
                                            aphid.alates.total_aphids(),
-                                           aphid.apterous.total_aphids());
+                                           aphid.apterous.total_aphids(),
+                                           aphid.paras.total_aphids());
                 }
                 append_mummies__(t, k, j, patch.total_mummies());
             }
@@ -275,28 +277,36 @@ private:
                                        const uint32& p,
                                        const std::string& l,
                                        const double& N_ala,
-                                       const double& N_apt) {
+                                       const double& N_apt,
+                                       const double& N_par) {
 
+        rep.push_back(r);
         rep.push_back(r);
         rep.push_back(r);
 
         time.push_back(t);
         time.push_back(t);
+        time.push_back(t);
 
+        cage.push_back(c);
         cage.push_back(c);
         cage.push_back(c);
 
         patch.push_back(p);
         patch.push_back(p);
+        patch.push_back(p);
 
+        line.push_back(l);
         line.push_back(l);
         line.push_back(l);
 
         type.push_back("alate");
         type.push_back("apterous");
+        type.push_back("parasitized");
 
         N.push_back(N_ala);
         N.push_back(N_apt);
+        N.push_back(N_par);
 
         return;
     }
