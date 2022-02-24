@@ -399,7 +399,7 @@ RepSummary one_rep__(const T& clear_threshold,
                      const uint32& save_every,
                      const double& mean_K,
                      const double& sd_K,
-                     const double& K_y_mult,
+                     const std::vector<double>& K_y_mult,
                      const double& death_prop,
                      const double& shape1_death_mort,
                      const double& shape2_death_mort,
@@ -428,9 +428,11 @@ RepSummary one_rep__(const T& clear_threshold,
                      const double& k,
                      const double& h,
                      const std::vector<double>& wasp_density_0,
-                     const uint32& wasp_delay,
+                     const std::vector<uint32>& wasp_delay,
+                     const double& wasp_dispersal_p,
                      const double& sex_ratio,
-                     const double& s_y,
+                     const std::vector<double>& s_y,
+                     const std::vector<bool>& constant_wasps,
                      const std::vector<uint32>& perturb_when,
                      const std::vector<uint32>& perturb_where,
                      const std::vector<uint32>& perturb_who,
@@ -457,14 +459,15 @@ RepSummary one_rep__(const T& clear_threshold,
     cages.reserve(n_cages);
     for (uint32 i = 0; i < n_cages; i++) {
         cages.push_back(
-            OneCage(sigma_x, sigma_y, rho, demog_mult, mean_K, sd_K, K_y_mult,
+            OneCage(sigma_x, sigma_y, rho, demog_mult, mean_K, sd_K, K_y_mult[i],
                     death_prop,
                     shape1_death_mort, shape2_death_mort, attack_surv,
                     aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1,
                     disp_rate, disp_mort, disp_start, living_days, pred_rate,
                     extinct_N, mum_density_0, max_mum_density,
-                    rel_attack, a, k, h, 0, sex_ratio, s_y, eng));
-        if (wasp_delay == 0) cages.back().wasps.Y = wasp_density_0[i];
+                    rel_attack, a, k, h, 0, sex_ratio,
+                    s_y[i], constant_wasps[i], eng));
+        if (wasp_delay[i] == 0) cages.back().wasps.Y = wasp_density_0[i];
     }
 
 
@@ -500,6 +503,15 @@ RepSummary one_rep__(const T& clear_threshold,
 
         }
 
+        // used to calculate wasp dispersal if desired:
+        double from_wasp_pool = 0;
+        if (wasp_dispersal_p > 0 && n_cages > 1) {
+            double wasp_Y_bar = 0;
+            for (OneCage& cage : cages) wasp_Y_bar += cage.wasps.Y;
+            wasp_Y_bar /= static_cast<double>(n_cages);
+            from_wasp_pool = wasp_Y_bar * wasp_dispersal_p;
+        }
+
         for (uint32 i = 0; i < n_cages; i++) {
 
             OneCage& cage(cages[i]);
@@ -512,8 +524,13 @@ RepSummary one_rep__(const T& clear_threshold,
                 cage.update(eng);
             } else cage.update();
 
+            // Add from wasp dispersal pool
+            if (wasp_dispersal_p > 0 && n_cages > 1) {
+                cage.wasps.Y *= (1 - wasp_dispersal_p);
+                cage.wasps.Y += from_wasp_pool;
+            }
 
-            if (t == wasp_delay) cage.wasps.Y += wasp_density_0[i];
+            if (t == wasp_delay[i]) cage.wasps.Y += wasp_density_0[i];
 
         }
 
@@ -633,7 +650,7 @@ void check_args(const uint32& n_reps,
                 const uint32& save_every,
                 const double& mean_K,
                 const double& sd_K,
-                const double& K_y_mult,
+                const std::vector<double>& K_y_mult,
                 const double& death_prop,
                 const double& shape1_death_mort,
                 const double& shape2_death_mort,
@@ -660,9 +677,11 @@ void check_args(const uint32& n_reps,
                 const double& k,
                 const double& h,
                 const std::vector<double>& wasp_density_0,
-                const uint32& wasp_delay,
+                const std::vector<uint32>& wasp_delay,
+                const double& wasp_dispersal_p,
                 const double& sex_ratio,
-                const double& s_y,
+                const std::vector<double>& s_y,
+                const std::vector<bool>& constant_wasps,
                 const std::vector<uint32>& perturb_when,
                 const std::vector<uint32>& perturb_where,
                 const std::vector<uint32>& perturb_who,
@@ -754,8 +773,20 @@ void check_args(const uint32& n_reps,
         stop("\nERROR: rel_attack.n_elem != n_stages\n");
     }
 
+    if (K_y_mult.size() != n_cages) {
+        stop("\nERROR: K_y_mult.size() != n_cages\n");
+    }
     if (wasp_density_0.size() != n_cages) {
         stop("\nERROR: wasp_density_0.size() != n_cages\n");
+    }
+    if (wasp_delay.size() != n_cages) {
+        stop("\nERROR: wasp_delay.size() != n_cages\n");
+    }
+    if (s_y.size() != n_cages) {
+        stop("\nERROR: s_y.size() != n_cages\n");
+    }
+    if (constant_wasps.size() != n_cages) {
+        stop("\nERROR: constant_wasps.size() != n_cages\n");
     }
 
     if (pred_rate.size() != n_patches) {
@@ -789,7 +820,6 @@ void check_args(const uint32& n_reps,
     one_negative_check(max_N, "max_N");
     one_negative_check(mean_K, "mean_K");
     one_negative_check(sd_K, "sd_K");
-    one_negative_check(K_y_mult, "K_y_mult");
     one_negative_check(shape1_death_mort, "shape1_death_mort");
     one_negative_check(shape2_death_mort, "shape2_death_mort");
     one_negative_check(sigma_x, "sigma_x");
@@ -801,6 +831,7 @@ void check_args(const uint32& n_reps,
     one_negative_check(h, "h");
 
     // objects containing doubles that must be >= 0
+    negative_check<std::vector<double>>(K_y_mult, "K_y_mult");
     negative_check<arma::mat>(attack_surv, "attack_surv");
     for (uint32 i = 0; i < leslie_mat.size(); i++) {
         negative_check<arma::cube>(leslie_mat[i], "leslie_mat");
@@ -815,11 +846,12 @@ void check_args(const uint32& n_reps,
     negative_check<arma::vec>(rel_attack, "rel_attack");
     negative_check<std::vector<double>>(wasp_density_0, "wasp_density_0");
 
-    // doubles that must be >= 0 and <= 1
+    // doubles / double vectors that must be >= 0 and <= 1
     one_non_prop_check(clear_surv, "clear_surv");
     one_non_prop_check(death_prop, "death_prop");
     one_non_prop_check(sex_ratio, "sex_ratio");
-    one_non_prop_check(s_y, "s_y");
+    one_non_prop_check(wasp_dispersal_p, "wasp_dispersal_p");
+    non_prop_check<std::vector<double>>(s_y, "s_y");
 
     // below top rows should be >= 0 and <= 1:
     auto iter = leslie_mat.begin();
@@ -868,7 +900,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                        const uint32& save_every,
                        const double& mean_K,
                        const double& sd_K,
-                       const double& K_y_mult,
+                       const std::vector<double>& K_y_mult,
                        const double& death_prop,
                        const double& shape1_death_mort,
                        const double& shape2_death_mort,
@@ -897,9 +929,11 @@ List sim_clonewars_cpp(const uint32& n_reps,
                        const double& k,
                        const double& h,
                        const std::vector<double>& wasp_density_0,
-                       const uint32& wasp_delay,
+                       const std::vector<uint32>& wasp_delay,
+                       const double& wasp_dispersal_p,
                        const double& sex_ratio,
-                       const double& s_y,
+                       const std::vector<double>& s_y,
+                       const std::vector<bool>& constant_wasps,
                        const std::vector<uint32>& perturb_when,
                        const std::vector<uint32>& perturb_where,
                        const std::vector<uint32>& perturb_who,
@@ -920,7 +954,8 @@ List sim_clonewars_cpp(const uint32& n_reps,
                leslie_mat, aphid_density_0, alate_b0, alate_b1,
                disp_rate, disp_mort, disp_start, living_days,
                pred_rate, mum_density_0, rel_attack, a, k, h,
-               wasp_density_0, wasp_delay, sex_ratio, s_y,
+               wasp_density_0, wasp_delay, wasp_dispersal_p,
+               sex_ratio, s_y, constant_wasps,
                perturb_when, perturb_where, perturb_who, perturb_how, n_threads);
 
     Progress prog_bar(max_t * n_reps, show_progress);
@@ -971,7 +1006,8 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                              mum_density_0, max_mum_density,
                                              rel_attack, a, k,
                                              h, wasp_density_0, wasp_delay,
-                                             sex_ratio, s_y,
+                                             wasp_dispersal_p,
+                                             sex_ratio, s_y, constant_wasps,
                                              perturb_when, perturb_where,
                                              perturb_who, perturb_how,
                                              prog_bar, status_code, eng);
@@ -992,7 +1028,8 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                              mum_density_0, max_mum_density,
                                              rel_attack, a, k,
                                              h, wasp_density_0, wasp_delay,
-                                             sex_ratio, s_y,
+                                             wasp_dispersal_p,
+                                             sex_ratio, s_y, constant_wasps,
                                              perturb_when, perturb_where,
                                              perturb_who, perturb_how,
                                              prog_bar, status_code, eng);

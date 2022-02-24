@@ -390,6 +390,7 @@ class OneCage {
     double shape2_death_mort_;      // shape2 of distribution of `death_mort` for plants
 
     double extinct_N;               // used here for the wasps
+    bool constant_wasps;            // keep wasp abundance constant?
 
 
     // Set K and K_y
@@ -443,6 +444,7 @@ public:
     OneCage()
         : tnorm_distr(), beta_distr(), mean_K_(), sd_K_(), K_y_mult(),
           shape1_death_mort_(), shape2_death_mort_(), extinct_N(),
+          constant_wasps(),
           patches(), wasps(), emigrants(), immigrants() {};
 
     /*
@@ -481,6 +483,7 @@ public:
                const double& wasp_density_0_,
                const double& sex_ratio_,
                const double& s_y_,
+               const bool& constant_wasps_,
                pcg32& eng)
         : tnorm_distr(),
           beta_distr(),
@@ -490,6 +493,7 @@ public:
           shape1_death_mort_(shape1_death_mort),
           shape2_death_mort_(shape2_death_mort),
           extinct_N(extinct_N_),
+          constant_wasps(constant_wasps_),
           patches(),
           wasps(rel_attack_, a_, k_, h_, wasp_density_0_,
                 sex_ratio_, s_y_, sigma_y),
@@ -550,6 +554,7 @@ public:
           shape1_death_mort_(other.shape1_death_mort_),
           shape2_death_mort_(other.shape2_death_mort_),
           extinct_N(other.extinct_N),
+          constant_wasps(other.constant_wasps),
           patches(other.patches),
           wasps(other.wasps),
           emigrants(other.emigrants),
@@ -564,6 +569,7 @@ public:
         shape1_death_mort_ = other.shape1_death_mort_;
         shape2_death_mort_ = other.shape2_death_mort_;
         extinct_N = other.extinct_N;
+        constant_wasps = other.constant_wasps;
         patches = other.patches;
         wasps = other.wasps;
         emigrants = other.emigrants;
@@ -652,9 +658,11 @@ public:
         for (OnePatch& p : patches) {
             p.update(emigrants, immigrants, &wasps, eng);
         }
-        // Lastly update adult wasps:
-        wasps.update(old_mums, eng);
-        if (wasps.Y < extinct_N) wasps.Y = 0;
+        // Lastly update adult wasps (if constant_wasps = false):
+        if (!constant_wasps) {
+            wasps.update(old_mums, eng);
+            if (wasps.Y < extinct_N) wasps.Y = 0;
+        }
         return;
     }
     inline void update() {
@@ -663,8 +671,10 @@ public:
         for (OnePatch& p : patches) {
             p.update(emigrants, immigrants, &wasps);
         }
-        wasps.update(old_mums);
-        if (wasps.Y < extinct_N) wasps.Y = 0;
+        if (!constant_wasps) {
+            wasps.update(old_mums);
+            if (wasps.Y < extinct_N) wasps.Y = 0;
+        }
         return;
     }
 

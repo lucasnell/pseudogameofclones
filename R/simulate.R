@@ -337,6 +337,8 @@ cube_list_check <- function(x, n) {
 #' @param show_progress Boolean for whether to show progress bar. Defaults to
 #'     \code{FALSE}.
 #' @param line_names Vector of names to assign to lines.
+#' @param wasp_dispersal_p proportion of adult wasps that are exchanged
+#'     among cages.
 #'
 #'
 #' @importFrom purrr map_dfr
@@ -376,8 +378,10 @@ sim_clonewars <- function(n_reps,
                           h = wasp_attack$h,
                           wasp_density_0 = 4,
                           wasp_delay = 0,
+                          wasp_dispersal_p = 0,
                           sex_ratio = populations$sex_ratio,
                           s_y = populations$s_y,
+                          constant_wasps = FALSE,  # <-- keeps adult wasps at same density
                           rel_attack = NULL,
                           mum_density_0 = 0,
                           max_mum_density = 0,
@@ -436,8 +440,13 @@ sim_clonewars <- function(n_reps,
     if (length(disp_mort) == 1) disp_mort <- rep(disp_mort, n_lines)
     if (length(alate_b0) == 1) alate_b0 <- rep(alate_b0, n_lines)
     if (length(alate_b1) == 1) alate_b1 <- rep(alate_b1, n_lines)
+    if (length(K_y_mult) == 1) K_y_mult <- rep(K_y_mult, n_cages)
     if (length(wasp_density_0) == 1) wasp_density_0 <- rep(wasp_density_0,
                                                            n_cages)
+    if (length(s_y) == 1) s_y <- rep(s_y, n_cages)
+    if (length(constant_wasps) == 1) constant_wasps <- rep(constant_wasps,
+                                                           n_cages)
+    if (length(wasp_delay) == 1) wasp_delay <- rep(wasp_delay, n_cages)
 
     if (is.null(rel_attack)) {
         rel_attack <- wasp_attack$rel_attack
@@ -526,7 +535,7 @@ sim_clonewars <- function(n_reps,
     uint_check(save_every, "save_every")
     dbl_check(mean_K, "mean_K")
     dbl_check(sd_K, "sd_K")
-    dbl_check(K_y_mult, "K_y_mult")
+    dbl_vec_check(K_y_mult, "K_y_mult")
     dbl_check(death_prop, "death_prop")
     dbl_check(shape1_death_mort, "shape1_death_mort")
     dbl_check(shape2_death_mort, "shape2_death_mort")
@@ -555,9 +564,11 @@ sim_clonewars <- function(n_reps,
     dbl_check(k, "k")
     dbl_check(h, "h")
     dbl_vec_check(wasp_density_0, "wasp_density_0")
-    uint_check(wasp_delay, "wasp_delay")
+    uint_vec_check(wasp_delay, "wasp_delay")
+    dbl_check(wasp_dispersal_p, "wasp_dispersal_p", .min = 0, .max = 1)
     dbl_check(sex_ratio, "sex_ratio")
-    dbl_check(s_y, "s_y")
+    dbl_vec_check(s_y, "s_y")
+    stopifnot(inherits(constant_wasps, "logical"))
     uint_vec_check(perturb_when, "perturb_when")
     uint_vec_check(perturb_where, "perturb_where")
     uint_vec_check(perturb_who, "perturb_who")
@@ -576,7 +587,8 @@ sim_clonewars <- function(n_reps,
                               alate_disp_prop,
                               disp_rate, disp_mort, disp_start, living_days, pred_rate,
                               mum_density_0, max_mum_density, rel_attack, a, k, h,
-                              wasp_density_0, wasp_delay, sex_ratio, s_y,
+                              wasp_density_0, wasp_delay, wasp_dispersal_p,
+                              sex_ratio, s_y, constant_wasps,
                               perturb_when, perturb_where, perturb_who, perturb_how,
                               n_threads, show_progress)
 
