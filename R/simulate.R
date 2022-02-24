@@ -100,9 +100,8 @@ clonal_line <- function(name,
                    repro_apterous,
                    repro_alates)
     names(inputs) <- c("surv_juv_apterous", "surv_juv_alates", "surv_juv_paras",
-                       "surv_adult_apterous", "surv_adult_alates", "surv_adult_alates",
-                       "repro_apterous",
-                       "repro_alates")
+                       "surv_adult_apterous", "surv_adult_alates", "surv_adult_paras",
+                       "repro_apterous", "repro_alates")
 
     for (x in c("apterous", "alates", "paras")) {
         leslie_args <- def_L_args

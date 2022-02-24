@@ -32,8 +32,10 @@ sim_clonewars(
   h = wasp_attack$h,
   wasp_density_0 = 4,
   wasp_delay = 0,
+  wasp_dispersal_p = 0,
   sex_ratio = populations$sex_ratio,
   s_y = populations$s_y,
+  constant_wasps = FALSE,
   rel_attack = NULL,
   mum_density_0 = 0,
   max_mum_density = 0,
@@ -60,6 +62,9 @@ sim_clonewars(
 \item{max_t}{Max time points to simulate for each rep.}
 
 \item{disp_error}{Boolean for whether to include dispersal stochasticity.}
+
+\item{wasp_dispersal_p}{proportion of adult wasps that are exchanged
+among cages.}
 
 \item{extinct_N}{Threshold below which a line is considered extinct.}
 
