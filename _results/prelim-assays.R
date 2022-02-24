@@ -8,12 +8,10 @@
 #'
 
 
-suppressPackageStartupMessages({
-    library(grid)
-    library(tidyverse)
-    library(readxl)
-    library(clonewars)
-})
+library(grid)
+library(tidyverse)
+library(readxl)
+library(clonewars)
 
 
 assay_excel_file <- paste0("~/Box Sync/eco-evo_experiments/prelim_assays/",
@@ -52,9 +50,9 @@ sc_pop_p <- pop_df %>%
     geom_hline(yintercept = 0, linetype = 2, color = "gray70", size = 1) +
     geom_line(aes(group = rep), color = "gray50") +
     geom_point(aes(fill = diff_z, shape = extinct), color = "gray40", size = 2) +
-    scale_fill_gradient2(low = "chartreuse", high = "firebrick", mid = "gray60",
-                         midpoint = 0, guide = FALSE) +
-    scale_shape_manual(values = c(21, 4), guide = FALSE) +
+    scale_fill_gradient2(low = "chartreuse3", high = "firebrick", mid = "gray60",
+                         midpoint = 0, guide = "none") +
+    scale_shape_manual(values = c(21, 4), guide = "none") +
     scale_y_continuous(expression("Scaled red" - "green"), breaks = c(-2, 0, 2)) +
     scale_x_continuous("Days after start") +
     coord_cartesian(ylim = c(-1,1) * 3.6705) +
@@ -73,15 +71,15 @@ pop_p <- pop_df %>%
     geom_line() +
     geom_point(aes(shape = zero), size = 2) +
     facet_wrap(~ rep, nrow = 2) +
-    scale_color_manual(values = c("chartreuse", "firebrick")) +
-    scale_shape_manual(values = c(19, 4), guide = FALSE) +
+    scale_color_manual(values = c("chartreuse3", "firebrick")) +
+    scale_shape_manual(values = c(19, 4), guide = "none") +
     scale_y_continuous("Number of aphids") +
     scale_x_continuous("Days after start") +
     NULL
 
 pop_p
 
-ggsave("~/Desktop/pop_comp.pdf", pop_p, width = 5, height = 3)
+# ggsave("~/Desktop/pop_comp.pdf", pop_p, width = 5, height = 3)
 
 
 
@@ -161,8 +159,8 @@ mummy_p <- wasp_df %>%
     geom_hline(yintercept = 0, color = "gray70") +
     geom_jitter(aes(shape = zero), height = 0, width = 0.25) +
     stat_summary(fun.data = "mean_cl_boot", color = "black") +
-    scale_color_manual(values = c("chartreuse", "firebrick"), guide = FALSE) +
-    scale_shape_manual(values = c(19, 4), guide = FALSE) +
+    scale_color_manual(values = c("chartreuse3", "firebrick"), guide = "none") +
+    scale_shape_manual(values = c(19, 4), guide = "none") +
     ylab("Mummy proportion") +
     theme(axis.text.x = element_text(size = 11, color = "black"),
           axis.title.x = element_blank()) +
@@ -179,8 +177,8 @@ juv_p <- wasp_df %>%
     geom_hline(yintercept = 0, color = "gray70") +
     geom_jitter(aes(shape = zero), height = 0, width = 0.25) +
     stat_summary(fun.data = "mean_cl_boot", color = "black") +
-    scale_color_manual(values = c("chartreuse", "firebrick"), guide = FALSE) +
-    scale_shape_manual(values = c(19, 4), guide = FALSE) +
+    scale_color_manual(values = c("chartreuse3", "firebrick"), guide = "none") +
+    scale_shape_manual(values = c(19, 4), guide = "none") +
     ylab("Number of juveniles") +
     theme(axis.text.x = element_text(size = 11, color = "black"),
           axis.title.x = element_blank()) +
@@ -198,8 +196,8 @@ surv_p <- wasp_df %>%
     geom_hline(yintercept = 0, color = "gray70") +
     geom_jitter(aes(shape = zero), height = 0, width = 0.25) +
     stat_summary(fun.data = "mean_cl_boot", color = "black") +
-    scale_color_manual(values = c("chartreuse", "firebrick"), guide = FALSE) +
-    scale_shape_manual(values = c(19, 4), guide = FALSE) +
+    scale_color_manual(values = c("chartreuse3", "firebrick"), guide = "none") +
+    scale_shape_manual(values = c(19, 4), guide = "none") +
     ylab("Survival proportion") +
     theme(axis.text.x = element_text(size = 11, color = "black"),
           axis.title.x = element_blank()) +

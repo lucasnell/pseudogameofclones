@@ -30,9 +30,9 @@ rel_res_fitness <- function(para, p_res = 0.48) {
     stopifnot(is.numeric(para) && is.null(dim(para)))
     stopifnot(is.numeric(p_res) && length(p_res) == 1)
 
-    if (file.exists("rr_rs_lookup.rds")) {
+    if (file.exists("_results/rr_rs_lookup.rds")) {
 
-        rr_rs_df <- readRDS("rr_rs_lookup.rds")
+        rr_rs_df <- readRDS("_results/rr_rs_lookup.rds")
 
     } else {
 
@@ -274,7 +274,7 @@ par_ts_p <- par_df %>%
     scale_color_manual(paste0("Relative fitness for\nresistant aphids\n",
                               "(r\U1D63 / r\U209B)"),
                       values = rr_rs_pal) +
-    # guides(color = guide_legend(override.aes = list(alpha = 1, size = 3))) +
+    guides(color = guide_legend(override.aes = list(alpha = 1, size = 3))) +
     scale_x_date(date_breaks = "1 month", date_labels = "%b") +
     scale_y_continuous("Parasitism", breaks = 0.4*0:2) +
     theme(axis.title.x = element_blank(),
