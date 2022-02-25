@@ -194,39 +194,6 @@ maps_dates <- as.Date(c("2015-06-03", "2015-06-12", "2015-06-19",
 
 
 
-#' #'
-#' #' Thresholds are the "... level of parasitism above which selection favours
-#' #' resistant Hamiltonella–APSE3 clones" for...
-#' #' - `min` minimum observed Hamiltonella frequency (0.02)
-#' #' - `mean` mean observed Hamiltonella frequency (0.48)
-#' #' - `max` max observed Hamiltonella frequency (0.88)
-#' #'
-#' #' For simplicity, I'm only using `mean` in plots below.
-#' #'
-#' #' These are from Ives et al. (2020)
-#' #'
-#' para_thresh = list(min = 0.13, mean = 0.21, max = 0.30)
-#'
-#' # Color palette to use in plots:
-#' thresh_pal <- c("gray70", viridis(3, begin = 0.1, end = 0.8)) %>% rev()
-#'
-#'
-#' #'
-#' #' To add whether parasitism goes beyond each threshold.
-#' #'
-#' add_thresh <- function(.df) {
-#'     .df %>%
-#'         mutate(thresh_grp = case_when(para < para_thresh$min ~ 1,
-#'                                       para < para_thresh$mean ~ 2,
-#'                                       para < para_thresh$max ~ 3,
-#'                                       TRUE ~ 4) %>%
-#'                    factor(levels = 4:1,
-#'                           labels = c("very often", "often", "rare", "very rare")))
-#'                           # labels = c("p[res] <= 0.02", "p[res] <= 0.48",
-#'                           #            "p[res] <= 0.88", "p[res] > 0.88")))
-#' }
-
-
 
 
 # Time series plot ----
@@ -250,27 +217,15 @@ par_ts_p <- par_df %>%
     add_rr_rs_fct() %>%
     ggplot(aes(plot_date, para)) +
     geom_hline(yintercept = 0, color = "gray70", size = 0.5) +
-    # geom_hline(yintercept = para_thresh$min, color = "gray70",
-    #            size = 0.5, linetype = 3) +
-    # geom_hline(yintercept = para_thresh$max, color = "gray70",
-    #            size = 0.5, linetype = 3) +
-    # geom_hline(yintercept = para_thresh$mean, color = "gray70", size = 0.5) +
     geom_segment(data = tibble(plot_date = yday(maps_dates) %>%
                                    as.Date(origin = "2021-12-31"),
                                year = year(maps_dates) %>% factor(),
-                               para = -0.1),
-               aes(xend = plot_date, yend = para + 0.05),
+                               para = -0.15),
+               aes(xend = plot_date, yend = -0.05),
                size = 0.5, linejoin = "mitre",
                arrow = arrow(length = unit(0.1, "lines"), type = "closed")) +
-    # geom_point(aes(color = field_col), alpha = 0.5, size = 1) +
-    # geom_point(aes(color = thresh_grp), alpha = 0.5, size = 1) +
     geom_point(aes(color = rr_rs_fct), alpha = 0.5, size = 1) +
     facet_wrap(~ year, ncol = 3) +
-    # scale_color_manual(values = viridis(10, begin = 0.1, end = 0.8) %>%
-    #                        .[do.call(c, map(5:1, ~ c(.x, .x + 5)))],
-    #                    guide = "none") +
-    # scale_color_manual("Selection for\nresistance", values = thresh_pal) +  # ,
-    #                    # labels = str2expression) +
     scale_color_manual(paste0("Relative fitness for\nresistant aphids\n",
                               "(r\U1D63 / r\U209B)"),
                       values = rr_rs_pal) +
@@ -283,7 +238,7 @@ par_ts_p <- par_df %>%
           strip.text = element_text(size = 9)) +
     NULL
 
-par_ts_p
+# par_ts_p
 
 
 
@@ -391,69 +346,6 @@ fields_sf <- st_read(paste0("~/Box Sync/eco-evo_experiments/field-data/",
     st_transform(st_crs(32616)) %>%
     mutate(geom = st_centroid(geom))
 
-# [1] "2013-07-01" "2014-07-01" "2015-06-16" "2016-06-16" "2018-07-26" "2019-07-01"
-
-# 1 2015  2015-06-12    10      5      3      1      1
-# 2 2016  2016-06-08     6      4      1      0      1
-# 3 2016  2016-06-14    10      3      0      0      7
-
-obs_par_df %>%
-    # filter(year %in% c(2016),
-    #        obs_day > yday(ymd("2022-05-30"))-1, obs_day < yday(ymd("2022-07-15"))-1) %>%
-    filter(year == 2013) %>%
-    add_rr_rs_fct() %>%
-    group_by(year, obs_date, obs_day) %>%
-    summarize(obs_n = n(),
-              rr_rs0 = sum(rr_rs_fct == levels(rr_rs_fct)[4]),
-              rr_rs1 = sum(rr_rs_fct == levels(rr_rs_fct)[3]),
-              rr_rs2 = sum(rr_rs_fct == levels(rr_rs_fct)[2]),
-              rr_rs3 = sum(rr_rs_fct == levels(rr_rs_fct)[1]),
-              .groups = "drop") %>%
-    # filter(rr_rs0 > 0, (rr_rs2 + rr_rs3) > 0) %>%
-    # filter(obs_n == max(obs_n)) %>%
-    print(n = 50)
-
-
-
-
-# obs_par_df %>%
-#     filter(year == 2013) %>%
-#     filter(obs_day %in% c(174, 177)) %>%
-#     # .[["field"]] %>% unique() %>% length() %>%
-#     # group_by(field) %>% summarize(no = n(), min = min(para), max = max(para)) %>%
-#     identity()
-#
-# # Looking at pairs of dates:
-# fdf <- obs_par_df %>%
-#     filter(year == 2013) %>%
-#     filter(!obs_day %in% c(181, 223, 230)) %>%
-#     group_by(obs_date, obs_day) %>%
-#     summarize(fields = list(field), .groups = "drop")
-#
-#
-# combn(nrow(fdf), 2) %>%
-#     t() %>%
-#     as.data.frame() %>%
-#     setNames(c("d1", "d2")) %>%
-#     as_tibble() %>%
-#     mutate(n_unq = map2_int(d1, d2, function(.x, .y) {
-#         c(fdf$fields[[.x]], fdf$fields[[.y]]) %>%
-#             unique() %>%
-#             length()
-#     }),
-#     d1 = map_chr(d1, ~ paste(fdf$obs_date)[.x]) %>% as.Date(),
-#     d2 = map_chr(d2, ~ paste(fdf$obs_date)[.x]) %>% as.Date()) %>%
-#     filter((d2 - d1) < 7) %>%
-#     filter(n_unq > 5) %>%
-#     print(n = 50)
-#
-#
-# obs_par_df %>%
-#     filter(obs_date == as.Date(c("2014-06-06"))) %>%
-#     .[["field"]] %>%
-#     {paste0('"', ., '"', collapse = ", ")} %>%
-#     cat("\n")
-
 
 
 
@@ -493,21 +385,12 @@ xy_lims$ymin <- xy_lims$ymin - 400
 xy_lims$ymax <- xy_lims$ymax + 400
 
 fields_par_p <- obs_fields_par %>%
-    # add_thresh() %>%
     add_rr_rs_fct() %>%
     ggplot() +
     geom_rect(xmin = xy_lims$xmin, xmax = xy_lims$xmax,
               ymin = xy_lims$ymin, ymax = xy_lims$ymax,
               fill = NA, color = "black", size = 0.5) +
-    # geom_sf(aes(size = para, color = para), shape = 16) +
     geom_sf(aes(size = para, color = rr_rs_fct), shape = 16) +
-    # scale_fill_viridis_c("Parasitism", option = "inferno",
-    #                      limits = c(0, 0.85), begin = 0.1, end = 0.9,
-    #                      aesthetics = c("color", "fill"),
-    #                      breaks = 0.2 * 0:4) +
-    # scale_fill_manual(values = thresh_pal,
-    #                   aesthetics = c("color", "fill"),
-    #                   guide = "none") +
     scale_color_manual(paste("'Relative fitness\nfor resistance\n('",
                              "* r[r] / r[s] * ')'") %>%
                            str2expression(),
@@ -515,8 +398,7 @@ fields_par_p <- obs_fields_par %>%
                        values = rr_rs_pal) +
     scale_size("Parasitism", limits = c(0, 0.85), range = c(0.5, 8),
                breaks = 0.2 * 0:4) +
-    guides(# color = guide_legend(override.aes = list(alpha = 1, size = 3)),
-           size = guide_legend()) +
+    guides(size = guide_legend()) +
     coord_sf(datum = st_crs(32616),
              xlim = as.numeric(xy_lims[c("xmin", "xmax")]),
              ylim = as.numeric(xy_lims[c("ymin", "ymax")])) +
@@ -539,13 +421,13 @@ fields_par_p <- obs_fields_par %>%
 
 
 mosaic_p <- par_ts_p + fields_par_p +
-    plot_annotation(tag_levels = "a") +
+    plot_annotation(tag_levels = "A") +
     plot_layout(nrow = 2, heights = c(1, 1.5)) &
     theme(plot.tag = element_text(size = 14, face = "bold"))
 
 
 {
-    cairo_pdf("~/Desktop/mosaic.pdf", width = 7, height = 7)
+    cairo_pdf("_results/plots/mosaic.pdf", width = 7, height = 7)
     plot(mosaic_p)
     dev.off()
 }
