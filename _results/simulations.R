@@ -9,14 +9,6 @@ if (file.exists(".Rprofile")) source(".Rprofile")
 
 options(mc.cores = max(parallel::detectCores()-2L, 1L))
 
-save_plot <- function(fn, p, w, h, ...) {
-    fn_dir <- dirname(fn)
-    if (!dir.exists(fn_dir)) stop("ERROR: `", fn_dir, "` doesn't exist")
-    cairo_pdf(filename = fn, width = w, height = h, ...)
-    plot(p)
-    dev.off()
-    invisible(NULL)
-}
 
 
 #' These simulations are to plan and create a priori hypotheses for the

@@ -425,12 +425,7 @@ mosaic_p <- par_ts_p + fields_par_p +
     plot_layout(nrow = 2, heights = c(1, 1.5)) &
     theme(plot.tag = element_text(size = 14, face = "bold"))
 
-
-{
-    cairo_pdf("_results/plots/mosaic.pdf", width = 7, height = 7)
-    plot(mosaic_p)
-    dev.off()
-}
+save_plot("_results/plots/mosaic.pdf", mosaic_p, 7, 7)
 
 
 
