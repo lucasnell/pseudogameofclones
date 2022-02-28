@@ -59,8 +59,11 @@ Defaults to \code{"low"}, which results in estimates from a low-reproduction
 line.}
 
 \item{surv_paras}{A single number for the juvenile survival rate for
-parasitized aphids. Defaults to \code{"low"}, which results in estimates
-from a low-reproduction line.}
+parasitized aphids.
+Because parasitized aphids don't make it to adulthood, this is the only
+survival rate necessary.
+Defaults to \code{"low"}, which results in estimates from a
+low-reproduction line.}
 
 \item{temp}{Single string specifying \code{"low"} (20º C) or \code{"high"} (27º C)
 temperature. Defaults to \code{"low"}.}

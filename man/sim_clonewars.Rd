@@ -38,6 +38,7 @@ sim_clonewars(
   constant_wasps = FALSE,
   rel_attack = NULL,
   mum_density_0 = 0,
+  mum_smooth = 0.5,
   max_mum_density = 0,
   pred_rate = 0,
   disp_rate = 1,

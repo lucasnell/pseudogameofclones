@@ -39,8 +39,11 @@
 #'     Defaults to `"low"`, which results in estimates from a low-reproduction
 #'     line.
 #' @param surv_paras A single number for the juvenile survival rate for
-#'     parasitized aphids. Defaults to `"low"`, which results in estimates
-#'     from a low-reproduction line.
+#'     parasitized aphids.
+#'     Because parasitized aphids don't make it to adulthood, this is the only
+#'     survival rate necessary.
+#'     Defaults to `"low"`, which results in estimates from a
+#'     low-reproduction line.
 #' @param temp Single string specifying `"low"` (20º C) or `"high"` (27º C)
 #'     temperature. Defaults to `"low"`.
 #' @param p_instar_smooth A value greater than zero here makes not all 4th
@@ -91,16 +94,19 @@ clonal_line <- function(name,
                                                      populations$surv_adult)),
                        repro = colMeans(do.call(rbind, populations$repro)))
 
+    # Note that we don't have values for parasitized aphid adult survival
+    # or fecundity because they don't reach adulthood anyway.
+    # Below, the defaults will be filled in for these, then the downstream
+    # code will ignore that info.
     inputs <- list(surv_juv_apterous,
                    surv_juv_alates,
                    surv_paras,
                    surv_adult_apterous,
                    surv_adult_alates,
-                   surv_paras,
                    repro_apterous,
                    repro_alates)
     names(inputs) <- c("surv_juv_apterous", "surv_juv_alates", "surv_juv_paras",
-                       "surv_adult_apterous", "surv_adult_alates", "surv_adult_paras",
+                       "surv_adult_apterous", "surv_adult_alates",
                        "repro_apterous", "repro_alates")
 
     for (x in c("apterous", "alates", "paras")) {
@@ -383,6 +389,7 @@ sim_clonewars <- function(n_reps,
                           constant_wasps = FALSE,  # <-- keeps adult wasps at same density
                           rel_attack = NULL,
                           mum_density_0 = 0,
+                          mum_smooth = 0.5,
                           max_mum_density = 0,
                           pred_rate = 0,
                           disp_rate = 1,
@@ -557,6 +564,7 @@ sim_clonewars <- function(n_reps,
     uint_vec_check(living_days, "living_days")
     stopifnot(inherits(pred_rate, "numeric"))
     dbl_mat_check(mum_density_0, "mum_density_0")
+    dbl_check(mum_smooth, "mum_smooth", .min = 0, .max = 1)
     dbl_check(max_mum_density, "max_mum_density", .min = 0)
     stopifnot(inherits(rel_attack, "numeric"))
     dbl_check(a, "a")
@@ -585,7 +593,7 @@ sim_clonewars <- function(n_reps,
                               aphid_density_0, alate_b0, alate_b1,
                               alate_disp_prop,
                               disp_rate, disp_mort, disp_start, living_days, pred_rate,
-                              mum_density_0, max_mum_density, rel_attack, a, k, h,
+                              mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h,
                               wasp_density_0, wasp_delay, wasp_dispersal_p,
                               sex_ratio, s_y, constant_wasps,
                               perturb_when, perturb_where, perturb_who, perturb_how,

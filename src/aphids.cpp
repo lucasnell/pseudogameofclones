@@ -279,8 +279,12 @@ double AphidPop::update(const OnePatch* patch,
         const double& z(patch->z);
         const double& S(patch->S);
         const double& S_y(patch->S_y);
-        arma::vec A = wasps->A(attack_surv);
+        arma::vec A_apt = wasps->A(attack_surv);
         double pred_surv = 1 - patch->pred_rate;
+        arma::vec A_ala = A_apt;
+        for (uint32 i = alates.disp_start_; i < alates.leslie_.n_cols; i++) {
+            A_ala[i] = 1;
+        }
 
         // Starting abundances (used in `process_error`):
         arma::vec apterous_Xt = apterous.X;
@@ -291,12 +295,12 @@ double AphidPop::update(const OnePatch* patch,
         // Basic updates for non-parasitized aphids:
         arma::mat LX_apt = apterous.leslie_ * apterous.X;
         arma::mat LX_ala = alates.leslie_ * alates.X;
-        apterous.X = pred_surv * S * A % LX_apt;
-        alates.X = pred_surv * S * A % LX_ala;
+        apterous.X = (pred_surv * S * A_apt) % LX_apt;
+        alates.X = (pred_surv * S * A_ala) % LX_ala;
 
         double np = 0; // newly parasitized
-        np += pred_surv * S_y * arma::as_scalar((1 - A).t() * LX_apt);
-        np += pred_surv * S_y * arma::as_scalar((1 - A).t() * LX_ala);
+        np += pred_surv * S_y * arma::as_scalar((1 - A_apt).t() * LX_apt);
+        np += pred_surv * S_y * arma::as_scalar((1 - A_ala).t() * LX_ala);
 
         nm += pred_surv * paras.X.back();  // newly mummified
 
@@ -352,18 +356,22 @@ double AphidPop::update(const OnePatch* patch,
 
         const double& S(patch->S);
         const double& S_y(patch->S_y);
-        arma::vec A = wasps->A(attack_surv);
+        arma::vec A_apt = wasps->A(attack_surv);
         double pred_surv = 1 - patch->pred_rate;
+        arma::vec A_ala = A_apt;
+        for (uint32 i = alates.disp_start_; i < alates.leslie_.n_cols; i++) {
+            A_ala[i] = 1;
+        }
 
         // Basic updates for unparasitized aphids:
         arma::mat LX_apt = apterous.leslie_ * apterous.X;
         arma::mat LX_ala = alates.leslie_ * alates.X;
-        apterous.X = (pred_surv * S * A) % LX_apt;
-        alates.X = (pred_surv * S * A) % LX_ala;
+        apterous.X = (pred_surv * S * A_apt) % LX_apt;
+        alates.X = (pred_surv * S * A_ala) % LX_ala;
 
         double np = 0; // newly parasitized
-        np += pred_surv * S_y * arma::as_scalar((1 - A).t() * LX_apt);
-        np += pred_surv * S_y * arma::as_scalar((1 - A).t() * LX_ala);
+        np += pred_surv * S_y * arma::as_scalar((1 - A_apt).t() * LX_apt);
+        np += pred_surv * S_y * arma::as_scalar((1 - A_ala).t() * LX_ala);
 
         nm += pred_surv * paras.X.back();  // newly mummified
 

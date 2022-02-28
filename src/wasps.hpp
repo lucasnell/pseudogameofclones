@@ -85,6 +85,12 @@ public:
 class MummyPop {
 
     arma::vec Y_0;          // initial mummy densities
+    /*
+     Proportion of mummies that will NOT take exactly 3 days to develop.
+     As this value approaches 2/3, it will provide greater smoothing of
+     wasp numbers through time.
+     */
+    double smooth;
 
 public:
 
@@ -93,12 +99,15 @@ public:
 
     // Constructors
     MummyPop() : Y_0(4, arma::fill::zeros), Y(4, arma::fill::zeros) {};
-    MummyPop(const arma::vec& Y_0_)
+    MummyPop(const arma::vec& Y_0_, const double& smooth_)
         : Y_0(arma::join_vert(arma::vec(1, arma::fill::zeros), Y_0_)),
+          smooth(smooth_),
           Y(arma::join_vert(arma::vec(1, arma::fill::zeros), Y_0_)) {};
-    MummyPop(const MummyPop& other) : Y_0(other.Y_0), Y(other.Y) {};
+    MummyPop(const MummyPop& other) : Y_0(other.Y_0), smooth(other.smooth),
+    Y(other.Y) {};
     MummyPop& operator=(const MummyPop& other) {
         Y_0 = other.Y_0;
+        smooth = other.smooth;
         Y = other.Y;
         return *this;
     }
@@ -115,9 +124,11 @@ public:
         }
 
         // Add newly mummified over three days:
-        Y(0) = nm / 3;
-        Y(1) += (nm / 3);
-        Y(2) += (nm / 3);
+        if (smooth > 0) {
+            Y(0) = nm * smooth / 2;
+            Y(1) += (nm * (1 - smooth));
+            Y(2) += (nm * smooth / 2);
+        } else Y(1) += nm;
 
         return;
 

@@ -302,6 +302,9 @@ void OneCage::clear_patches(const uint32& max_age,
         double N = p.total_aphids();
         wilted.push_back(p.wilted());
         if (p.age > max_age || p.wilted()) {
+            double surv_remaining = N * clear_surv;
+            if (surv_remaining < extinct_N) surv_remaining = 0;
+            remaining += surv_remaining;
             clear_patches.push_back(PatchClearingInfo<uint32>(p.this_j, N, wilted.back(),
                                                               p.age));
         } else remaining += N;
@@ -329,6 +332,9 @@ void OneCage::clear_patches(const double& max_N,
         double N = p.total_aphids();
         wilted.push_back(p.wilted());
         if (N > max_N || p.wilted()) {
+            double surv_remaining = N * clear_surv;
+            if (surv_remaining < extinct_N) surv_remaining = 0;
+            remaining += surv_remaining;
             clear_patches.push_back(PatchClearingInfo<double>(p.this_j, N, wilted.back(),
                                                               N));
         } else remaining += N;

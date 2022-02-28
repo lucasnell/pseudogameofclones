@@ -170,10 +170,11 @@ public:
              const uint32& this_j_,
              const double& extinct_N_,
              const arma::vec& mum_density_0,
+             const double& mum_smooth,
              const double& max_mum_density_)
         : wilted_(false),
           aphids(),
-          mummies(mum_density_0),
+          mummies(mum_density_0, mum_smooth),
           empty(true),
           pred_rate(pred_rate_),
           K(K_),
@@ -475,6 +476,7 @@ public:
                const std::vector<double>& pred_rate,
                const double& extinct_N_,
                const arma::mat& mum_density_0,
+               const double& mum_smooth_,
                const double& max_mum_density_,
                const arma::vec& rel_attack_,
                const double& a_,
@@ -536,7 +538,7 @@ public:
                         aphid_name, leslie_mat,
                         aphid_density_0[j], alate_b0, alate_b1, disp_rate, disp_mort,
                         disp_start, living_days, pred_rate[j], n_patches, j, extinct_N_,
-                        mum_density_0.col(j), max_mum_density_);
+                        mum_density_0.col(j), mum_smooth_, max_mum_density_);
             patches.push_back(ap);
         }
 
