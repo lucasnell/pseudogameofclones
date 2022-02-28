@@ -315,7 +315,7 @@ cube_list_check <- function(x, n) {
 #'
 #'
 #' @param n_reps Number of reps to simulate.
-#' @param n_plants Number of plants per cage.
+#' @param n_plants Number of plants per field.
 #' @param max_t Max time points to simulate for each rep.
 #' @param N_0 Starting abundances for each aphid line on each plant.
 #'     Can be a single number if you want the same value for each line on each plant,
@@ -343,7 +343,7 @@ cube_list_check <- function(x, n) {
 #'     \code{FALSE}.
 #' @param line_names Vector of names to assign to lines.
 #' @param wasp_dispersal_p proportion of adult wasps that are exchanged
-#'     among cages.
+#'     among fields.
 #'
 #'
 #' @importFrom purrr map_dfr
@@ -358,7 +358,7 @@ cube_list_check <- function(x, n) {
 # main fun code ----
 sim_clonewars <- function(n_reps,
                           clonal_lines,
-                          n_cages = 1,
+                          n_fields = 1,
                           n_plants = 4,
                           max_t = 100,
                           plant_check_gaps = c(3, 4),
@@ -446,13 +446,13 @@ sim_clonewars <- function(n_reps,
     if (length(disp_mort) == 1) disp_mort <- rep(disp_mort, n_lines)
     if (length(alate_b0) == 1) alate_b0 <- rep(alate_b0, n_lines)
     if (length(alate_b1) == 1) alate_b1 <- rep(alate_b1, n_lines)
-    if (length(K_y_mult) == 1) K_y_mult <- rep(K_y_mult, n_cages)
+    if (length(K_y_mult) == 1) K_y_mult <- rep(K_y_mult, n_fields)
     if (length(wasp_density_0) == 1) wasp_density_0 <- rep(wasp_density_0,
-                                                           n_cages)
-    if (length(s_y) == 1) s_y <- rep(s_y, n_cages)
+                                                           n_fields)
+    if (length(s_y) == 1) s_y <- rep(s_y, n_fields)
     if (length(constant_wasps) == 1) constant_wasps <- rep(constant_wasps,
-                                                           n_cages)
-    if (length(wasp_delay) == 1) wasp_delay <- rep(wasp_delay, n_cages)
+                                                           n_fields)
+    if (length(wasp_delay) == 1) wasp_delay <- rep(wasp_delay, n_fields)
 
     if (is.null(rel_attack)) {
         rel_attack <- wasp_attack$rel_attack
@@ -515,7 +515,7 @@ sim_clonewars <- function(n_reps,
         stopifnot(identical(colnames(perturb), c("when", "where", "who", "how")))
         perturb <- dplyr::arrange(perturb, when)
         perturb_when <- perturb$when
-        stopifnot(all(perturb$where <= n_cages & perturb$where > 0))
+        stopifnot(all(perturb$where <= n_fields & perturb$where > 0))
         perturb_where <- perturb$where - 1
         perturb_how <- perturb$how
         if (is.character(perturb$who)) {
@@ -532,7 +532,7 @@ sim_clonewars <- function(n_reps,
     }
 
     uint_check(n_reps, "n_reps")
-    uint_check(n_cages, "n_cages")
+    uint_check(n_fields, "n_fields")
     uint_check(max_plant_age, "max_plant_age")
     dbl_check(max_N, "max_N")
     uint_vec_check(check_for_clear, "check_for_clear")
@@ -584,7 +584,7 @@ sim_clonewars <- function(n_reps,
     stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
 
 
-    sims <- sim_clonewars_cpp(n_reps, n_cages, max_plant_age, max_N, check_for_clear,
+    sims <- sim_clonewars_cpp(n_reps, n_fields, max_plant_age, max_N, check_for_clear,
                               clear_surv,
                               max_t, save_every, mean_K, sd_K, K_y_mult,
                               death_prop, shape1_death_mort, shape2_death_mort,

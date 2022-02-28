@@ -5,7 +5,7 @@
 #include <random>               // normal distribution
 #include <pcg/pcg_random.hpp>   // pcg prng
 #include "clonewars_types.hpp"  // integer types
-#include "patches.hpp"          // patch and plant classes
+#include "patches.hpp"          // field and plant classes
 #include "math.hpp"             // combine_leslies fxn
 
 
@@ -197,7 +197,7 @@ void OnePlant::update(const arma::cube& emigrants,
 
 // Do the actual clearing of plants while avoiding extinction
 template <typename T>
-inline void OneCage::do_clearing(std::vector<PlantClearingInfo<T>>& clear_plants,
+inline void OneField::do_clearing(std::vector<PlantClearingInfo<T>>& clear_plants,
                                     double& remaining,
                                     std::vector<bool>& wilted,
                                     const double& clear_surv,
@@ -284,7 +284,7 @@ inline void OneCage::do_clearing(std::vector<PlantClearingInfo<T>>& clear_plants
 
 
 // Clear plants by either a maximum age or total abundance
-void OneCage::clear_plants(const uint32& max_age,
+void OneField::clear_plants(const uint32& max_age,
                                const double& clear_surv,
                                pcg32& eng) {
 
@@ -316,7 +316,7 @@ void OneCage::clear_plants(const uint32& max_age,
 }
 
 
-void OneCage::clear_plants(const double& max_N,
+void OneField::clear_plants(const double& max_N,
                                const double& clear_surv,
                                pcg32& eng) {
 

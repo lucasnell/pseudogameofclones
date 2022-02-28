@@ -19,13 +19,13 @@ using namespace Rcpp;
 
 
 
-// Info for a single perturbation (it happens to all plants within a cage)
+// Info for a single perturbation (it happens to all plants within a field)
 struct PerturbInfo {
 
     // When to perturb.
     uint32 time;
     // Where to perturb.
-    uint32 cage;
+    uint32 field;
     // Number to multiply abundance by.
     double multiplier;
     /*
@@ -36,13 +36,13 @@ struct PerturbInfo {
      */
     uint32 index;
 
-    PerturbInfo() : time(), cage(), multiplier(), index() {}
+    PerturbInfo() : time(), field(), multiplier(), index() {}
     PerturbInfo(const uint32& when, const uint32& where,
                 const uint32& who, const double& how)
-        : time(when), cage(where), multiplier(how), index(who) {}
+        : time(when), field(where), multiplier(how), index(who) {}
     PerturbInfo& operator=(const PerturbInfo& other) {
         time = other.time;
-        cage = other.cage;
+        field = other.field;
         multiplier = other.multiplier;
         index = other.index;
         return *this;
@@ -364,7 +364,7 @@ public:
 
 
 /*
- Class for all plants.
+ One field of plants.
 
  For the constructors below, all vector arguments should have a length equal to the
  number of aphid lines, except for `K`, `aphid_density_0`, and `pred_rate_`;
@@ -373,7 +373,7 @@ public:
 
  */
 
-class OneCage {
+class OneField {
 
     // For new Ks if desired:
     trunc_normal_distribution tnorm_distr;
@@ -443,7 +443,7 @@ public:
     arma::cube immigrants;
 
 
-    OneCage()
+    OneField()
         : tnorm_distr(), beta_distr(), mean_K_(), sd_K_(), K_y_mult(),
           shape1_death_mort_(), shape2_death_mort_(), extinct_N(),
           constant_wasps(),
@@ -454,7 +454,7 @@ public:
      apterous), and slices are aphid lines.
      In `leslie_mat` below, slices are aphid lines.
      */
-    OneCage(const double& sigma_x,
+    OneField(const double& sigma_x,
                const double& sigma_y,
                const double& rho,
                const double& demog_mult,
@@ -548,7 +548,7 @@ public:
 
     }
 
-    OneCage(const OneCage& other)
+    OneField(const OneField& other)
         : tnorm_distr(other.tnorm_distr),
           beta_distr(other.beta_distr),
           mean_K_(other.mean_K_),
@@ -563,7 +563,7 @@ public:
           emigrants(other.emigrants),
           immigrants(other.immigrants) {};
 
-    OneCage& operator=(const OneCage& other) {
+    OneField& operator=(const OneField& other) {
         tnorm_distr = other.tnorm_distr;
         beta_distr = other.beta_distr;
         mean_K_ = other.mean_K_;
@@ -592,7 +592,7 @@ public:
         return plants[idx];
     }
 
-    // Remove dispersers from this cage:
+    // Remove dispersers from this field:
     arma::mat remove_dispersers(const double& disp_prop) {
 
         uint32 n_lines = plants[0].aphids.size();
@@ -612,7 +612,7 @@ public:
 
     }
 
-    // Add dispersers from another cage:
+    // Add dispersers from another field:
     void add_dispersers(const arma::mat& D) {
 
         uint32 n_lines = plants[0].aphids.size();

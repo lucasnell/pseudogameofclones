@@ -6,7 +6,7 @@
 #include "clonewars_types.hpp"  // integer types
 #include "aphids.hpp"           // aphid classes
 #include "wasps.hpp"            // wasp classes
-#include "patches.hpp"          // patch and plant classes
+#include "patches.hpp"          // field and plant classes
 #include "pcg.hpp"              // runif_01 fxn
 #include "math.hpp"             // inv_logit__ fxn
 

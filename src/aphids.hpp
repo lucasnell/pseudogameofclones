@@ -317,7 +317,7 @@ public:
     }
 
     /*
-     Returns vector of abundances of adults that would be moved between cages,
+     Returns vector of abundances of adults that would be moved between fields,
      given that `disp_prop` is the proportion of winged adults that will be
      moved.
      */
