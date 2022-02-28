@@ -219,6 +219,8 @@ get_avg_diff <- function(.data, .trans = identity, .col = "num") {
 
 #'
 #' Simple permutation test of sum of total aphids across each time series.
+#' This should be a very conservative assessment because it's not using
+#' a lot of the information.
 #'
 sum_diffs <- pop_df %>%
     group_by(rep, line) %>%
@@ -238,12 +240,17 @@ mean(abs(diff_perms) >= abs(obs_diff))
 
 
 
-
+#'
+#' If we instead use a linear model with AR1 temporal autocorrelation,
+#' the effect of line is also quite significant.
+#'
 pop_mod <- gls(log1p(num) ~ line, pop_df, corAR1(form = ~ 1 | rep))
+pop_mod %>% summary()
 
 #'
-#' Blocked bootstrap for line estimates, where I bootstrap the number of aphids
-#' within each replicate and aphid line.
+#' Blocked nonparametric bootstrap for the effect of clonal line,
+#' where I bootstrap `y` (the log1p number of aphids) within each
+#' replicate and aphid line.
 #'
 set.seed(24357986)
 pop_mod_boots <- replicate(2000, {
@@ -259,6 +266,9 @@ pop_mod_boots <- replicate(2000, {
     return(coef(.pop_mod)[["linesusceptible"]])
 })
 
+#'
+#' 95% CI is well above zero:
+#'
 quantile(pop_mod_boots, c(0.025, 0.5, 0.975))
 
 
@@ -270,25 +280,25 @@ quantile(pop_mod_boots, c(0.025, 0.5, 0.975))
 # -----------------------------------------------`
 
 
-obs_mum <- get_avg_diff(wasp_df, .col = "mummy-end")
-obs_juv <- get_avg_diff(wasp_df, .col = "juvenile-end")
-obs_surv <- get_avg_diff(wasp_df, .col = "surv")
+obs_mum <- get_avg_diff(wasp_df, .col = "mummy_end")
+obs_juv <- get_avg_diff(wasp_df, .col = "juvenile_end")
+obs_surv <- get_avg_diff(wasp_df, .col = "p_survived")
 
 set.seed(678530)
 mum_perms <- replicate(2000, {
     ..wasp_df <- wasp_df
     ..wasp_df[["line"]] <- sample(..wasp_df[["line"]])
-    get_avg_diff(..wasp_df, .col = "mummy-end")
+    get_avg_diff(..wasp_df, .col = "mummy_end")
 })
 juv_perms <- replicate(2000, {
     ..wasp_df <- wasp_df
     ..wasp_df[["line"]] <- sample(..wasp_df[["line"]])
-    get_avg_diff(..wasp_df, .col = "juvenile-end")
+    get_avg_diff(..wasp_df, .col = "juvenile_end")
 })
 surv_perms <- replicate(2000, {
     ..wasp_df <- wasp_df
     ..wasp_df[["line"]] <- sample(..wasp_df[["line"]])
-    get_avg_diff(..wasp_df, .col = "surv")
+    get_avg_diff(..wasp_df, .col = "p_survived")
 })
 
 # Values of 0 actually indicate < 0.0005
@@ -306,7 +316,7 @@ mean(abs(surv_perms) >= abs(obs_surv))
 #' I then did some regressions below to show that this doesn't affect our
 #' conclusions based on the permutation tests.
 #' If anything, the permutations appear to be conservative, so they are
-#' what I present in text.
+#' what I present in the main text.
 #'
 
 surv_mod <- glmer(cbind(survived, non_survived) ~ line + id +
@@ -318,6 +328,8 @@ surv_mod_boot <- bootMer(surv_mod, function(x) fixef(x)[["linesusceptible"]],
                          nsim = 2000)
 # hist(surv_mod_boot$t)
 quantile(surv_mod_boot$t, c(0.025, 0.5, 0.975))
+#      2.5%       50%     97.5%
+# -2.466044 -1.870173 -1.353917
 
 juv_mod <- glmer(juvenile_end ~ line + id + (1 | wasp_group),
                  wasp_df, family = poisson)
@@ -328,3 +340,5 @@ juv_mod_boot <- bootMer(juv_mod, function(x) fixef(x)[["linesusceptible"]],
                          nsim = 2000)
 # hist(juv_mod_boot$t)
 quantile(juv_mod_boot$t, c(0.025, 0.5, 0.975))
+#       2.5%        50%      97.5%
+# -1.0961211 -0.9703011 -0.8497353
