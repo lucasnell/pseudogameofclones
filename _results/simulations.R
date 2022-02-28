@@ -50,42 +50,54 @@ line_s <- clonal_line("susceptible",
 # Resistant line: high resistance, low population growth rate
 line_r <- clonal_line("resistant",
                       density_0 = matrix(c(rep(0, 3), 32, rep(0, 6)), 5, 2),
-                      resistant = c(0.95, 0.8),
-                      surv_juv_apterous = "low",
-                      surv_adult_apterous = "low",
+                      # resistant = c(0.95, 0.4),
+                      resistant = TRUE,
+                      surv_paras = 0.5,
+                      surv_juv_apterous = NULL,
+                      surv_adult_apterous = NULL,
                       repro_apterous = "low")
 
 para_lvls <- c("parasitism", "no parasitism")
+
 
 
 #'
 #' Base function to do all the simulations.
 #' Each section below builds on this one.
 #'
-do_base_sims <- function(.clonal_lines, .alate_disp_prop, .max_t, .perturb,
-                         .K_y_mult = 1 / 1.57, .wasp_dispersal_p = 0,
-                         .extinct_N = 1) {
+do_base_sims <- function(.clonal_lines, .alate_disp_prop, .max_t,
+                         ...) {
 
     # .clonal_lines = c(line_s, line_r); .alate_disp_prop = 0.05
     # .max_t = 1000; .perturb = NULL
     # rm(.clonal_lines, .alate_disp_prop, .max_t, .perturb, .sims)
 
-    .sims <- sim_clonewars(n_reps = 1, n_patches = 1, n_cages = 2,
+    .args <- list(n_reps = 1, n_patches = 1, n_cages = 2,
                            max_N = 0,
                            max_plant_age = 1e9,
-                           mean_K = formals(sim_clonewars)$mean_K * 8,
+                           mean_K = formals(sim_clonewars)$mean_K * 4,
                            no_error = TRUE,
                            wasp_delay = 0,
                            wasp_density_0 = c(3, 0),
                            plant_check_gaps = 1,  # makes alates disperse daily
-                           alate_b0 = logit(0.3),
+                           # alate_b0 = logit(0.3),
+                           alate_b0 = -5,
+                           alate_b1 = 2.2e-3,
                            clonal_lines = .clonal_lines,
                            alate_disp_prop = .alate_disp_prop,
                            max_t = .max_t,
-                           perturb = .perturb,
-                           K_y_mult = .K_y_mult,
-                           wasp_dispersal_p = .wasp_dispersal_p,
-                           extinct_N = .extinct_N)
+                           perturb = NULL,
+                           K_y_mult = 1 / 1.57,
+                           s_y = populations$s_y,
+                           wasp_dispersal_p = 0,
+                           extinct_N = 1)
+    .other_args <- list(...)
+    if (length(.other_args) > 0) {
+        stopifnot(!is.null(names(.other_args)))
+        for (n in names(.other_args)) .args[[n]] <- .other_args[[n]]
+    }
+
+    .sims <- do.call(sim_clonewars, .args)
 
     .sims[["wasps"]] <- .sims %>%
         .[["wasps"]] %>%
@@ -186,6 +198,146 @@ group_aphids <- function(.sim_aphids_df, .type) {
     return(.out)
 
 }
+
+
+
+
+# ============================================================================*
+# ============================================================================*
+
+# Match experiments ----
+
+# ============================================================================*
+# ============================================================================*
+
+
+
+
+plot_test <- function(.sims) {
+
+    # aphids <- .sims[["aphids"]] %>%
+    #     filter(type != "mummy") %>%
+    #     mutate(type = factor(type, levels = c("apterous", "alate", "parasitized")))
+    aphids <- group_aphids(.sims[["aphids"]], "living")
+    mummies <- .sims[["aphids"]] %>% filter(type == "mummy")
+    wasps <- .sims[["wasps"]]
+
+    mod <- max(wasps$wasps) / max(aphids$N)
+
+    aphids %>%
+        ggplot(aes(time, N / 1e3)) +
+        geom_hline(yintercept = 0, color = "gray70") +
+        geom_area(data = wasps %>%
+                      mutate(N = wasps / mod),
+                  fill = "gray80", color = NA) +
+        # geom_line(aes(color = line, linetype = type)) +
+        geom_line(aes(color = line)) +
+        scale_color_manual(values = c("chartreuse3", "firebrick"), guide = "none") +
+        scale_linetype_manual(values = c("solid", "33", "11")) +
+        scale_y_continuous(expression("Aphid abundance (" %*% 1000 * ")"),
+                           sec.axis = sec_axis(~ . * mod * 1000,
+                                               "Wasp abundance")) +
+        scale_x_continuous("Days") +
+        facet_wrap(~ cage, ncol = 1) +
+        theme(strip.text = element_text(size = 10),
+              legend.position = "top",
+              panel.grid.major.x = element_line(size = 0.25, color = "gray90"),
+              panel.grid.major.y = element_line(size = 0.25, color = "gray90")) +
+        # coord_cartesian(ylim = c(0, 3)) +
+        NULL
+
+}
+
+
+
+
+line_s2 <- clonal_line(name = "susceptible",
+                       # >>>>>>>>>>>>> things to potentially change:
+                       # surv_paras = 0.8,
+                       # <<<<<<<<<<<<<
+                       repro_apterous = NULL,
+                       density_0 = matrix(c(rep(0, 3), 32, rep(0, 6)), 5, 2))
+# Resistant line: high resistance, low population growth rate
+line_r2 <- clonal_line(name = "resistant",
+                       # >>>>>>>>>>>>> things to potentially change:
+                       resistant = c(0.9, 0.6),
+                       # resistant = c(1, 1),
+                      # resistant = TRUE,
+                      surv_paras = 0.67,
+                      # surv_paras = populations$surv_juv[["low"]],
+                      repro_apterous = populations$repro[["low"]] * 0.7,
+                      # <<<<<<<<<<<<<
+                      density_0 = matrix(c(rep(0, 3), 32, rep(0, 6)), 5, 2))
+
+
+.sims <- do_base_sims(.clonal_lines = c(line_r2, line_s2),
+                      .alate_disp_prop = 0.02,
+                      mean_K = 12.5e3,
+                      # s_y = populations$s_y * 0.8,
+                      K_y_mult = (1 / 1.57) * 4,
+                      wasp_delay = 7,
+                      mum_smooth = 0.4,
+                      max_plant_age = 1e9,
+                      pred_rate = 0.1,
+                      # max_plant_age = 7,
+                      # clear_surv = 0.6,
+                      # .extinct_N = 0,
+                      # a = wasp_attack$a * 2.5,
+                      # h = wasp_attack$h * 0.8,
+                      .max_t = 250)
+.sims %>% plot_test()
+
+
+
+
+
+
+# sad_dist <- sapply(1:length(dev_times$instar_days$lowT),
+#        function(i) {
+#            v <- dev_times$instar_days$lowT
+#            m <- sad_leslie(line_r2$leslie[,,1])
+#            j0 <- ifelse(i == 1, 1, sum(v[1:(i-1)]) + 1)
+#            j1 <- ifelse(i == length(v), nrow(m), sum(v[1:i]))
+#            sum(m[j0:j1])
+#        })
+#
+#
+# # # This will vary in function:
+# # Y_m = 40  # adult wasps
+# # x = 1000  # non-parasitized aphids
+# # attack_surv = c(1, 0.6) # resistance to single and multiple oviposits
+#
+# wasp_surv <- function(Y_m, x, attack_surv, km = 1, hm = 1, am = 1) {
+#     stopifnot(length(attack_surv) > 1)
+#     a = wasp_attack$a * am
+#     k = wasp_attack$k * km
+#     h = wasp_attack$h * hm
+#     rel_attack = wasp_attack$rel_attack
+#     A_ <- (a * rel_attack * Y_m) / (h * x + 1)
+#     AA <- (1 + A_ / k);
+#     as_mults <- lapply(1:(length(attack_surv)-1), function(z) A_ * AA^(-k-z))
+#     # A <-AA^(-k) + attack_surv[1] * A_ * AA^(-k-1) +
+#     #     attack_surv[2] * { 1 - ( AA^(-k) + A_ * AA^(-k-1) ) }
+#     A <- AA^(-k)
+#     for (i in 1:(length(attack_surv)-1)) A <- A + attack_surv[i] * as_mults[[i]]
+#     A <- A + tail(attack_surv, 1) * { 1 - ( AA^(-k) + Reduce(`+`, as_mults) ) }
+#     return(A)
+# }
+#
+# f <- function(z, .as, .km) {
+#     map_dbl(z, ~ sum(sad_dist * wasp_surv(Y_m = .x, x = 1000, attack_surv = .as, km = .km)))
+# }
+#
+# curve(f(x, wasp_attack$attack_surv, .km = 1), 0, 80, ylim = c(0, 1))
+# curve(f(x, c(1, 0.2), .km = 1), 0, 80, add = TRUE, col = "red")
+# curve(f(x, wasp_attack$attack_surv, .km = 10), 0, 80, add = TRUE, lty = 2)
+# curve(f(x, c(1, 0.2), .km = 10), 0, 80, add = TRUE, col = "red", lty = 2)
+# curve(f(x, wasp_attack$attack_surv, .km = 100), 0, 80, add = TRUE, lty = 3)
+# curve(f(x, c(1, 0.2), .km = 100), 0, 80, add = TRUE, col = "red", lty = 3)
+
+
+
+
 
 
 
