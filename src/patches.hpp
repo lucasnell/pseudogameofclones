@@ -19,7 +19,7 @@ using namespace Rcpp;
 
 
 
-// Info for a single perturbation (it happens to all patches within a cage)
+// Info for a single perturbation (it happens to all plants within a cage)
 struct PerturbInfo {
 
     // When to perturb.
@@ -53,31 +53,31 @@ struct PerturbInfo {
 
 
 
-// Info for clearing patches
+// Info for clearing plants
 template <typename T>
-struct PatchClearingInfo {
+struct PlantClearingInfo {
 
     uint32 ind;
     double N;
     bool wilted;
     T thresh_info; // age or # aphids
 
-    PatchClearingInfo(const uint32& ind_,
+    PlantClearingInfo(const uint32& ind_,
                       const double& N_,
                       const bool& wilted_,
                       const T& thresh_info_)
         : ind(ind_), N(N_), wilted(wilted_), thresh_info(thresh_info_) {}
-    PatchClearingInfo(const PatchClearingInfo<T>& other)
+    PlantClearingInfo(const PlantClearingInfo<T>& other)
         : ind(other.ind), N(other.N), thresh_info(other.thresh_info) {}
 
     // This returns true when `other` should be cleared first
-    bool operator<(const PatchClearingInfo<T>& other) const {
+    bool operator<(const PlantClearingInfo<T>& other) const {
         if (other.wilted && !wilted) return true;
         if (!other.wilted && wilted) return false;
         return thresh_info < other.thresh_info;
     }
     // This returns true when `this` should be cleared first
-    bool operator>(const PatchClearingInfo<T>& other) const {
+    bool operator>(const PlantClearingInfo<T>& other) const {
         if (other.wilted && !wilted) return false;
         if (!other.wilted && wilted) return true;
         return thresh_info > other.thresh_info;
@@ -90,13 +90,14 @@ struct PatchClearingInfo {
 
 
 /*
-One patch of continuous habitat.
+One plant or a number of plants so close that aphids freely disperse
+ across them.
 */
-class OnePatch {
+class OnePlant {
 
 
     /*
-     Carrying capacity for patch.
+     Carrying capacity for plant.
      It depends on the Leslie matrix for each line's apterous and alates.
      I'm not including parasitized aphids because they shouldn't be too numerous.
      */
@@ -109,7 +110,7 @@ class OnePatch {
     void extinct_colonize(const uint32& i);
 
 
-    // Updates total # living aphids in this patch (`z`), and
+    // Updates total # living aphids in this plant (`z`), and
     // checks to see if plant should be wilted.
     void update_z_wilted();
 
@@ -118,18 +119,18 @@ class OnePatch {
 
 public:
 
-    std::vector<AphidPop> aphids;   // aphids in this patch
-    MummyPop mummies;               // mummies in this patch
-    bool empty;                     // whether no aphids are on this patch
+    std::vector<AphidPop> aphids;   // aphids on this plant
+    MummyPop mummies;               // mummies on this plant
+    bool empty;                     // whether no aphids are on this plant
     double pred_rate;               // predation on aphids
     double K;                       // unparasitized aphid carrying capacity
     double K_y;                     // parasitized aphid carrying capacity
     double z = 0;                   // sum of all living aphids at time t
     double S = 0;                   // effect of density dependence on aphids
     double S_y = 0;                 // effect of dd on parasitized aphids
-    uint32 n_patches;               // total # patches
-    uint32 this_j;                  // index for this patch
-    uint32 age = 0;                 // age of this patch
+    uint32 n_plants;                // total # plants
+    uint32 this_j;                  // index for this plant
+    uint32 age = 0;                 // age of this plant
     double death_prop;              // proportion of carrying capacity that kills plant
     double death_mort;              // growth-rate modifier once plants start dying
     double extinct_N;               // threshold for calling an aphid line extinct
@@ -137,10 +138,10 @@ public:
 
 
 
-    OnePatch()
+    OnePlant()
         : wilted_(false), aphids(), mummies(), empty(true), pred_rate(0),
           K(0), K_y(1),
-          n_patches(1), this_j(0), death_prop(1), death_mort(1), extinct_N() {};
+          n_plants(1), this_j(0), death_prop(1), death_mort(1), extinct_N() {};
 
     /*
      In `aphid_density_0` below, rows are aphid stages, columns are types (alate vs
@@ -148,7 +149,7 @@ public:
      In `leslie_mat` below, items in vector are aphid lines, slices are
      alate/apterous/parasitized.
      */
-    OnePatch(const double& sigma_x,
+    OnePlant(const double& sigma_x,
              const double& rho,
              const double& demog_mult,
              const arma::mat& attack_surv_,
@@ -166,7 +167,7 @@ public:
              const std::vector<uint32>& disp_start,
              const std::vector<uint32>& living_days,
              const double& pred_rate_,
-             const uint32& n_patches_,
+             const uint32& n_plants_,
              const uint32& this_j_,
              const double& extinct_N_,
              const arma::vec& mum_density_0,
@@ -179,7 +180,7 @@ public:
           pred_rate(pred_rate_),
           K(K_),
           K_y(K_y_),
-          n_patches(n_patches_),
+          n_plants(n_plants_),
           this_j(this_j_),
           death_prop(death_prop_),
           death_mort(death_mort_),
@@ -207,16 +208,16 @@ public:
 
 
 
-    OnePatch(const OnePatch& other)
+    OnePlant(const OnePlant& other)
         : wilted_(false), aphids(other.aphids), mummies(other.mummies),
           empty(other.empty), pred_rate(other.pred_rate),
           K(other.K), K_y(other.K_y), z(other.z),
-          S(other.S), S_y(other.S_y), n_patches(other.n_patches),
+          S(other.S), S_y(other.S_y), n_plants(other.n_plants),
           this_j(other.this_j), age(other.age), death_prop(other.death_prop),
           death_mort(other.death_mort), extinct_N(other.extinct_N),
           max_mum_density(other.max_mum_density) {};
 
-    OnePatch& operator=(const OnePatch& other) {
+    OnePlant& operator=(const OnePlant& other) {
         wilted_ = other.wilted_;
         aphids = other.aphids;
         mummies = other.mummies;
@@ -227,7 +228,7 @@ public:
         z = other.z;
         S = other.S;
         S_y = other.S_y;
-        n_patches = other.n_patches;
+        n_plants = other.n_plants;
         this_j = other.this_j;
         age = other.age;
         death_prop = other.death_prop;
@@ -296,7 +297,7 @@ public:
         return;
     }
 
-    // Total (living) aphids on patch
+    // Total (living) aphids on plant
     inline double total_aphids() const {
         double ta = 0;
         for (const AphidPop& ap : aphids) {
@@ -304,7 +305,7 @@ public:
         }
         return ta;
     }
-    // Total UNparasitized aphids on patch
+    // Total UNparasitized aphids on plant
     inline double total_unpar_aphids() const {
         double ta = 0;
         for (const AphidPop& ap : aphids) {
@@ -312,7 +313,7 @@ public:
         }
         return ta;
     }
-    // Total mummies on patch
+    // Total mummies on plant
     inline double total_mummies() const {
         double tm = arma::accu(mummies.Y);
         return tm;
@@ -320,7 +321,7 @@ public:
 
     /*
      Add dispersal info to `emigrants` and `immigrants` cubes.
-     In these cubes, rows are aphid stages, columns are patches,
+     In these cubes, rows are aphid stages, columns are plants,
      and slices are aphid lines.
     */
     void calc_dispersal(arma::cube& emigrants,
@@ -363,11 +364,11 @@ public:
 
 
 /*
- Class for all patches.
+ Class for all plants.
 
  For the constructors below, all vector arguments should have a length equal to the
  number of aphid lines, except for `K`, `aphid_density_0`, and `pred_rate_`;
- these should have a length equal to the number of patches.
+ these should have a length equal to the number of plants.
  Each item in `aphid_density_0` should have a length equal to the number of aphid lines.
 
  */
@@ -417,7 +418,7 @@ class OneCage {
     inline void set_wasp_info(double& old_mums) {
         wasps.x = 0;
         old_mums = 0;
-        for (OnePatch& p : patches) {
+        for (OnePlant& p : plants) {
             wasps.x += p.total_unpar_aphids();
             old_mums += p.mummies.Y.back();
         }
@@ -425,9 +426,9 @@ class OneCage {
     }
 
 
-    // Do the actual clearing of patches while avoiding extinction
+    // Do the actual clearing of plants while avoiding extinction
     template <typename T>
-    void do_clearing(std::vector<PatchClearingInfo<T>>& clear_patches,
+    void do_clearing(std::vector<PlantClearingInfo<T>>& clear_plants,
                      double& remaining,
                      std::vector<bool>& wilted,
                      const double& clear_surv,
@@ -436,7 +437,7 @@ class OneCage {
 
 public:
 
-    std::vector<OnePatch> patches;
+    std::vector<OnePlant> plants;
     WaspPop wasps;
     arma::cube emigrants;
     arma::cube immigrants;
@@ -446,7 +447,7 @@ public:
         : tnorm_distr(), beta_distr(), mean_K_(), sd_K_(), K_y_mult(),
           shape1_death_mort_(), shape2_death_mort_(), extinct_N(),
           constant_wasps(),
-          patches(), wasps(), emigrants(), immigrants() {};
+          plants(), wasps(), emigrants(), immigrants() {};
 
     /*
      In `aphid_density_0` below, rows are aphid stages, columns are types (alate vs
@@ -496,7 +497,7 @@ public:
           shape2_death_mort_(shape2_death_mort),
           extinct_N(extinct_N_),
           constant_wasps(constant_wasps_),
-          patches(),
+          plants(),
           wasps(rel_attack_, a_, k_, h_, wasp_density_0_,
                 sex_ratio_, s_y_, sigma_y),
           emigrants(),
@@ -522,28 +523,28 @@ public:
                                            shape2_death_mort_);
         }
 
-        uint32 n_patches = aphid_density_0.size();
-        // (We know pred_rate.size() == n_patches bc it's check inside sim_clonewars_cpp)
+        uint32 n_plants = aphid_density_0.size();
+        // (We know pred_rate.size() == n_plants bc it's check inside sim_clonewars_cpp)
 
         uint32 n_lines = aphid_name.size();
         uint32 n_stages = leslie_mat.front().n_rows;
 
         double K, K_y, death_mort;
-        patches.reserve(n_patches);
-        for (uint32 j = 0; j < n_patches; j++) {
+        plants.reserve(n_plants);
+        for (uint32 j = 0; j < n_plants; j++) {
             set_K(K, K_y, eng);
             set_death_mort(death_mort, eng);
-            OnePatch ap(sigma_x, rho, demog_mult, attack_surv_,
+            OnePlant ap(sigma_x, rho, demog_mult, attack_surv_,
                         K, K_y, death_prop, death_mort,
                         aphid_name, leslie_mat,
                         aphid_density_0[j], alate_b0, alate_b1, disp_rate, disp_mort,
-                        disp_start, living_days, pred_rate[j], n_patches, j, extinct_N_,
+                        disp_start, living_days, pred_rate[j], n_plants, j, extinct_N_,
                         mum_density_0.col(j), mum_smooth_, max_mum_density_);
-            patches.push_back(ap);
+            plants.push_back(ap);
         }
 
-        emigrants = arma::zeros<arma::cube>(n_stages, n_patches, n_lines);
-        immigrants = arma::zeros<arma::cube>(n_stages, n_patches, n_lines);
+        emigrants = arma::zeros<arma::cube>(n_stages, n_plants, n_lines);
+        immigrants = arma::zeros<arma::cube>(n_stages, n_plants, n_lines);
 
     }
 
@@ -557,7 +558,7 @@ public:
           shape2_death_mort_(other.shape2_death_mort_),
           extinct_N(other.extinct_N),
           constant_wasps(other.constant_wasps),
-          patches(other.patches),
+          plants(other.plants),
           wasps(other.wasps),
           emigrants(other.emigrants),
           immigrants(other.immigrants) {};
@@ -572,7 +573,7 @@ public:
         shape2_death_mort_ = other.shape2_death_mort_;
         extinct_N = other.extinct_N;
         constant_wasps = other.constant_wasps;
-        patches = other.patches;
+        plants = other.plants;
         wasps = other.wasps;
         emigrants = other.emigrants;
         immigrants = other.immigrants;
@@ -581,26 +582,26 @@ public:
 
 
     inline uint32 size() const noexcept {
-        return patches.size();
+        return plants.size();
     }
 
-    OnePatch& operator[](const uint32& idx) {
-        return patches[idx];
+    OnePlant& operator[](const uint32& idx) {
+        return plants[idx];
     }
-    const OnePatch& operator[](const uint32& idx) const {
-        return patches[idx];
+    const OnePlant& operator[](const uint32& idx) const {
+        return plants[idx];
     }
 
     // Remove dispersers from this cage:
     arma::mat remove_dispersers(const double& disp_prop) {
 
-        uint32 n_lines = patches[0].aphids.size();
-        uint32 n_stages = patches[0].aphids[0].alates.X.n_elem;
+        uint32 n_lines = plants[0].aphids.size();
+        uint32 n_stages = plants[0].aphids[0].alates.X.n_elem;
 
         arma::mat D = arma::zeros<arma::mat>(n_stages, n_lines);
 
         arma::vec Di;
-        for (OnePatch& p : patches) {
+        for (OnePlant& p : plants) {
             for (uint32 i = 0; i < n_lines; i++) {
                 Di = p.aphids[i].remove_dispersers(disp_prop);
                 D.col(i) += Di;
@@ -614,13 +615,13 @@ public:
     // Add dispersers from another cage:
     void add_dispersers(const arma::mat& D) {
 
-        uint32 n_lines = patches[0].aphids.size();
+        uint32 n_lines = plants[0].aphids.size();
 
-        double n_patches = static_cast<double>(patches.size());
+        double n_plants = static_cast<double>(plants.size());
 
         for (uint32 i = 0; i < n_lines; i++) {
-            arma::vec DD = D.col(i) / n_patches;
-            for (OnePatch& p : patches) {
+            arma::vec DD = D.col(i) / n_plants;
+            for (OnePlant& p : plants) {
                 p.aphids[i].alates.X += DD;
             }
         }
@@ -634,7 +635,7 @@ public:
         // Dispersal from previous generation
         emigrants.fill(0);
         immigrants.fill(0);
-        for (const OnePatch& p : patches) {
+        for (const OnePlant& p : plants) {
             p.calc_dispersal(emigrants, immigrants, eng);
         }
         return;
@@ -642,7 +643,7 @@ public:
     inline void calc_dispersal() {
         emigrants.fill(0);
         immigrants.fill(0);
-        for (const OnePatch& p : patches) {
+        for (const OnePlant& p : plants) {
             p.calc_dispersal(emigrants, immigrants);
         }
         return;
@@ -657,7 +658,7 @@ public:
         double old_mums;
         set_wasp_info(old_mums);
         // Then we can update aphids and mummies:
-        for (OnePatch& p : patches) {
+        for (OnePlant& p : plants) {
             p.update(emigrants, immigrants, &wasps, eng);
         }
         // Lastly update adult wasps (if constant_wasps = false):
@@ -670,7 +671,7 @@ public:
     inline void update() {
         double old_mums;
         set_wasp_info(old_mums);
-        for (OnePatch& p : patches) {
+        for (OnePlant& p : plants) {
             p.update(emigrants, immigrants, &wasps);
         }
         if (!constant_wasps) {
@@ -681,11 +682,11 @@ public:
     }
 
 
-    // Clear patches by either a maximum age or total abundance
-    void clear_patches(const uint32& max_age,
+    // Clear plants by either a maximum age or total abundance
+    void clear_plants(const uint32& max_age,
                        const double& clear_surv,
                        pcg32& eng);
-    void clear_patches(const double& max_N,
+    void clear_plants(const double& max_N,
                        const double& clear_surv,
                        pcg32& eng);
 

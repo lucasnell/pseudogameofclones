@@ -134,11 +134,11 @@ public:
 
     }
 
-    // Clearing a patch kills all mummies
+    // Clearing a plant kills all mummies
     inline void clear() {
         Y.fill(0);
     }
-    // Clearing part of patch
+    // Clearing part of plant
     inline void clear(const double& surv) {
         Y *= surv;
     }

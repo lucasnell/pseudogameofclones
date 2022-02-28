@@ -31,15 +31,15 @@ leslie_matrix <- function(instar_days, surv_juv, surv_adult, repro) {
     .Call(`_clonewars_leslie_matrix`, instar_days, surv_juv, surv_adult, repro)
 }
 
-#' Calculate carrying capacity from aphid and patch info
+#' Calculate carrying capacity from aphid and plant info
 #'
 #' @param apterous Leslie matrix for apterous aphids of this line
 #' @param alates Leslie matrix for alates of this line
 #' @param alate_prop The proportion of new aphids that are alates
-#' @param disp_prop The proportion of alates that disperse away from the patch.
+#' @param disp_prop The proportion of alates that disperse away from the plant.
 #' @param disp_mort Mortality rate for dispersing alates.
 #' @param disp_start Index for the age at which alates disperse (0-indexed).
-#' @param K The "carrying capacity" for this patch.
+#' @param K The "carrying capacity" for this plant.
 #'
 #'
 #' @export

@@ -22,7 +22,7 @@
 
 #include "clonewars_types.hpp"  // integer types
 #include "aphids.hpp"           // aphid classes
-#include "patches.hpp"          // patch classes
+#include "patches.hpp"          // patch and plant classes
 #include "pcg.hpp"              // mt_seeds seed_pcg fxns
 
 
@@ -89,16 +89,16 @@ void calc_rep_rows(uint32& n_rows,
                    const uint32& save_every,
                    const uint32& n_lines,
                    const uint32& n_cages,
-                   const uint32& n_patches) {
+                   const uint32& n_plants) {
 
     // # time points you'll save:
     n_rows_wasps = (max_t / save_every) + 1;
     if (max_t % save_every > 0) n_rows_wasps++;
     n_rows_wasps *= n_cages;
 
-    n_rows = n_patches * n_lines * n_rows_wasps;
+    n_rows = n_plants * n_lines * n_rows_wasps;
     n_rows *= 3;  // `*3` for separate alate vs apterous vs parasitized
-    n_rows += n_patches * n_rows_wasps;  // for mummies
+    n_rows += n_plants * n_rows_wasps;  // for mummies
 
     return;
 }
@@ -128,7 +128,7 @@ struct RepSummary {
     std::vector<uint32> rep;
     std::vector<uint32> time;
     std::vector<uint32> cage;
-    std::vector<uint32> patch;
+    std::vector<uint32> plant;
     std::vector<std::string> line;
     std::vector<std::string> type;
     std::vector<double> N;
@@ -138,7 +138,7 @@ struct RepSummary {
     std::vector<double> wasp_N;
 
     RepSummary()
-        : rep(), time(), cage(), patch(), line(), type(), N(),
+        : rep(), time(), cage(), plant(), line(), type(), N(),
           wasp_rep(), wasp_time(), wasp_cage(), wasp_N(), r() {};
 
     void reserve(const uint32& rep_,
@@ -146,14 +146,14 @@ struct RepSummary {
                  const uint32& save_every,
                  const uint32& n_lines,
                  const uint32& n_cages,
-                 const uint32& n_patches) {
+                 const uint32& n_plants) {
         uint32 n_rows, n_rows_wasps;
         calc_rep_rows(n_rows, n_rows_wasps, max_t, save_every,
-                      n_lines, n_cages, n_patches);
+                      n_lines, n_cages, n_plants);
         rep.reserve(n_rows);
         time.reserve(n_rows);
         cage.reserve(n_rows);
-        patch.reserve(n_rows);
+        plant.reserve(n_rows);
         line.reserve(n_rows);
         type.reserve(n_rows);
         N.reserve(n_rows);
@@ -169,7 +169,7 @@ struct RepSummary {
         rep.reserve(n);
         time.reserve(n);
         cage.reserve(n);
-        patch.reserve(n);
+        plant.reserve(n);
         line.reserve(n);
         type.reserve(n);
         N.reserve(n);
@@ -190,15 +190,15 @@ struct RepSummary {
 
             // Everything but wasps:
             for (uint32 j = 0; j < cage.size(); j++) {
-                const OnePatch& patch(cage[j]);
-                for (uint32 i = 0; i < patch.size(); i++) {
-                    const AphidPop& aphid(patch[i]);
+                const OnePlant& plant(cage[j]);
+                for (uint32 i = 0; i < plant.size(); i++) {
+                    const AphidPop& aphid(plant[i]);
                     append_living_aphids__(t, k, j, aphid.aphid_name,
                                            aphid.alates.total_aphids(),
                                            aphid.apterous.total_aphids(),
                                            aphid.paras.total_aphids());
                 }
-                append_mummies__(t, k, j, patch.total_mummies());
+                append_mummies__(t, k, j, plant.total_mummies());
             }
 
             wasp_rep.push_back(r);
@@ -215,7 +215,7 @@ struct RepSummary {
 
         time.clear();
         cage.clear();
-        patch.clear();
+        plant.clear();
         line.clear();
         type.clear();
         N.clear();
@@ -227,7 +227,7 @@ struct RepSummary {
         // to clear memory:
         time.shrink_to_fit();
         cage.shrink_to_fit();
-        patch.shrink_to_fit();
+        plant.shrink_to_fit();
         line.shrink_to_fit();
         type.shrink_to_fit();
         N.shrink_to_fit();
@@ -245,7 +245,7 @@ struct RepSummary {
             rep.push_back(other.rep[i]);
             time.push_back(other.time[i]);
             cage.push_back(other.cage[i]);
-            patch.push_back(other.patch[i]);
+            plant.push_back(other.plant[i]);
             line.push_back(other.line[i]);
             type.push_back(other.type[i]);
             N.push_back(other.N[i]);
@@ -292,9 +292,9 @@ private:
         cage.push_back(c);
         cage.push_back(c);
 
-        patch.push_back(p);
-        patch.push_back(p);
-        patch.push_back(p);
+        plant.push_back(p);
+        plant.push_back(p);
+        plant.push_back(p);
 
         line.push_back(l);
         line.push_back(l);
@@ -318,7 +318,7 @@ private:
         rep.push_back(r);
         time.push_back(t);
         cage.push_back(c);
-        patch.push_back(p);
+        plant.push_back(p);
         line.push_back("");
         type.push_back("mummy");
         N.push_back(N_mum);
@@ -345,7 +345,7 @@ inline void do_perturb(std::deque<PerturbInfo>& perturbs,
         double mult = pert.multiplier;
         OneCage& cage(cages[pert.cage]);
         if (pert.index < n_lines) { // aphids (non-parasitized)
-            for (OnePatch& p : cage.patches) {
+            for (OnePlant& p : cage.plants) {
                 AphidPop& aphids(p.aphids[pert.index]);
                 aphids.apterous.clear(mult);
                 aphids.alates.clear(mult);
@@ -355,7 +355,7 @@ inline void do_perturb(std::deque<PerturbInfo>& perturbs,
                 }
             }
         } else if (pert.index == n_lines) { // mummies + parasitized aphids
-            for (OnePatch& p : cage.patches) {
+            for (OnePlant& p : cage.plants) {
                 p.mummies.clear(mult);
                 if (arma::accu(p.mummies.Y) < extinct_N) p.mummies.Y.fill(0);
                 for (AphidPop& aphids : p.aphids) {
@@ -385,8 +385,8 @@ inline void do_perturb(std::deque<PerturbInfo>& perturbs,
 
 
 /*
- `T` should be uint32 for using age to determine whether a patch gets cleared.
- It should be double for using aphid abundance to determine whether a patch gets cleared.
+ `T` should be uint32 for using age to determine whether a plant gets cleared.
+ It should be double for using aphid abundance to determine whether a plant gets cleared.
  */
 
 template <typename T>
@@ -448,11 +448,11 @@ RepSummary one_rep__(const T& clear_threshold,
     bool process_error = (sigma_x > 0) || (sigma_y > 0);
 
     uint32 n_lines = aphid_name.size();
-    uint32 n_patches = aphid_density_0.size();
+    uint32 n_plants = aphid_density_0.size();
 
     RepSummary summary;
 
-    summary.reserve(rep, max_t, save_every, n_lines, n_cages, n_patches);
+    summary.reserve(rep, max_t, save_every, n_lines, n_cages, n_plants);
 
     uint32 iters = 0;
 
@@ -538,10 +538,10 @@ RepSummary one_rep__(const T& clear_threshold,
         if (t % save_every == 0 || t == max_t) summary.push_back(t, cages);
 
         // If all cages are empty, then stop this rep.
-        // It's important to do this before clearing patches.
+        // It's important to do this before clearing plants.
         bool all_empty = true;
         for (uint32 i = 0; i < n_cages; i++) {
-            for (const OnePatch& p : cages[i].patches) {
+            for (const OnePlant& p : cages[i].plants) {
                 if (!p.empty) {
                     all_empty = false;
                     break;
@@ -554,7 +554,7 @@ RepSummary one_rep__(const T& clear_threshold,
         if (!check_for_clear.empty() && t == check_for_clear.front()) {
             check_for_clear.pop_front();
             for (uint32 i = 0; i < n_cages; i++) {
-                cages[i].clear_patches(clear_threshold, clear_surv, eng);
+                cages[i].clear_plants(clear_threshold, clear_surv, eng);
             }
         }
 
@@ -642,7 +642,7 @@ void one_positive_check(const uint32& input, const std::string& name) {
 void check_args(const uint32& n_reps,
                 const uint32& n_lines,
                 const uint32& n_cages,
-                const uint32& n_patches,
+                const uint32& n_plants,
                 const uint32& max_plant_age,
                 const double& max_N,
                 const std::deque<uint32>& check_for_clear,
@@ -701,7 +701,7 @@ void check_args(const uint32& n_reps,
     if (n_reps == 0) stop("\nERROR: n_reps == 0\n");
     if (n_lines == 0) stop("\nERROR: n_lines == 0\n");
     if (n_cages == 0) stop("\nERROR: n_cages == 0\n");
-    if (n_patches == 0) stop("\nERROR: n_patches == 0\n");
+    if (n_plants == 0) stop("\nERROR: n_plants == 0\n");
     if (n_stages == 0) stop("\nERROR: n_stages == 0\n");
 
     if (leslie_mat.size() != n_lines) {
@@ -737,10 +737,10 @@ void check_args(const uint32& n_reps,
 
     // In `aphid_density_0`, rows are aphid stages, columns are types (alate vs
     // apterous), and slices are aphid lines.
-    if (aphid_density_0.size() != n_patches) {
-        stop("\nERROR: aphid_density_0.size() != n_patches\n");
+    if (aphid_density_0.size() != n_plants) {
+        stop("\nERROR: aphid_density_0.size() != n_plants\n");
     }
-    for (uint32 i = 0; i < n_patches; i++) {
+    for (uint32 i = 0; i < n_plants; i++) {
         if (aphid_density_0[i].n_rows != n_stages) {
             stop("\nERROR: aphid_density_0[i].n_rows != n_stages\n");
         }
@@ -791,11 +791,11 @@ void check_args(const uint32& n_reps,
         stop("\nERROR: constant_wasps.size() != n_cages\n");
     }
 
-    if (pred_rate.size() != n_patches) {
-        stop("\nERROR: pred_rate.size() != n_patches\n");
+    if (pred_rate.size() != n_plants) {
+        stop("\nERROR: pred_rate.size() != n_plants\n");
     }
-    if (mum_density_0.n_cols != n_patches) {
-        stop("\nERROR: mum_density_0.n_cols != n_patches\n");
+    if (mum_density_0.n_cols != n_plants) {
+        stop("\nERROR: mum_density_0.n_cols != n_plants\n");
     }
     if (mum_density_0.n_rows == 0) {
         stop("\nERROR: mum_density_0.n_rows == 0\n");
@@ -946,9 +946,9 @@ List sim_clonewars_cpp(const uint32& n_reps,
                        const bool& show_progress) {
 
     uint32 n_lines = aphid_name.size();
-    uint32 n_patches = aphid_density_0.size();
+    uint32 n_plants = aphid_density_0.size();
 
-    check_args(n_reps, n_lines, n_cages, n_patches,
+    check_args(n_reps, n_lines, n_cages, n_plants,
                max_plant_age, max_N, check_for_clear, clear_surv,
                max_t, save_every,
                mean_K, sd_K, K_y_mult, death_prop,
@@ -1064,7 +1064,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                 _["rep"] = summ.rep,
                                 _["time"] = summ.time,
                                 _["cage"] = summ.cage,
-                                _["patch"] = summ.patch,
+                                _["plant"] = summ.plant,
                                 _["line"] = summ.line,
                                 _["type"] = summ.type,
                                 _["N"] = summ.N),

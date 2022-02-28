@@ -14,7 +14,7 @@ using namespace Rcpp;
 
 
 // This is necessary for dispersal methods and ApterousPop::alate_prop
-class OnePatch;
+class OnePlant;
 // Necessary here to declare friendship
 class AphidPop;
 
@@ -124,7 +124,7 @@ public:
 
 
     // logit(Pr(alates)) ~ b0 + b1 * z, where `z` is # aphids (all lines)
-    double alate_prop(const OnePatch* patch) const;
+    double alate_prop(const OnePlant* plant) const;
 
 };
 // Aphid "type" population for alates of a particular clonal line
@@ -202,7 +202,7 @@ public:
 
 
 
-// Aphid population: both alates and apterous for one clonal line on a patch
+// Aphid population: both alates and apterous for one clonal line on a plant
 class AphidPop {
 
     double sigma_x;          // environmental standard deviation for aphids
@@ -356,26 +356,26 @@ public:
 
 
     /*
-     Calculate dispersal of this line to all other patches.
+     Calculate dispersal of this line to all other plants.
      Emigration doesn't necessarily == immigration due to disperser mortality.
     */
-    void calc_dispersal(const OnePatch* patch,
+    void calc_dispersal(const OnePlant* plant,
                         arma::mat& emigrants,
                         arma::mat& immigrants,
                         pcg32& eng) const;
     // Same, but with no stochasticity
-    void calc_dispersal(const OnePatch* patch,
+    void calc_dispersal(const OnePlant* plant,
                         arma::mat& emigrants,
                         arma::mat& immigrants) const;
 
     // Update new aphid abundances, return the # newly mummified aphids
-    double update(const OnePatch* patch,
+    double update(const OnePlant* plant,
                   const WaspPop* wasps,
                   const arma::vec& emigrants,
                   const arma::vec& immigrants,
                   pcg32& eng);
     // Same as above, but no randomness in alate production:
-    double update(const OnePatch* patch,
+    double update(const OnePlant* plant,
                   const WaspPop* wasps,
                   const arma::vec& emigrants,
                   const arma::vec& immigrants);

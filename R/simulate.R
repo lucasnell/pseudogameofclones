@@ -315,10 +315,10 @@ cube_list_check <- function(x, n) {
 #'
 #'
 #' @param n_reps Number of reps to simulate.
-#' @param n_patches Number of patches to simulate.
+#' @param n_plants Number of plants per cage.
 #' @param max_t Max time points to simulate for each rep.
-#' @param N_0 Starting abundances for each aphid line on each patch.
-#'     Can be a single number if you want the same value for each line on each patch,
+#' @param N_0 Starting abundances for each aphid line on each plant.
+#'     Can be a single number if you want the same value for each line on each plant,
 #'     or a matrix if you want to specify everything.
 #' @param R Growth rates for each line.
 #' @param A Density dependence for each line.
@@ -329,15 +329,15 @@ cube_list_check <- function(x, n) {
 #' @param log_zeta_mean Mean of the distribution of log(zeta) values.
 #' @param log_zeta_sd SD of the distribution of log(zeta) values.
 #' @param zeta_t_thresh Threshold for `exp(zeta * (t - mu_time))` that makes that
-#'     patch get replaced. This is equivalent to the threshold for patch "health"
+#'     plant get replaced. This is equivalent to the threshold for plant "health"
 #'     that would make an experimenter replace it.
 #' @param mu_time Mean of time values.
-#' @param repl_times Vector of times at which to replace patches.
-#' @param repl_threshold Threshold above which patches are replaced.
+#' @param repl_times Vector of times at which to replace plants.
+#' @param repl_threshold Threshold above which plants are replaced.
 #' @param extinct_N Threshold below which a line is considered extinct.
 #' @param save_every Abundances will be stored every `save_every` time points.
-#' @param by_patch Logical for whether to summarize abundances by patch, rather
-#'     than separately by line and patch.
+#' @param by_plant Logical for whether to summarize abundances by plant, rather
+#'     than separately by line and plant.
 #' @param n_cores Number of cores to use. Defaults to \code{1}.
 #' @param show_progress Boolean for whether to show progress bar. Defaults to
 #'     \code{FALSE}.
@@ -359,7 +359,7 @@ cube_list_check <- function(x, n) {
 sim_clonewars <- function(n_reps,
                           clonal_lines,
                           n_cages = 1,
-                          n_patches = 4,
+                          n_plants = 4,
                           max_t = 100,
                           plant_check_gaps = c(3, 4),
                           max_plant_age = 1000000,
@@ -441,7 +441,7 @@ sim_clonewars <- function(n_reps,
         }
     }
 
-    if (length(pred_rate) == 1) pred_rate <- rep(pred_rate, n_patches)
+    if (length(pred_rate) == 1) pred_rate <- rep(pred_rate, n_plants)
     if (length(disp_rate) == 1) disp_rate <- rep(disp_rate, n_lines)
     if (length(disp_mort) == 1) disp_mort <- rep(disp_mort, n_lines)
     if (length(alate_b0) == 1) alate_b0 <- rep(alate_b0, n_lines)
@@ -459,7 +459,7 @@ sim_clonewars <- function(n_reps,
     } else stopifnot(length(rel_attack) == 5)
 
     if (length(mum_density_0) == 1) {
-        mum_density_0 <- matrix(mum_density_0, dev_times$mum_days[2], n_patches)
+        mum_density_0 <- matrix(mum_density_0, dev_times$mum_days[2], n_plants)
     }
 
 
@@ -481,7 +481,7 @@ sim_clonewars <- function(n_reps,
     }
     aphid_density_0 <- array(do.call(c, densities_0),
                              dim = c(dim(densities_0[[1]]), n_lines))
-    aphid_density_0 <- replicate(n_patches, aphid_density_0, simplify = FALSE)
+    aphid_density_0 <- replicate(n_plants, aphid_density_0, simplify = FALSE)
 
     attack_surv <- do.call(cbind, lapply(clonal_lines, `[[`, i = "attack_surv"))
 
@@ -601,7 +601,7 @@ sim_clonewars <- function(n_reps,
 
     sims <- lapply(sims, as_tibble)
     sims[["aphids"]] <- sims[["aphids"]] %>%
-        mutate(across(c("rep", "time", "patch"), as.integer))
+        mutate(across(c("rep", "time", "plant"), as.integer))
     sims[["wasps"]] <- sims[["wasps"]] %>%
         mutate(across(c("rep", "time"), as.integer))
 
