@@ -153,6 +153,7 @@ class WaspPop {
 
     WaspAttack attack;      // info for attack rates
     double Y_0;             // initial adult wasp density
+    uint32 delay;           // when to add initial wasps
     double sex_ratio;       // proportion of female wasps
     double s_y;             // parasitoid adult daily survival
 
@@ -166,29 +167,33 @@ public:
     double Y;               // Wasp density
     double x;               // Total number of unparasitized aphids
 
+
     // Constructors
     WaspPop()
-        : attack(), Y_0(), sex_ratio(), s_y(), norm_distr(),
+        : attack(), Y_0(), delay(), sex_ratio(), s_y(), norm_distr(),
           sigma_y(), Y(), x() {};
     WaspPop(const arma::vec& rel_attack_,
             const double& a_,
             const double& k_,
             const double& h_,
             const double& Y_0_,
+            const uint32& delay_,
             const double& sex_ratio_,
             const double& s_y_,
             const double& sigma_y_)
         : attack(rel_attack_, a_, k_, h_),
           Y_0(Y_0_),
+          delay(delay_),
           sex_ratio(sex_ratio_),
           s_y(s_y_),
           norm_distr(0, 1),
           sigma_y(sigma_y_),
-          Y(Y_0_),
+          Y((delay_ == 0) ? Y_0_ : 0.0),
           x(0) {};
     WaspPop(const WaspPop& other)
         : attack(other.attack),
           Y_0(other.Y_0),
+          delay(other.delay),
           sex_ratio(other.sex_ratio),
           s_y(other.s_y),
           norm_distr(other.norm_distr),
@@ -198,6 +203,7 @@ public:
     WaspPop& operator=(const WaspPop& other) {
         attack = other.attack;
         Y_0 = other.Y_0;
+        delay = other.delay;
         sex_ratio = other.sex_ratio;
         s_y = other.s_y;
         norm_distr = other.norm_distr;
@@ -212,6 +218,12 @@ public:
     arma::vec A(const arma::vec& attack_surv) const {
         arma::vec A_ = attack.A(Y, x, attack_surv);
         return A_;
+    }
+
+    // Check for whether to add initial wasps:
+    void add_Y_0_check(const uint32& t) {
+        if (t == delay) Y += Y_0;
+        return;
     }
 
     /*

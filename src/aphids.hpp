@@ -132,32 +132,32 @@ class AlatePop : public AphidTypePop {
 
     friend class AphidPop;
 
-    MEMBER(double, disp_rate)      // rate at which they leave focal plant
+    MEMBER(double, alate_plant_disp_p) // proportion that leaves focal plant
     MEMBER(double, disp_mort)      // mortality of dispersers
     MEMBER(uint32, disp_start)     // index for stage in which dispersal starts
 
 public:
 
-    AlatePop() : AphidTypePop(), disp_rate_(0), disp_mort_(0), disp_start_(0) {};
+    AlatePop() : AphidTypePop(), alate_plant_disp_p_(0), disp_mort_(0), disp_start_(0) {};
     AlatePop(const arma::mat& leslie_mat,
              const arma::vec& aphid_density_0,
-             const double& disp_rate,
+             const double& alate_plant_disp_p,
              const double& disp_mort,
              const uint32& disp_start)
         : AphidTypePop(leslie_mat, aphid_density_0),
-          disp_rate_(disp_rate),
+          alate_plant_disp_p_(alate_plant_disp_p),
           disp_mort_(disp_mort),
           disp_start_(disp_start) {};
 
     AlatePop(const AlatePop& other)
         : AphidTypePop(other),
-          disp_rate_(other.disp_rate_),
+          alate_plant_disp_p_(other.alate_plant_disp_p_),
           disp_mort_(other.disp_mort_),
           disp_start_(other.disp_start_) {};
 
     AlatePop& operator=(const AlatePop& other) {
         AphidTypePop::operator=(other);
-        disp_rate_ = other.disp_rate_;
+        alate_plant_disp_p_ = other.alate_plant_disp_p_;
         disp_mort_ = other.disp_mort_;
         disp_start_ = other.disp_start_;
         return *this;
@@ -258,7 +258,7 @@ public:
              const arma::mat& aphid_density_0,
              const double& alate_b0,
              const double& alate_b1,
-             const double& disp_rate,
+             const double& alate_plant_disp_p,
              const double& disp_mort,
              const uint32& disp_start,
              const uint32& living_days)
@@ -268,7 +268,7 @@ public:
           attack_surv(attack_surv_),
           aphid_name(aphid_name_),
           apterous(leslie_mat.slice(0), aphid_density_0.col(0), alate_b0, alate_b1),
-          alates(leslie_mat.slice(1), aphid_density_0.col(1), disp_rate, disp_mort,
+          alates(leslie_mat.slice(1), aphid_density_0.col(1), alate_plant_disp_p, disp_mort,
                  disp_start),
           paras(leslie_mat.slice(2), living_days),
           extinct(false) {};

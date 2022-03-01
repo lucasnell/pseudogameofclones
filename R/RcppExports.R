@@ -59,6 +59,10 @@ sad_leslie <- function(leslie) {
     .Call(`_clonewars_sad_leslie`, leslie)
 }
 
+fields_to_list <- function(all_fields_ptr) {
+    .Call(`_clonewars_fields_to_list`, all_fields_ptr)
+}
+
 #' Check that the number of threads doesn't exceed the number available, and change
 #' to 1 if OpenMP isn't enabled.
 #'
@@ -70,7 +74,7 @@ using_openmp <- function() {
     .Call(`_clonewars_using_openmp`)
 }
 
-sim_clonewars_cpp <- function(n_reps, n_fields, max_plant_age, max_N, check_for_clear, clear_surv, max_t, save_every, mean_K, sd_K, K_y_mult, death_prop, shape1_death_mort, shape2_death_mort, attack_surv, disp_error, demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_disp_prop, disp_rate, disp_mort, disp_start, living_days, pred_rate, mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h, wasp_density_0, wasp_delay, wasp_dispersal_p, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, n_threads, show_progress) {
-    .Call(`_clonewars_sim_clonewars_cpp`, n_reps, n_fields, max_plant_age, max_N, check_for_clear, clear_surv, max_t, save_every, mean_K, sd_K, K_y_mult, death_prop, shape1_death_mort, shape2_death_mort, attack_surv, disp_error, demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_disp_prop, disp_rate, disp_mort, disp_start, living_days, pred_rate, mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h, wasp_density_0, wasp_delay, wasp_dispersal_p, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, n_threads, show_progress)
+sim_clonewars_cpp <- function(n_reps, n_fields, max_plant_age, max_N, check_for_clear, clear_surv, max_t, save_every, mean_K, sd_K, K_y_mult, wilted_prop, shape1_wilted_mort, shape2_wilted_mort, attack_surv, disp_error, demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, alate_plant_disp_p, disp_mort, disp_start, living_days, pred_rate, mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h, wasp_density_0, wasp_delay, wasp_disp_p, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, n_threads, show_progress) {
+    .Call(`_clonewars_sim_clonewars_cpp`, n_reps, n_fields, max_plant_age, max_N, check_for_clear, clear_surv, max_t, save_every, mean_K, sd_K, K_y_mult, wilted_prop, shape1_wilted_mort, shape2_wilted_mort, attack_surv, disp_error, demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, alate_plant_disp_p, disp_mort, disp_start, living_days, pred_rate, mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h, wasp_density_0, wasp_delay, wasp_disp_p, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, n_threads, show_progress)
 }
 

@@ -66,7 +66,7 @@ double OnePlant::carrying_capacity() const {
                         aphids[i].apterous.leslie(),
                         aphids[i].alates.leslie(),
                         aphids[i].apterous.alate_prop(this),
-                        aphids[i].alates.disp_rate(),
+                        aphids[i].alates.alate_plant_disp_p(),
                         aphids[i].alates.disp_mort(),
                         aphids[i].alates.disp_start());
 
@@ -94,7 +94,10 @@ void OnePlant::update_z_wilted() {
 
     // Once it turns wilted, it stays that way until cleared
     if (wilted_) return;
-    wilted_ = carrying_capacity() >= (K * death_prop);
+    // Wilting process is ignored if wilted_prop > 1
+    if (wilted_prop <= 1) {
+        wilted_ = carrying_capacity() >= (K * wilted_prop);
+    }
 
     return;
 }
@@ -127,9 +130,9 @@ void OnePlant::update(const arma::cube& emigrants,
                                immigrants.slice(i).col(this_j), eng);
 
         if (wilted_) {
-            aphids[i].apterous.X *= death_mort;
-            aphids[i].alates.X *= death_mort;
-            aphids[i].paras.X *= death_mort;
+            aphids[i].apterous.X *= wilted_mort;
+            aphids[i].alates.X *= wilted_mort;
+            aphids[i].paras.X *= wilted_mort;
         }
 
         // Adjust for potential extinction or re-colonization:
@@ -169,9 +172,9 @@ void OnePlant::update(const arma::cube& emigrants,
                                immigrants.slice(i).col(this_j));
 
         if (wilted_) {
-            aphids[i].apterous.X *= death_mort;
-            aphids[i].alates.X *= death_mort;
-            aphids[i].paras.X *= death_mort;
+            aphids[i].apterous.X *= wilted_mort;
+            aphids[i].alates.X *= wilted_mort;
+            aphids[i].paras.X *= wilted_mort;
         }
 
         extinct_colonize(i);
@@ -206,7 +209,7 @@ inline void OneField::do_clearing(std::vector<PlantClearingInfo<T>>& clear_plant
     int n_plants = plants.size();
     int n_wilted = std::accumulate(wilted.begin(), wilted.end(), 0);
 
-    double K, K_y, death_mort;
+    double K, K_y, wilted_mort;
 
     if (clear_plants.size() == 0 && n_wilted < n_plants) return;
 
@@ -234,12 +237,12 @@ inline void OneField::do_clearing(std::vector<PlantClearingInfo<T>>& clear_plant
 
 
         set_K(K, K_y, eng);
-        set_death_mort(death_mort, eng);
+        set_wilted_mort(wilted_mort, eng);
 
         if (clear_surv > 0) {
-            plants[clear_plants.front().ind].clear(K, K_y, death_mort,
+            plants[clear_plants.front().ind].clear(K, K_y, wilted_mort,
                                         clear_surv);
-        } else plants[clear_plants.front().ind].clear(K, K_y, death_mort);
+        } else plants[clear_plants.front().ind].clear(K, K_y, wilted_mort);
 
         return;
 
@@ -267,12 +270,12 @@ inline void OneField::do_clearing(std::vector<PlantClearingInfo<T>>& clear_plant
     for (uint32 i = 0; i < clear_plants.size(); i++) {
 
         set_K(K, K_y, eng);
-        set_death_mort(death_mort, eng);
+        set_wilted_mort(wilted_mort, eng);
 
         if (clear_surv > 0) {
-            plants[clear_plants.front().ind].clear(K, K_y, death_mort,
+            plants[clear_plants.front().ind].clear(K, K_y, wilted_mort,
                                         clear_surv);
-        } else plants[clear_plants.front().ind].clear(K, K_y, death_mort);
+        } else plants[clear_plants.front().ind].clear(K, K_y, wilted_mort);
 
     }
 
@@ -343,4 +346,24 @@ void OneField::clear_plants(const double& max_N,
     do_clearing<double>(clear_plants, remaining, wilted, clear_surv, eng);
 
     return;
+}
+
+
+//[[Rcpp::export]]
+List fields_to_list(SEXP all_fields_ptr) {
+
+    XPtr<std::vector<AllFields>> all_fields_vec_xptr(all_fields_ptr);
+    const std::vector<AllFields>& all_fields_vec(*all_fields_vec_xptr);
+
+    uint32 n_reps = all_fields_vec.size();
+
+    List out(n_reps);
+
+    for (uint32 i = 0; i < n_reps; i++) {
+        const AllFields& all_fields(all_fields_vec[i]);
+        out[i] = all_fields.to_list();
+    }
+
+    return out;
+
 }

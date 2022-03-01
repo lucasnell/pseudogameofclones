@@ -104,23 +104,6 @@ void calc_rep_rows(uint32& n_rows,
 }
 
 
-/*
-
-
- leslie_matrix__(instar_days, surv_juv, surv_adult, repro, leslie_);
- leslie_sad__(leslie_, X_0_);
- X_0_ *= aphid_density_0;
-
- OR
-
- leslie_matrix__(instar_days, surv_juv, surv_adult, repro, leslie_);
- X_0_ = aphid_density_0;
- */
-
-/*
- To calculate dispersal start date
- arma::accu(instar_days.head(instar_days.n_elem - 1)) - 1
- */
 
 
 struct RepSummary {
@@ -182,7 +165,7 @@ struct RepSummary {
 
 
     void push_back(const uint32& t,
-                   const std::vector<OneField>& fields) {
+                   const AllFields& fields) {
 
         for (uint32 k = 0; k < fields.size(); k++) {
 
@@ -330,13 +313,13 @@ private:
 
 
 inline void do_perturb(std::deque<PerturbInfo>& perturbs,
-                       std::vector<OneField>& fields,
-                       const uint32& t,
-                       const uint32& n_lines,
-                       const double& extinct_N,
-                       const bool& do_pop) {
+                       AllFields& fields,
+                       const uint32& t) {
 
     if (perturbs.empty()) return;
+
+    uint32 n_lines = fields.n_lines();
+    const double& extinct_N(fields.extinct_N);
 
     uint32 i = 0;
     while (i < perturbs.size()) {
@@ -373,7 +356,7 @@ inline void do_perturb(std::deque<PerturbInfo>& perturbs,
         i++;
     }
 
-    if (do_pop && i > 0) {
+    if (i > 0) {
         perturbs.erase(perturbs.begin(), perturbs.begin() + i);
     }
 
@@ -384,94 +367,28 @@ inline void do_perturb(std::deque<PerturbInfo>& perturbs,
 
 
 
-/*
- `T` should be uint32 for using age to determine whether a plant gets cleared.
- It should be double for using aphid abundance to determine whether a plant gets cleared.
- */
 
-template <typename T>
-RepSummary one_rep__(const T& clear_threshold,
-                     const uint32& rep,
-                     const uint32& n_fields,
-                     std::deque<uint32> check_for_clear,
-                     const double& clear_surv,
-                     const uint32& max_t,
-                     const uint32& save_every,
-                     const double& mean_K,
-                     const double& sd_K,
-                     const std::vector<double>& K_y_mult,
-                     const double& death_prop,
-                     const double& shape1_death_mort,
-                     const double& shape2_death_mort,
-                     const arma::mat& attack_surv,
-                     const bool& disp_error,
-                     const bool& demog_error,
-                     const double& sigma_x,
-                     const double& sigma_y,
-                     const double& rho,
-                     const double& extinct_N,
-                     const std::vector<std::string>& aphid_name,
-                     const std::vector<arma::cube>& leslie_mat,
-                     const std::vector<arma::cube>& aphid_density_0,
-                     const std::vector<double>& alate_b0,
-                     const std::vector<double>& alate_b1,
-                     const double& alate_disp_prop,
-                     const std::vector<double>& disp_rate,
-                     const std::vector<double>& disp_mort,
-                     const std::vector<uint32>& disp_start,
-                     const std::vector<uint32>& living_days,
-                     const std::vector<double>& pred_rate,
-                     const arma::mat& mum_density_0,
-                     const double& mum_smooth,
-                     const double& max_mum_density,
-                     const arma::vec& rel_attack,
-                     const double& a,
-                     const double& k,
-                     const double& h,
-                     const std::vector<double>& wasp_density_0,
-                     const std::vector<uint32>& wasp_delay,
-                     const double& wasp_dispersal_p,
-                     const double& sex_ratio,
-                     const std::vector<double>& s_y,
-                     const std::vector<bool>& constant_wasps,
-                     const std::vector<uint32>& perturb_when,
-                     const std::vector<uint32>& perturb_where,
-                     const std::vector<uint32>& perturb_who,
-                     const std::vector<double>& perturb_how,
-                     Progress& prog_bar,
-                     int& status_code,
-                     pcg32& eng) {
+void one_rep__(RepSummary& summary,
+               AllFields& fields,
+               const uint32& rep,
+               std::deque<uint32> check_for_clear,
+               const uint32& max_t,
+               const uint32& save_every,
+               const std::vector<uint32>& perturb_when,
+               const std::vector<uint32>& perturb_where,
+               const std::vector<uint32>& perturb_who,
+               const std::vector<double>& perturb_how,
+               Progress& prog_bar,
+               int& status_code) {
 
-    double demog_mult = 1;
-    if (!demog_error) demog_mult = 0;
-    // either type of environmental error
-    bool process_error = (sigma_x > 0) || (sigma_y > 0);
+    uint32 n_lines = fields.n_lines();
+    uint32 n_plants = fields.n_plants();
+    uint32 n_fields = fields.size();
 
-    uint32 n_lines = aphid_name.size();
-    uint32 n_plants = aphid_density_0.size();
-
-    RepSummary summary;
 
     summary.reserve(rep, max_t, save_every, n_lines, n_fields, n_plants);
 
     uint32 iters = 0;
-
-    std::vector<OneField> fields;
-    fields.reserve(n_fields);
-    for (uint32 i = 0; i < n_fields; i++) {
-        fields.push_back(
-            OneField(sigma_x, sigma_y, rho, demog_mult, mean_K, sd_K, K_y_mult[i],
-                    death_prop,
-                    shape1_death_mort, shape2_death_mort, attack_surv,
-                    aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1,
-                    disp_rate, disp_mort, disp_start, living_days, pred_rate,
-                    extinct_N, mum_density_0, mum_smooth, max_mum_density,
-                    rel_attack, a, k, h, 0, sex_ratio,
-                    s_y[i], constant_wasps[i], eng));
-        if (wasp_delay[i] == 0) fields.back().wasps.Y = wasp_density_0[i];
-    }
-
-
 
     std::deque<PerturbInfo> perturbs(perturb_when.size());
     for (uint32 i = 0; i < perturb_when.size(); i++) {
@@ -486,83 +403,29 @@ RepSummary one_rep__(const T& clear_threshold,
 
         if (interrupt_check(iters, prog_bar)) {
             status_code = -1;
-            return summary;
+            return;
         }
 
         // Perturbations
-        do_perturb(perturbs, fields, t, aphid_name.size(), extinct_N, true);
+        do_perturb(perturbs, fields, t);
 
-        if (n_fields > 1 && alate_disp_prop > 0 &&
-            !check_for_clear.empty() && t == check_for_clear.front()) {
-
-            arma::mat D = fields.front().remove_dispersers(alate_disp_prop);
-            for (uint32 i = 1; i < fields.size(); i++) {
-                D += fields[i].remove_dispersers(alate_disp_prop);
-            }
-            D /= static_cast<double>(n_fields);
-            for (OneField& c : fields) c.add_dispersers(D);
-
-        }
-
-        // used to calculate wasp dispersal if desired:
-        double from_wasp_pool = 0;
-        if (wasp_dispersal_p > 0 && n_fields > 1) {
-            double wasp_Y_bar = 0;
-            for (OneField& field : fields) wasp_Y_bar += field.wasps.Y;
-            wasp_Y_bar /= static_cast<double>(n_fields);
-            from_wasp_pool = wasp_Y_bar * wasp_dispersal_p;
-        }
-
-        for (uint32 i = 0; i < n_fields; i++) {
-
-            OneField& field(fields[i]);
-
-            if (disp_error) {
-                field.calc_dispersal(eng);
-            } else field.calc_dispersal();
-
-            if (process_error) {
-                field.update(eng);
-            } else field.update();
-
-            // Add from wasp dispersal pool
-            if (wasp_dispersal_p > 0 && n_fields > 1) {
-                field.wasps.Y *= (1 - wasp_dispersal_p);
-                field.wasps.Y += from_wasp_pool;
-            }
-
-            if (t == wasp_delay[i]) field.wasps.Y += wasp_density_0[i];
-
-        }
+        // Basic updates for dispersal and population dynamics.
+        // Returns true if all plants/fields are empty.
+        // It's important to do this (& to save output) before clearing plants.
+        bool all_empty = fields.update(t, check_for_clear);
 
         if (t % save_every == 0 || t == max_t) summary.push_back(t, fields);
 
         // If all fields are empty, then stop this rep.
-        // It's important to do this before clearing plants.
-        bool all_empty = true;
-        for (uint32 i = 0; i < n_fields; i++) {
-            for (const OnePlant& p : fields[i].plants) {
-                if (!p.empty) {
-                    all_empty = false;
-                    break;
-                }
-            }
-            if (!all_empty) break;
-        }
         if (all_empty) break;
 
-        if (!check_for_clear.empty() && t == check_for_clear.front()) {
-            check_for_clear.pop_front();
-            for (uint32 i = 0; i < n_fields; i++) {
-                fields[i].clear_plants(clear_threshold, clear_surv, eng);
-            }
-        }
+        fields.clear_plants(t, check_for_clear);
 
 
     }
 
 
-    return summary;
+    return;
 
 }
 
@@ -615,7 +478,7 @@ void one_non_prop_check(const double& input, const std::string& name) {
 }
 
 
-// Same but checks for numbers <= 0
+// Same but number must be > 0
 template <typename T>
 void positive_check(const T& input, const std::string& name) {
     for (uint32 i = 0; i < input.size(); i++) {
@@ -652,9 +515,9 @@ void check_args(const uint32& n_reps,
                 const double& mean_K,
                 const double& sd_K,
                 const std::vector<double>& K_y_mult,
-                const double& death_prop,
-                const double& shape1_death_mort,
-                const double& shape2_death_mort,
+                const double& wilted_prop,
+                const double& shape1_wilted_mort,
+                const double& shape2_wilted_mort,
                 const arma::mat& attack_surv,
                 const bool& disp_error,
                 const bool& demog_error,
@@ -667,7 +530,7 @@ void check_args(const uint32& n_reps,
                 const std::vector<arma::cube>& aphid_density_0,
                 const std::vector<double>& alate_b0,
                 const std::vector<double>& alate_b1,
-                const std::vector<double>& disp_rate,
+                const std::vector<double>& alate_plant_disp_p,
                 const std::vector<double>& disp_mort,
                 const std::vector<uint32>& disp_start,
                 const std::vector<uint32>& living_days,
@@ -680,7 +543,7 @@ void check_args(const uint32& n_reps,
                 const double& h,
                 const std::vector<double>& wasp_density_0,
                 const std::vector<uint32>& wasp_delay,
-                const double& wasp_dispersal_p,
+                const double& wasp_disp_p,
                 const double& sex_ratio,
                 const std::vector<double>& s_y,
                 const std::vector<bool>& constant_wasps,
@@ -713,8 +576,8 @@ void check_args(const uint32& n_reps,
     if (alate_b1.size() != n_lines) {
         stop("\nERROR: alate_b1.size() != n_lines\n");
     }
-    if (disp_rate.size() != n_lines) {
-        stop("\nERROR: disp_rate.size() != n_lines\n");
+    if (alate_plant_disp_p.size() != n_lines) {
+        stop("\nERROR: alate_plant_disp_p.size() != n_lines\n");
     }
     if (disp_mort.size() != n_lines) {
         stop("\nERROR: disp_mort.size() != n_lines\n");
@@ -822,8 +685,8 @@ void check_args(const uint32& n_reps,
     one_negative_check(max_N, "max_N");
     one_negative_check(mean_K, "mean_K");
     one_negative_check(sd_K, "sd_K");
-    one_negative_check(shape1_death_mort, "shape1_death_mort");
-    one_negative_check(shape2_death_mort, "shape2_death_mort");
+    one_negative_check(shape1_wilted_mort, "shape1_wilted_mort");
+    one_negative_check(shape2_wilted_mort, "shape2_wilted_mort");
     one_negative_check(sigma_x, "sigma_x");
     one_negative_check(sigma_y, "sigma_y");
     one_negative_check(rho, "rho");
@@ -831,6 +694,9 @@ void check_args(const uint32& n_reps,
     one_negative_check(a, "a");
     one_negative_check(k, "k");
     one_negative_check(h, "h");
+    // This is technically a proportion but I allow values > 1 to indicate
+    // that we want to ignore the wilting process:
+    one_negative_check(wilted_prop, "wilted_prop");
 
     // objects containing doubles that must be >= 0
     negative_check<std::vector<double>>(K_y_mult, "K_y_mult");
@@ -841,19 +707,19 @@ void check_args(const uint32& n_reps,
     for (uint32 i = 0; i < aphid_density_0.size(); i++) {
         negative_check<arma::cube>(aphid_density_0[i], "aphid_density_0");
     }
-    negative_check<std::vector<double>>(disp_rate, "disp_rate");
+    negative_check<std::vector<double>>(alate_plant_disp_p, "alate_plant_disp_p");
     negative_check<std::vector<double>>(disp_mort, "disp_mort");
     negative_check<std::vector<double>>(pred_rate, "pred_rate");
     negative_check<arma::mat>(mum_density_0, "mum_density_0");
     negative_check<arma::vec>(rel_attack, "rel_attack");
     negative_check<std::vector<double>>(wasp_density_0, "wasp_density_0");
 
+
     // doubles / double vectors that must be >= 0 and <= 1
     one_non_prop_check(mum_smooth, "mum_smooth");
     one_non_prop_check(clear_surv, "clear_surv");
-    one_non_prop_check(death_prop, "death_prop");
     one_non_prop_check(sex_ratio, "sex_ratio");
-    one_non_prop_check(wasp_dispersal_p, "wasp_dispersal_p");
+    one_non_prop_check(wasp_disp_p, "wasp_disp_p");
     non_prop_check<std::vector<double>>(s_y, "s_y");
 
     // below top rows should be >= 0 and <= 1:
@@ -904,9 +770,9 @@ List sim_clonewars_cpp(const uint32& n_reps,
                        const double& mean_K,
                        const double& sd_K,
                        const std::vector<double>& K_y_mult,
-                       const double& death_prop,
-                       const double& shape1_death_mort,
-                       const double& shape2_death_mort,
+                       const double& wilted_prop,
+                       const double& shape1_wilted_mort,
+                       const double& shape2_wilted_mort,
                        const arma::mat& attack_surv,
                        const bool& disp_error,
                        const bool& demog_error,
@@ -919,8 +785,8 @@ List sim_clonewars_cpp(const uint32& n_reps,
                        const std::vector<arma::cube>& aphid_density_0,
                        const std::vector<double>& alate_b0,
                        const std::vector<double>& alate_b1,
-                       const double& alate_disp_prop,
-                       const std::vector<double>& disp_rate,
+                       const double& alate_field_disp_p,
+                       const std::vector<double>& alate_plant_disp_p,
                        const std::vector<double>& disp_mort,
                        const std::vector<uint32>& disp_start,
                        const std::vector<uint32>& living_days,
@@ -934,7 +800,7 @@ List sim_clonewars_cpp(const uint32& n_reps,
                        const double& h,
                        const std::vector<double>& wasp_density_0,
                        const std::vector<uint32>& wasp_delay,
-                       const double& wasp_dispersal_p,
+                       const double& wasp_disp_p,
                        const double& sex_ratio,
                        const std::vector<double>& s_y,
                        const std::vector<bool>& constant_wasps,
@@ -951,14 +817,14 @@ List sim_clonewars_cpp(const uint32& n_reps,
     check_args(n_reps, n_lines, n_fields, n_plants,
                max_plant_age, max_N, check_for_clear, clear_surv,
                max_t, save_every,
-               mean_K, sd_K, K_y_mult, death_prop,
-               shape1_death_mort, shape2_death_mort,
+               mean_K, sd_K, K_y_mult, wilted_prop,
+               shape1_wilted_mort, shape2_wilted_mort,
                attack_surv, disp_error, demog_error,
                sigma_x, sigma_y, rho, extinct_N, aphid_name,
                leslie_mat, aphid_density_0, alate_b0, alate_b1,
-               disp_rate, disp_mort, disp_start, living_days,
+               alate_plant_disp_p, disp_mort, disp_start, living_days,
                pred_rate, mum_density_0, mum_smooth, rel_attack, a, k, h,
-               wasp_density_0, wasp_delay, wasp_dispersal_p,
+               wasp_density_0, wasp_delay, wasp_disp_p,
                sex_ratio, s_y, constant_wasps,
                perturb_when, perturb_where, perturb_who, perturb_how, n_threads);
 
@@ -969,6 +835,37 @@ List sim_clonewars_cpp(const uint32& n_reps,
     const std::vector<std::vector<uint64>> seeds = mt_seeds(n_reps);
 
     std::vector<RepSummary> summaries(n_reps);
+
+
+    /*
+     Setting info for all AllFields objects.
+     I'm doing it this way so that I can store all info (including stages)
+     for the end of each rep, which also allows an easier time of repeating
+     things after a custom perturbation.
+     */
+    XPtr<std::vector<AllFields>> all_fields_vec_xptr(
+            new std::vector<AllFields>(n_reps), true);
+    std::vector<AllFields>& all_fields_vec(*all_fields_vec_xptr);
+    // Only allowing 0 or 1 as multiplier of demographic stochasticity:
+    double demog_mult = (demog_error) ? 1 : 0;
+    // Fill in first AllFields object, then copy that to the rest:
+    all_fields_vec[0] = AllFields(
+        n_fields, max_plant_age, max_N, wasp_delay,
+        sigma_x, sigma_y, rho, demog_mult,
+        mean_K, sd_K, K_y_mult, wilted_prop,
+        shape1_wilted_mort, shape2_wilted_mort, attack_surv,
+        aphid_name, leslie_mat, aphid_density_0,
+        alate_b0, alate_b1, alate_plant_disp_p, disp_mort,
+        disp_start, disp_error, living_days, pred_rate, extinct_N,
+        mum_density_0, mum_smooth, max_mum_density,
+        rel_attack, a, k, h, wasp_density_0, sex_ratio,
+        s_y, constant_wasps,
+        clear_surv, alate_field_disp_p, wasp_disp_p, seeds[0]);
+    for (uint32 i = 1; i < n_reps; i++){
+        all_fields_vec[i] = all_fields_vec[0];
+        all_fields_vec[i].reseed(seeds[i]);
+    }
+
 
 
 #ifdef _OPENMP
@@ -984,62 +881,16 @@ List sim_clonewars_cpp(const uint32& n_reps,
 #endif
     int& status_code(status_codes[active_thread]);
 
-    pcg32 eng;
-
     // Parallelize the Loop
 #ifdef _OPENMP
 #pragma omp for schedule(static)
 #endif
     for (uint32 i = 0; i < n_reps; i++) {
         if (status_code != 0) continue;
-        seed_pcg(eng, seeds[i]);
-        if (max_plant_age > 0) {
-            summaries[i] = one_rep__<uint32>(max_plant_age, i, n_fields, check_for_clear,
-                                             clear_surv, max_t,
-                                             save_every, mean_K, sd_K, K_y_mult,
-                                             death_prop,
-                                             shape1_death_mort, shape2_death_mort,
-                                             attack_surv, disp_error,
-                                             demog_error, sigma_x, sigma_y, rho,
-                                             extinct_N,
-                                             aphid_name, leslie_mat, aphid_density_0,
-                                             alate_b0, alate_b1,
-                                             alate_disp_prop,
-                                             disp_rate, disp_mort,
-                                             disp_start, living_days, pred_rate,
-                                             mum_density_0, mum_smooth,
-                                             max_mum_density,
-                                             rel_attack, a, k,
-                                             h, wasp_density_0, wasp_delay,
-                                             wasp_dispersal_p,
-                                             sex_ratio, s_y, constant_wasps,
-                                             perturb_when, perturb_where,
-                                             perturb_who, perturb_how,
-                                             prog_bar, status_code, eng);
-        } else {
-            summaries[i] = one_rep__<double>(max_N, i, n_fields, check_for_clear,
-                                             clear_surv, max_t,
-                                             save_every, mean_K, sd_K, K_y_mult,
-                                             death_prop,
-                                             shape1_death_mort, shape2_death_mort,
-                                             attack_surv, disp_error,
-                                             demog_error, sigma_x, sigma_y, rho,
-                                             extinct_N,
-                                             aphid_name, leslie_mat, aphid_density_0,
-                                             alate_b0, alate_b1,
-                                             alate_disp_prop,
-                                             disp_rate, disp_mort,
-                                             disp_start, living_days, pred_rate,
-                                             mum_density_0, mum_smooth,
-                                             max_mum_density,
-                                             rel_attack, a, k,
-                                             h, wasp_density_0, wasp_delay,
-                                             wasp_dispersal_p,
-                                             sex_ratio, s_y, constant_wasps,
-                                             perturb_when, perturb_where,
-                                             perturb_who, perturb_how,
-                                             prog_bar, status_code, eng);
-        }
+        one_rep__(summaries[i], all_fields_vec[i], i,
+                  check_for_clear, max_t, save_every,
+                  perturb_when, perturb_where, perturb_who, perturb_how,
+                  prog_bar, status_code);
     }
 
 #ifdef _OPENMP
@@ -1072,7 +923,8 @@ List sim_clonewars_cpp(const uint32& n_reps,
                                 _["rep"] = summ.wasp_rep,
                                 _["time"] = summ.wasp_time,
                                 _["field"] = summ.wasp_field,
-                                _["wasps"] = summ.wasp_N));
+                                _["wasps"] = summ.wasp_N),
+                            _["all_info_xptr"] = all_fields_vec_xptr);
 
     return out;
 }

@@ -136,7 +136,7 @@ void AphidPop::calc_dispersal(const OnePlant* plant,
     const uint32& this_j(plant->this_j);
     const uint32& n_plants(plant->n_plants);
 
-    if (arma::accu(alates.X) == 0 || n_plants == 1 || alates.disp_rate() <= 0) return;
+    if (arma::accu(alates.X) == 0 || n_plants == 1 || alates.alate_plant_disp_p() <= 0) return;
 
     // Abundance for alates. (Only adult alates can disperse.)
     const arma::vec& X_disp(alates.X);
@@ -153,7 +153,7 @@ void AphidPop::calc_dispersal(const OnePlant* plant,
          Calculate emigration, or the # aphids that leave the plant:
          */
         // Calculate lambda. (We're splitting dispersers over # of other plants.)
-        double lambda_ = alates.disp_rate() * X_disp(i) /
+        double lambda_ = alates.alate_plant_disp_p() * X_disp(i) /
             static_cast<double>(n_plants - 1);
         pois_distr.param(std::poisson_distribution<uint32>::param_type(lambda_));
         for (uint32 j = 0; j < n_plants; j++) {
@@ -220,7 +220,7 @@ void AphidPop::calc_dispersal(const OnePlant* plant,
     const uint32& this_j(plant->this_j);
     const uint32& n_plants(plant->n_plants);
 
-    if (arma::accu(alates.X) == 0 || n_plants == 1 || alates.disp_rate() <= 0) return;
+    if (arma::accu(alates.X) == 0 || n_plants == 1 || alates.alate_plant_disp_p() <= 0) return;
 
 
     // Abundance for alates. (Only adult alates can disperse.)
@@ -234,7 +234,7 @@ void AphidPop::calc_dispersal(const OnePlant* plant,
 
         if (X_disp(i) == 0) continue;
 
-        double lambda_ = alates.disp_rate() * X_disp(i) /
+        double lambda_ = alates.alate_plant_disp_p() * X_disp(i) /
             static_cast<double>(n_plants - 1);
         n_leaving.fill(lambda_);
         n_leaving(this_j) = 0;

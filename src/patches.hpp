@@ -15,8 +15,8 @@
 
 using namespace Rcpp;
 
-
-
+// Necessary here to declare friendship
+class AllFields;
 
 
 // Info for a single perturbation (it happens to all plants within a field)
@@ -99,7 +99,7 @@ class OnePlant {
     /*
      Carrying capacity for plant.
      It depends on the Leslie matrix for each line's apterous and alates.
-     I'm not including parasitized aphids because they shouldn't be too numerous.
+     I'm not including parasitized aphids because they shouldn't be numerous.
      */
     double carrying_capacity() const;
 
@@ -131,21 +131,21 @@ public:
     uint32 n_plants;                // total # plants
     uint32 this_j;                  // index for this plant
     uint32 age = 0;                 // age of this plant
-    double death_prop;              // proportion of carrying capacity that kills plant
-    double death_mort;              // growth-rate modifier once plants start dying
-    double extinct_N;               // threshold for calling an aphid line extinct
+    double wilted_prop;             // prop. of CC that kills plant
+    double wilted_mort;             // growth-rate modifier due to wilting
+    double extinct_N;               // threshold for calling something extinct
     double max_mum_density;         // maximum mummy density (ignored if zero)
 
 
 
     OnePlant()
         : wilted_(false), aphids(), mummies(), empty(true), pred_rate(0),
-          K(0), K_y(1),
-          n_plants(1), this_j(0), death_prop(1), death_mort(1), extinct_N() {};
+          K(0), K_y(1), n_plants(1), this_j(0),
+          wilted_prop(1), wilted_mort(1), extinct_N() {};
 
     /*
-     In `aphid_density_0` below, rows are aphid stages, columns are types (alate vs
-     apterous), and slices are aphid lines.
+     In `aphid_density_0` below, rows are aphid stages, columns are types
+     (alate vs apterous), and slices are aphid lines.
      In `leslie_mat` below, items in vector are aphid lines, slices are
      alate/apterous/parasitized.
      */
@@ -155,14 +155,14 @@ public:
              const arma::mat& attack_surv_,
              const double& K_,
              const double& K_y_,
-             const double& death_prop_,
-             const double& death_mort_,
+             const double& wilted_prop_,
+             const double& wilted_mort_,
              const std::vector<std::string>& aphid_name,
              const std::vector<arma::cube>& leslie_mat,
              const arma::cube& aphid_density_0,
              const std::vector<double>& alate_b0,
              const std::vector<double>& alate_b1,
-             const std::vector<double>& disp_rate,
+             const std::vector<double>& alate_plant_disp_p,
              const std::vector<double>& disp_mort,
              const std::vector<uint32>& disp_start,
              const std::vector<uint32>& living_days,
@@ -182,8 +182,8 @@ public:
           K_y(K_y_),
           n_plants(n_plants_),
           this_j(this_j_),
-          death_prop(death_prop_),
-          death_mort(death_mort_),
+          wilted_prop(wilted_prop_),
+          wilted_mort(wilted_mort_),
           extinct_N(extinct_N_),
           max_mum_density(max_mum_density_) {
 
@@ -195,8 +195,8 @@ public:
             AphidPop ap(aphid_name[i], sigma_x, rho, demog_mult,
                         attack_surv_.col(i),
                         leslie_mat[i], aphid_density_0.slice(i),
-                        alate_b0[i], alate_b1[i], disp_rate[i], disp_mort[i],
-                        disp_start[i], living_days[i]);
+                        alate_b0[i], alate_b1[i], alate_plant_disp_p[i],
+                        disp_mort[i], disp_start[i], living_days[i]);
             aphids.push_back(ap);
             double N = aphids.back().total_aphids();
             if (N < extinct_N) {
@@ -213,8 +213,8 @@ public:
           empty(other.empty), pred_rate(other.pred_rate),
           K(other.K), K_y(other.K_y), z(other.z),
           S(other.S), S_y(other.S_y), n_plants(other.n_plants),
-          this_j(other.this_j), age(other.age), death_prop(other.death_prop),
-          death_mort(other.death_mort), extinct_N(other.extinct_N),
+          this_j(other.this_j), age(other.age), wilted_prop(other.wilted_prop),
+          wilted_mort(other.wilted_mort), extinct_N(other.extinct_N),
           max_mum_density(other.max_mum_density) {};
 
     OnePlant& operator=(const OnePlant& other) {
@@ -231,8 +231,8 @@ public:
         n_plants = other.n_plants;
         this_j = other.this_j;
         age = other.age;
-        death_prop = other.death_prop;
-        death_mort = other.death_mort;
+        wilted_prop = other.wilted_prop;
+        wilted_mort = other.wilted_mort;
         extinct_N = other.extinct_N;
         max_mum_density = other.max_mum_density;
         return *this;
@@ -258,7 +258,7 @@ public:
      */
     void clear(const double& K_,
                const double& K_y_,
-               const double& death_mort_) {
+               const double& wilted_mort_) {
         for (AphidPop& ap : aphids) ap.clear();
         mummies.clear();
         empty = true;
@@ -266,7 +266,7 @@ public:
         age = 0;
         K = K_;
         K_y = K_y_;
-        death_mort = death_mort_;
+        wilted_mort = wilted_mort_;
         return;
     }
     /*
@@ -274,7 +274,7 @@ public:
      */
     void clear(const double& K_,
                const double& K_y_,
-               const double& death_mort_,
+               const double& wilted_mort_,
                const double& surv) {
         empty = true;
         for (AphidPop& ap : aphids) {
@@ -293,7 +293,7 @@ public:
         age = 0;
         K = K_;
         K_y = K_y_;
-        death_mort = death_mort_;
+        wilted_mort = wilted_mort_;
         return;
     }
 
@@ -334,7 +334,7 @@ public:
         return;
     }
 
-    // Same thing as above, but overloaded for not including dispersal stochasticity
+    // Same thing as above, but overloaded for not including dispersal stoch.
     void calc_dispersal(arma::cube& emigrants,
                         arma::cube& immigrants) const {
         for (uint32 i = 0; i < aphids.size(); i++) {
@@ -366,19 +366,23 @@ public:
 /*
  One field of plants.
 
- For the constructors below, all vector arguments should have a length equal to the
- number of aphid lines, except for `K`, `aphid_density_0`, and `pred_rate_`;
+ For the constructors below, all vector arguments should have a length equal
+ to the number of aphid lines, except for `K`, `aphid_density_0`, and
+ `pred_rate_`;
  these should have a length equal to the number of plants.
- Each item in `aphid_density_0` should have a length equal to the number of aphid lines.
+ Each item in `aphid_density_0` should have a length equal to the number of
+ aphid lines.
 
  */
 
 class OneField {
 
+    friend class AllFields;
+
     // For new Ks if desired:
     trunc_normal_distribution tnorm_distr;
 
-    // For new death_morts if desired:
+    // For new wilted_morts if desired:
     beta_distribution beta_distr;
 
     double mean_K_;                 // mean of distribution of `K` for plants
@@ -388,8 +392,8 @@ class OneField {
     // (`K_y = K * K_y_mult`):
     double K_y_mult;
 
-    double shape1_death_mort_;      // shape1 of distribution of `death_mort` for plants
-    double shape2_death_mort_;      // shape2 of distribution of `death_mort` for plants
+    double shape1_wilted_mort_;      // shape1 of distr of `wilted_mort`
+    double shape2_wilted_mort_;      // shape2 of distr of `wilted_mort`
 
     double extinct_N;               // used here for the wasps
     bool constant_wasps;            // keep wasp abundance constant?
@@ -405,12 +409,12 @@ class OneField {
         K_y = K * K_y_mult;
         return;
     }
-    // Set plant-death mortality parameter
-    void set_death_mort(double& death_mort, pcg32& eng) {
-        if (shape2_death_mort_ == 0) {
-            death_mort = shape1_death_mort_;
+    // Set plant-wilted mortality parameter
+    void set_wilted_mort(double& wilted_mort, pcg32& eng) {
+        if (shape2_wilted_mort_ == 0) {
+            wilted_mort = shape1_wilted_mort_;
         } else {
-            death_mort = beta_distr(eng);
+            wilted_mort = beta_distr(eng);
         }
         return;
     }
@@ -445,13 +449,13 @@ public:
 
     OneField()
         : tnorm_distr(), beta_distr(), mean_K_(), sd_K_(), K_y_mult(),
-          shape1_death_mort_(), shape2_death_mort_(), extinct_N(),
+          shape1_wilted_mort_(), shape2_wilted_mort_(), extinct_N(),
           constant_wasps(),
           plants(), wasps(), emigrants(), immigrants() {};
 
     /*
-     In `aphid_density_0` below, rows are aphid stages, columns are types (alate vs
-     apterous), and slices are aphid lines.
+     In `aphid_density_0` below, rows are aphid stages, columns are types
+     (alate vs apterous), and slices are aphid lines.
      In `leslie_mat` below, slices are aphid lines.
      */
     OneField(const double& sigma_x,
@@ -461,16 +465,16 @@ public:
                const double& mean_K,
                const double& sd_K,
                const double& K_y_mult_,
-               const double& death_prop,
-               const double& shape1_death_mort,
-               const double& shape2_death_mort,
+               const double& wilted_prop,
+               const double& shape1_wilted_mort,
+               const double& shape2_wilted_mort,
                const arma::mat& attack_surv_,
                const std::vector<std::string>& aphid_name,
                const std::vector<arma::cube>& leslie_mat,
                const std::vector<arma::cube>& aphid_density_0,
                const std::vector<double>& alate_b0,
                const std::vector<double>& alate_b1,
-               const std::vector<double>& disp_rate,
+               const std::vector<double>& alate_plant_disp_p,
                const std::vector<double>& disp_mort,
                const std::vector<uint32>& disp_start,
                const std::vector<uint32>& living_days,
@@ -484,6 +488,7 @@ public:
                const double& k_,
                const double& h_,
                const double& wasp_density_0_,
+               const uint32& wasp_delay_,
                const double& sex_ratio_,
                const double& s_y_,
                const bool& constant_wasps_,
@@ -493,21 +498,21 @@ public:
           mean_K_(mean_K),
           sd_K_(sd_K),
           K_y_mult(K_y_mult_),
-          shape1_death_mort_(shape1_death_mort),
-          shape2_death_mort_(shape2_death_mort),
+          shape1_wilted_mort_(shape1_wilted_mort),
+          shape2_wilted_mort_(shape2_wilted_mort),
           extinct_N(extinct_N_),
           constant_wasps(constant_wasps_),
           plants(),
-          wasps(rel_attack_, a_, k_, h_, wasp_density_0_,
+          wasps(rel_attack_, a_, k_, h_, wasp_density_0_, wasp_delay_,
                 sex_ratio_, s_y_, sigma_y),
           emigrants(),
           immigrants() {
 
 
         /*
-         None of these hyperparameters can be <= 0, so if they're <= then that makes
-         the associated parameter whose distribution it describes (e.g., K for `sd_K_`)
-         not have stochasticity.
+         None of these hyperparameters can be <= 0, so if they're <= then
+         that makes the associated parameter whose distribution it describes
+         (e.g., K for `sd_K_`) not have stochasticity.
          This means that the first hyperparameter provided will be the value
          used for ALL of that parameter WITHOUT BEING TRANSFORMED.
          */
@@ -516,29 +521,32 @@ public:
         } else {
             tnorm_distr = trunc_normal_distribution(mean_K_, sd_K_);
         }
-        if (shape2_death_mort_ <= 0) {
-            shape2_death_mort_ = 0;
+        if (shape2_wilted_mort_ <= 0) {
+            shape2_wilted_mort_ = 0;
         } else {
-            beta_distr = beta_distribution(shape1_death_mort_,
-                                           shape2_death_mort_);
+            beta_distr = beta_distribution(shape1_wilted_mort_,
+                                           shape2_wilted_mort_);
         }
 
         uint32 n_plants = aphid_density_0.size();
-        // (We know pred_rate.size() == n_plants bc it's check inside sim_clonewars_cpp)
+        // (We know pred_rate.size() == n_plants bc it's check inside
+        //  sim_clonewars_cpp)
 
         uint32 n_lines = aphid_name.size();
         uint32 n_stages = leslie_mat.front().n_rows;
 
-        double K, K_y, death_mort;
+        double K, K_y, wilted_mort;
         plants.reserve(n_plants);
         for (uint32 j = 0; j < n_plants; j++) {
             set_K(K, K_y, eng);
-            set_death_mort(death_mort, eng);
+            set_wilted_mort(wilted_mort, eng);
             OnePlant ap(sigma_x, rho, demog_mult, attack_surv_,
-                        K, K_y, death_prop, death_mort,
+                        K, K_y, wilted_prop, wilted_mort,
                         aphid_name, leslie_mat,
-                        aphid_density_0[j], alate_b0, alate_b1, disp_rate, disp_mort,
-                        disp_start, living_days, pred_rate[j], n_plants, j, extinct_N_,
+                        aphid_density_0[j], alate_b0, alate_b1,
+                        alate_plant_disp_p, disp_mort,
+                        disp_start, living_days, pred_rate[j],
+                        n_plants, j, extinct_N_,
                         mum_density_0.col(j), mum_smooth_, max_mum_density_);
             plants.push_back(ap);
         }
@@ -554,8 +562,8 @@ public:
           mean_K_(other.mean_K_),
           sd_K_(other.sd_K_),
           K_y_mult(other.K_y_mult),
-          shape1_death_mort_(other.shape1_death_mort_),
-          shape2_death_mort_(other.shape2_death_mort_),
+          shape1_wilted_mort_(other.shape1_wilted_mort_),
+          shape2_wilted_mort_(other.shape2_wilted_mort_),
           extinct_N(other.extinct_N),
           constant_wasps(other.constant_wasps),
           plants(other.plants),
@@ -569,8 +577,8 @@ public:
         mean_K_ = other.mean_K_;
         sd_K_ = other.sd_K_;
         K_y_mult = other.K_y_mult;
-        shape1_death_mort_ = other.shape1_death_mort_;
-        shape2_death_mort_ = other.shape2_death_mort_;
+        shape1_wilted_mort_ = other.shape1_wilted_mort_;
+        shape2_wilted_mort_ = other.shape2_wilted_mort_;
         extinct_N = other.extinct_N;
         constant_wasps = other.constant_wasps;
         plants = other.plants;
@@ -630,6 +638,7 @@ public:
 
     }
 
+    // Calculate among-plant dispersal:
     inline void calc_dispersal(pcg32& eng) {
 
         // Dispersal from previous generation
@@ -651,8 +660,8 @@ public:
 
     inline void update(pcg32& eng) {
         /*
-         Once `calc_dispersal` has updated inside `emigrants` and `immigrants`, we
-         can update the populations using those dispersal numbers.
+         Once `calc_dispersal` has updated inside `emigrants` and `immigrants`,
+         we can update the populations using those dispersal numbers.
          */
         // First update info for wasps before iterating:
         double old_mums;
@@ -693,6 +702,418 @@ public:
 
 };
 
+
+
+
+
+
+
+
+
+
+// ============================================================================
+// ============================================================================
+// ============================================================================
+// ============================================================================
+
+
+
+
+
+
+class AllFields {
+
+    uint32 max_age;
+    double max_N;
+
+    pcg32 eng;   // RNG
+
+
+public:
+
+    std::vector<OneField> fields;
+
+    double clear_surv;
+    double alate_field_disp_p;
+    double wasp_disp_p;
+    bool disp_error;
+    bool process_error;
+    double extinct_N;
+
+    // Total stages for all wasps, mummies, and aphids. Used for output.
+    uint32 total_stages;
+
+    AllFields()
+        : max_age(), max_N(), fields(), clear_surv(),
+          alate_field_disp_p(), wasp_disp_p(), disp_error(), process_error(),
+          extinct_N(), total_stages() {};
+
+    AllFields(const AllFields& other)
+        : max_age(other.max_age), max_N(other.max_N),
+          fields(other.fields),
+          clear_surv(other.clear_surv),
+          alate_field_disp_p(other.alate_field_disp_p),
+          wasp_disp_p(other.wasp_disp_p),
+          disp_error(other.disp_error),
+          process_error(other.process_error),
+          extinct_N(other.extinct_N),
+          total_stages(other.total_stages){};
+
+    AllFields& operator=(const AllFields& other) {
+        max_age = other.max_age;
+        max_N = other.max_N;
+        fields = other.fields;
+        clear_surv = other.clear_surv;
+        alate_field_disp_p = other.alate_field_disp_p;
+        wasp_disp_p = other.wasp_disp_p;
+        disp_error = other.disp_error;
+        process_error = other.process_error;
+        extinct_N = other.extinct_N;
+        total_stages = other.total_stages;
+        return *this;
+    };
+
+
+    AllFields(const uint32& n_fields,
+              const uint32& max_age_,
+              const double& max_N_,
+              const std::vector<uint32>& wasp_delay,
+              const double& sigma_x,
+              const double& sigma_y,
+              const double& rho,
+              const double& demog_mult,
+              const double& mean_K,
+              const double& sd_K,
+              const std::vector<double>& K_y_mult,
+              const double& wilted_prop,
+              const double& shape1_wilted_mort,
+              const double& shape2_wilted_mort,
+              const arma::mat& attack_surv,
+              const std::vector<std::string>& aphid_name,
+              const std::vector<arma::cube>& leslie_mat,
+              const std::vector<arma::cube>& aphid_density_0,
+              const std::vector<double>& alate_b0,
+              const std::vector<double>& alate_b1,
+              const std::vector<double>& alate_plant_disp_p,
+              const std::vector<double>& disp_mort,
+              const std::vector<uint32>& disp_start,
+              const bool& disp_error_,
+              const std::vector<uint32>& living_days,
+              const std::vector<double>& pred_rate,
+              const double& extinct_N_,
+              const arma::mat& mum_density_0,
+              const double& mum_smooth,
+              const double& max_mum_density,
+              const arma::vec& rel_attack,
+              const double& a,
+              const double& k,
+              const double& h,
+              const std::vector<double>& wasp_density_0,
+              const double& sex_ratio,
+              const std::vector<double>& s_y,
+              const std::vector<bool>& constant_wasps,
+              const double& clear_surv_,
+              const double& alate_field_disp_p_,
+              const double& wasp_disp_p_,
+              const std::vector<uint64>& seeds)
+        : max_age(max_age_), max_N(max_N_), eng(),
+          fields(),
+          clear_surv(clear_surv_),
+          alate_field_disp_p(alate_field_disp_p_),
+          wasp_disp_p(wasp_disp_p_),
+          disp_error(disp_error_),
+          process_error((sigma_x > 0) || (sigma_y > 0)),
+          extinct_N(extinct_N_),
+          total_stages(0) {
+
+        seed_pcg(eng, seeds);
+
+        fields.reserve(n_fields);
+        for (uint32 i = 0; i < n_fields; i++) {
+            fields.push_back(
+                OneField(sigma_x, sigma_y, rho, demog_mult,
+                         mean_K, sd_K, K_y_mult[i],
+                         wilted_prop, shape1_wilted_mort, shape2_wilted_mort,
+                         attack_surv, aphid_name, leslie_mat, aphid_density_0,
+                         alate_b0, alate_b1, alate_plant_disp_p,
+                         disp_mort, disp_start, living_days, pred_rate,
+                         extinct_N, mum_density_0, mum_smooth, max_mum_density,
+                         rel_attack, a, k, h,
+                         wasp_density_0[i], wasp_delay[i],
+                         sex_ratio,
+                         s_y[i], constant_wasps[i], eng));
+            total_stages += 1;
+            const OneField& field(fields[i]);
+            for (const OnePlant& plant : field.plants) {
+                total_stages += plant.mummies.Y.n_elem;
+                for (const AphidPop& aphid : plant.aphids) {
+                    total_stages += aphid.apterous.X.n_elem;
+                    total_stages += aphid.alates.X.n_elem;
+                    total_stages += aphid.paras.X.n_elem;
+                }
+            }
+        }
+
+    };
+
+    inline uint32 size() const noexcept {
+        return fields.size();
+    }
+
+    OneField& operator[](const uint32& idx) {
+        return fields[idx];
+    }
+    const OneField& operator[](const uint32& idx) const {
+        return fields[idx];
+    }
+
+    uint32 n_plants() const {
+        if (fields.size() == 0) return 0;
+        return fields[0].plants.size();
+    }
+    uint32 n_lines() const {
+        if (n_plants() == 0) return 0;
+        return fields[0].plants[0].aphids.size();
+    }
+
+    void reseed(const std::vector<uint64>& seeds) {
+        seed_pcg(eng, seeds);
+        return;
+    }
+
+
+    // Alate dispersal across fields:
+    void across_field_disp_alates() {
+        if (fields.size() > 1 && alate_field_disp_p > 0) {
+            arma::mat D = fields[0].remove_dispersers(alate_field_disp_p);
+            for (uint32 i = 1; i < fields.size(); i++) {
+                D += fields[i].remove_dispersers(alate_field_disp_p);
+            }
+            D /= static_cast<double>(fields.size());
+            for (OneField& c : fields) c.add_dispersers(D);
+        }
+        return;
+    }
+
+    // Wasp dispersal across fields:
+    void across_field_disp_wasps() {
+        if (fields.size() > 1 && wasp_disp_p > 0) {
+            double from_wasp_pool = 0;
+            for (OneField& field : fields) from_wasp_pool += field.wasps.Y;
+            from_wasp_pool /= static_cast<double>(fields.size());
+            from_wasp_pool *= wasp_disp_p;
+            for (OneField& field : fields) {
+                field.wasps.Y *= (1 - wasp_disp_p);
+                field.wasps.Y += from_wasp_pool;
+            }
+        }
+        return;
+    }
+
+
+    // Update for one time step.
+    // Returns true if all fields/plants are empty
+    bool update(const uint32& t,
+                std::deque<uint32>& check_for_clear) {
+
+        // Alate and wasp dispersal across fields:
+        if (!check_for_clear.empty() && t == check_for_clear.front()) {
+            across_field_disp_alates();
+            across_field_disp_wasps();
+        }
+
+        bool all_empty = true;
+
+        for (OneField& field : fields) {
+
+            field.wasps.add_Y_0_check(t);
+
+            if (disp_error) {
+                field.calc_dispersal(eng);
+            } else field.calc_dispersal();
+
+            if (process_error) {
+                field.update(eng);
+            } else field.update();
+
+            for (const OnePlant& p : field.plants) {
+                if (!p.empty) {
+                    all_empty = false;
+                    break;
+                }
+            }
+
+        }
+
+        return all_empty;
+    }
+
+
+    // Clear plants by age or total N thresholds (or neither)
+    void clear_plants(const uint32& t,
+                      std::deque<uint32>& check_for_clear) {
+        if (check_for_clear.empty()) return;
+        if (t != check_for_clear.front()) return;
+        check_for_clear.pop_front();
+        if (max_N > 0) {
+            for (OneField& field : fields) {
+                field.clear_plants(max_N, clear_surv, eng);
+            }
+        } else if (max_age > 0) {
+            for (OneField& field : fields) {
+                field.clear_plants(max_age, clear_surv, eng);
+            }
+        }
+        return;
+    }
+
+
+
+
+
+
+    List to_list() const {
+
+        std::vector<uint32> field_out;
+        std::vector<uint32> plant_out;
+        std::vector<std::string> line_out;
+        std::vector<std::string> type_out;
+        std::vector<uint32> stage_out;
+        std::vector<double> N_out;
+
+        field_out.reserve(total_stages);
+        plant_out.reserve(total_stages);
+        line_out.reserve(total_stages);
+        type_out.reserve(total_stages);
+        stage_out.reserve(total_stages);
+        N_out.reserve(total_stages);
+
+
+        for (uint32 k = 0; k < fields.size(); k++) {
+
+            const OneField& field(fields[k]);
+
+            // Adult wasps:
+            field_out.push_back(k+1);
+            plant_out.push_back(0);
+            line_out.push_back("");
+            type_out.push_back("wasp");
+            stage_out.push_back(1);
+            N_out.push_back(field.wasps.Y);
+
+            // Everything but adult wasps:
+            for (uint32 j = 0; j < field.size(); j++) {
+
+                const OnePlant& plant(field[j]);
+
+                // Mummies:
+                for (uint32 ii = 0; ii < plant.mummies.Y.n_elem; ii++) {
+                    field_out.push_back(k+1);
+                    plant_out.push_back(j+1);
+                    line_out.push_back("");
+                    type_out.push_back("mummy");
+                    stage_out.push_back(ii+1);
+                    N_out.push_back(plant.mummies.Y[ii]);
+                }
+
+                // Everything but mummies:
+                for (uint32 i = 0; i < plant.size(); i++) {
+
+                    const AphidPop& aphid(plant[i]);
+
+                    uint32 n_stages = aphid.apterous.X.n_elem +
+                        aphid.alates.X.n_elem +
+                        aphid.paras.X.n_elem;
+
+                    for (uint32 ii = 0; ii < n_stages; ii++) {
+                        field_out.push_back(k+1);
+                        plant_out.push_back(j+1);
+                        line_out.push_back(aphid.aphid_name);
+                    }
+
+                    for (uint32 ii = 0; ii < aphid.apterous.X.n_elem; ii++) {
+                        type_out.push_back("apterous");
+                        stage_out.push_back(ii+1);
+                        N_out.push_back(aphid.apterous.X[ii]);
+                    }
+                    for (uint32 ii = 0; ii < aphid.alates.X.n_elem; ii++) {
+                        type_out.push_back("alate");
+                        stage_out.push_back(ii+1);
+                        N_out.push_back(aphid.alates.X[ii]);
+                    }
+                    for (uint32 ii = 0; ii < aphid.paras.X.n_elem; ii++) {
+                        type_out.push_back("parasitized");
+                        stage_out.push_back(ii+1);
+                        N_out.push_back(aphid.paras.X[ii]);
+                    }
+
+                }
+
+            }
+
+        }
+
+        List out = List::create(
+            _["field"] = field_out,
+            _["plant"] = plant_out,
+            _["line"] = line_out,
+            _["type"] = type_out,
+            _["stage"] = stage_out,
+            _["N"] = N_out);
+
+        return out;
+    }
+
+
+
+    // It's assumed this vector is in the same order as the outputs are above!
+    // Make sure this happens from the R side.
+    void from_vector(std::vector<double>& N) {
+
+        if (N.size() != total_stages) {
+            std::string err_msg("ERROR:\n");
+            err_msg += "The vector used to update internal C++ object ";
+            err_msg += "`AllFields` is not of the required size (";
+            err_msg += std::to_string(total_stages);
+            err_msg += "). This is perhaps because you removed row(s) from ";
+            err_msg += "the dataframe output from here.";
+            Rcpp::stop(err_msg.c_str());
+        }
+
+
+        uint32 i = 0;
+        for (OneField& field : fields) {
+            field.wasps.Y = N[i];
+            i++;
+            for (OnePlant& plant : field.plants) {
+                for (double& y : plant.mummies.Y) {
+                    y = N[i];
+                    i++;
+                }
+                for (AphidPop& aphid : plant.aphids) {
+                    for (double& x : aphid.apterous.X) {
+                        x = N[i];
+                        i++;
+                    }
+                    for (double& x : aphid.alates.X) {
+                        x = N[i];
+                        i++;
+                    }
+                    for (double& x : aphid.paras.X) {
+                        x = N[i];
+                        i++;
+                    }
+                }
+            }
+        }
+
+        return;
+
+    }
+
+
+
+};
 
 
 

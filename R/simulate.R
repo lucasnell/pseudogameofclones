@@ -309,42 +309,202 @@ cube_list_check <- function(x, n) {
     }
 }
 
-# main fun docs ----
-
-#' Simulate multiple reps and simplify output.
+# full fun docs ----
+#' Simulate multiple reps and simplify output - all options.
+#'
+#' This mainly differs from `sim_clonewars` in that it allows for
+#' stochasticity and for simulating the process of plants dying and
+#' being replaced.
+#' The latter process doesn't appear important except for very small scales
+#' and for defenseless plants (like fava bean).
+#' Stochasticity isn't necessarily important, either, and the code has
+#' change in other ways such that I have largely abandoned the
+#' stochastic simulations.
+#' So use this at your own risk.
 #'
 #'
 #' @param n_reps Number of reps to simulate.
-#' @param n_plants Number of plants per field.
-#' @param max_t Max time points to simulate for each rep.
-#' @param N_0 Starting abundances for each aphid line on each plant.
-#'     Can be a single number if you want the same value for each line on each plant,
-#'     or a matrix if you want to specify everything.
-#' @param R Growth rates for each line.
-#' @param A Density dependence for each line.
-#' @param D_vec Vector of `b0` values, where the predicted number of dispersed aphids is
-#'     given by `exp(b0) * N` when `N` is the number of total aphids.
-#' @param process_error SD of process error. Set to 0 for no process error.
-#' @param disp_error Boolean for whether to include dispersal stochasticity.
-#' @param log_zeta_mean Mean of the distribution of log(zeta) values.
-#' @param log_zeta_sd SD of the distribution of log(zeta) values.
-#' @param zeta_t_thresh Threshold for `exp(zeta * (t - mu_time))` that makes that
-#'     plant get replaced. This is equivalent to the threshold for plant "health"
-#'     that would make an experimenter replace it.
-#' @param mu_time Mean of time values.
-#' @param repl_times Vector of times at which to replace plants.
-#' @param repl_threshold Threshold above which plants are replaced.
+#' @param clonal_lines A `multiAphid` object containing the aphid-line-specific
+#'     info for all the lines in the simulations.
+#'     Each object in the `multiAphid` is an `aphid` object that results from
+#'     the `clonal_line` function.
+#'     Combine them using `c(aphid_obj1, aphid_obj2)`.
+#' @param n_fields The number of fields to simulate.
+#'     Wasps operate at the field level, whereas aphids operate at the
+#'     plant level.
+#'     Both wasps and aphids operate separately across fields but can be
+#'     connected via dispersal (see arguments `wasp_disp_p` and
+#'     `alate_field_disp_p`).
+#'     Defaults to `2`.
+#' @param n_plants The number of plants per field.
+#'     This argument is only useful if you want to simulate the process
+#'     of plants or groups of plants dying.
+#'     Wasps operate at the field level, whereas aphids operate at the
+#'     plant level.
+#'     "Plant" can indicate a group of plants where the aphids can freely
+#'     disperse across them.
+#'     Aphids can disperse across plants via alate production and the
+#'     `` argument.
+#'     Defaults to `1`.
+#' @param max_t How many days to simulate. Defaults to `250`.
+#' @param plant_check_gaps Gap(s) between when plants are check on.
+#'     This is used if you want to see what will happen if you can't check
+#'     on things every day in an experiment.
+#'     You could use `c(3, 4)` for checking twice per week, for example.
+#'     Note that this argument determines how often
+#'     (1) wasps and alates disperse across fields and
+#'     (2) plants are check for exceeding `max_plant_age` or `max_N`.
+#'     So using this argument to simulate harvesting fields will also cause
+#'     wasp and alate dispersal to not occur daily.
+#'     Defaults to `1`.
+#' @param max_plant_age Age at which plants are cleared.
+#'     This can be useful to simulate harvesting fields.
+#'     A value of `0` turns this off completely, but it also requires that
+#'     `max_N > 0` because the internal code wants some threshold to look for.
+#'     Defaults to `1e9` which effectively turns this off.
+#' @param clear_surv Survival of aphids and mummies when a harvest occurs.
+#'     Defaults to `0`.
+#' @param max_N Maximum number of aphids at which plants are cleared.
+#'     This is useful for simulating an experiment where you have a threshold
+#'     at which you harvest plants.
+#'     Defaults to `0`, which turns this off.
+#' @param temp A string indicating which temperature to simulate.
+#'     Options are `"low"` (20ºC) or `"high"` (27ºC).
+#'     Defaults to `"low"`.
+#' @param no_error Logical for whether to have no error at all.
+#'     This being `TRUE` overrides all other `_error` arguments.
+#'     Defaults to `TRUE`.
+#' @param disp_error Logical for whether to have stochasticity in the
+#'     dispersal process.
+#'     Defaults to `FALSE`.
+#' @param environ_error Logical for whether to have environmental stochasticity
+#'     Defaults to `FALSE`.
+#' @param plant_K_error Logical for whether to have stochasticity in aphid
+#'     density dependence across plants.
+#'     Defaults to `FALSE`.
+#' @param wilted_effects_error Logical for whether to have stochasticity in
+#'     the effects of plants dying on aphid populations.
+#'     Defaults to `FALSE`.
+#' @param sigma_x Standard deviation of environmental stochasticity for aphids.
+#'     Defaults to the internal object `environ$sigma_x`,
+#'     which is from Meisner et al. (2014).
+#' @param sigma_y Standard deviation of environmental stochasticity for wasps.
+#'     Defaults to the internal object `environ$sigma_y`,
+#'     which is from Meisner et al. (2014).
+#' @param mean_K Mean of the distribution of `K` values (affecting aphid
+#'     density dependence) among plants.
+#'     Defaults to `1 / 4.67e-4`, which is from Meisner et al. (2014).
+#' @param sd_K Mean of the distribution of `K` values (affecting aphid
+#'     density dependence) among plants. Defaults to `0`.
+#' @param K_y_mult The number multiplied by `K` to get density dependence for
+#'     parasitized aphids.
+#'     Defaults to `1 / 1.57`, which is from Meisner et al. (2014).
+#' @param wilted_prop Proportion of carrying capacity that causes the plant
+#'     to become wilted. Values > 1 cause this to be ignored.
+#'     Defaults to `1.1`.
+#' @param rho Environmental correlation among instars.
+#'     Defaults to `environ$rho`.
+#' @param a Parasitoid attack rate. Defaults to the internal object
+#'     `wasp_attack$a`, which is from Meisner et al. (2014).
+#' @param k Aggregation parameter of the negative binomial distribution.
+#'     Defaults to the internal object `wasp_attack$k`,
+#'     which is from Meisner et al. (2014).
+#' @param h Parasitoid handling time. Defaults to the internal object
+#'     `wasp_attack$h`, which is from Meisner et al. (2014).
+#' @param wasp_density_0 Starting adult wasp density.
+#'     Must be a single number or a `n_fields`-length vector.
+#'     Defaults to `c(3, 0)`.
+#' @param wasp_delay Delay in days between when the aphids start and the
+#'     wasps are added.
+#'     This can be a single integer or a `n_fields`-length vector.
+#'     Defaults to `8`.
+#' @param wasp_disp_p Proportion of adult wasps from each field that
+#'     are added to the dispersal pool.
+#'     After adding wasps to the pool, they are then evenly distributed
+#'     to all fields.
+#'     This happens only on days indicated by `plant_check_gaps`.
+#'     Defaults to `0`.
+#' @param sex_ratio Sex ratio of adult wasps. Defaults to `0.5`.
+#' @param s_y Daily survival rate of adult wasps.
+#'     Defaults to `populations$s_y`, which is from Meisner et al. (2014).
+#' @param constant_wasps Logical for whether to keep adult wasps at the same
+#'     density throughout simulations.
+#'     This can be a single logical or a `n_fields`-length vector.
+#'     Defaults to `FALSE`.
+#' @param rel_attack Relative parasitoid attack rate among instars.
+#'     Defaults to `wasp_attack$rel_attack`, which is from
+#'     Meisner et al. (2014).
+#' @param mum_density_0 Starting mummy density. Defaults to `0`.
+#' @param mum_smooth Proportion of mummies that will NOT take exactly 3 days
+#'     to develop. As this value approaches 2/3, it will provide greater
+#'     smoothing of wasp numbers through time.
+#'     Defaults to `0.4`.
+#' @param max_mum_density Maximum mummy density (ignored if zero).
+#'     Used to test the effects of a potential experimental treatment.
+#'     Defaults to `0`.
+#' @param pred_rate Daily predation rate on aphids and mummies. Defaults to `0`.
+#' @param alate_plant_disp_p Proportion of alates that emigration to new plants
+#'     every day. Note that this does not depend on `plant_check_gaps`
+#'     like among-field alate dispersal does.
+#'     This is because we would have to replicate among-field dispersal
+#'     by hand in the experiments we were planning, and we wanted to be sure
+#'     that not checking daily wouldn't affect anything significantly.
+#'     It didn't.
+#'     This can be a single number or a vector with the same length as the
+#'     number of aphid lines.
+#'     Defaults to `0.1`.
+#' @param disp_mort Mortality rate of alates that disperse among plants.
+#'     Defaults to `0`.
+#' @param alate_b0 The proportion of offspring from apterous aphids is
+#'     `inv_logit(alate_b0 + alate_b1 * N)` where `N` is the total number of
+#'     aphids on that plant.
+#'     Defaults to `logit(0.3)`.
+#' @param alate_b1 The proportion of offspring from apterous aphids is
+#'     `inv_logit(alate_b0 + alate_b1 * N)` where `N` is the total number of
+#'     aphids on that plant.
+#'     Defaults to `0`, which makes alate production not density dependent.
+#' @param alate_field_disp_p Proportion of alates from each field that
+#'     are added to the dispersal pool.
+#'     After adding alates to the pool, they are then evenly distributed
+#'     to all fields.
+#'     This happens only on days indicated by `plant_check_gaps`.
+#'     Defaults to `0.05`.
+#' @param shape1_wilted_mort Shape 1 for the beta distribution that generates
+#'     mortality parameters for aphid populations living on a wilted plant.
+#'     If `wilted_effects_error` is `FALSE`, then the wilted-plant-induced
+#'     mortality is fixed at
+#'     `shape1_wilted_mort / (shape1_wilted_mort + shape2_wilted_mort)`.
+#'     Defaults to `3.736386`, which is based on previous work in the lab.
+#' @param shape2_wilted_mort Shape 2 for the beta distribution that generates
+#'     mortality parameters for aphid populations living on a wilted plant.
+#'     Defaults to `5.777129`, which is based on previous work in the lab.
 #' @param extinct_N Threshold below which a line is considered extinct.
+#'     Defaults to `1`.
 #' @param save_every Abundances will be stored every `save_every` time points.
-#' @param by_plant Logical for whether to summarize abundances by plant, rather
-#'     than separately by line and plant.
-#' @param n_cores Number of cores to use. Defaults to \code{1}.
-#' @param show_progress Boolean for whether to show progress bar. Defaults to
-#'     \code{FALSE}.
-#' @param line_names Vector of names to assign to lines.
-#' @param wasp_dispersal_p proportion of adult wasps that are exchanged
-#'     among fields.
-#'
+#'     Defaults to `1`.
+#' @param n_threads Number of threads to use if OpenMP is enabled
+#'     (ignored otherwise).
+#'     Find out whether it's enabled using `clonewars:::using_openmp()`.
+#'     Defaults to `1`.
+#' @param show_progress Boolean for whether to show progress bar.
+#'     Defaults to `FALSE`.
+#' @param perturb Information for perturbing populations in the simulations.
+#'     It should be a dataframe with 4 columns:
+#'     * `when`: Integers indicating at what timepoint(s) to do the
+#'       perturbations. These can be repeated if you want to perturb
+#'       multiple things at the same time.
+#'     * `where`: What field to do the perturbations in.
+#'     * `who`: Which population to perturb.
+#'       This can be a character vector where values must be the name of an
+#'       aphid line, `"wasps"`, or `"mummies"`.
+#'       It can also be an integer vector where, for `n` aphid lines,
+#'       values `<= n` indicate an aphid line,
+#'       values `== n+1` indicate mummies,
+#'       and values `== n+2` indicate adult wasps.
+#'       Note that perturbing the mummy population also perturbs the
+#'       still-living but parasitized aphids, too.
+#'     * `how`: Numbers `>= 0` that are multiplied by the desired population
+#'       to cause the perturbation.
 #'
 #' @importFrom purrr map_dfr
 #' @importFrom dplyr as_tibble
@@ -354,56 +514,55 @@ cube_list_check <- function(x, n) {
 #'
 #' @export
 #'
-#'
-# main fun code ----
-sim_clonewars <- function(n_reps,
-                          clonal_lines,
-                          n_fields = 1,
-                          n_plants = 4,
-                          max_t = 100,
-                          plant_check_gaps = c(3, 4),
-                          max_plant_age = 1000000,
-                          clear_surv = 0,
-                          max_N = 0,
-                          temp = "low",
-                          no_error = FALSE, # <-- this being TRUE overrides all others
-                          disp_error = FALSE,
-                          environ_error = FALSE,
-                          plant_K_error = FALSE,
-                          wither_effects_error = FALSE,
-                          sigma_x = environ$sigma_x,
-                          sigma_y = environ$sigma_y,
-                          mean_K = 1806.176,
-                          sd_K = 658.4736,
-                          K_y_mult = 1 / 1.57,
-                          death_prop = 0.8,
-                          rho = environ$rho,
-                          a = wasp_attack$a,
-                          k = wasp_attack$k,
-                          h = wasp_attack$h,
-                          wasp_density_0 = 4,
-                          wasp_delay = 0,
-                          wasp_dispersal_p = 0,
-                          sex_ratio = populations$sex_ratio,
-                          s_y = populations$s_y,
-                          constant_wasps = FALSE,  # <-- keeps adult wasps at same density
-                          rel_attack = NULL,
-                          mum_density_0 = 0,
-                          mum_smooth = 0.5,
-                          max_mum_density = 0,
-                          pred_rate = 0,
-                          disp_rate = 1,
-                          disp_mort = 0,
-                          alate_b0 = logit(0.093),
-                          alate_b1 = 0,
-                          alate_disp_prop = 0.75,
-                          shape1_death_mort = 3.736386,
-                          shape2_death_mort = 5.777129,
-                          extinct_N = 1,
-                          save_every = 1,
-                          n_threads = max(parallel::detectCores()-2,1),
-                          show_progress = FALSE,
-                          perturb = NULL) {
+# full fun code ----
+sim_clonewars_full <- function(n_reps,
+                               clonal_lines,
+                               n_fields = 2,
+                               n_plants = 1,
+                               max_t = 250,
+                               plant_check_gaps = 1,
+                               max_plant_age = 1e9,
+                               clear_surv = 0,
+                               max_N = 0,
+                               temp = "low",
+                               no_error = TRUE,
+                               disp_error = FALSE,
+                               environ_error = FALSE,
+                               plant_K_error = FALSE,
+                               wilted_effects_error = FALSE,
+                               sigma_x = environ$sigma_x,
+                               sigma_y = environ$sigma_y,
+                               mean_K = 1 / 4.67e-4,
+                               sd_K = 0,
+                               K_y_mult = 1 / 1.57,
+                               wilted_prop = 1.1,
+                               rho = environ$rho,
+                               a = wasp_attack$a,
+                               k = wasp_attack$k,
+                               h = wasp_attack$h,
+                               wasp_density_0 = c(3, 0),
+                               wasp_delay = 8,
+                               wasp_disp_p = 0,
+                               sex_ratio = populations$sex_ratio,
+                               s_y = populations$s_y,
+                               constant_wasps = FALSE,
+                               rel_attack = wasp_attack$rel_attack,
+                               mum_density_0 = 0,
+                               mum_smooth = 0.4,
+                               max_mum_density = 0,
+                               pred_rate = 0,
+                               alate_plant_disp_p = 0.1,
+                               disp_mort = 0,
+                               alate_b0 = logit(0.093),
+                               alate_b1 = 0,
+                               alate_field_disp_p = 0.05,
+                               shape1_wilted_mort = 3.736386,
+                               shape2_wilted_mort = 5.777129,
+                               extinct_N = 1,
+                               save_every = 1,
+                               n_threads = 1,
+                               show_progress = FALSE,
+                               perturb = NULL) {
 
     if (!inherits(clonal_lines, "multiAphid")) {
         if (inherits(clonal_lines, "aphid")) {
@@ -424,7 +583,7 @@ sim_clonewars <- function(n_reps,
         disp_error <- FALSE
         environ_error <- FALSE
         plant_K_error <- FALSE
-        wither_effects_error <- FALSE
+        wilted_effects_error <- FALSE
     }
     if (!environ_error) {
         demog_error <- FALSE
@@ -433,16 +592,16 @@ sim_clonewars <- function(n_reps,
     } else demog_error <- TRUE
     if (!plant_K_error) sd_K <- 0
 
-    if (!wither_effects_error) {
-        if (shape2_death_mort > 0) {
-            shape1_death_mort <- shape1_death_mort /
-                (shape1_death_mort + shape2_death_mort)
-            shape2_death_mort <- 0
+    if (!wilted_effects_error) {
+        if (shape2_wilted_mort > 0) {
+            shape1_wilted_mort <- shape1_wilted_mort /
+                (shape1_wilted_mort + shape2_wilted_mort)
+            shape2_wilted_mort <- 0
         }
     }
 
     if (length(pred_rate) == 1) pred_rate <- rep(pred_rate, n_plants)
-    if (length(disp_rate) == 1) disp_rate <- rep(disp_rate, n_lines)
+    if (length(alate_plant_disp_p) == 1) alate_plant_disp_p <- rep(alate_plant_disp_p, n_lines)
     if (length(disp_mort) == 1) disp_mort <- rep(disp_mort, n_lines)
     if (length(alate_b0) == 1) alate_b0 <- rep(alate_b0, n_lines)
     if (length(alate_b1) == 1) alate_b1 <- rep(alate_b1, n_lines)
@@ -454,9 +613,7 @@ sim_clonewars <- function(n_reps,
                                                            n_fields)
     if (length(wasp_delay) == 1) wasp_delay <- rep(wasp_delay, n_fields)
 
-    if (is.null(rel_attack)) {
-        rel_attack <- wasp_attack$rel_attack
-    } else stopifnot(length(rel_attack) == 5)
+    stopifnot(length(rel_attack) == 5)
 
     if (length(mum_density_0) == 1) {
         mum_density_0 <- matrix(mum_density_0, dev_times$mum_days[2], n_plants)
@@ -512,7 +669,7 @@ sim_clonewars <- function(n_reps,
         perturb_how = numeric(0)
     } else {
         stopifnot(inherits(perturb, "data.frame"))
-        stopifnot(identical(colnames(perturb), c("when", "where", "who", "how")))
+        stopifnot(all(c("when", "where", "who", "how") %in% colnames(perturb)))
         perturb <- dplyr::arrange(perturb, when)
         perturb_when <- perturb$when
         stopifnot(all(perturb$where <= n_fields & perturb$where > 0))
@@ -542,9 +699,9 @@ sim_clonewars <- function(n_reps,
     dbl_check(mean_K, "mean_K")
     dbl_check(sd_K, "sd_K")
     dbl_vec_check(K_y_mult, "K_y_mult")
-    dbl_check(death_prop, "death_prop")
-    dbl_check(shape1_death_mort, "shape1_death_mort")
-    dbl_check(shape2_death_mort, "shape2_death_mort")
+    dbl_check(wilted_prop, "wilted_prop")
+    dbl_check(shape1_wilted_mort, "shape1_wilted_mort")
+    dbl_check(shape2_wilted_mort, "shape2_wilted_mort")
     dbl_mat_check(attack_surv, "attack_surv")
     stopifnot(inherits(disp_error, "logical") && length(disp_error) == 1)
     stopifnot(inherits(demog_error, "logical") && length(demog_error) == 1)
@@ -557,8 +714,8 @@ sim_clonewars <- function(n_reps,
     cube_list_check(aphid_density_0, "aphid_density_0")
     stopifnot(inherits(alate_b0, "numeric"))
     stopifnot(inherits(alate_b1, "numeric"))
-    dbl_check(alate_disp_prop, "alate_disp_prop")
-    stopifnot(inherits(disp_rate, "numeric"))
+    dbl_check(alate_field_disp_p, "alate_field_disp_p")
+    stopifnot(inherits(alate_plant_disp_p, "numeric"))
     stopifnot(inherits(disp_mort, "numeric"))
     uint_vec_check(disp_start, "disp_start")
     uint_vec_check(living_days, "living_days")
@@ -572,7 +729,7 @@ sim_clonewars <- function(n_reps,
     dbl_check(h, "h")
     dbl_vec_check(wasp_density_0, "wasp_density_0")
     uint_vec_check(wasp_delay, "wasp_delay")
-    dbl_check(wasp_dispersal_p, "wasp_dispersal_p", .min = 0, .max = 1)
+    dbl_check(wasp_disp_p, "wasp_disp_p", .min = 0, .max = 1)
     dbl_check(sex_ratio, "sex_ratio")
     dbl_vec_check(s_y, "s_y")
     stopifnot(inherits(constant_wasps, "logical"))
@@ -584,26 +741,35 @@ sim_clonewars <- function(n_reps,
     stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
 
 
-    sims <- sim_clonewars_cpp(n_reps, n_fields, max_plant_age, max_N, check_for_clear,
-                              clear_surv,
+    sims <- sim_clonewars_cpp(n_reps, n_fields, max_plant_age, max_N,
+                              check_for_clear, clear_surv,
                               max_t, save_every, mean_K, sd_K, K_y_mult,
-                              death_prop, shape1_death_mort, shape2_death_mort,
+                              wilted_prop, shape1_wilted_mort,
+                              shape2_wilted_mort,
                               attack_surv, disp_error, demog_error, sigma_x,
-                              sigma_y, rho, extinct_N, aphid_names, leslie_cubes,
+                              sigma_y, rho, extinct_N, aphid_names,
+                              leslie_cubes,
                               aphid_density_0, alate_b0, alate_b1,
-                              alate_disp_prop,
-                              disp_rate, disp_mort, disp_start, living_days, pred_rate,
-                              mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h,
-                              wasp_density_0, wasp_delay, wasp_dispersal_p,
+                              alate_field_disp_p,
+                              alate_plant_disp_p, disp_mort, disp_start,
+                              living_days, pred_rate,
+                              mum_density_0, mum_smooth, max_mum_density,
+                              rel_attack, a, k, h,
+                              wasp_density_0, wasp_delay, wasp_disp_p,
                               sex_ratio, s_y, constant_wasps,
-                              perturb_when, perturb_where, perturb_who, perturb_how,
+                              perturb_when, perturb_where,
+                              perturb_who, perturb_how,
                               n_threads, show_progress)
 
-    sims <- lapply(sims, as_tibble)
     sims[["aphids"]] <- sims[["aphids"]] %>%
-        mutate(across(c("rep", "time", "plant"), as.integer))
+        mutate(across(c("rep", "time", "plant"), as.integer)) %>%
+        as_tibble()
     sims[["wasps"]] <- sims[["wasps"]] %>%
-        mutate(across(c("rep", "time"), as.integer))
+        mutate(across(c("rep", "time"), as.integer)) %>%
+        as_tibble()
+
+    sims[["all_info"]] <- lapply(fields_to_list(sims[["all_info_xptr"]]),
+                                 as.data.frame)
 
     return(sims)
 }
@@ -611,3 +777,112 @@ sim_clonewars <- function(n_reps,
 
 
 
+
+
+#' Relatively simple simulations to set up experiments.
+#'
+#' Deterministic simulations of multiple fields of aphids and wasps.
+#'
+#'
+#' @inheritParams sim_clonewars_full
+#'
+#' @param K Aphid density dependence.
+#'     Defaults to `12.5e3` because this caused simulations to
+#'     approximately match experiments.
+#' @param alate_b0 The proportion of offspring from apterous aphids is
+#'     `inv_logit(alate_b0 + alate_b1 * N)` where `N` is the total number of
+#'     aphids on that plant.
+#'     Defaults to `-5` because we're making this weakly density dependent.
+#' @param alate_b1 The proportion of offspring from apterous aphids is
+#'     `inv_logit(alate_b0 + alate_b1 * N)` where `N` is the total number of
+#'     aphids on that plant.
+#'     Defaults to `K / 1.76e-07`, which makes alate production only mildly
+#'     density dependent.
+#' @param pred_rate Daily predation rate on aphids and mummies.
+#'     Defaults to `0.1` to compensate for losses from plants dying.
+#'
+#'
+#' @export
+#'
+# main fun code ----
+sim_experiments <- function(clonal_lines,
+                            n_fields = 2,
+                            max_t = 250,
+                            K = 12.5e3,
+                            alate_b0 = -5,
+                            alate_b1 = K / 1.76e-07,
+                            alate_field_disp_p = 0.05,
+                            K_y_mult = 1 / 1.57,
+                            s_y = populations$s_y,
+                            a = wasp_attack$a,
+                            k = wasp_attack$k,
+                            h = wasp_attack$h,
+                            rel_attack = wasp_attack$rel_attack,
+                            wasp_density_0 = c(3, 0),
+                            wasp_delay = 8,
+                            wasp_disp_p = 0,
+                            constant_wasps = FALSE,
+                            mum_smooth = 0.4,
+                            pred_rate = 0.1,
+                            extinct_N = 1,
+                            save_every = 1,
+                            perturb = NULL,
+                            plant_check_gaps = 1,
+                            max_plant_age = 1e9,
+                            clear_surv = 0,
+                            show_progress = FALSE) {
+
+
+    sims <- sim_clonewars_full(clonal_lines = clonal_lines,
+                               n_fields = n_fields,
+                               max_t = max_t,
+                               plant_check_gaps = plant_check_gaps,
+                               max_plant_age = max_plant_age,
+                               clear_surv = clear_surv,
+                               mean_K = K,
+                               K_y_mult = K_y_mult,
+                               a = a,
+                               k = k,
+                               h = h,
+                               wasp_density_0 = wasp_density_0,
+                               wasp_delay = wasp_delay,
+                               wasp_disp_p = wasp_disp_p,
+                               s_y = s_y,
+                               constant_wasps = constant_wasps,
+                               rel_attack = rel_attack,
+                               mum_smooth = mum_smooth,
+                               pred_rate = pred_rate,
+                               alate_b0 = alate_b0,
+                               alate_b1 = alate_b1,
+                               alate_field_disp_p = alate_field_disp_p,
+                               extinct_N = extinct_N,
+                               save_every = save_every,
+                               perturb = perturb,
+                               show_progress = show_progress,
+                               # Things not changeable in this simpler version:
+                               n_reps = 1,
+                               n_plants = 1,
+                               max_N = 0,
+                               temp = "low",
+                               no_error = TRUE,
+                               disp_error = FALSE,
+                               environ_error = FALSE,
+                               plant_K_error = FALSE,
+                               wilted_effects_error = FALSE,
+                               sigma_x = environ$sigma_x,
+                               sigma_y = environ$sigma_y,
+                               sd_K = 0,
+                               wilted_prop = 1.1,
+                               rho = environ$rho,
+                               sex_ratio = populations$sex_ratio,
+                               mum_density_0 = 0,
+                               max_mum_density = 0,
+                               alate_plant_disp_p = 0.1,
+                               disp_mort = 0,
+                               shape1_wilted_mort = 3.736386,
+                               shape2_wilted_mort = 5.777129,
+                               n_threads = 1)
+
+    return(sims)
+
+}

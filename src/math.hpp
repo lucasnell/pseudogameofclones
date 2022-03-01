@@ -74,7 +74,7 @@ public:
 /*
  Custom Beta distibution class
  Idea for combining two gammas from https://stackoverflow.com/a/10359049
- Used for generating plant-death-mortality growth-rate modifiers bc they should be
+ Used for generating plant-wilted-mortality growth-rate modifiers bc they should be
  between 0 and 1.
  */
 class beta_distribution {
@@ -192,7 +192,7 @@ inline void combine_leslies(arma::mat& L,
                             const arma::mat& apterous,
                             const arma::mat& alates,
                             const double& alate_prop,
-                            const double& disp_rate,
+                            const double& alate_plant_disp_p,
                             const double& disp_mort,
                             const uint32& disp_start) {
 
@@ -212,7 +212,7 @@ inline void combine_leslies(arma::mat& L,
 
 
     for (uint32 i = disp_start; i < (n-1); i++) {
-        L(n+i+1, n+i) *= (1 - disp_mort * disp_rate);
+        L(n+i+1, n+i) *= (1 - disp_mort * alate_plant_disp_p);
     }
 
     return;

@@ -2,7 +2,7 @@
 % Please edit documentation in R/RcppExports.R
 \name{carrying_capacity}
 \alias{carrying_capacity}
-\title{Calculate carrying capacity from aphid and patch info}
+\title{Calculate carrying capacity from aphid and plant info}
 \usage{
 carrying_capacity(
   apterous,
@@ -21,14 +21,14 @@ carrying_capacity(
 
 \item{alate_prop}{The proportion of new aphids that are alates}
 
-\item{disp_prop}{The proportion of alates that disperse away from the patch.}
+\item{disp_prop}{The proportion of alates that disperse away from the plant.}
 
 \item{disp_mort}{Mortality rate for dispersing alates.}
 
 \item{disp_start}{Index for the age at which alates disperse (0-indexed).}
 
-\item{K}{The "carrying capacity" for this patch.}
+\item{K}{The "carrying capacity" for this plant.}
 }
 \description{
-Calculate carrying capacity from aphid and patch info
+Calculate carrying capacity from aphid and plant info
 }
