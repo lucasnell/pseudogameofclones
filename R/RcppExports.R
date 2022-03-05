@@ -63,6 +63,10 @@ fields_to_list <- function(all_fields_ptr) {
     .Call(`_clonewars_fields_to_list`, all_fields_ptr)
 }
 
+fields_from_vectors <- function(all_fields_ptr, N_vecs) {
+    invisible(.Call(`_clonewars_fields_from_vectors`, all_fields_ptr, N_vecs))
+}
+
 #' Check that the number of threads doesn't exceed the number available, and change
 #' to 1 if OpenMP isn't enabled.
 #'
@@ -76,5 +80,13 @@ using_openmp <- function() {
 
 sim_clonewars_cpp <- function(n_reps, n_fields, max_plant_age, max_N, check_for_clear, clear_surv, max_t, save_every, mean_K, sd_K, K_y_mult, wilted_prop, shape1_wilted_mort, shape2_wilted_mort, attack_surv, disp_error, demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, alate_plant_disp_p, disp_mort, disp_start, living_days, pred_rate, mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h, wasp_density_0, wasp_delay, wasp_disp_p, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, n_threads, show_progress) {
     .Call(`_clonewars_sim_clonewars_cpp`, n_reps, n_fields, max_plant_age, max_N, check_for_clear, clear_surv, max_t, save_every, mean_K, sd_K, K_y_mult, wilted_prop, shape1_wilted_mort, shape2_wilted_mort, attack_surv, disp_error, demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, alate_plant_disp_p, disp_mort, disp_start, living_days, pred_rate, mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h, wasp_density_0, wasp_delay, wasp_disp_p, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, n_threads, show_progress)
+}
+
+restart_fill_other_pars <- function(all_fields_in_ptr, K, alate_b0, alate_b1, alate_field_disp_p, K_y_mult, s_y, a, k, h, wasp_disp_p, mum_smooth, pred_rate, max_plant_age, clear_surv) {
+    .Call(`_clonewars_restart_fill_other_pars`, all_fields_in_ptr, K, alate_b0, alate_b1, alate_field_disp_p, K_y_mult, s_y, a, k, h, wasp_disp_p, mum_smooth, pred_rate, max_plant_age, clear_surv)
+}
+
+restart_experiments_cpp <- function(all_fields_ptr, max_t, save_every, check_for_clear, show_progress) {
+    .Call(`_clonewars_restart_experiments_cpp`, all_fields_ptr, max_t, save_every, check_for_clear, show_progress)
 }
 

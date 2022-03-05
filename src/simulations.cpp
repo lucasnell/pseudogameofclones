@@ -312,57 +312,6 @@ private:
 
 
 
-inline void do_perturb(std::deque<PerturbInfo>& perturbs,
-                       AllFields& fields,
-                       const uint32& t) {
-
-    if (perturbs.empty()) return;
-
-    uint32 n_lines = fields.n_lines();
-    const double& extinct_N(fields.extinct_N);
-
-    uint32 i = 0;
-    while (i < perturbs.size()) {
-        const PerturbInfo& pert(perturbs[i]);
-        if (pert.time != t) break;
-        double mult = pert.multiplier;
-        OneField& field(fields[pert.field]);
-        if (pert.index < n_lines) { // aphids (non-parasitized)
-            for (OnePlant& p : field.plants) {
-                AphidPop& aphids(p.aphids[pert.index]);
-                aphids.apterous.clear(mult);
-                aphids.alates.clear(mult);
-                if (aphids.total_aphids() < extinct_N) aphids.clear();
-                if ((p.total_aphids() + p.total_mummies()) == 0) {
-                    p.empty = true;
-                }
-            }
-        } else if (pert.index == n_lines) { // mummies + parasitized aphids
-            for (OnePlant& p : field.plants) {
-                p.mummies.clear(mult);
-                if (arma::accu(p.mummies.Y) < extinct_N) p.mummies.Y.fill(0);
-                for (AphidPop& aphids : p.aphids) {
-                    aphids.paras.clear(mult);
-                    if (aphids.total_aphids() < extinct_N) aphids.clear();
-                }
-                if ((p.total_aphids() + p.total_mummies()) == 0) {
-                    p.empty = true;
-                }
-            }
-        } else { // adult wasps
-            field.wasps.Y *= mult;
-            if (field.wasps.Y < extinct_N) field.wasps.Y = 0;
-        }
-        i++;
-    }
-
-    if (i > 0) {
-        perturbs.erase(perturbs.begin(), perturbs.begin() + i);
-    }
-
-    return;
-}
-
 
 
 
@@ -385,7 +334,6 @@ void one_rep__(RepSummary& summary,
     uint32 n_plants = fields.n_plants();
     uint32 n_fields = fields.size();
 
-
     summary.reserve(rep, max_t, save_every, n_lines, n_fields, n_plants);
 
     uint32 iters = 0;
@@ -396,7 +344,6 @@ void one_rep__(RepSummary& summary,
                                   perturb_who[i], perturb_how[i]);
     }
 
-
     summary.push_back(0, fields);
 
     for (uint32 t = 1; t <= max_t; t++) {
@@ -406,13 +353,10 @@ void one_rep__(RepSummary& summary,
             return;
         }
 
-        // Perturbations
-        do_perturb(perturbs, fields, t);
-
-        // Basic updates for dispersal and population dynamics.
+        // Basic updates for perturbations, dispersal, and population dynamics.
         // Returns true if all plants/fields are empty.
         // It's important to do this (& to save output) before clearing plants.
-        bool all_empty = fields.update(t, check_for_clear);
+        bool all_empty = fields.update(t, perturbs, check_for_clear);
 
         if (t % save_every == 0 || t == max_t) summary.push_back(t, fields);
 
@@ -654,8 +598,8 @@ void check_args(const uint32& n_reps,
         stop("\nERROR: constant_wasps.size() != n_fields\n");
     }
 
-    if (pred_rate.size() != n_plants) {
-        stop("\nERROR: pred_rate.size() != n_plants\n");
+    if (pred_rate.size() != n_fields) {
+        stop("\nERROR: pred_rate.size() != n_fields\n");
     }
     if (mum_density_0.n_cols != n_plants) {
         stop("\nERROR: mum_density_0.n_cols != n_plants\n");
@@ -928,3 +872,150 @@ List sim_clonewars_cpp(const uint32& n_reps,
 
     return out;
 }
+
+
+
+
+
+
+
+
+
+
+// Make new `XPtr<std::vector<AllFields>>` object with new parameters
+// before restarting simulation.
+//[[Rcpp::export]]
+SEXP restart_fill_other_pars(SEXP all_fields_in_ptr,
+                             const double& K,
+                             const std::vector<double>& alate_b0,
+                             const std::vector<double>& alate_b1,
+                             const double& alate_field_disp_p,
+                             const std::vector<double>& K_y_mult,
+                             const std::vector<double>& s_y,
+                             const double& a,
+                             const double& k,
+                             const double& h,
+                             const double& wasp_disp_p,
+                             const double& mum_smooth,
+                             const std::vector<double>& pred_rate,
+                             const uint32& max_plant_age,
+                             const double& clear_surv) {
+
+    XPtr<std::vector<AllFields>> all_fields_vec_in_xptr(all_fields_in_ptr);
+    std::vector<AllFields>& all_fields_vec_in(*all_fields_vec_in_xptr);
+
+    uint32 n_reps = all_fields_vec_in.size();
+    if (n_reps == 0) stop("\nERROR: n_reps == 0\n");
+
+    XPtr<std::vector<AllFields>> all_fields_vec_xptr(
+            new std::vector<AllFields>(n_reps), true);
+    std::vector<AllFields>& all_fields_vec(*all_fields_vec_xptr);
+    for (uint32 i = 0; i < n_reps; i++){
+        all_fields_vec[i] = all_fields_vec_in[i];
+    }
+
+    // Checking dimensions of vectors
+    uint32 n_lines = all_fields_vec[0].n_lines();
+    uint32 n_fields = all_fields_vec[0].size();
+    uint32 n_plants = all_fields_vec[0].n_plants();
+    if (n_lines == 0) stop("\nERROR: n_lines == 0\n");
+    if (n_fields == 0) stop("\nERROR: n_fields == 0\n");
+    if (n_plants == 0) stop("\nERROR: n_plants == 0\n");
+    if (alate_b0.size() != n_lines) {
+        stop("\nERROR: alate_b0.size() != n_lines\n");
+    }
+    if (alate_b1.size() != n_lines) {
+        stop("\nERROR: alate_b1.size() != n_lines\n");
+    }
+    if (K_y_mult.size() != n_fields) {
+        stop("\nERROR: K_y_mult.size() != n_fields\n");
+    }
+    if (s_y.size() != n_fields) {
+        stop("\nERROR: s_y.size() != n_fields\n");
+    }
+    if (pred_rate.size() != n_fields) {
+        stop("\nERROR: pred_rate.size() != n_fields\n");
+    }
+
+    for (AllFields& fields : all_fields_vec) {
+
+        fields.set_new_pars(K, alate_b0, alate_b1, alate_field_disp_p,
+                            K_y_mult, s_y, a, k, h, wasp_disp_p, mum_smooth,
+                            pred_rate, max_plant_age, clear_surv);
+
+    }
+
+
+    return all_fields_vec_xptr;
+
+}
+
+
+
+
+
+//[[Rcpp::export]]
+List restart_experiments_cpp(SEXP all_fields_ptr,
+                             const uint32& max_t,
+                             const uint32& save_every,
+                             const std::deque<uint32>& check_for_clear,
+                             const bool& show_progress) {
+
+
+    XPtr<std::vector<AllFields>> all_fields_vec_xptr(all_fields_ptr);
+    std::vector<AllFields>& all_fields_vec(*all_fields_vec_xptr);
+
+    uint32 n_reps = all_fields_vec.size();
+
+    // Only 1 thread and no perturbations allowed here:
+    uint32 n_threads = 1;
+    Progress prog_bar(max_t * n_reps, show_progress);
+    int status_code = 0;
+    std::vector<uint32> perturb_when(0);
+    std::vector<uint32> perturb_where(0);
+    std::vector<uint32> perturb_who(0);
+    std::vector<double> perturb_how(0);
+
+    std::vector<RepSummary> summaries(n_reps);
+
+    for (uint32 i = 0; i < n_reps; i++) {
+        if (status_code != 0) continue;
+        one_rep__(summaries[i], all_fields_vec[i], i,
+                  check_for_clear, max_t, save_every,
+                  perturb_when, perturb_where, perturb_who, perturb_how,
+                  prog_bar, status_code);
+    }
+
+
+    /*
+     When # reps > 1, combine all RepSummary objects into the first one.
+     This is to make it easier to add them to the output data frame.
+     */
+    RepSummary& summ(summaries.front());
+    if (n_reps > 1) {
+        summ.reserve(summ.N.size() * summaries.size(),
+                     summ.wasp_N.size() * summaries.size());
+        for (uint32 i = 1; i < n_reps; i++) {
+            summ.assimilate(summaries[i]);
+        }
+    }
+
+    List out = List::create(_["aphids"] = DataFrame::create(
+                                _["rep"] = summ.rep,
+                                _["time"] = summ.time,
+                                _["field"] = summ.field,
+                                _["plant"] = summ.plant,
+                                _["line"] = summ.line,
+                                _["type"] = summ.type,
+                                _["N"] = summ.N),
+                            _["wasps"] = DataFrame::create(
+                                _["rep"] = summ.wasp_rep,
+                                _["time"] = summ.wasp_time,
+                                _["field"] = summ.wasp_field,
+                                _["wasps"] = summ.wasp_N),
+                            _["all_info_xptr"] = all_fields_vec_xptr);
+
+    return out;
+
+}
+

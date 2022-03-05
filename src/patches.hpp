@@ -122,7 +122,7 @@ public:
     std::vector<AphidPop> aphids;   // aphids on this plant
     MummyPop mummies;               // mummies on this plant
     bool empty;                     // whether no aphids are on this plant
-    double pred_rate;               // predation on aphids
+    double pred_rate;               // predation on aphids and mummies
     double K;                       // unparasitized aphid carrying capacity
     double K_y;                     // parasitized aphid carrying capacity
     double z = 0;                   // sum of all living aphids at time t
@@ -388,7 +388,7 @@ class OneField {
     double mean_K_;                 // mean of distribution of `K` for plants
     double sd_K_;                   // sd of distribution of `K` for plants
 
-    // Helps calculate carrying capacity for parasitized wasps
+    // Helps calculate carrying capacity for parasitized aphids
     // (`K_y = K * K_y_mult`):
     double K_y_mult;
 
@@ -478,7 +478,7 @@ public:
                const std::vector<double>& disp_mort,
                const std::vector<uint32>& disp_start,
                const std::vector<uint32>& living_days,
-               const std::vector<double>& pred_rate,
+               const double& pred_rate,
                const double& extinct_N_,
                const arma::mat& mum_density_0,
                const double& mum_smooth_,
@@ -529,8 +529,6 @@ public:
         }
 
         uint32 n_plants = aphid_density_0.size();
-        // (We know pred_rate.size() == n_plants bc it's check inside
-        //  sim_clonewars_cpp)
 
         uint32 n_lines = aphid_name.size();
         uint32 n_stages = leslie_mat.front().n_rows;
@@ -545,7 +543,7 @@ public:
                         aphid_name, leslie_mat,
                         aphid_density_0[j], alate_b0, alate_b1,
                         alate_plant_disp_p, disp_mort,
-                        disp_start, living_days, pred_rate[j],
+                        disp_start, living_days, pred_rate,
                         n_plants, j, extinct_N_,
                         mum_density_0.col(j), mum_smooth_, max_mum_density_);
             plants.push_back(ap);
@@ -723,10 +721,10 @@ public:
 
 class AllFields {
 
+    pcg32 eng;   // RNG
+
     uint32 max_age;
     double max_N;
-
-    pcg32 eng;   // RNG
 
 
 public:
@@ -744,12 +742,13 @@ public:
     uint32 total_stages;
 
     AllFields()
-        : max_age(), max_N(), fields(), clear_surv(),
+        : eng(), max_age(), max_N(), fields(), clear_surv(),
           alate_field_disp_p(), wasp_disp_p(), disp_error(), process_error(),
           extinct_N(), total_stages() {};
 
     AllFields(const AllFields& other)
-        : max_age(other.max_age), max_N(other.max_N),
+        : eng(other.eng),
+          max_age(other.max_age), max_N(other.max_N),
           fields(other.fields),
           clear_surv(other.clear_surv),
           alate_field_disp_p(other.alate_field_disp_p),
@@ -760,6 +759,7 @@ public:
           total_stages(other.total_stages){};
 
     AllFields& operator=(const AllFields& other) {
+        eng = other.eng;
         max_age = other.max_age;
         max_N = other.max_N;
         fields = other.fields;
@@ -816,7 +816,7 @@ public:
               const double& alate_field_disp_p_,
               const double& wasp_disp_p_,
               const std::vector<uint64>& seeds)
-        : max_age(max_age_), max_N(max_N_), eng(),
+        : eng(), max_age(max_age_), max_N(max_N_),
           fields(),
           clear_surv(clear_surv_),
           alate_field_disp_p(alate_field_disp_p_),
@@ -836,7 +836,7 @@ public:
                          wilted_prop, shape1_wilted_mort, shape2_wilted_mort,
                          attack_surv, aphid_name, leslie_mat, aphid_density_0,
                          alate_b0, alate_b1, alate_plant_disp_p,
-                         disp_mort, disp_start, living_days, pred_rate,
+                         disp_mort, disp_start, living_days, pred_rate[i],
                          extinct_N, mum_density_0, mum_smooth, max_mum_density,
                          rel_attack, a, k, h,
                          wasp_density_0[i], wasp_delay[i],
@@ -910,206 +910,41 @@ public:
         return;
     }
 
+    void do_perturb(std::deque<PerturbInfo>& perturbs, const uint32& t);
+
 
     // Update for one time step.
     // Returns true if all fields/plants are empty
     bool update(const uint32& t,
-                std::deque<uint32>& check_for_clear) {
-
-        // Alate and wasp dispersal across fields:
-        if (!check_for_clear.empty() && t == check_for_clear.front()) {
-            across_field_disp_alates();
-            across_field_disp_wasps();
-        }
-
-        bool all_empty = true;
-
-        for (OneField& field : fields) {
-
-            field.wasps.add_Y_0_check(t);
-
-            if (disp_error) {
-                field.calc_dispersal(eng);
-            } else field.calc_dispersal();
-
-            if (process_error) {
-                field.update(eng);
-            } else field.update();
-
-            for (const OnePlant& p : field.plants) {
-                if (!p.empty) {
-                    all_empty = false;
-                    break;
-                }
-            }
-
-        }
-
-        return all_empty;
-    }
+                std::deque<PerturbInfo>& perturbs,
+                std::deque<uint32>& check_for_clear);
 
 
     // Clear plants by age or total N thresholds (or neither)
     void clear_plants(const uint32& t,
-                      std::deque<uint32>& check_for_clear) {
-        if (check_for_clear.empty()) return;
-        if (t != check_for_clear.front()) return;
-        check_for_clear.pop_front();
-        if (max_N > 0) {
-            for (OneField& field : fields) {
-                field.clear_plants(max_N, clear_surv, eng);
-            }
-        } else if (max_age > 0) {
-            for (OneField& field : fields) {
-                field.clear_plants(max_age, clear_surv, eng);
-            }
-        }
-        return;
-    }
+                      std::deque<uint32>& check_for_clear);
 
-
-
-
-
-
-    List to_list() const {
-
-        std::vector<uint32> field_out;
-        std::vector<uint32> plant_out;
-        std::vector<std::string> line_out;
-        std::vector<std::string> type_out;
-        std::vector<uint32> stage_out;
-        std::vector<double> N_out;
-
-        field_out.reserve(total_stages);
-        plant_out.reserve(total_stages);
-        line_out.reserve(total_stages);
-        type_out.reserve(total_stages);
-        stage_out.reserve(total_stages);
-        N_out.reserve(total_stages);
-
-
-        for (uint32 k = 0; k < fields.size(); k++) {
-
-            const OneField& field(fields[k]);
-
-            // Adult wasps:
-            field_out.push_back(k+1);
-            plant_out.push_back(0);
-            line_out.push_back("");
-            type_out.push_back("wasp");
-            stage_out.push_back(1);
-            N_out.push_back(field.wasps.Y);
-
-            // Everything but adult wasps:
-            for (uint32 j = 0; j < field.size(); j++) {
-
-                const OnePlant& plant(field[j]);
-
-                // Mummies:
-                for (uint32 ii = 0; ii < plant.mummies.Y.n_elem; ii++) {
-                    field_out.push_back(k+1);
-                    plant_out.push_back(j+1);
-                    line_out.push_back("");
-                    type_out.push_back("mummy");
-                    stage_out.push_back(ii+1);
-                    N_out.push_back(plant.mummies.Y[ii]);
-                }
-
-                // Everything but mummies:
-                for (uint32 i = 0; i < plant.size(); i++) {
-
-                    const AphidPop& aphid(plant[i]);
-
-                    uint32 n_stages = aphid.apterous.X.n_elem +
-                        aphid.alates.X.n_elem +
-                        aphid.paras.X.n_elem;
-
-                    for (uint32 ii = 0; ii < n_stages; ii++) {
-                        field_out.push_back(k+1);
-                        plant_out.push_back(j+1);
-                        line_out.push_back(aphid.aphid_name);
-                    }
-
-                    for (uint32 ii = 0; ii < aphid.apterous.X.n_elem; ii++) {
-                        type_out.push_back("apterous");
-                        stage_out.push_back(ii+1);
-                        N_out.push_back(aphid.apterous.X[ii]);
-                    }
-                    for (uint32 ii = 0; ii < aphid.alates.X.n_elem; ii++) {
-                        type_out.push_back("alate");
-                        stage_out.push_back(ii+1);
-                        N_out.push_back(aphid.alates.X[ii]);
-                    }
-                    for (uint32 ii = 0; ii < aphid.paras.X.n_elem; ii++) {
-                        type_out.push_back("parasitized");
-                        stage_out.push_back(ii+1);
-                        N_out.push_back(aphid.paras.X[ii]);
-                    }
-
-                }
-
-            }
-
-        }
-
-        List out = List::create(
-            _["field"] = field_out,
-            _["plant"] = plant_out,
-            _["line"] = line_out,
-            _["type"] = type_out,
-            _["stage"] = stage_out,
-            _["N"] = N_out);
-
-        return out;
-    }
-
-
+    List to_list() const;
 
     // It's assumed this vector is in the same order as the outputs are above!
     // Make sure this happens from the R side.
-    void from_vector(std::vector<double>& N) {
+    void from_vector(std::vector<double>& N);
 
-        if (N.size() != total_stages) {
-            std::string err_msg("ERROR:\n");
-            err_msg += "The vector used to update internal C++ object ";
-            err_msg += "`AllFields` is not of the required size (";
-            err_msg += std::to_string(total_stages);
-            err_msg += "). This is perhaps because you removed row(s) from ";
-            err_msg += "the dataframe output from here.";
-            Rcpp::stop(err_msg.c_str());
-        }
-
-
-        uint32 i = 0;
-        for (OneField& field : fields) {
-            field.wasps.Y = N[i];
-            i++;
-            for (OnePlant& plant : field.plants) {
-                for (double& y : plant.mummies.Y) {
-                    y = N[i];
-                    i++;
-                }
-                for (AphidPop& aphid : plant.aphids) {
-                    for (double& x : aphid.apterous.X) {
-                        x = N[i];
-                        i++;
-                    }
-                    for (double& x : aphid.alates.X) {
-                        x = N[i];
-                        i++;
-                    }
-                    for (double& x : aphid.paras.X) {
-                        x = N[i];
-                        i++;
-                    }
-                }
-            }
-        }
-
-        return;
-
-    }
+    // Set new parameters
+    void set_new_pars(const double& K_,
+                      const std::vector<double>& alate_b0_,
+                      const std::vector<double>& alate_b1_,
+                      const double& alate_field_disp_p_,
+                      const std::vector<double>& K_y_mult_,
+                      const std::vector<double>& s_y_,
+                      const double& a_,
+                      const double& k_,
+                      const double& h_,
+                      const double& wasp_disp_p_,
+                      const double& mum_smooth_,
+                      const std::vector<double>& pred_rate_,
+                      const uint32& max_plant_age_,
+                      const double& clear_surv_);
 
 
 

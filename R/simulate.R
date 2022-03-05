@@ -246,16 +246,32 @@ print.multiAphid <- function(x, ...) {
 }
 
 # Basic type checks ----
-uint_check <- function(x, n) {
+uint_check <- function(x, n, .max = NULL, .min = NULL) {
     if (!(is.numeric(x) && length(x) == 1 && x %% 1 == 0 && x >= 0)) {
         stop(paste("\nERROR:", n, "cannot be properly cast as an",
                    "unsigned integer.\n"))
     }
+    if (!is.null(.min) && x < .min) {
+        stop(paste0("\nERROR: ", n, " is below the minimum allowed value (",
+                    .min, ").\n"))
+    }
+    if (!is.null(.max) && x > .max) {
+        stop(paste0("\nERROR: ", n, " is above the maximum allowed value (",
+                    .max, ").\n"))
+    }
 }
-uint_vec_check <- function(x, n) {
+uint_vec_check <- function(x, n, .max = NULL, .min = NULL) {
     if (!(is.numeric(x) && all(x %% 1 == 0) && all(x >= 0))) {
         stop(paste("\nERROR:", n, "cannot be properly cast as an",
                    "unsigned integer vector.\n"))
+    }
+    if (!is.null(.min) && any(x < .min)) {
+        stop(paste0("\nERROR: ", n, " contains values below the minimum ",
+                    "allowed (", .min, ").\n"))
+    }
+    if (!is.null(.max) && any(x > .max)) {
+        stop(paste0("\nERROR: ", n, " contains values above the maximum ",
+                    "allowed (", .max, ").\n"))
     }
 }
 dbl_check <- function(x, n, .max = NULL, .min = NULL) {
@@ -564,6 +580,10 @@ sim_clonewars_full <- function(n_reps,
                                show_progress = FALSE,
                                perturb = NULL) {
 
+    # This is like match.call but includes default arguments and
+    # evaluates everything
+    call_ <- mget(names(formals()), sys.frame(sys.nframe()))
+
     if (!inherits(clonal_lines, "multiAphid")) {
         if (inherits(clonal_lines, "aphid")) {
             clonal_lines <- c(clonal_lines)
@@ -576,7 +596,7 @@ sim_clonewars_full <- function(n_reps,
 
     check_for_clear <- cumsum(rep(plant_check_gaps,
                                   ceiling(max_t / sum(plant_check_gaps))))
-    check_for_clear <- check_for_clear[check_for_clear < max_t]
+    check_for_clear <- check_for_clear[check_for_clear <= max_t]
 
 
     if (no_error) {
@@ -600,8 +620,9 @@ sim_clonewars_full <- function(n_reps,
         }
     }
 
-    if (length(pred_rate) == 1) pred_rate <- rep(pred_rate, n_plants)
-    if (length(alate_plant_disp_p) == 1) alate_plant_disp_p <- rep(alate_plant_disp_p, n_lines)
+    if (length(pred_rate) == 1) pred_rate <- rep(pred_rate, n_fields)
+    if (length(alate_plant_disp_p) == 1) alate_plant_disp_p <-
+        rep(alate_plant_disp_p, n_lines)
     if (length(disp_mort) == 1) disp_mort <- rep(disp_mort, n_lines)
     if (length(alate_b0) == 1) alate_b0 <- rep(alate_b0, n_lines)
     if (length(alate_b1) == 1) alate_b1 <- rep(alate_b1, n_lines)
@@ -688,14 +709,14 @@ sim_clonewars_full <- function(n_reps,
         }
     }
 
-    uint_check(n_reps, "n_reps")
-    uint_check(n_fields, "n_fields")
+    uint_check(n_reps, "n_reps", .min = 1)
+    uint_check(n_fields, "n_fields", .min = 1)
     uint_check(max_plant_age, "max_plant_age")
     dbl_check(max_N, "max_N")
     uint_vec_check(check_for_clear, "check_for_clear")
     dbl_check(clear_surv, "clear_surv")
-    uint_check(max_t, "max_t")
-    uint_check(save_every, "save_every")
+    uint_check(max_t, "max_t", .min = 1)
+    uint_check(save_every, "save_every", .min = 1)
     dbl_check(mean_K, "mean_K")
     dbl_check(sd_K, "sd_K")
     dbl_vec_check(K_y_mult, "K_y_mult")
@@ -714,7 +735,7 @@ sim_clonewars_full <- function(n_reps,
     cube_list_check(aphid_density_0, "aphid_density_0")
     stopifnot(inherits(alate_b0, "numeric"))
     stopifnot(inherits(alate_b1, "numeric"))
-    dbl_check(alate_field_disp_p, "alate_field_disp_p")
+    dbl_check(alate_field_disp_p, "alate_field_disp_p", .min = 0, .max = 1)
     stopifnot(inherits(alate_plant_disp_p, "numeric"))
     stopifnot(inherits(disp_mort, "numeric"))
     uint_vec_check(disp_start, "disp_start")
@@ -737,7 +758,7 @@ sim_clonewars_full <- function(n_reps,
     uint_vec_check(perturb_where, "perturb_where")
     uint_vec_check(perturb_who, "perturb_who")
     dbl_vec_check(perturb_how, "perturb_how", .min = 0)
-    uint_check(n_threads, "n_threads")
+    uint_check(n_threads, "n_threads", .min = 1)
     stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
 
 
@@ -768,8 +789,11 @@ sim_clonewars_full <- function(n_reps,
         mutate(across(c("rep", "time"), as.integer)) %>%
         as_tibble()
 
-    sims[["all_info"]] <- lapply(fields_to_list(sims[["all_info_xptr"]]),
-                                 as.data.frame)
+    sims[["all_info"]] <- make_all_info(sims)
+
+    sims[["call"]] <- call_
+
+    class(sims) <- "cloneSims"
 
     return(sims)
 }
@@ -882,6 +906,210 @@ sim_experiments <- function(clonal_lines,
                                shape1_wilted_mort = 3.736386,
                                shape2_wilted_mort = 5.777129,
                                n_threads = 1)
+
+    # Adjusting for different name from `sim_clonewars_full`:
+    sims$call[["K"]] <- sims$call[["mean_K"]]
+    sims$call[["mean_K"]] <- NULL
+
+    return(sims)
+
+}
+
+
+
+
+
+# Internal function to create the list of dataframes containing all info.
+make_all_info <- function(sims_obj) {
+    if (!inherits(sims_obj$all_info_xptr, "externalptr")) {
+        stop("\nSomething has happened to the \"all_info_xptr\" field ",
+             "in this `cloneSims` object. Please re-run simulation.")
+    }
+    all_info <- lapply(fields_to_list(sims_obj$all_info_xptr),
+                                as.data.frame)
+    return(all_info)
+}
+
+
+
+
+
+
+#' Restart experimental simulations.
+#'
+#' Note that defaults for all this function's arguments except for
+#' `sims_obj`, `new_starts`, `max_t`, and `save_every` are `NULL`,
+#' which results in them being the same as for the original simulations.
+#'
+#' @param sims_obj A `cloneSims` object output from `sim_experiments`.
+#' @param new_starts A dataframe or list of dataframes indicating the
+#'     new starting abundances for all populations (wasps, mummies,
+#'     all aphid lines) and stages.
+#'     It should be the exact same format as what's in `sims_obj$all_info`.
+#'     (But don't change `sims_obj$all_info` to make this be true!)
+#' @inheritParams sim_experiments
+#'
+#' @export
+#'
+restart_experiment <- function(sims_obj,
+                               new_starts = NULL,
+                               max_t = 250,
+                               save_every = 1,
+                               alate_field_disp_p = NULL,
+                               K = NULL,
+                               alate_b0 = NULL,
+                               alate_b1 = NULL,
+                               K_y_mult = NULL,
+                               s_y = NULL,
+                               a = NULL,
+                               k = NULL,
+                               h = NULL,
+                               wasp_disp_p = NULL,
+                               mum_smooth = NULL,
+                               pred_rate = NULL,
+                               plant_check_gaps = NULL,
+                               max_plant_age = NULL,
+                               clear_surv = NULL,
+                               show_progress = NULL) {
+
+    # This is like match.call but includes default arguments and
+    # evaluates everything
+    call_ <- mget(names(formals()), sys.frame(sys.nframe()))
+
+
+    stopifnot(inherits(sims_obj, "cloneSims"))
+    if (!inherits(sims_obj$all_info_xptr, "externalptr")) {
+        stop("\nSomething has happened to the \"all_info_xptr\" field ",
+             "in this `cloneSims` object. Please re-run simulation.")
+    }
+
+    # If `new_starts` is provided, check it carefully then adjust the
+    # underlying C++ objects accordingly.
+    if (!is.null(new_starts)) {
+        stopifnot(inherits(new_starts, c("list", "data.frame")))
+        test_against_starts <- make_all_info(sims_obj)
+        n_reps <- length(test_against_starts)
+        if (length(sims_obj$all_info) != n_reps) {
+            stop("\nPlease do not directly edit `sims_obj$all_info`. ",
+                 "You can try to fix this problem by running ",
+                 "`sims_obj$all_info <- ",
+                 "clonewars:::make_all_info(sims_obj)`")
+        }
+        if (is.data.frame(new_starts)) {
+            new_starts <- rep(list(new_starts), n_reps)
+        }
+        needed_cols <- c("field", "plant", "line", "type", "stage", "N")
+        for (i in 1:n_reps) {
+            not_present_cols <- needed_cols[!needed_cols %in%
+                                                colnames(new_starts[[i]])]
+            if (length(not_present_cols) > 0) {
+                stop("\n`new_starts` contains at least one dataframe without ",
+                     "the following needed column(s): ",
+                     paste(not_present_cols, collapse = ", "))
+            }
+            x <- test_against_starts[[i]][, head(needed_cols, -1)]
+            y <- new_starts[[i]][, head(needed_cols, -1)]
+            z <- sims_obj$all_info[[i]][, head(needed_cols, -1)]
+            if (!isTRUE(all.equal(x, y))) {
+                stop("\n`new_starts` contains at least one dataframe that ",
+                     "differs from its counterpart in ",
+                     "`sims_obj$all_info`. ",
+                     "Note that changing sims_obj$all_info does not fix ",
+                     "this problem.")
+            }
+            if (!isTRUE(all.equal(x, z))) {
+                stop("\nPlease do not directly edit `sims_obj$all_info`. ",
+                     "You can try to fix this problem by running ",
+                     "`sims_obj$all_info <- ",
+                     "clonewars:::make_all_info(sims_obj)`")
+            }
+        }
+        N_vecs <- lapply(new_starts, function(x) x[["N"]])
+        fields_from_vectors(sims_obj$all_info_xptr, N_vecs)
+    }
+
+
+    # Fill in defaults / previously provided arguments:
+    if (is.null(alate_field_disp_p)) alate_field_disp_p <-
+            sims_obj$call[["alate_field_disp_p"]]
+    if (is.null(K)) K <- sims_obj$call[["K"]]
+    if (is.null(alate_b0)) alate_b0 <- sims_obj$call[["alate_b0"]]
+    if (is.null(alate_b1)) alate_b1 <- sims_obj$call[["alate_b1"]]
+    if (is.null(K_y_mult)) K_y_mult <- sims_obj$call[["K_y_mult"]]
+    if (is.null(s_y)) s_y <- sims_obj$call[["s_y"]]
+    if (is.null(a)) a <- sims_obj$call[["a"]]
+    if (is.null(k)) k <- sims_obj$call[["k"]]
+    if (is.null(h)) h <- sims_obj$call[["h"]]
+    if (is.null(wasp_disp_p)) wasp_disp_p <- sims_obj$call[["wasp_disp_p"]]
+    if (is.null(mum_smooth)) mum_smooth <- sims_obj$call[["mum_smooth"]]
+    if (is.null(pred_rate)) pred_rate <- sims_obj$call[["pred_rate"]]
+    if (is.null(plant_check_gaps)) plant_check_gaps <-
+            sims_obj$call[["plant_check_gaps"]]
+    if (is.null(max_plant_age)) max_plant_age <-
+            sims_obj$call[["max_plant_age"]]
+    if (is.null(clear_surv)) clear_surv <- sims_obj$call[["clear_surv"]]
+    if (is.null(show_progress)) show_progress <-
+            sims_obj$call[["show_progress"]]
+
+    # Create / edit some items:
+    n_fields <- sims_obj$call$n_fields
+    n_lines <- length(sims_obj$call$clonal_lines)
+    check_for_clear <- cumsum(rep(plant_check_gaps,
+                                  ceiling(max_t / sum(plant_check_gaps))))
+    check_for_clear <- check_for_clear[check_for_clear <= max_t]
+    if (length(pred_rate) == 1) pred_rate <- rep(pred_rate, n_fields)
+    if (length(alate_b0) == 1) alate_b0 <- rep(alate_b0, n_lines)
+    if (length(alate_b1) == 1) alate_b1 <- rep(alate_b1, n_lines)
+    if (length(K_y_mult) == 1) K_y_mult <- rep(K_y_mult, n_fields)
+    if (length(s_y) == 1) s_y <- rep(s_y, n_fields)
+
+
+    # Check validity of arguments:
+    uint_check(max_t, "max_t", .min = 1)
+    uint_check(save_every, "save_every", .min = 1)
+    dbl_check(alate_field_disp_p, "alate_field_disp_p", .min = 0, .max = 1)
+    dbl_check(K, "K", .min = 0)
+    dbl_vec_check(alate_b0, "alate_b0")
+    dbl_vec_check(alate_b1, "alate_b1")
+    dbl_vec_check(K_y_mult, "K_y_mult", .min = 0)
+    dbl_vec_check(s_y, "s_y", .min = 0, .max = 1)
+    dbl_check(a, "a", .min = 0)
+    dbl_check(k, "k", .min = 0)
+    dbl_check(h, "h", .min = 0)
+    dbl_check(wasp_disp_p, "wasp_disp_p", .min = 0, .max = 1)
+    dbl_check(mum_smooth, "mum_smooth", .min = 0, .max = 1)
+    dbl_vec_check(pred_rate, "pred_rate", .min = 0, .max = 1)
+    uint_vec_check(check_for_clear, "check_for_clear")
+    stopifnot(all(!duplicated(check_for_clear)))
+    uint_check(max_plant_age, "max_plant_age")
+    dbl_check(clear_surv, "clear_surv", .min = 0, .max = 1)
+    stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
+
+
+    # Make new C++ pointer to use for simulations:
+    new_all_info_xptr <- restart_fill_other_pars(sims_obj$all_info_xptr,
+                                                 K, alate_b0, alate_b1,
+                                                 alate_field_disp_p, K_y_mult,
+                                                 s_y, a, k, h, wasp_disp_p,
+                                                 mum_smooth, pred_rate,
+                                                 max_plant_age, clear_surv)
+
+
+    sims <- restart_experiments_cpp(new_all_info_xptr, max_t, save_every,
+                                    check_for_clear, show_progress)
+
+    sims[["aphids"]] <- sims[["aphids"]] %>%
+        mutate(across(c("rep", "time", "plant"), as.integer)) %>%
+        as_tibble()
+    sims[["wasps"]] <- sims[["wasps"]] %>%
+        mutate(across(c("rep", "time"), as.integer)) %>%
+        as_tibble()
+
+    sims[["all_info"]] <- make_all_info(sims)
+
+    sims[["call"]] <- call_
+
+    class(sims) <- "cloneSimsRestart"
 
     return(sims)
 

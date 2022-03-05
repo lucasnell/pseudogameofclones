@@ -95,11 +95,12 @@ class ApterousPop : public AphidTypePop {
 
     friend class AphidPop;
 
-    // Parameters for logit(Pr(alates)) ~ b0 + b1 * N
-    MEMBER(double, alate_b0)
-    MEMBER(double, alate_b1)
-
 public:
+
+    // Parameters for logit(Pr(alates)) ~ b0 + b1 * N
+    double alate_b0_;
+    double alate_b1_;
+
 
     ApterousPop() : AphidTypePop(), alate_b0_(0), alate_b1_(0) {};
     ApterousPop(const arma::mat& leslie_mat,

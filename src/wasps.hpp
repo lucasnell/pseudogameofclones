@@ -21,12 +21,13 @@ using namespace Rcpp;
 // Wasp attack info
 class WaspAttack {
 
+public:
+
     arma::vec rel_attack;    // relative wasp attack rates by aphid stage
     double a;                // overall parasitoid attack rate
     double k;                // aggregation parameter of the nbinom distribution
     double h;                // parasitoid attack rate handling time
 
-public:
 
     // Constructors
     WaspAttack()
@@ -84,6 +85,8 @@ public:
 // Mummy population
 class MummyPop {
 
+public:
+
     arma::vec Y_0;          // initial mummy densities
     /*
      Proportion of mummies that will NOT take exactly 3 days to develop.
@@ -92,7 +95,6 @@ class MummyPop {
      */
     double smooth;
 
-public:
 
     // Changing through time
     arma::vec Y;            // Mummy density
@@ -151,6 +153,8 @@ public:
 // Adult wasp population
 class WaspPop {
 
+public:
+
     WaspAttack attack;      // info for attack rates
     double Y_0;             // initial adult wasp density
     uint32 delay;           // when to add initial wasps
@@ -160,8 +164,6 @@ class WaspPop {
     // for process error:
     std::normal_distribution<double> norm_distr;
     double sigma_y;
-
-public:
 
     // Changing through time
     double Y;               // Wasp density

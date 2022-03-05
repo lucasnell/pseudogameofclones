@@ -87,6 +87,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// fields_from_vectors
+void fields_from_vectors(SEXP all_fields_ptr, std::vector<std::vector<double>>& N_vecs);
+RcppExport SEXP _clonewars_fields_from_vectors(SEXP all_fields_ptrSEXP, SEXP N_vecsSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type all_fields_ptr(all_fields_ptrSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::vector<double>>& >::type N_vecs(N_vecsSEXP);
+    fields_from_vectors(all_fields_ptr, N_vecs);
+    return R_NilValue;
+END_RCPP
+}
 // using_openmp
 bool using_openmp();
 RcppExport SEXP _clonewars_using_openmp() {
@@ -158,6 +169,46 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// restart_fill_other_pars
+SEXP restart_fill_other_pars(SEXP all_fields_in_ptr, const double& K, const std::vector<double>& alate_b0, const std::vector<double>& alate_b1, const double& alate_field_disp_p, const std::vector<double>& K_y_mult, const std::vector<double>& s_y, const double& a, const double& k, const double& h, const double& wasp_disp_p, const double& mum_smooth, const std::vector<double>& pred_rate, const uint32& max_plant_age, const double& clear_surv);
+RcppExport SEXP _clonewars_restart_fill_other_pars(SEXP all_fields_in_ptrSEXP, SEXP KSEXP, SEXP alate_b0SEXP, SEXP alate_b1SEXP, SEXP alate_field_disp_pSEXP, SEXP K_y_multSEXP, SEXP s_ySEXP, SEXP aSEXP, SEXP kSEXP, SEXP hSEXP, SEXP wasp_disp_pSEXP, SEXP mum_smoothSEXP, SEXP pred_rateSEXP, SEXP max_plant_ageSEXP, SEXP clear_survSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type all_fields_in_ptr(all_fields_in_ptrSEXP);
+    Rcpp::traits::input_parameter< const double& >::type K(KSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type alate_b0(alate_b0SEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type alate_b1(alate_b1SEXP);
+    Rcpp::traits::input_parameter< const double& >::type alate_field_disp_p(alate_field_disp_pSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type K_y_mult(K_y_multSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type s_y(s_ySEXP);
+    Rcpp::traits::input_parameter< const double& >::type a(aSEXP);
+    Rcpp::traits::input_parameter< const double& >::type k(kSEXP);
+    Rcpp::traits::input_parameter< const double& >::type h(hSEXP);
+    Rcpp::traits::input_parameter< const double& >::type wasp_disp_p(wasp_disp_pSEXP);
+    Rcpp::traits::input_parameter< const double& >::type mum_smooth(mum_smoothSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type pred_rate(pred_rateSEXP);
+    Rcpp::traits::input_parameter< const uint32& >::type max_plant_age(max_plant_ageSEXP);
+    Rcpp::traits::input_parameter< const double& >::type clear_surv(clear_survSEXP);
+    rcpp_result_gen = Rcpp::wrap(restart_fill_other_pars(all_fields_in_ptr, K, alate_b0, alate_b1, alate_field_disp_p, K_y_mult, s_y, a, k, h, wasp_disp_p, mum_smooth, pred_rate, max_plant_age, clear_surv));
+    return rcpp_result_gen;
+END_RCPP
+}
+// restart_experiments_cpp
+List restart_experiments_cpp(SEXP all_fields_ptr, const uint32& max_t, const uint32& save_every, const std::deque<uint32>& check_for_clear, const bool& show_progress);
+RcppExport SEXP _clonewars_restart_experiments_cpp(SEXP all_fields_ptrSEXP, SEXP max_tSEXP, SEXP save_everySEXP, SEXP check_for_clearSEXP, SEXP show_progressSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type all_fields_ptr(all_fields_ptrSEXP);
+    Rcpp::traits::input_parameter< const uint32& >::type max_t(max_tSEXP);
+    Rcpp::traits::input_parameter< const uint32& >::type save_every(save_everySEXP);
+    Rcpp::traits::input_parameter< const std::deque<uint32>& >::type check_for_clear(check_for_clearSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type show_progress(show_progressSEXP);
+    rcpp_result_gen = Rcpp::wrap(restart_experiments_cpp(all_fields_ptr, max_t, save_every, check_for_clear, show_progress));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_clonewars_logit", (DL_FUNC) &_clonewars_logit, 1},
@@ -166,8 +217,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_clonewars_carrying_capacity", (DL_FUNC) &_clonewars_carrying_capacity, 7},
     {"_clonewars_sad_leslie", (DL_FUNC) &_clonewars_sad_leslie, 1},
     {"_clonewars_fields_to_list", (DL_FUNC) &_clonewars_fields_to_list, 1},
+    {"_clonewars_fields_from_vectors", (DL_FUNC) &_clonewars_fields_from_vectors, 2},
     {"_clonewars_using_openmp", (DL_FUNC) &_clonewars_using_openmp, 0},
     {"_clonewars_sim_clonewars_cpp", (DL_FUNC) &_clonewars_sim_clonewars_cpp, 51},
+    {"_clonewars_restart_fill_other_pars", (DL_FUNC) &_clonewars_restart_fill_other_pars, 15},
+    {"_clonewars_restart_experiments_cpp", (DL_FUNC) &_clonewars_restart_experiments_cpp, 5},
     {NULL, NULL, 0}
 };
 
