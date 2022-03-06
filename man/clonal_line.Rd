@@ -6,7 +6,7 @@
 \usage{
 clonal_line(
   name,
-  density_0 = NULL,
+  density_0,
   resistant = FALSE,
   surv_juv_apterous = NULL,
   surv_adult_apterous = NULL,
@@ -22,9 +22,14 @@ clonal_line(
 \arguments{
 \item{name}{String for clonal line name.}
 
-\item{density_0}{A 5 x 2 matrix with the rows indicating aphid instar,
-and column indicating apterous vs alate.
-Defaults to \code{NULL}, which results in four 4th instars.}
+\item{density_0}{A single number or 2-column matrix indicating starting
+aphid densities.
+If a number, there will be no starting alates and a total apterous
+density equal to the number provided.
+Stages will be calculated based on the stable age distribution.
+If a matrix, it must have 5 rows (rows indicate instar)
+or a row per aphid age (rows indicate age in days).
+Matrix column indicates apterous vs alate.}
 
 \item{resistant}{Logical or length-2 vector of survivals of
 singly attacked and multiply attacked aphids.

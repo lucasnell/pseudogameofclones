@@ -10,9 +10,14 @@
 #'
 #'
 #' @param name String for clonal line name.
-#' @param density_0 A 5 x 2 matrix with the rows indicating aphid instar,
-#'     and column indicating apterous vs alate.
-#'     Defaults to `NULL`, which results in four 4th instars.
+#' @param density_0 A single number or 2-column matrix indicating starting
+#'     aphid densities.
+#'     If a number, there will be no starting alates and a total apterous
+#'     density equal to the number provided.
+#'     Stages will be calculated based on the stable age distribution.
+#'     If a matrix, it must have 5 rows (rows indicate instar)
+#'     or a row per aphid age (rows indicate age in days).
+#'     Matrix column indicates apterous vs alate.
 #' @param resistant Logical or length-2 vector of survivals of
 #'     singly attacked and multiply attacked aphids.
 #'     If a logical, `FALSE` is equivalent to `c(0,0)` and results in no
@@ -60,7 +65,7 @@
 #' @export
 #'
 clonal_line <- function(name,
-                        density_0 = NULL,
+                        density_0,
                         resistant = FALSE,
                         surv_juv_apterous = NULL,
                         surv_adult_apterous = NULL,
@@ -172,22 +177,42 @@ clonal_line <- function(name,
     if (is.numeric(resistant) && length(resistant) == 2) attack_surv <- resistant
 
 
-    if (is.null(density_0)) {
-        density_0 <- matrix(0, 5, 2)
-        density_0[4,1] <- 4
+    d0_dbl <- is.numeric(density_0) && length(density_0) == 1
+    d0_m52 <- is.numeric(density_0) && is.matrix(density_0) &&
+        identical(dim(density_0), c(5L, 2L))
+    d0_mn2 <- is.numeric(density_0) && is.matrix(density_0) &&
+        identical(dim(density_0), c(ns, 2L))
+    if (!(d0_dbl || d0_m52 || d0_mn2)) {
+        stop("\nERROR: The `density_0` arg to the ",
+             "`clonal_line` function must be a single number or a 5x2 or ",
+             ns, "x2 numeric matrix")
     }
-    if (!is.matrix(density_0) || !is.numeric(density_0) ||
-        !identical(dim(density_0), c(5L, 2L))) {
-        stop("\nERROR: If not NULL, then the `density_0` arg to the ",
-             "`clonal_line` function must be a 5x2 numeric matrix")
+    if (d0_dbl) {
+        # If provided with just one number, assume stable age distribution:
+        sad <- as.numeric(sad_leslie(leslie_array[,,1]))
+        density_0 <- cbind(sad * density_0, rep(0, length(sad)))
+    } else if (d0_m52) {
+        d0 <- density_0
+        density_0 <- matrix(0, ns, 2)
+        # Going from instar to days old, using stable age distribution to
+        # calculate the proportion for each age within each instar.
+        sads <- cbind(as.numeric(sad_leslie(leslie_array[,,1])),
+                      as.numeric(sad_leslie(leslie_array[,,2])))
+        idays <- dev_times$instar_days[[temp]]
+        d0_inds <- cbind(c(1, head(cumsum(idays), -1) + 1),
+                         c(head(cumsum(idays), -1), nrow(sads)))
+        for (i in 1:nrow(d0)) {
+            irange <- d0_inds[i,1]:d0_inds[i,2]
+            for (j in 1:2) {
+                sad_ij = sads[irange, j] / sum(sads[irange,j])
+                density_0[irange,j] <- sad_ij * d0[i,j]
+            }
+        }
     }
-    d0 <- density_0
-    density_0 <- matrix(0, ns, 2)
-    # Going from instar to days old, using the approximate middle
-    # point of each instar age range:
-    d0_inds <- cumsum(dev_times$instar_days[[temp]][1:4])
-    d0_inds <- as.integer({c(1, d0_inds + 1) + c(d0_inds, ns)} / 2)
-    for (i in 1:nrow(d0)) density_0[d0_inds[i],] <- d0[i,]
+    if (any(density_0 < 0)) {
+        stop("\nERROR: The `density_0` arg to the `clonal_line` function ",
+             "cannot contain values < 0.")
+    }
 
 
     output <- list(name = name,
