@@ -50,11 +50,10 @@ line_s <- clonal_line("susceptible",
 # Resistant line: high resistance, low population growth rate
 line_r <- clonal_line("resistant",
                       density_0 = matrix(c(rep(0, 3), 32, rep(0, 6)), 5, 2),
-                      # resistant = c(0.95, 0.4),
                       resistant = TRUE,
-                      surv_paras = 0.5,
-                      surv_juv_apterous = NULL,
-                      surv_adult_apterous = NULL,
+                      surv_paras = 0.57,
+                      surv_juv_apterous = "low",
+                      surv_adult_apterous = "low",
                       repro_apterous = "low")
 
 para_lvls <- c("parasitism", "no parasitism")
@@ -231,46 +230,151 @@ plot_test <- function(.sims) {
 }
 
 
+#'
+#' At day 8 of prelim assays, mean(N_res / N_sus) was 0.219.
+#' At day 12 of prelim assays, mean(N_res / N_sus) was 0.527.
+#' The overall average was 0.373.
+#'
+#' Average aphids for 3 fava bean plants inside a single 8" pot at 8 and 12 days for
+#' each line:
+#'
+#'    date line          num
+#'   <int> <fct>       <dbl>
+#' 1     8 resistant    11.5
+#' 2     8 susceptible  47.8
+#' 3    12 resistant    23
+#' 4    12 susceptible  76.8
+#'
 
 
 line_s2 <- clonal_line(name = "susceptible",
                        # >>>>>>>>>>>>> things to potentially change:
                        # surv_paras = 0.8,
                        # <<<<<<<<<<<<<
-                       repro_apterous = NULL,
-                       density_0 = matrix(c(rep(0, 3), 32, rep(0, 6)), 5, 2))
+                       surv_juv_apterous = "high",
+                       surv_adult_apterous = "high",
+                       repro_apterous = "high",
+                       # density_0 = matrix(c(rep(0, 3), 32, rep(0, 6)), 5, 2))
+                       density_0 = matrix(c(rep(0, 3), 250, rep(0, 6)), 5, 2))
+                       # density_0 = matrix(c(rep(0, 3), 410, rep(0, 6)), 5, 2))
 # Resistant line: high resistance, low population growth rate
 line_r2 <- clonal_line(name = "resistant",
-                       # >>>>>>>>>>>>> things to potentially change:
-                       resistant = c(0.9, 0.6),
-                       # resistant = c(1, 1),
-                      # resistant = TRUE,
-                      surv_paras = 0.67,
-                      # surv_paras = populations$surv_juv[["low"]],
-                      repro_apterous = populations$repro[["low"]] * 0.7,
-                      # <<<<<<<<<<<<<
-                      density_0 = matrix(c(rep(0, 3), 32, rep(0, 6)), 5, 2))
+                       resistant = TRUE,
+                       surv_paras = 0.57,
+                       surv_juv_apterous = "low",
+                       surv_adult_apterous = "low",
+                       repro_apterous = "low",
+                       # <<<<<<<<<<<<<
+                       # density_0 = matrix(c(rep(0, 3), 32, rep(0, 6)), 5, 2))
+                       density_0 = matrix(c(rep(0, 3), 60, rep(0, 6)), 5, 2))
+                       # density_0 = matrix(c(rep(0, 3), 123, rep(0, 6)), 5, 2))
 
 
-.sims <- do_base_sims(.clonal_lines = c(line_r2, line_s2),
-                      .alate_disp_prop = 0.02,
-                      mean_K = 12.5e3,
-                      # s_y = populations$s_y * 0.8,
-                      K_y_mult = (1 / 1.57) * 4,
-                      wasp_delay = 7,
-                      mum_smooth = 0.4,
-                      max_plant_age = 1e9,
-                      pred_rate = 0.1,
-                      # max_plant_age = 7,
-                      # clear_surv = 0.6,
-                      # .extinct_N = 0,
-                      # a = wasp_attack$a * 2.5,
-                      # h = wasp_attack$h * 0.8,
-                      .max_t = 250)
+
+
+.sims <- do_base_sims(
+    # alate_field_disp_p = 0.2,
+    # pred_rate = 0.1,
+    # K = 11e3,
+    # s_y = populations$s_y * 0.8,
+    # clear_surv = 0.01,
+    wasp_density_0 = c(10, 0),
+    wasp_delay = 0,
+    # extinct_N = 0,
+    # max_plant_age = 0,
+    max_t = 10e3,
+    clonal_lines = c(line_r2, line_s2))
 .sims %>% plot_test()
 
+mt <- max(.sims$aphids$time)
+
+zz <- ((.sims$aphids %>% filter(time == mt))[["N"]] -
+           (.sims$aphids %>% filter(time == mt-1))[["N"]])
+((.sims$wasps %>% filter(time == mt))[["wasps"]] - (.sims$wasps %>% filter(time == mt-1))[["wasps"]])
+
+.sims$aphids %>% filter(time == mt) %>% mutate(d = zz)
 
 
+# # A tibble: 14 × 6
+# time field         line        type              N       d
+# <int> <fct>         <fct>       <chr>         <dbl>   <dbl>
+#     1 10000 parasitism    resistant   alate        805.    1.10
+# 2 10000 parasitism    resistant   apterous     782.    3.46
+# 3 10000 parasitism    resistant   parasitized   20.8   0.0196
+# 4 10000 parasitism    susceptible alate        136.   -1.40
+# 5 10000 parasitism    susceptible apterous     157.   -4.11
+# 6 10000 parasitism    susceptible parasitized   52.3  -0.155
+# 7 10000 parasitism    NA          mummy          5.16  0
+# 8 10000 no parasitism resistant   alate        213.   -1.06
+# 9 10000 no parasitism resistant   apterous     239.   -3.39
+# 10 10000 no parasitism resistant   parasitized    0     0
+# 11 10000 no parasitism susceptible alate       1003.    1.34
+# 12 10000 no parasitism susceptible apterous     826.    4.17
+# 13 10000 no parasitism susceptible parasitized    0     0
+# 14 10000 no parasitism NA          mummy          0     0
+
+
+
+mod <- max(.sims$wasps$wasps) / max(.sims$aphids$N)
+
+.sims$aphids %>%
+    filter(type != "mummy") %>%
+    filter(time > 99000) %>%
+    filter(field == "parasitism") %>%
+    filter(line == "resistant") %>%
+    filter(type == "alate") %>%
+    ggplot(aes(time, N / 1e3)) +
+    # geom_hline(yintercept = 0, color = "gray70") +
+    geom_line(aes(color = line, linetype = type)) +
+    # geom_line(aes(color = line), size = 1) +
+    scale_color_manual(values = c("chartreuse3", "firebrick"), guide = "none") +
+    scale_linetype_manual(values = c("solid", "33", "11")) +
+    scale_y_continuous(expression("Aphid abundance (" %*% 1000 * ")")) +
+    scale_x_continuous("Days") +
+    facet_wrap(~ field, ncol = 1) +
+    theme(strip.text = element_text(size = 10),
+          legend.position = "top") +  # ,
+    # panel.grid.major.x = element_line(size = 0.25, color = "gray90"),
+    # panel.grid.major.y = element_line(size = 0.25, color = "gray90")) +
+    # coord_cartesian(ylim = c(0, 3)) +
+    NULL
+
+
+
+
+ad <- .sims$all_info
+
+inds <- ad[[1]]$field == 1 & ad[[1]]$line == "resistant" & ad[[1]]$type != "parasitized"
+ad[[1]][inds, "N"] <- ad[[1]][inds, "N"] * 1.1
+
+z <- restart_experiment(.sims, new_starts = ad, max_t = 10, save_every = 1)
+
+
+.sims2 <- do_base_sims(
+    # alate_field_disp_p = 0.2,
+    # pred_rate = 0.1,
+    # K = 11e3,
+    # s_y = populations$s_y * 0.8,
+    wasp_density_0 = c(10, 0),
+    wasp_delay = 0,
+    # extinct_N = 0,
+    max_t = 10e3+1,
+    clonal_lines = c(line_r2, line_s2),
+    perturb = tibble(when = 10e3+1, who = "resistant", how = 1.1, where = 1))
+
+.sims$aphids %>% filter(time == max(time), field == para_lvls[1])
+.sims2$aphids %>% filter(time == max(time), field == para_lvls[1])
+z$aphids %>% filter(time == 1, field == min(field))
+
+
+(.sims2$aphids %>% filter(time == max(time), field == para_lvls[1]))[["N"]] -
+(z$aphids %>% filter(time == 1, field == min(field)))[["N"]]
+
+
+
+.sims$wasps %>% filter(time == max(time), field == para_lvls[1])
+.sims2$wasps %>% filter(time == max(time), field == para_lvls[1])
+z$wasps %>% filter(time == 1, field == min(field))
 
 
 
