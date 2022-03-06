@@ -21,15 +21,15 @@ options(mc.cores = max(parallel::detectCores()-2L, 1L))
 #' I won't be simulating plant death because simulations show that this only
 #' adds complexity without changing outcomes.
 #' I'll also have alate production be density-independent because previous
-#' assays in our cages indicate density has little effect.
+#' assays in our fields indicate density has little effect.
 #'
 #'
 #' I'm simulating 1,000 days of interacting aphid and parasitoid wasp
 #' populations.
-#' There are two patches, one with wasps and another without.
-#' Movement between patches must happen via alates, and
+#' There are two fields, one with wasps and another without.
+#' Movement between fields must happen via alates, and
 #' rates of alate production are density-independent.
-#' Every day, 10% of all alates in each cage disperse to the other cage.
+#' Every day, 10% of all alates in each field disperse to the other field.
 #' There are two aphid lines:
 #' The susceptible line is susceptible to parasitism but has a higher
 #' growth rate.
@@ -65,50 +65,32 @@ para_lvls <- c("parasitism", "no parasitism")
 #' Base function to do all the simulations.
 #' Each section below builds on this one.
 #'
-do_base_sims <- function(.clonal_lines, .alate_disp_prop, .max_t,
-                         ...) {
+do_base_sims <- function(clonal_lines, ...) {
 
-    # .clonal_lines = c(line_s, line_r); .alate_disp_prop = 0.05
-    # .max_t = 1000; .perturb = NULL
-    # rm(.clonal_lines, .alate_disp_prop, .max_t, .perturb, .sims)
+    # clonal_lines = c(line_s, line_r)
+    # rm(clonal_lines, .sims, .args)
 
-    .args <- list(n_reps = 1, n_patches = 1, n_cages = 2,
-                           max_N = 0,
-                           max_plant_age = 1e9,
-                           mean_K = formals(sim_clonewars)$mean_K * 4,
-                           no_error = TRUE,
-                           wasp_delay = 0,
-                           wasp_density_0 = c(3, 0),
-                           plant_check_gaps = 1,  # makes alates disperse daily
-                           # alate_b0 = logit(0.3),
-                           alate_b0 = -5,
-                           alate_b1 = 2.2e-3,
-                           clonal_lines = .clonal_lines,
-                           alate_disp_prop = .alate_disp_prop,
-                           max_t = .max_t,
-                           perturb = NULL,
-                           K_y_mult = 1 / 1.57,
-                           s_y = populations$s_y,
-                           wasp_dispersal_p = 0,
-                           extinct_N = 1)
+    .args <- list(clonal_lines = clonal_lines)
     .other_args <- list(...)
     if (length(.other_args) > 0) {
         stopifnot(!is.null(names(.other_args)))
+        stopifnot(sum(duplicated(names(.other_args))) == 0)
+        stopifnot(all(names(.other_args) %in% names(formals(sim_experiments))))
         for (n in names(.other_args)) .args[[n]] <- .other_args[[n]]
     }
 
-    .sims <- do.call(sim_clonewars, .args)
+    .sims <- do.call(sim_experiments, .args)
 
     .sims[["wasps"]] <- .sims %>%
         .[["wasps"]] %>%
         select(-rep) %>%
-        mutate(cage = factor(cage, levels = 0:max(cage),
+        mutate(field = factor(field, levels = 0:max(field),
                              labels = para_lvls))
 
     .sims[["aphids"]] <- .sims %>%
         .[["aphids"]] %>%
-        select(-rep, -patch) %>%
-        mutate(cage = factor(cage, levels = 0:max(cage),
+        select(-rep, -plant) %>%
+        mutate(field = factor(field, levels = 0:max(field),
                              labels = para_lvls),
                line = factor(line, levels = c("resistant", "susceptible")))
 
@@ -140,7 +122,7 @@ group_aphids <- function(.sim_aphids_df, .type) {
 
     stopifnot(is.data.frame(.sim_aphids_df))
 
-    needed_cols <- c("cage", "time", "line", "type", "N")
+    needed_cols <- c("field", "time", "line", "type", "N")
     stopifnot(all(needed_cols %in% colnames(.sim_aphids_df)))
 
     # Other columns to potentially keep:
@@ -159,32 +141,32 @@ group_aphids <- function(.sim_aphids_df, .type) {
     if (.type == "living") {
         .out <- .sim_aphids_df %>%
             filter(type != "mummy") %>%
-            group_by(cage, time, line) %>%
+            group_by(field, time, line) %>%
             summarize(N = sum(N), .groups = "drop")
     } else if (.type == "unparasitized") {
         .out <- .sim_aphids_df %>%
             filter(type != "mummy", type != "parasitized") %>%
-            group_by(cage, time, line) %>%
+            group_by(field, time, line) %>%
             summarize(N = sum(N), .groups = "drop")
     } else if (.type == "mummies") {
         .out <- .sim_aphids_df %>%
             filter(type == "mummy") %>%
-            group_by(cage, time) %>%
+            group_by(field, time) %>%
             summarize(N = sum(N), .groups = "drop")
     } else if (.type == "parasitized") {
         .out <- .sim_aphids_df %>%
             filter(type == "mummy" | type == "parasitized") %>%
-            group_by(cage, time) %>%
+            group_by(field, time) %>%
             summarize(N = sum(N), .groups = "drop")
     } else if (.type == "alates") {
         .out <- .sim_aphids_df %>%
             filter(type == "alate") %>%
-            group_by(cage, time, line) %>%
+            group_by(field, time, line) %>%
             summarize(N = sum(N), .groups = "drop")
     } else if (.type == "apterous") {
         .out <- .sim_aphids_df %>%
             filter(type == "apterous") %>%
-            group_by(cage, time, line) %>%
+            group_by(field, time, line) %>%
             summarize(N = sum(N), .groups = "drop")
     } else {
         stop("ERROR: strange .type requested. Options are ",
@@ -231,18 +213,18 @@ plot_test <- function(.sims) {
                       mutate(N = wasps / mod),
                   fill = "gray80", color = NA) +
         # geom_line(aes(color = line, linetype = type)) +
-        geom_line(aes(color = line)) +
+        geom_line(aes(color = line), size = 1) +
         scale_color_manual(values = c("chartreuse3", "firebrick"), guide = "none") +
         scale_linetype_manual(values = c("solid", "33", "11")) +
         scale_y_continuous(expression("Aphid abundance (" %*% 1000 * ")"),
                            sec.axis = sec_axis(~ . * mod * 1000,
                                                "Wasp abundance")) +
         scale_x_continuous("Days") +
-        facet_wrap(~ cage, ncol = 1) +
+        facet_wrap(~ field, ncol = 1) +
         theme(strip.text = element_text(size = 10),
-              legend.position = "top",
-              panel.grid.major.x = element_line(size = 0.25, color = "gray90"),
-              panel.grid.major.y = element_line(size = 0.25, color = "gray90")) +
+              legend.position = "top") +  # ,
+              # panel.grid.major.x = element_line(size = 0.25, color = "gray90"),
+              # panel.grid.major.y = element_line(size = 0.25, color = "gray90")) +
         # coord_cartesian(ylim = c(0, 3)) +
         NULL
 
@@ -354,7 +336,7 @@ line_r2 <- clonal_line(name = "resistant",
 
 #'
 #' Do a call to `sim_clonewars` that can vary by the proportion of alates
-#' that move between cages every day (`alate_p`).
+#' that move between fields every day (`alate_p`).
 #' How does dispersal affect maintenance of diversity in the resistance trait?
 #'
 do_disp_sims <- function(.alate_disp_prop, .max_t = 5000) {
@@ -392,17 +374,17 @@ disp_p <- disp_aphids %>%
     ggplot(aes(time, N / 1e3)) +
     geom_hline(yintercept = 0, color = "gray70") +
     geom_area(data = disp_wasps %>%
-                  filter(cage == para_lvls[1]) %>%
+                  filter(field == para_lvls[1]) %>%
                   mutate(N = wasps / disp_mod),
               fill = "gray80", color = NA) +
-    geom_line(aes(color = line, linetype = cage, size = cage)) +
+    geom_line(aes(color = line, linetype = field, size = field)) +
     geom_text(data = tibble(line = factor(c("resistant", "susceptible")),
-                            cage = factor(para_lvls[1], levels = para_lvls),
+                            field = factor(para_lvls[1], levels = para_lvls),
                             alate_p = disp_aphids$alate_p %>% unique() %>% sort() %>% .[1],
                             time = c(500, 500), N = c(300, max(disp_aphids$N) - 300)),
               aes(label = line, color = line),
               size = 9 / 2.8, hjust = 0, vjust = c(0, 1)) +
-    geom_text(data = tibble(cage = factor(para_lvls[1], levels = para_lvls),
+    geom_text(data = tibble(field = factor(para_lvls[1], levels = para_lvls),
                             alate_p = disp_aphids$alate_p %>% unique() %>% sort() %>% .[3],
                             time = 500, N = 1200),
               aes(label = "wasps"), size = 9 / 2.8, hjust = 0, vjust = 0,
@@ -503,10 +485,10 @@ stable_start_p <- stable_start_aphids %>%
     ggplot(aes(time, N / 1e3)) +
     geom_hline(yintercept = 0, color = "gray70") +
     geom_area(data = stable_start_wasps %>%
-                  filter(cage == para_lvls[1]) %>%
+                  filter(field == para_lvls[1]) %>%
                   mutate(N = wasps / stable_start_mod),
               fill = "gray80", color = NA) +
-    geom_line(aes(color = line, linetype = cage, size = cage)) +
+    geom_line(aes(color = line, linetype = field, size = field)) +
     scale_color_manual(values = c("chartreuse3", "firebrick"), guide = "none") +
     scale_linetype_manual("Patch:", values = c("solid", "22")) +
     scale_size_manual("Patch:", values = c(0.5, 0.75)) +
@@ -607,10 +589,10 @@ stable_perturb_p <- stable_perturb_aphids %>%
     ggplot(aes(time, N / 1e3)) +
     geom_hline(yintercept = 0, color = "gray70") +
     geom_area(data = stable_perturb_wasps %>%
-                  filter(cage == para_lvls[1]) %>%
+                  filter(field == para_lvls[1]) %>%
                   mutate(N = wasps / stable_perturb_mod),
               fill = "gray80", color = NA) +
-    geom_line(aes(color = line, linetype = cage, size = cage)) +
+    geom_line(aes(color = line, linetype = field, size = field)) +
     scale_color_manual(values = c("chartreuse3", "firebrick"), guide = "none") +
     scale_linetype_manual("Patch:", values = c("solid", "22")) +
     scale_size_manual("Patch:", values = c(0.5, 0.75)) +
@@ -679,7 +661,7 @@ do_comm_mat_perturb_sims <- function(.who, .where) {
 # comm_mat_perturb_sims <- crossing(.who = c("resistant", "susceptible",
 #                                            "parasitized"), .where = 1:2) %>%
 #     # no need to perturb the non-existent parasitized aphids in the
-#     # no parasitism cage
+#     # no parasitism field
 #     filter(!(.who == "parasitized" &
 #                  .where == which(grepl("^no", para_lvls)))) %>%
 #     as.list() %>%
@@ -704,7 +686,7 @@ comm_mat_perturb_df <- list(
             a <- group_aphids(comm_mat_perturb_sims[[i]][["aphids"]],
                               "parasitized")
             b <- comm_mat_perturb_sims[[i]][["wasps"]]
-            full_join(a, b, by = c("cage", "time", "perturb_who",
+            full_join(a, b, by = c("field", "time", "perturb_who",
                                    "perturb_where")) %>%
                 mutate(N = N + wasps, type = "parasitized") %>%
                 select(-wasps)
@@ -712,7 +694,7 @@ comm_mat_perturb_df <- list(
     bind_rows() %>%
     mutate(perturb_where = factor(perturb_where, levels = 1:2,
                                   labels = para_lvls)) %>%
-    rename(who = type, where = cage)
+    rename(who = type, where = field)
 
 # Order of rows and columns:
 cm_order <- tibble(
@@ -764,7 +746,7 @@ eigen(comm_mat)$values
 #'
 #' Trying to simulate with low parasitism instead of no parasitism.
 #' Can't really get this working!
-#' The wasps in the low-parasitism cage always go extinct.
+#' The wasps in the low-parasitism field always go extinct.
 #'
 
 # ============================================================================*
@@ -772,10 +754,10 @@ eigen(comm_mat)$values
 
 
 #'
-#' Trying to get low parasitism cage not to crash.
+#' Trying to get low parasitism field not to crash.
 #'
 #'
-#' * `kymm` affects the low parasitism cage's value for the `K_y_mult` arg
+#' * `kymm` affects the low parasitism field's value for the `K_y_mult` arg
 #'   to `sim_clonewars` (it is multiplied by the default value) and
 #'   affects the density dependence of adult wasps;
 #'   higher values create *weaker* density dependence.
@@ -793,7 +775,7 @@ do_low_sims <- function(kymm, wdp) {
                           .wasp_dispersal_p = wdp)
 
     for (n in names(.sims)) .sims[[n]] <- .sims[[n]] %>%
-        mutate(cage = fct_recode(cage, low = "no parasitism",
+        mutate(field = fct_recode(field, low = "no parasitism",
                                  high = "parasitism"),
                k = kymm, w = wdp)
 
@@ -843,7 +825,7 @@ low_p_list <- low_aphids %>%
                                sec.axis = sec_axis(~ . * low_mod * 1000,
                                                    "Wasp abundance")) +
             scale_x_continuous("Days") +
-            facet_wrap(~ cage, ncol = 1) +
+            facet_wrap(~ field, ncol = 1) +
             theme(strip.text = element_text(size = 8),
                   axis.title = element_text(size = 8),
                   axis.text = element_text(size = 6),
