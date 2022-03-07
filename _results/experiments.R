@@ -210,6 +210,18 @@ lab_df <- aphid_cage_df %>%
 
 
 
+# aphid_cage_df_og <- aphid_cage_df
+# alate_cage_df_og <- alate_cage_df
+# wasp_cage_df_og <- wasp_cage_df
+#
+# # aphid_cage_df <- aphid_cage_df_og %>%
+# #     filter(treatment == "isolated")
+# # alate_cage_df <- alate_cage_df_og %>%
+# #     filter(treatment == "isolated")
+# # wasp_cage_df <- wasp_cage_df_og %>%
+# #     filter(treatment == "isolated")
+
+
 aphid_cage_p <- aphid_cage_df %>%
     ggplot(aes(days)) +
     geom_area(data = wasp_cage_df %>%
@@ -299,186 +311,32 @@ if (!file.exists(sprintf("~/Desktop/eco-evo_cages__%s.pdf", .date))) {
 # ============================================================================*
 # ============================================================================*
 
-# Misc. other plots ----
+#  Dispersal proportion ----
 
 # ============================================================================*
 # ============================================================================*
 
 
 
-# Checking specific situations:
-aphid_cage_df %>%
-    filter(days %in% sort(unique(days), decreasing = TRUE)[1:2]) %>%
-    filter(rep %in% c(9,10), line == "resistant", cage == "no wasp") %>%
-    select(treatment, rep, days, cage, line, aphids) %>%
-    arrange(treatment, rep, days, cage, line)
-
-
-
-#  __alates ----
-
-# Alate production decreasing?
-# alate_p <-
-aphid_cage_df %>%
-    filter(treatment != "isolated", cage == "no wasp") %>%
-    # filter(days > 7) %>%
-    group_by(trt_id, treatment, rep, days, line) %>%
-    summarize(across(c(aphids, alates_total), sum), .groups = "drop") %>%
-    mutate(P = ifelse(aphids > 0, alates_total / aphids, NA)) %>%
-    {stopifnot(all(.$P <= 1)); .} %>%
-    {amod <<- max(.$P, na.rm = TRUE) / (max(.$aphids) * 1.2); .} %>%
-    ggplot(aes(days, P, color = line)) +
-    stat_summary(aes(y = aphids * amod, group = trt_id), geom = "line",
-                 fun = sum, color = "gray70") +
-    geom_line(aes(y = aphids * amod)) +
-    geom_text(data = aphid_cage_df %>%
-                  filter(trt_id == "dispersal, rep 10") %>%
-                  filter(aphids == max(aphids)),
-              aes(days + 5, aphids * amod * 1.1, label = "both\nlines"),
-              hjust = 0, color = "gray50", size = 9 / 2.8, lineheight = 0.75) +
-    geom_point() +
-    facet_wrap(~ trt_id) +
-    scale_color_manual("aphid line", values = c("chartreuse3", "firebrick")) +
-    scale_y_continuous("Counted alates / aphids\n(points)",
-                       sec.axis = sec_axis(~ . / amod,
-                                           "Total aphids\n(lines)")) +
-    scale_x_continuous("Day of experiment", breaks = seq(0, 50, 25))
-
-alate_p
-
-ggsave(sprintf("~/Desktop/eco-evo_alates__%s.pdf", .date),
-       alate_p, width = 6.5, height = 4)
-
-
-
-
-
-
-# __observer differences ----
-
-
-
-# Expected vs observed alates IN:
-exp_df %>%
+left_join(aphid_cage_df, alate_cage_df,
+          by = c("treatment", "rep", "cage", "days", "line", "trt_id")) %>%
+    # Filter out isolated treatments:
     filter(treatment != "isolated") %>%
-    select(observer, rep, cage, days, starts_with("alates")) %>%
-    arrange(rep, days, cage) %>%
-    group_by(rep, days) %>%
-    summarize(observer = paste(unique(observer), collapse = "__"),
-              in_pred = list(c(rev(alates_total_red) / 2,
-                               rev(alates_total_green) / 2)),
-              in_obs = list(c(alates_in_red, alates_in_green)),
-              line = list(rep(c("red", "green"), each = 2)),
-              cage = list(rep(unique(cage), 2)),
-              .groups  = "drop") %>%
-    filter(!grepl("__", observer)) %>%
-    unnest(in_pred:cage) %>%
-    # problematic day:
-    # filter(in_pred > 7, in_obs < 2, observer == "CES")
-    ggplot(aes(in_pred, in_obs, color = cage)) +
-    geom_abline(slope = 1, intercept = 0, linetype = 2, color = "gray70") +
-    geom_point() +
-    facet_wrap(~ observer, nrow = 1) +
-    coord_equal() +
-    NULL
-
-
-# Differences in plant replacement by observer:
-exp_df %>%
-    mutate(n_replaced = replaced_plants %>%
-               str_split(",") %>%
-               map_int(length)) %>%
-    select(observer, n_replaced) %>%
-    ggplot(aes(observer, n_replaced)) +
-    geom_jitter() +
-    stat_summary(fun.data = "mean_cl_boot", color = "red")
-
-
-
-
-
-
-
-
-# =============================================================================*
-# =============================================================================*
-
-# For Schoville lab meeting -  9 Dec 2021
-
-# =============================================================================*
-# =============================================================================*
-
-
-
-bounds_df <- aphid_cage_df %>%
-    summarize(days = list(range(days)),
-              !!as.name(aphid_y) := list(range(!!as.name(aphid_y)))) %>%
-    unnest(cols = c(days, !!as.name(aphid_y)))
-
-
-
-trt <- "dispersal"
-# trt <- "isolated"
-
-
-p <- aphid_cage_df %>%
-    filter(treatment == trt) %>%
-    ggplot(aes(days)) +
-    # To set bounds independently of facet_* call:
-    geom_blank(data = bounds_df) +
-    geom_area(data = wasp_cage_df %>%
-                  filter(treatment == trt) %>%
-                  mutate(wasps = wasps * wasp_mod),
-              aes(y = wasps), fill = "gray80", color = NA) +
-    geom_hline(yintercept = 0, color = "gray60") +
-    geom_vline(data = aphid_cage_df %>%
-                   filter(treatment == trt) %>%
-                   filter(rep %in% 6:10) %>%
-                   distinct(trt_id) %>%
-                   mutate(x = difftime(as.Date("2021-08-23"),
-                                       as.Date("2021-06-14"),
-                                       units = "days") %>% as.integer()),
-               aes(xintercept = x), linetype = 3, color = "gray70") +
-    geom_vline(data = aphid_cage_df %>%
-                   filter(treatment == trt) %>%
-                   filter(rep %in% 6:10) %>%
-                   distinct(trt_id) %>%
-                   mutate(x = difftime(as.Date("2021-07-26"),
-                                       as.Date("2021-06-14"),
-                                       units = "days") %>% as.integer()),
-               aes(xintercept = x), linetype = 2, color = "gray70") +
-    geom_line(aes_(y = as.name(aphid_y), color = ~line), size = 0.75) +
-    # Points for when experiment terminated:
-    geom_point(data = aphid_cage_df %>%
-                   filter(treatment == trt) %>%
-                   filter(terminated),
-               aes_(y = as.name(aphid_y), color = ~line), shape = 4, size = 3) +
-    facet_grid(trt_id ~ cage,
-               scales = "fixed") +
-    scale_color_manual(NULL, values = clone_pal) +
-    scale_y_continuous(ifelse(aphid_y == "log_aphids",
-                              "log(aphid abundance + 1)",
-                              "Aphid abundance"),
-                       sec.axis = sec_axis(~ . / wasp_mod,
-                                           paste0("Wasps (gray shading)\n",
-                                                  "Alates input (points)"))) +
-    scale_x_continuous("Day of experiment") +
-    theme(strip.text.y = element_blank(), legend.position = "right") +
-    NULL
-
-if (trt == "dispersal") {
-    p <- p +
-        geom_point(data = aphid_cage_df %>%
-                       filter(treatment == trt) %>%
-                       filter(rep == 8, cage == "wasp") %>%
-                       distinct(trt_id, cage) %>%
-                       mutate(days = difftime(as.Date("2021-09-16"),
-                                              as.Date("2021-06-14"),
-                                              units = "days") %>% as.integer()),
-                   aes(y = max(aphid_cage_df[[aphid_y]]) * 0.9),
-                   shape = 8, size = 3)
-}
-
-ggsave(paste0("~/Desktop/eco-evo-", trt, ".pdf"),
-       p, width = 6.5, height = ifelse(trt == "dispersal", 4, 3))
+    # Filter out observations from before we were dispersing alates
+    # on the tops of plants:
+    filter(!(rep %in% 6:10 &
+                 days < as.integer(difftime(as.Date("2021-08-23"),
+                                            as.Date("2021-06-14"),
+                                            units = "days")))) %>%
+    # Filter out the beginnings of each period because it takes some time
+    # for alates to show up
+    filter(days > 20) %>%
+    mutate(dispersed = alates_total / 2) %>%
+    # Control for rare scenario where there were lots of alates on the
+    # sides/tops but few on plants, so alates_total > aphids
+    mutate(aphids = ifelse(alates_total > aphids, alates_total + aphids, aphids)) %>%
+    filter(aphids > 0) %>%
+    mutate(p_dispersed = dispersed / aphids) %>%
+    group_by(cage, line) %>%
+    summarize(p_dispersed = mean(p_dispersed), nobs = n(), .groups = "drop")
 
