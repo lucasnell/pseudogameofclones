@@ -46,7 +46,7 @@ are added to the dispersal pool.
 After adding alates to the pool, they are then evenly distributed
 to all fields.
 This happens only on days indicated by \code{plant_check_gaps}.
-Defaults to \code{0.05}.}
+Defaults to \code{0.1}.}
 
 \item{K}{Aphid density dependence.
 Defaults to \code{12.5e3} because this caused simulations to
@@ -60,7 +60,7 @@ Defaults to \code{-5} because we're making this weakly density dependent.}
 \item{alate_b1}{The proportion of offspring from apterous aphids is
 \code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
 aphids on that plant.
-Defaults to \code{K / 1.76e-07}, which makes alate production only mildly
+Defaults to \code{K * 1.76e-07}, which makes alate production only mildly
 density dependent.}
 
 \item{K_y_mult}{The number multiplied by \code{K} to get density dependence for

@@ -509,7 +509,7 @@ cube_list_check <- function(x, n) {
 #'     After adding alates to the pool, they are then evenly distributed
 #'     to all fields.
 #'     This happens only on days indicated by `plant_check_gaps`.
-#'     Defaults to `0.05`.
+#'     Defaults to `0.1`.
 #' @param shape1_wilted_mort Shape 1 for the beta distribution that generates
 #'     mortality parameters for aphid populations living on a wilted plant.
 #'     If `wilted_effects_error` is `FALSE`, then the wilted-plant-induced
@@ -596,7 +596,7 @@ sim_clonewars_full <- function(n_reps,
                                disp_mort = 0,
                                alate_b0 = logit(0.093),
                                alate_b1 = 0,
-                               alate_field_disp_p = 0.05,
+                               alate_field_disp_p = 0.1,
                                shape1_wilted_mort = 3.736386,
                                shape2_wilted_mort = 5.777129,
                                extinct_N = 1,
@@ -845,7 +845,7 @@ sim_clonewars_full <- function(n_reps,
 #' @param alate_b1 The proportion of offspring from apterous aphids is
 #'     `inv_logit(alate_b0 + alate_b1 * N)` where `N` is the total number of
 #'     aphids on that plant.
-#'     Defaults to `K / 1.76e-07`, which makes alate production only mildly
+#'     Defaults to `K * 1.76e-07`, which makes alate production only mildly
 #'     density dependent.
 #' @param pred_rate Daily predation rate on aphids and mummies.
 #'     Defaults to `0.1` to compensate for losses from plants dying.

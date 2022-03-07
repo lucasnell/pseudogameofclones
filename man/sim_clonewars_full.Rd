@@ -45,7 +45,7 @@ sim_clonewars_full(
   disp_mort = 0,
   alate_b0 = logit(0.093),
   alate_b1 = 0,
-  alate_field_disp_p = 0.05,
+  alate_field_disp_p = 0.1,
   shape1_wilted_mort = 3.736386,
   shape2_wilted_mort = 5.777129,
   extinct_N = 1,
@@ -241,7 +241,7 @@ are added to the dispersal pool.
 After adding alates to the pool, they are then evenly distributed
 to all fields.
 This happens only on days indicated by \code{plant_check_gaps}.
-Defaults to \code{0.05}.}
+Defaults to \code{0.1}.}
 
 \item{shape1_wilted_mort}{Shape 1 for the beta distribution that generates
 mortality parameters for aphid populations living on a wilted plant.
