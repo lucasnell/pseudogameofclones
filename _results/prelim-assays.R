@@ -29,6 +29,9 @@ assay_excel_file <- paste0("~/Box Sync/eco-evo_experiments/prelim_assays/",
 # ========================================================================*
 # ========================================================================*
 
+# Palette for the two clonal lines.
+# Equivalent to `viridis::viridis(100)[c(70, 10)]`.
+clone_pal <- c("#41BE71FF", "#482173FF")
 
 # -----------------------------------------------`
 # __pop. growth ----
@@ -61,7 +64,7 @@ pop_p <- pop_df %>%
     geom_line() +
     geom_point(aes(shape = zero), size = 2) +
     facet_wrap(~ rep, nrow = 2) +
-    scale_color_manual(values = c("chartreuse3", "firebrick")) +
+    scale_color_manual(values = clone_pal) +
     scale_shape_manual(values = c(19, 4), guide = "none") +
     scale_y_continuous("Number of aphids") +
     scale_x_continuous("Days after start") +
@@ -71,7 +74,7 @@ pop_p <- pop_df %>%
 
 pop_p
 
-# save_plot("_results/plots/assays_competition.pdf", pop_p, 5, 3)
+# save_plot("_results/plots/assays-competition.pdf", pop_p, 5, 3)
 
 
 
@@ -140,7 +143,7 @@ mummy_p <- wasp_df %>%
     geom_hline(yintercept = 0, color = "gray70") +
     geom_jitter(height = 0, width = 0.25, shape = 1) +
     stat_summary(fun.data = "mean_cl_boot", color = "black") +
-    scale_color_manual(values = c("chartreuse3", "firebrick"), guide = "none") +
+    scale_color_manual(values = clone_pal, guide = "none") +
     ylab("Mummy proportion") +
     NULL
 
@@ -153,7 +156,7 @@ juv_p <- wasp_df %>%
     geom_hline(yintercept = 0, color = "gray70") +
     geom_jitter(height = 0, width = 0.25, shape = 1) +
     stat_summary(fun.data = "mean_cl_boot", color = "black") +
-    scale_color_manual(values = c("chartreuse3", "firebrick"), guide = "none") +
+    scale_color_manual(values = clone_pal, guide = "none") +
     scale_y_continuous("Number of juveniles") +
     NULL
 
@@ -167,7 +170,7 @@ surv_p <- wasp_df %>%
     geom_hline(yintercept = 0, color = "gray70") +
     geom_jitter(height = 0, width = 0.25, shape = 1) +
     stat_summary(fun.data = "mean_cl_boot", color = "black") +
-    scale_color_manual(values = c("chartreuse3", "firebrick"), guide = "none") +
+    scale_color_manual(values = clone_pal, guide = "none") +
     ylab("Survival proportion") +
     NULL
 
@@ -183,7 +186,7 @@ wasp_p <- mummy_p + surv_p + juv_p +
                                      vjust = 1, hjust = 1),
           axis.title.x = element_blank())
 
-# save_plot("_results/plots/assays_wasps.pdf", wasp_p, 6.5, 3.5, seed = 45670)
+# save_plot("_results/plots/assays-wasps.pdf", wasp_p, 6.5, 3.5, seed = 45670)
 
 
 

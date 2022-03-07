@@ -4,6 +4,11 @@ library(clonewars)
 source(".Rprofile")
 
 
+# Palette for the two clonal lines.
+# Equivalent to `viridis::viridis(100)[c(70, 10)]`.
+clone_pal <- c("#41BE71FF", "#482173FF")
+
+
 # Date of most recent downloaded datasheet:
 .date <- "2022-02-17"
 
@@ -269,7 +274,7 @@ aphid_cage_p <- aphid_cage_df %>%
                scales = "fixed") +
                # # use this when you have new reps:
                # scales = "free_y") +
-    scale_color_manual(NULL, values = c("chartreuse3", "firebrick")) +
+    scale_color_manual(NULL, values = clone_pal) +
     scale_y_continuous(ifelse(aphid_y == "log_aphids",
                               "log(aphid abundance + 1)",
                               "Aphid abundance"),
@@ -450,7 +455,7 @@ p <- aphid_cage_df %>%
                aes_(y = as.name(aphid_y), color = ~line), shape = 4, size = 3) +
     facet_grid(trt_id ~ cage,
                scales = "fixed") +
-    scale_color_manual(NULL, values = c("chartreuse3", "firebrick")) +
+    scale_color_manual(NULL, values = clone_pal) +
     scale_y_continuous(ifelse(aphid_y == "log_aphids",
                               "log(aphid abundance + 1)",
                               "Aphid abundance"),

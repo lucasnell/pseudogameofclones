@@ -58,8 +58,10 @@ line_r <- clonal_line("resistant",
 
 para_lvls <- c("parasitism", "no parasitism")
 
-# Palette for clonal line
-clone_pal <- c("chartreuse3", "firebrick")
+# Palette for the two clonal lines.
+# Equivalent to `viridis::viridis(100)[c(70, 10)]`.
+clone_pal <- c("#41BE71FF", "#482173FF")
+
 
 # To maintain the same y-axis limits:
 wasp_mod <- 0.0164459
@@ -192,6 +194,76 @@ group_aphids <- function(.sim_aphids_df, .type) {
 # ============================================================================*
 
 
+main_sims <- rep(list(NA), 2)
+main_sims[[1]] <- do_base_sims()
+main_sims[[2]] <- do_base_sims(alate_field_disp_p = 0)
+names(main_sims) <- c("aphid dispersal", "no aphid dispersal")
+for (d in names(main_sims)) {
+    for (n in c("wasps", "aphids")) {
+        main_sims[[d]][[n]] <- main_sims[[d]][[n]] %>%
+            mutate(disp = d)
+    }
+}
+
+main_aphids <- map_dfr(main_sims, ~ group_aphids(.x[["aphids"]], "living")) %>%
+    mutate(disp = factor(disp, levels = names(main_sims)))
+main_mummies <- map_dfr(main_sims, ~ group_aphids(.x[["aphids"]], "mummies")) %>%
+    mutate(disp = factor(disp, levels = names(main_sims)))
+main_wasps <- map_dfr(main_sims, ~ .x[["wasps"]]) %>%
+    mutate(disp = factor(disp, levels = names(main_sims)))
+
+
+main_p_list <- map(
+    levels(main_aphids$disp),
+    function(d) {
+        mad <- main_aphids %>%
+            filter(disp == d)
+        wad <- main_wasps %>%
+            filter(disp == d)
+        mad %>%
+            ggplot(aes(time, N / 1e3)) +
+            ggtitle(d) +
+            geom_hline(yintercept = 0, color = "gray70") +
+            geom_area(data = wad %>%
+                          mutate(N = wasps / wasp_mod),
+                      fill = "gray80", color = NA) +
+            geom_line(aes(color = line)) +
+            scale_color_manual(values = clone_pal, guide = "none") +
+            scale_y_continuous(expression("Aphid abundance (" %*% 1000 * ")"),
+                               breaks = 0:2, limits = ylims,
+                               sec.axis = sec_axis(~ . * wasp_mod * 1000,
+                                                   "Wasp abundance",
+                                                   breaks = 0:2 * 20)) +
+            scale_x_continuous("Days") +
+            facet_wrap( ~ field, ncol = 1) +
+            theme(strip.text = element_text(size = 10),
+                  plot.title = element_text(size = 12, hjust = 0.5,
+                                            margin = margin(0,0,0,b=6)))
+    })
+
+
+main_p_list[[1]] <- main_p_list[[1]] +
+    geom_text(data = tibble(line = factor(c("susceptible", "resistant")),
+                            field = factor(para_lvls[1], levels = para_lvls),
+                            time = 250,
+                            N = c(520, 1700)),
+              aes(label = line, color = line),
+              size = 9 / 2.8, hjust = 1, vjust = 0) +
+    geom_text(data = tibble(field = factor(para_lvls[1], levels = para_lvls),
+                            time = 45, N = 1400),
+              aes(label = "wasps"), size = 9 / 2.8, hjust = 0.5, vjust = 0,
+              color = "gray50")
+
+
+main_p <- wrap_plots(main_p_list, ncol = 2) +
+    plot_annotation(tag_levels = "A") &
+    theme(plot.tag = element_text(size = 14, face = "bold"))
+
+# main_p
+
+# save_plot("_results/plots/sims-main.pdf", main_p, 8, 4)
+
+
 
 
 
@@ -281,8 +353,7 @@ disp_p <- wrap_plots(disp_p_list, ncol = 2) +
     theme(plot.tag = element_text(size = 14, face = "bold"))
 
 
-
-# save_plot("_results/plots/disp_sims.pdf", disp_p, 8, 6)
+# save_plot("_results/plots/sims-disp.pdf", disp_p, 8, 6)
 
 
 
@@ -401,7 +472,7 @@ stable_start_p <- wrap_plots(stable_start_p_list, ncol = 2) +
     plot_annotation(tag_levels = "A") &
     theme(plot.tag = element_text(size = 14, face = "bold"))
 
-# save_plot("_results/plots/stable_start_sims.pdf", stable_start_p, 8, 6)
+# save_plot("_results/plots/sims-stable-start.pdf", stable_start_p, 8, 6)
 
 
 
@@ -525,7 +596,7 @@ stable_perturb_p <- wrap_plots(stable_perturb_p_list, ncol = 2) +
     plot_annotation(tag_levels = "A") &
     theme(plot.tag = element_text(size = 14, face = "bold"))
 
-# save_plot("_results/plots/stable_perturb_sims.pdf", stable_perturb_p, 8, 6)
+# save_plot("_results/plots/sims-stable-perturb.pdf", stable_perturb_p, 8, 6)
 
 
 
