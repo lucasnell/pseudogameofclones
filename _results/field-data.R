@@ -176,8 +176,12 @@ par_df <- list(
     mutate(rr_rs = rel_res_fitness(para))
 
 
-# Color palette to use in plots (using binned rr_rs values):
-rr_rs_pal <- c(viridis(3, begin = 0.1, end = 0.8, direction = -1), "gray70")
+# Color palettes to use in plots (using binned rr_rs values):
+rr_rs_pal <- with(list(pal = inferno, inds = c(80, 60, 20)),
+                  list(color = c(pal(100)[inds], "gray70"),
+                       fill = c(pal(100)[inds], "white"),
+                       fill2 = c(pal(100, alpha = 0.5)[inds], "white")))
+
 # Add factor that breaks rr_rs into bins for plotting:
 add_rr_rs_fct <- function(.df) {
     .df %>%
@@ -205,8 +209,11 @@ maps_dates <- as.Date(c("2015-06-03", "2015-06-12", "2015-06-19",
 #' and because code I used to separate by cycle for years 2011--2016 doesn't
 #' appear to work for 2017--2019.
 #'
-#' To show the
-#'
+
+
+
+
+
 
 par_ts_p <- par_df %>%
     split(.$year) %>%
@@ -224,11 +231,15 @@ par_ts_p <- par_df %>%
                aes(xend = plot_date, yend = -0.05),
                size = 0.5, linejoin = "mitre",
                arrow = arrow(length = unit(0.1, "lines"), type = "closed")) +
-    geom_point(aes(color = rr_rs_fct), alpha = 0.5, size = 1) +
+    geom_point(aes(color = rr_rs_fct, fill = rr_rs_fct),
+               size = 1, shape = 21) +
     facet_wrap(~ year, ncol = 3) +
     scale_color_manual(paste0("Relative fitness for\nresistant aphids\n",
                               "(r\U1D63 / r\U209B)"),
-                      values = rr_rs_pal) +
+                      values = rr_rs_pal$color) +
+    scale_fill_manual(paste0("Relative fitness for\nresistant aphids\n",
+                              "(r\U1D63 / r\U209B)"),
+                      values = rr_rs_pal$fill2) +
     guides(color = guide_legend(override.aes = list(alpha = 1, size = 3))) +
     scale_x_date(date_breaks = "1 month", date_labels = "%b") +
     scale_y_continuous("Parasitism", breaks = 0.4*0:2) +
@@ -390,15 +401,20 @@ fields_par_p <- obs_fields_par %>%
     geom_rect(xmin = xy_lims$xmin, xmax = xy_lims$xmax,
               ymin = xy_lims$ymin, ymax = xy_lims$ymax,
               fill = NA, color = "black", size = 0.5) +
-    geom_sf(aes(size = para, color = rr_rs_fct), shape = 16) +
+    geom_sf(aes(size = para, color = rr_rs_fct, fill = rr_rs_fct), shape = 21) +
     scale_color_manual(paste("'Relative fitness\nfor resistance\n('",
                              "* r[r] / r[s] * ')'") %>%
                            str2expression(),
                        guide = "none",
-                       values = rr_rs_pal) +
+                       values = rr_rs_pal$color) +
+    scale_fill_manual(paste("'Relative fitness\nfor resistance\n('",
+                             "* r[r] / r[s] * ')'") %>%
+                           str2expression(),
+                       guide = "none",
+                       values = rr_rs_pal$fill) +
     scale_size("Parasitism", limits = c(0, 0.85), range = c(0.5, 8),
                breaks = 0.2 * 0:4) +
-    guides(size = guide_legend()) +
+    guides(size = guide_legend(override.aes = list(shape = 16))) +
     coord_sf(datum = st_crs(32616),
              xlim = as.numeric(xy_lims[c("xmin", "xmax")]),
              ylim = as.numeric(xy_lims[c("ymin", "ymax")])) +
@@ -425,7 +441,7 @@ mosaic_p <- par_ts_p + fields_par_p +
     plot_layout(nrow = 2, heights = c(1, 1.5)) &
     theme(plot.tag = element_text(size = 14, face = "bold"))
 
-save_plot("_results/plots/mosaic.pdf", mosaic_p, 7, 7)
+# save_plot("_results/plots/mosaic.pdf", mosaic_p, 7, 7)
 
 
 
