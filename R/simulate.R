@@ -1139,3 +1139,37 @@ restart_experiment <- function(sims_obj,
     return(sims)
 
 }
+
+
+
+# cloneSims* print methods ----
+
+#'
+#' @export
+#' @noRd
+#'
+print.cloneSims <- function(x, ...) {
+    cat("< cloneSims object >\n\n")
+    cat("$aphids\n")
+    print(head(x$aphids))
+    cat("\n$wasps\n")
+    print(head(x$wasps))
+    cat("\n$all_info\n")
+    print(lapply(x$all_info, head, n = 5))
+    invisible(x)
+}
+
+#'
+#' @export
+#' @noRd
+#'
+print.cloneSimsRestart <- function(x, ...) {
+    cat("< cloneSimsRestart object >\n\n")
+    cat("$aphids\n")
+    print(head(x$aphids))
+    cat("\n$wasps\n")
+    print(head(x$wasps))
+    cat("\n$all_info\n")
+    print(lapply(x$all_info, head, n = 5))
+    invisible(x)
+}

@@ -2,6 +2,8 @@
 
 S3method(c,aphid)
 S3method(print,aphid)
+S3method(print,cloneSims)
+S3method(print,cloneSimsRestart)
 S3method(print,multiAphid)
 export(carrying_capacity)
 export(clonal_line)
