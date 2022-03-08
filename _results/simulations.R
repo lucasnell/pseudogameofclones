@@ -56,7 +56,7 @@ line_r <- clonal_line("resistant",
                       surv_adult_apterous = "low",
                       repro_apterous = "low")
 
-para_lvls <- c("parasitism", "no parasitism")
+para_lvls <- paste(c("parasitism", "no parasitism"), "patch")
 
 # Palette for the two clonal lines.
 # Equivalent to `viridis::viridis(100)[c(70, 10)]`.
@@ -235,7 +235,7 @@ main_p_list <- map(
                                                    "Wasp abundance",
                                                    breaks = 0:2 * 20)) +
             scale_x_continuous("Days") +
-            facet_wrap( ~ field, ncol = 1) +
+            facet_wrap( ~ field, nrow = 1) +
             theme(strip.text = element_text(size = 10),
                   plot.title = element_text(size = 12, hjust = 0.5,
                                             margin = margin(0,0,0,b=6)))
@@ -255,13 +255,13 @@ main_p_list[[1]] <- main_p_list[[1]] +
               color = "gray50")
 
 
-main_p <- wrap_plots(main_p_list, ncol = 2) +
+main_p <- wrap_plots(main_p_list, ncol = 1) +
     plot_annotation(tag_levels = "A") &
     theme(plot.tag = element_text(size = 14, face = "bold"))
 
 # main_p
 
-# save_plot("_results/plots/sims-main.pdf", main_p, 8, 4)
+# save_plot("_results/plots/sims-main.pdf", main_p, 6, 5)
 
 
 
@@ -330,7 +330,7 @@ disp_p_list <- map(
                                                    "Wasp abundance",
                                                    breaks = 0:2 * 20)) +
             scale_x_continuous("Days") +
-            facet_wrap( ~ field, ncol = 1) +
+            facet_wrap( ~ field, nrow = 1) +
             theme(strip.text = element_text(size = 10),
                   plot.title = element_text(size = 12, hjust = 0.5))
     })
@@ -341,10 +341,13 @@ disp_p_list[[1]] <- disp_p_list[[1]] +
                             field = factor(para_lvls[1], levels = para_lvls),
                             time = c(500, 500), N = c(300, max(disp_aphids$N) - 300)),
               aes(label = line, color = line),
-              size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
+              size = 9 / 2.8, hjust = 1, vjust = c(0, 1))
+
+
+disp_p_list[[4]] <- disp_p_list[[4]] +
     geom_text(data = tibble(field = factor(para_lvls[1], levels = para_lvls),
-                            time = 0, N = 1500),
-              aes(label = "wasps"), size = 9 / 2.8, hjust = 0, vjust = 0,
+                            time = 400, N = 1500),
+              aes(label = "wasps"), size = 9 / 2.8, hjust = 1, vjust = 0,
               color = "gray50")
 
 
@@ -353,7 +356,7 @@ disp_p <- wrap_plots(disp_p_list, ncol = 2) +
     theme(plot.tag = element_text(size = 14, face = "bold"))
 
 
-# save_plot("_results/plots/sims-disp.pdf", disp_p, 8, 6)
+# save_plot("_results/plots/sims-disp.pdf", disp_p, 10, 5)
 
 
 
@@ -411,7 +414,6 @@ do_stable_start_sims <- function(.p_res, .max_t = 5000) {
 
 p_res_lvls <- c(0.35, 0.4, 0.8, 0.85)
 
-# Takes ~9 sec
 stable_start_sims <- mclapply(p_res_lvls, do_stable_start_sims)
 
 
@@ -451,7 +453,7 @@ stable_start_p_list <- map(
                                                    "Wasp abundance",
                                                    breaks = 0:2 * 20)) +
             scale_x_continuous("Days") +
-            facet_wrap(~ field, ncol = 1) +
+            facet_wrap(~ field, nrow = 1) +
             theme(strip.text = element_text(size = 10),
                   plot.title = element_text(size = 12, hjust = 0.5))
     })
@@ -464,15 +466,15 @@ stable_start_p_list[[1]] <- stable_start_p_list[[1]] +
               aes(label = line, color = line),
               size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
     geom_text(data = tibble(field = factor(para_lvls[1], levels = para_lvls),
-                            time = 500, N = 1800),
-              aes(label = "wasps"), size = 9 / 2.8, hjust = 1, vjust = 0,
+                            time = 400, N = 800),
+              aes(label = "wasps"), size = 9 / 2.8, hjust = 0.5, vjust = 0.5,
               color = "gray50")
 
 stable_start_p <- wrap_plots(stable_start_p_list, ncol = 2) +
     plot_annotation(tag_levels = "A") &
     theme(plot.tag = element_text(size = 14, face = "bold"))
 
-# save_plot("_results/plots/sims-stable-start.pdf", stable_start_p, 8, 6)
+# save_plot("_results/plots/sims-stable-start.pdf", stable_start_p, 10, 5)
 
 
 
@@ -574,7 +576,7 @@ stable_perturb_p_list <- map(
                                                    "Wasp abundance",
                                                    breaks = 0:2 * 20)) +
             scale_x_continuous("Days") +
-            facet_wrap(~ field, ncol = 1) +
+            facet_wrap(~ field, nrow = 1) +
             theme(strip.text = element_text(size = 10),
                   plot.title = element_text(size = 12, hjust = 0.5))
     })
@@ -587,8 +589,8 @@ stable_perturb_p_list[[1]] <- stable_perturb_p_list[[1]] +
               aes(label = line, color = line),
               size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
     geom_text(data = tibble(field = factor(para_lvls[1], levels = para_lvls),
-                            time = 10030, N = 550),
-              aes(label = "wasps"), size = 9 / 2.8, hjust = 0, vjust = 0,
+                            time = 10200, N = 110),
+              aes(label = "wasps"), size = 9 / 2.8, hjust = 0, vjust = 0.5,
               color = "gray50")
 
 
@@ -596,7 +598,7 @@ stable_perturb_p <- wrap_plots(stable_perturb_p_list, ncol = 2) +
     plot_annotation(tag_levels = "A") &
     theme(plot.tag = element_text(size = 14, face = "bold"))
 
-# save_plot("_results/plots/sims-stable-perturb.pdf", stable_perturb_p, 8, 6)
+# save_plot("_results/plots/sims-stable-perturb.pdf", stable_perturb_p, 10, 5)
 
 
 

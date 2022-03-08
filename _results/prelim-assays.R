@@ -139,7 +139,7 @@ wasp_df <- bind_rows(
 
 
 mummy_p <- wasp_df %>%
-    ggplot(aes(line, mummy_end, color = line)) +
+    ggplot(aes(line, p_mummy, color = line)) +
     geom_hline(yintercept = 0, color = "gray70") +
     geom_jitter(height = 0, width = 0.25, shape = 1) +
     stat_summary(fun.data = "mean_cl_boot", color = "black") +
