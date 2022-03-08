@@ -1,5 +1,6 @@
 library(tidyverse)
 library(clonewars)
+library(patchwork)
 
 source(".Rprofile")
 
@@ -8,9 +9,11 @@ source(".Rprofile")
 # Equivalent to `viridis::viridis(100)[c(70, 10)]`.
 clone_pal <- c("#41BE71FF", "#482173FF")
 
+# What to name wasp and no wasp cages for plot:
+cage_lvls <- c("parasitism cage" = "wasp", "no parasitism cage" = "no wasp")
 
 # Date of most recent downloaded datasheet:
-.date <- "2022-02-17"
+.date <- "2022-02-28"
 
 #'
 #' Reps to exclude from plot.
@@ -45,29 +48,18 @@ exp_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
            cage = cage %>%
                tolower() %>%
                factor(levels = c("wasp", "no wasp")),
-           rep = factor(rep, levels = sort(unique(rep))),
-           trt_id = interaction(treatment, rep, drop = TRUE, sep = ", rep ",
-                                lex.order = TRUE)) %>%
-    select(trt_id, everything(), -start_date, -red_line,
+           rep = factor(rep, levels = sort(unique(rep)))) %>%
+    select(everything(), -start_date, -red_line,
            -green_line) %>%
-    # To show when an experimental cage was terminated:
+    # To show when an experimental cage was terminated bc of an extinction:
     group_by(treatment, rep, cage) %>%
     mutate(terminated = date == max(date[plant1_red >= 0])) %>%
     ungroup() %>%
-    # Using 2nd latest date to prevent all cages that weren't sampled on the
+    # Using `- 4` to prevent all cages that weren't sampled on the
     # latest date from returning TRUE here
-    mutate(terminated = (terminated & date < sort(unique(date),
-                                                  decreasing = TRUE)[2]))
-
-
-
-# Should be zero!
-exp_df %>%
-    filter(if_any(starts_with("plant"), is.na)) %>%
-    nrow()
-
-# Should be TRUE!
-nrow(distinct(exp_df, treatment, rep)) == nrow(distinct(exp_df, rep))
+    mutate(terminated = (terminated &
+                             date < (max(date) - 4) &
+                             days < (max(days) - 4)))
 
 
 
@@ -98,8 +90,6 @@ pesky_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
            cage = factor("no wasp", levels = levels(exp_df$cage)),
            treatment = ifelse(rep %in% c(6,8,10,11),"dispersal","isolated") %>%
                factor(levels = levels(exp_df$treatment)),
-           trt_id = paste(treatment, rep, sep = ", rep ") %>%
-               factor(levels = levels(exp_df$trt_id)),
            start_date = map_chr(rep, ~ filter(exp_df, rep == .x) %>%
                                     .[["date"]] %>% min() %>% paste()) %>%
                as.Date(),
@@ -124,17 +114,15 @@ wasp_cage_df <- exp_df %>%
     filter(!interaction(rep, date, cage, drop = TRUE) %in%
                interaction(pesky_df$rep, pesky_df$date, pesky_df$cage,
                            drop = TRUE)) %>%
-    select(trt_id, treatment, rep, cage, days, date, wasps, mummies, wasps_rm, mumm_rm) %>%
+    select(treatment, rep, cage, days, date, wasps, mummies, wasps_rm, mumm_rm) %>%
     filter(wasps >= 0) %>%
     mutate(pesky = 0) %>%
     bind_rows(pesky_df %>%
-                  select(trt_id, treatment, rep, cage, days, date, wasps, mummies) %>%
+                  select(treatment, rep, cage, days, date, wasps, mummies) %>%
                   mutate(wasps_rm = wasps, mumm_rm = mummies,
                          pesky = 1)) %>%
-    mutate(pesky = factor(pesky, levels = 0:1))
-
-
-
+    mutate(pesky = factor(pesky, levels = 0:1),
+           cage = fct_recode(cage, !!!cage_lvls))
 
 
 
@@ -152,8 +140,9 @@ aphid_cage_df <- exp_df %>%
                             line == "green" ~ "resistant") %>%
                factor(levels = c("resistant", "susceptible"))) %>%
     filter(aphids >= 0) %>%
-    mutate(log_aphids = log1p(aphids)) %>%
-    select(trt_id, treatment, rep, cage, days, line, aphids,
+    mutate(log_aphids = log1p(aphids),
+           cage = fct_recode(cage, !!!cage_lvls)) %>%
+    select(treatment, rep, cage, days, line, aphids,
            log_aphids, terminated)
 
 
@@ -163,7 +152,7 @@ alate_cage_df <- exp_df %>%
     mutate(n_replaced = replaced_plants %>%
                str_split(",") %>%
                map_int(length)) %>%
-    select(trt_id, treatment, rep, cage, days,
+    select(treatment, rep, cage, days,
            starts_with("alates_"), n_replaced) %>%
     pivot_longer(starts_with("alates_total_"), names_to = "line",
                  values_to = "alates_total") %>%
@@ -171,8 +160,9 @@ alate_cage_df <- exp_df %>%
            alates_in = ifelse(line == "red", alates_in_red, alates_in_green),
            line = case_when(line == "red" ~ "susceptible",
                             line == "green" ~ "resistant") %>%
-               factor(levels = c("resistant", "susceptible"))) %>%
-    select(trt_id, treatment, rep, cage, days, line,
+               factor(levels = c("resistant", "susceptible")),
+           cage = fct_recode(cage, !!!cage_lvls)) %>%
+    select(treatment, rep, cage, days, line,
            alates_total, alates_in, n_replaced)
 
 
@@ -185,127 +175,184 @@ alate_cage_df <- exp_df %>%
 # ============================================================================*
 
 
-aphid_y <- "aphids"
 
-wasp_mod <- max(aphid_cage_df[[aphid_y]], na.rm = TRUE) /
-    max(max(wasp_cage_df$wasps), max(alate_cage_df$alates_in, na.rm = TRUE))
+wasp_mod <- max(max(wasp_cage_df$wasps),
+                max(alate_cage_df$alates_in, na.rm = TRUE)) /
+    max(aphid_cage_df$aphids, na.rm = TRUE)
 
-# Use col `Y` when facet scales are free, `Z` when they're not
-lab_df <- aphid_cage_df %>%
-    split(.$trt_id, drop = TRUE) %>%
-    map_dfr(function(.d) {
-        max_aphids <- max(.d[[aphid_y]], na.rm = TRUE)
-        .dw <- wasp_cage_df %>%
-            filter(trt_id == .d$trt_id[1])
-        .da <- alate_cage_df %>%
-            filter(trt_id == .d$trt_id[1])
-        max_y2 <- max(max(.dw$wasps, na.rm = TRUE),
-                      max(.da$alates_in, na.rm = TRUE)) * wasp_mod
-        .d %>%
-            filter(cage == "wasp", days == 0) %>%
-            distinct(trt_id, cage, days) %>%
-            mutate(Y = max(max_aphids, max_y2),
-                   Z = max(aphid_cage_df[[aphid_y]], na.rm = TRUE))
+# maximum N used to define y axis limits and items that are near the top
+# of plots:
+max_N <- max(aphid_cage_df$aphids) / 0.9
+
+# "Raw" plots without annotations:
+exp_p_list_raw <- aphid_cage_df %>%
+    distinct(treatment, rep) %>%
+    arrange(treatment, rep) %>%
+    .[["rep"]] %>%
+    paste() %>%
+    set_names() %>%
+    map(
+    function(r) {
+        # r = levels(aphid_cage_df$rep)[1]
+        # rm(r, acd, lcd, wcd, trt_title)
+        acd <- aphid_cage_df %>%
+            filter(rep == r) %>%
+            rename(N = aphids)
+        lcd <- alate_cage_df %>%
+            filter(rep == r, alates_in > 0) %>%
+            mutate(N = alates_in / wasp_mod)
+        wcd <- wasp_cage_df %>%
+            filter(rep == r) %>%
+            mutate(N = wasps / wasp_mod)
+        p <- acd %>%
+            ggplot(aes(days, N / 1e3, color = line)) +
+            geom_area(data = wcd, fill = "gray80", color = NA) +
+            geom_hline(yintercept = 0, color = "gray70") +
+            # Points for number of alates input:
+            geom_point(data = lcd, size = 0.5) +
+            # Main abundance lines:
+            geom_line() +
+            # Points for early termination:
+            geom_point(data = acd %>% filter(terminated), shape = 4, size = 3) +
+            scale_color_manual(values = clone_pal, guide = "none") +
+            scale_y_continuous(sec.axis = sec_axis(~ . * wasp_mod * 1000,
+                                                   breaks = 0:2 * 40),
+                               limits = c(0, max_N / 1000),
+                               breaks = 0:2 * 2) +
+            scale_x_continuous("Days", limits = c(0, 250),
+                               breaks = 0:4 * 50) +
+            facet_grid(rep ~ cage, scales = "fixed") +
+            theme(strip.text.x = element_blank(),
+                  strip.text.y = element_blank(),
+                  axis.title = element_blank(),
+                  axis.text.x = element_blank()) +
+            coord_cartesian(clip = FALSE)
+        return(p)
     })
 
 
-
-# aphid_cage_df_og <- aphid_cage_df
-# alate_cage_df_og <- alate_cage_df
-# wasp_cage_df_og <- wasp_cage_df
-#
-# # aphid_cage_df <- aphid_cage_df_og %>%
-# #     filter(treatment == "isolated")
-# # alate_cage_df <- alate_cage_df_og %>%
-# #     filter(treatment == "isolated")
-# # wasp_cage_df <- wasp_cage_df_og %>%
-# #     filter(treatment == "isolated")
+ylab_left <- paste0(expression("Aphid abundance (" %*% 1000 * ")"))
+ylab_right <- paste0("Wasps (gray shading)\nDispersed aphids input (points)")
 
 
-aphid_cage_p <- aphid_cage_df %>%
-    ggplot(aes(days)) +
-    geom_area(data = wasp_cage_df %>%
-                  mutate(wasps = wasps * wasp_mod),
-              aes(y = wasps), fill = "gray80", color = NA) +
-    geom_hline(yintercept = 0, color = "gray60") +
-    geom_vline(data = aphid_cage_df %>%
-                   filter(rep %in% 6:10) %>%
-                   distinct(trt_id) %>%
-                   mutate(x = difftime(as.Date("2021-08-23"),
-                                       as.Date("2021-06-14"),
-                                       units = "days") %>% as.integer()),
-               aes(xintercept = x), linetype = 3, color = "gray70") +
-    geom_vline(data = aphid_cage_df %>%
-                   filter(rep %in% 6:10) %>%
-                   distinct(trt_id) %>%
-                   mutate(x = difftime(as.Date("2021-07-26"),
-                                       as.Date("2021-06-14"),
-                                       units = "days") %>% as.integer()),
-               aes(xintercept = x), linetype = 2, color = "gray70") +
-    geom_point(data = aphid_cage_df %>%
-                     filter(rep == 8, cage == "wasp") %>%
-                     distinct(trt_id, cage) %>%
-                     mutate(days = difftime(as.Date("2021-09-16"),
-                                            as.Date("2021-06-14"),
-                                            units = "days") %>% as.integer()),
-               aes(y = max(aphid_cage_df[[aphid_y]]) * 0.9),
-               shape = 8, size = 2.5) +
-    geom_point(data = aphid_cage_df %>%
-                     filter(rep == 8, cage == "wasp") %>%
-                     distinct(trt_id, cage) %>%
-                     mutate(days = difftime(as.Date("2021-12-13"),
-                                            as.Date("2021-06-14"),
-                                            units = "days") %>% as.integer()),
-               aes(y = max(aphid_cage_df[[aphid_y]]) * 0.9),
-               shape = 3, size = 2.5) +
-    # # Points for number of plants replaced:
-    # geom_point(data = alate_cage_df %>%
-    #                filter(line == "resistant", n_replaced > 0),
-    #            aes(y = n_replaced * wasp_mod),
-    #           size = 0.75, color = "gray40") +
-    # Points for number of alates input:
-    geom_point(data = alate_cage_df %>% filter(alates_in > 0),
-               aes(y = alates_in * wasp_mod, color = line), size = 0.75) +
-    geom_line(aes_(y = as.name(aphid_y), color = ~line), size = 0.75) +
-    # # Points for when no aphids of a line present:
-    # geom_point(data = aphid_cage_df %>%
-    #                filter(aphids == 0) %>%
-    #                mutate(Y = max(aphid_cage_df[[aphid_y]]) *
-    #                           ifelse(line == "resistant", 0.1, 0)),
-    #           aes_(y = ~Y, color = ~line), shape = 4, size = 3) +
-    #
-    # Points for when experiment terminated:
-    geom_point(data = aphid_cage_df %>% filter(terminated),
-              aes_(y = as.name(aphid_y), color = ~line), shape = 4, size = 3) +
-    geom_text(data = lab_df,
-              aes(y = Z, label = trt_id),
-              # # use this when you have new reps:
-              # aes(y = Y, label = trt_id),
-              size = 10 / 2.8, hjust = 0, vjust = 1) +
-    facet_grid(trt_id ~ cage,
-               scales = "fixed") +
-               # # use this when you have new reps:
-               # scales = "free_y") +
-    scale_color_manual(NULL, values = clone_pal) +
-    scale_y_continuous(ifelse(aphid_y == "log_aphids",
-                              "log(aphid abundance + 1)",
-                              "Aphid abundance"),
-                       sec.axis = sec_axis(~ . / wasp_mod,
-                                           paste0("Wasps (gray shading)\n",
-                                                  "Alates input (points)"))) +
-    scale_x_continuous("Day of experiment") +
-    theme(strip.text.y = element_blank(), legend.position = "top") +
-    NULL
+#'
+#' On day 42 of reps 6, 8, 9, and 10 (2021-07-26), we started to remove
+#' adult wasps twice per week.
+#'
+#' On day 70 of reps 6, 8, 9, and 10 (2021-08-23), we started to disperse
+#' more alates and to remove adult wasps once per week.
+#'
+#'
 
-aphid_cage_p
+exp_p_list <- exp_p_list_raw
 
+# top bar height:
+.tbh <- 0.15
 
-if (!file.exists(sprintf("~/Desktop/eco-evo_cages__%s.pdf", .date))) {
-    ggsave(sprintf("~/Desktop/eco-evo_cages__%s.pdf", .date),
-           aphid_cage_p, width = 7, height = 8)
+for (r in paste((6:10)[-2])) {
+    # r = "6"
+    exp_p_list[[r]] <- exp_p_list[[r]] +
+        geom_rect(xmin = 0, xmax = 42,
+                  ymin = max_N * (1-.tbh) / 1e3, ymax = max_N * (1-.tbh/2) / 1e3,
+                  color = NA, fill = "dodgerblue3") +
+        geom_rect(xmin = 42, xmax = 70,
+                  ymin = max_N * (1-.tbh) / 1e3, ymax = max_N * (1-.tbh/2) / 1e3,
+                  color = NA, fill = "deepskyblue") +
+        geom_rect(xmin = 0, xmax = 70,
+                  ymin = max_N * (1-.tbh/2) / 1e3, ymax = max_N / 1e3,
+                  color = NA, fill = "goldenrod1")
+    # exp_p_list[[r]] <- exp_p_list[[r]] +
+    #     geom_vline(xintercept = 42, linetype = 2, color = "gray70") +
+    #     geom_vline(xintercept = 70, linetype = 3, color = "gray70")
 }
 
+#'
+#' On day 94 of rep 8 (2021-09-16), we added 3 female wasps to the wasp cage.
+#' On day 182 of rep 8 (2021-12-13), we added 3 UT3 alates to the wasp cage.
+#'
+exp_p_list[["8"]] <- exp_p_list[["8"]] +
+    geom_segment(data = tibble(cage = factor(names(cage_lvls)[1]),
+                               days = c(94, 182),
+                               N = max_N * 0.9,
+                               N2 = N - (max_N * 0.1)),
+                 aes(xend = days, yend = N2 / 1e3),
+                 size = 0.5, linejoin = "mitre", color = "black",
+                 arrow = arrow(length = unit(0.1, "lines"), type = "closed"))
 
+
+# wrap_plots(exp_p_list, ncol = 1)
+
+
+# for (i in 1:length(exp_p_list)) {
+#     fn <- sprintf("_results/plots/experiments/%i-rep%s.pdf",
+#                   i, names(exp_p_list)[i])
+#     save_plot(fn, exp_p_list[[i]], 5, 1.5)
+# }
+
+
+
+
+
+
+
+
+# ============================================================================*
+# ============================================================================*
+
+# Plants replaced ----
+
+# ============================================================================*
+# ============================================================================*
+
+
+
+
+rplants_mod <- max(alate_cage_df$n_replaced) /
+    max(aphid_cage_df$aphids, na.rm = TRUE)
+
+
+exp_rplants_p_list <- aphid_cage_df %>%
+    distinct(treatment, rep) %>%
+    arrange(treatment, rep) %>%
+    .[["rep"]] %>%
+    paste() %>%
+    set_names() %>%
+    map(
+        function(r) {
+            # r = levels(aphid_cage_df$rep)[1]
+            # rm(r, acd, prd)
+            acd <- aphid_cage_df %>%
+                filter(rep == r) %>%
+                rename(N = aphids)
+            prd <- alate_cage_df %>%
+                filter(rep == r, line == "resistant") %>%
+                mutate(N = n_replaced / rplants_mod)
+            acd %>%
+                ggplot(aes(days, N / 1e3, color = line)) +
+                geom_hline(yintercept = 0, color = "gray70") +
+                # Lines for number of plants replaced:
+                geom_area(data = prd, fill = "gray80", color = NA) +
+                # geom_line(data = prd, size = 0.5, color = "gray60") +
+                # Main abundance lines:
+                geom_line() +
+                # Points for early termination:
+                geom_point(data = acd %>% filter(terminated), shape = 4, size = 3) +
+                scale_color_manual(values = clone_pal, guide = "none") +
+                scale_y_continuous(sec.axis = sec_axis(~ . * rplants_mod * 1000,
+                                                       breaks = 0:2 * 5),
+                                   limits = c(0, max_N / 1000),
+                                   breaks = 0:2 * 2) +
+                scale_x_continuous("Days", limits = c(0, 250),
+                                   breaks = 0:4 * 50) +
+                facet_grid(rep ~ cage, scales = "fixed") +
+                theme(strip.text.x = element_blank(),
+                      strip.text.y = element_blank(),
+                      axis.title = element_blank(),
+                      axis.text.x = element_blank()) +
+                coord_cartesian(clip = FALSE)
+        })
+
+wrap_plots(exp_rplants_p_list, ncol = 1)
 
 
 # ============================================================================*
@@ -319,7 +366,7 @@ if (!file.exists(sprintf("~/Desktop/eco-evo_cages__%s.pdf", .date))) {
 
 
 left_join(aphid_cage_df, alate_cage_df,
-          by = c("treatment", "rep", "cage", "days", "line", "trt_id")) %>%
+          by = c("treatment", "rep", "cage", "days", "line")) %>%
     # Filter out isolated treatments:
     filter(treatment != "isolated") %>%
     # Filter out observations from before we were dispersing alates
