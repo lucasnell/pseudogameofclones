@@ -327,7 +327,7 @@ exp_rplants_p_list <- aphid_cage_df %>%
             prd <- alate_cage_df %>%
                 filter(rep == r, line == "resistant") %>%
                 mutate(N = n_replaced / rplants_mod)
-            acd %>%
+            p <- acd %>%
                 ggplot(aes(days, N / 1e3, color = line)) +
                 geom_hline(yintercept = 0, color = "gray70") +
                 # Lines for number of plants replaced:
@@ -343,16 +343,69 @@ exp_rplants_p_list <- aphid_cage_df %>%
                                    limits = c(0, max_N / 1000),
                                    breaks = 0:2 * 2) +
                 scale_x_continuous("Days", limits = c(0, 250),
-                                   breaks = 0:4 * 50) +
-                facet_grid(rep ~ cage, scales = "fixed") +
+                                   breaks = 0:5 * 50) +
+                facet_grid( ~ cage, scales = "fixed") +
                 theme(strip.text.x = element_blank(),
                       strip.text.y = element_blank(),
-                      axis.title = element_blank(),
-                      axis.text.x = element_blank()) +
+                      axis.title.y = element_blank()) +
                 coord_cartesian(clip = FALSE)
+            if (r != "13") {
+                p <- p +
+                    theme(axis.title.x = element_blank(),
+                          axis.text.x = element_blank())
+            }
+            return(p)
         })
 
-wrap_plots(exp_rplants_p_list, ncol = 1)
+
+exp_rplants_lm_p <- aphid_cage_df %>%
+    mutate(id = interaction(treatment, rep, cage, line, drop = TRUE)) %>%
+    split(.$id, drop = TRUE) %>%
+    map_dfr(function(dd) {
+        left_join(select(dd, days, log_aphids),
+                  alate_cage_df %>%
+                      filter(treatment == dd$treatment[1], rep == dd$rep[1],
+                             cage == dd$cage[1], line == dd$line[1]) %>%
+                      select(days, n_replaced),
+                  by = "days") %>%
+            mutate(pcg = log_aphids - lag(log_aphids)) %>%
+            filter(!is.na(pcg)) %>%
+            mutate(treatment = dd$treatment[1], rep = dd$rep[1],
+                   cage = dd$cage[1], line = dd$line[1])
+    }) %>%
+    ggplot(aes(n_replaced, pcg)) +
+    geom_hline(yintercept = 0, color = "gray80") +
+    geom_point(alpha = 0.25) +
+    stat_smooth(formula = y ~ x, method = "lm", se = TRUE) +
+    xlab(expression("Number of plants replaced on day " * italic(t))) +
+    ylab(expression("Per-capita growth rate (log[" * italic(N[t]) /
+                        italic(N[t-1]) * "])")) +
+    theme(strip.text = element_text(size = 10),
+          axis.title = element_text(size = 9))
+
+
+exp_rplants_p <- wrap_elements(grid::textGrob(expression("Aphid abundance ("
+                                                         %*% 1000 * ")"),
+                             x = 0, vjust = 1, rot = 90)) +
+    wrap_plots(exp_rplants_p_list, ncol = 1) +
+    wrap_elements(grid::textGrob("Plants replaced (gray shading)",
+                                 x = 1, vjust = 1, rot = -90)) +
+    exp_rplants_lm_p +
+    plot_layout(widths = c(0.06, 1, 0.06), heights = c(1, 0.3),
+                nrow = 2, ncol = 3, design = "123
+                                              #4#") +
+    plot_annotation(tag_levels = list(c("", LETTERS[1:7], "", LETTERS[8]))) &
+    theme(plot.tag = element_text(size = 14, face = "bold"))
+
+
+
+
+
+
+# save_plot("_results/plots/repl-plants.pdf", exp_rplants_p, 6, 12)
+
+
+
 
 
 # ============================================================================*
