@@ -15,7 +15,6 @@ library(readxl)
 library(patchwork)
 library(clonewars)
 library(lme4)
-library(nlme)
 
 assay_excel_file <- paste0("~/Box Sync/eco-evo_experiments/prelim_assays/",
                            "eco-evo-prelims.xlsx")
@@ -72,7 +71,7 @@ pop_p <- pop_df %>%
           strip.text = element_blank()) +
     NULL
 
-pop_p
+# pop_p
 
 # save_plot("_results/plots/assays-competition.pdf", pop_p, 5, 3)
 
@@ -222,8 +221,7 @@ get_avg_diff <- function(.data, .trans = identity, .col = "num") {
 
 #'
 #' Simple permutation test of sum of total aphids across each time series.
-#' This should be a very conservative assessment because it's not using
-#' a lot of the information.
+#' This should be a conservative assessment.
 #'
 sum_diffs <- pop_df %>%
     group_by(rep, line) %>%
@@ -239,40 +237,8 @@ diff_perms <- replicate(2000, {
 })
 
 mean(abs(diff_perms) >= abs(obs_diff))
+# [1] 0.0305
 
-
-
-
-#'
-#' If we instead use a linear model with AR1 temporal autocorrelation,
-#' the effect of line is also quite significant.
-#'
-pop_mod <- gls(log1p(num) ~ line, pop_df, corAR1(form = ~ 1 | rep))
-pop_mod %>% summary()
-
-#'
-#' Blocked nonparametric bootstrap for the effect of clonal line,
-#' where I bootstrap `y` (the log1p number of aphids) within each
-#' replicate and aphid line.
-#'
-set.seed(24357986)
-pop_mod_boots <- replicate(2000, {
-    .pop_df <- pop_df
-    for (r in levels(pop_df$rep)) {
-        for (l in levels(pop_df$line)) {
-            rl_inds <- which(pop_df$rep == r & pop_df$line == l)
-            smpl_inds <- sample(rl_inds, replace = TRUE)
-            .pop_df$num[rl_inds] <- pop_df$num[smpl_inds]
-        }
-    }
-    .pop_mod <- gls(log1p(num) ~ line, .pop_df, corAR1(form = ~ 1 | rep))
-    return(coef(.pop_mod)[["linesusceptible"]])
-})
-
-#'
-#' 95% CI is well above zero:
-#'
-quantile(pop_mod_boots, c(0.025, 0.5, 0.975))
 
 
 
@@ -306,8 +272,11 @@ surv_perms <- replicate(2000, {
 
 # Values of 0 actually indicate < 0.0005
 mean(abs(mum_perms) >= abs(obs_mum))
+# [1] 0
 mean(abs(juv_perms) >= abs(obs_juv))
+# [1] 0.0015
 mean(abs(surv_perms) >= abs(obs_surv))
+# [1] 0
 
 
 
@@ -323,7 +292,8 @@ mean(abs(surv_perms) >= abs(obs_surv))
 #'
 
 surv_mod <- glmer(cbind(survived, non_survived) ~ line + id +
-                      (1 | wasp_group), wasp_df, family = binomial)
+                      (1 | wasp_group),
+                  wasp_df, family = binomial)
 surv_mod %>% summary()
 
 set.seed(9876345)
@@ -345,3 +315,4 @@ juv_mod_boot <- bootMer(juv_mod, function(x) fixef(x)[["linesusceptible"]],
 quantile(juv_mod_boot$t, c(0.025, 0.5, 0.975))
 #       2.5%        50%      97.5%
 # -1.0961211 -0.9703011 -0.8497353
+
