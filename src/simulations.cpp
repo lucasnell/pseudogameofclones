@@ -373,6 +373,69 @@ void one_rep__(RepSummary& summary,
 
 }
 
+
+
+void one_rep__(RepSummary& summary,
+               List& stage_ts,
+               AllFields& fields,
+               const uint32& rep,
+               std::deque<uint32> check_for_clear,
+               const uint32& max_t,
+               const uint32& save_every,
+               const std::vector<uint32>& perturb_when,
+               const std::vector<uint32>& perturb_where,
+               const std::vector<uint32>& perturb_who,
+               const std::vector<double>& perturb_how,
+               Progress& prog_bar,
+               int& status_code) {
+
+    uint32 n_lines = fields.n_lines();
+    uint32 n_plants = fields.n_plants();
+    uint32 n_fields = fields.size();
+
+    summary.reserve(rep, max_t, save_every, n_lines, n_fields, n_plants);
+
+    uint32 iters = 0;
+
+    std::deque<PerturbInfo> perturbs(perturb_when.size());
+    for (uint32 i = 0; i < perturb_when.size(); i++) {
+        perturbs[i] = PerturbInfo(perturb_when[i], perturb_where[i],
+                                  perturb_who[i], perturb_how[i]);
+    }
+
+    summary.push_back(0, fields);
+
+    for (uint32 t = 1; t <= max_t; t++) {
+
+        if (interrupt_check(iters, prog_bar)) {
+            status_code = -1;
+            return;
+        }
+
+        // Basic updates for perturbations, dispersal, and population dynamics.
+        // Returns true if all plants/fields are empty.
+        // It's important to do this (& to save output) before clearing plants.
+        bool all_empty = fields.update(t, perturbs, check_for_clear);
+
+        if (t % save_every == 0 || t == max_t) summary.push_back(t, fields);
+
+        // If all fields are empty, then stop this rep.
+        if (all_empty) break;
+
+        fields.clear_plants(t, check_for_clear);
+
+        stage_ts[std::to_string(t)] = fields.to_list();
+
+
+    }
+
+
+    return;
+
+}
+
+
+
 /*
  This template checks for any negative values, and returns an error if
  it finds any.
@@ -944,6 +1007,7 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
                              const uint32& max_t,
                              const uint32& save_every,
                              const std::deque<uint32>& check_for_clear,
+                             const bool& stage_ts_out,
                              const bool& show_progress) {
 
 
@@ -952,8 +1016,7 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
 
     uint32 n_reps = all_fields_vec.size();
 
-    // Only 1 thread and no perturbations allowed here:
-    uint32 n_threads = 1;
+    // No perturbations allowed here:
     Progress prog_bar(max_t * n_reps, show_progress);
     int status_code = 0;
     std::vector<uint32> perturb_when(0);
@@ -963,13 +1026,27 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
 
     std::vector<RepSummary> summaries(n_reps);
 
-    for (uint32 i = 0; i < n_reps; i++) {
-        if (status_code != 0) continue;
-        one_rep__(summaries[i], all_fields_vec[i], i,
-                  check_for_clear, max_t, save_every,
-                  perturb_when, perturb_where, perturb_who, perturb_how,
-                  prog_bar, status_code);
+    List stage_ts;
+
+    if (stage_ts_out) {
+        for (uint32 i = 0; i < n_reps; i++) {
+            if (status_code != 0) break;
+            one_rep__(summaries[i], stage_ts, all_fields_vec[i], i,
+                      check_for_clear, max_t, save_every,
+                      perturb_when, perturb_where, perturb_who, perturb_how,
+                      prog_bar, status_code);
+        }
+    } else {
+        for (uint32 i = 0; i < n_reps; i++) {
+            if (status_code != 0) break;
+            one_rep__(summaries[i], all_fields_vec[i], i,
+                      check_for_clear, max_t, save_every,
+                      perturb_when, perturb_where, perturb_who, perturb_how,
+                      prog_bar, status_code);
+        }
     }
+
+    if (status_code != 0) stop("User interruption.");
 
 
     /*
@@ -999,6 +1076,7 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
                                 _["field"] = summ.wasp_field,
                                 _["wasps"] = summ.wasp_N),
                             _["all_info_xptr"] = all_fields_vec_xptr);
+    if (stage_ts_out) out["stage_ts"] = stage_ts;
 
     return out;
 

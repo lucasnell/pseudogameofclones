@@ -972,12 +972,18 @@ make_all_info <- function(sims_obj) {
 #'     all aphid lines) and stages.
 #'     It should be the exact same format as what's in `sims_obj$all_info`.
 #'     (But don't change `sims_obj$all_info` to make this be true!)
+#' @param stage_ts_out Single logical for whether to output stage-structured
+#'     information for all time points.
+#'     If `TRUE`, the output object will contain this information in the
+#'     `stage_ts` field, which will be a list of data frames.
+#'     Defaults to `FALSE`.
 #' @inheritParams sim_experiments
 #'
 #' @export
 #'
 restart_experiment <- function(sims_obj,
                                new_starts = NULL,
+                               stage_ts_out = FALSE,
                                max_t = 250,
                                save_every = 1,
                                alate_field_disp_p = NULL,
@@ -1113,6 +1119,7 @@ restart_experiment <- function(sims_obj,
     uint_check(max_plant_age, "max_plant_age")
     dbl_check(clear_surv, "clear_surv", .min = 0, .max = 1)
     stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
+    stopifnot(inherits(stage_ts_out, "logical") && length(stage_ts_out) == 1)
 
 
     # Make new C++ pointer to use for simulations:
@@ -1140,6 +1147,10 @@ restart_experiment <- function(sims_obj,
     sims[["all_info"]] <- make_all_info(sims)
 
     sims[["call"]] <- call_
+
+    if (stage_ts_out) {
+        sims[["stage_ts"]] <- lapply(sims[["stage_ts"]], as.data.frame)
+    }
 
     class(sims) <- "cloneSimsRestart"
 

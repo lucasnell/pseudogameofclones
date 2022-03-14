@@ -195,8 +195,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // restart_experiments_cpp
-List restart_experiments_cpp(SEXP all_fields_ptr, const uint32& max_t, const uint32& save_every, const std::deque<uint32>& check_for_clear, const bool& show_progress);
-RcppExport SEXP _clonewars_restart_experiments_cpp(SEXP all_fields_ptrSEXP, SEXP max_tSEXP, SEXP save_everySEXP, SEXP check_for_clearSEXP, SEXP show_progressSEXP) {
+List restart_experiments_cpp(SEXP all_fields_ptr, const uint32& max_t, const uint32& save_every, const std::deque<uint32>& check_for_clear, const bool& stage_ts_out, const bool& show_progress);
+RcppExport SEXP _clonewars_restart_experiments_cpp(SEXP all_fields_ptrSEXP, SEXP max_tSEXP, SEXP save_everySEXP, SEXP check_for_clearSEXP, SEXP stage_ts_outSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -204,8 +204,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const uint32& >::type max_t(max_tSEXP);
     Rcpp::traits::input_parameter< const uint32& >::type save_every(save_everySEXP);
     Rcpp::traits::input_parameter< const std::deque<uint32>& >::type check_for_clear(check_for_clearSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type stage_ts_out(stage_ts_outSEXP);
     Rcpp::traits::input_parameter< const bool& >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(restart_experiments_cpp(all_fields_ptr, max_t, save_every, check_for_clear, show_progress));
+    rcpp_result_gen = Rcpp::wrap(restart_experiments_cpp(all_fields_ptr, max_t, save_every, check_for_clear, stage_ts_out, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -221,7 +222,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_clonewars_using_openmp", (DL_FUNC) &_clonewars_using_openmp, 0},
     {"_clonewars_sim_clonewars_cpp", (DL_FUNC) &_clonewars_sim_clonewars_cpp, 51},
     {"_clonewars_restart_fill_other_pars", (DL_FUNC) &_clonewars_restart_fill_other_pars, 15},
-    {"_clonewars_restart_experiments_cpp", (DL_FUNC) &_clonewars_restart_experiments_cpp, 5},
+    {"_clonewars_restart_experiments_cpp", (DL_FUNC) &_clonewars_restart_experiments_cpp, 6},
     {NULL, NULL, 0}
 };
 
