@@ -19,19 +19,23 @@ clone_pal <- c("chartreuse3", "firebrick")
 
 
 # Date of most recent downloaded datasheet:
-.date <- "2022-02-28"
+.date <- "~/Box Sync/eco-evo_experiments/results_csv/" %>%
+    list.files("_eco-evo_datasheet_round-2.csv") %>%
+    str_split("_") %>%
+    map_chr(~ .x[[1]]) %>%
+    as.Date() %>%
+    max()
 
-#'
-#' Reps to exclude from plot.
-#' - Rep 7 failed bc wasps got into the no-wasp cage, and we didn't
-#'   adequately respond to this.
-#'
-.exclude_reps <- c(7)
+
 
 exp_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
                           .date, "_eco-evo_datasheet_round-2.csv"),
          col_types = cols()) %>%
-    filter(! rep %in% .exclude_reps) %>%
+    #'
+    #' Rep 7 failed bc wasps got into the no-wasp cage, and we didn't
+    #' adequately respond to this.
+    #'
+    filter(rep != 7) %>%
     mutate(date = as.Date(date, format = "%m/%d/%Y"),
            start_date = as.Date(start_date, format = "%m/%d/%Y"),
            days = difftime(date, start_date, units = "days") %>%
@@ -63,11 +67,11 @@ exp_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
     group_by(treatment, rep, cage) %>%
     mutate(terminated = date == max(date[plant1_red >= 0])) %>%
     ungroup() %>%
-    # Using 2nd latest date to prevent all cages that weren't sampled on the
+    # Using `- 4` to prevent all cages that weren't sampled on the
     # latest date from returning TRUE here
     mutate(terminated = (terminated &
-                             date < sort(unique(date), decreasing = TRUE)[2] &
-                             days < max(days)))
+                             date < (max(date) - 4) &
+                             days < (max(days) - 4)))
 
 
 

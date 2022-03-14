@@ -1,6 +1,7 @@
 library(tidyverse)
 library(clonewars)
 library(patchwork)
+library(grid)
 
 source(".Rprofile")
 
@@ -13,19 +14,22 @@ clone_pal <- c("#41BE71FF", "#482173FF")
 cage_lvls <- c("parasitism cage" = "wasp", "no parasitism cage" = "no wasp")
 
 # Date of most recent downloaded datasheet:
-.date <- "2022-02-28"
+.date <- "~/Box Sync/eco-evo_experiments/results_csv/" %>%
+    list.files("_eco-evo_datasheet_round-2.csv") %>%
+    str_split("_") %>%
+    map_chr(~ .x[[1]]) %>%
+    as.Date() %>%
+    max()
 
-#'
-#' Reps to exclude from plot.
-#' - Rep 7 failed bc wasps got into the no-wasp cage, and we didn't
-#'   adequately respond to this.
-#'
-.exclude_reps <- c(7)
 
 exp_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
                           .date, "_eco-evo_datasheet_round-2.csv"),
          col_types = cols()) %>%
-    filter(! rep %in% .exclude_reps) %>%
+    #'
+    #' Rep 7 failed bc wasps got into the no-wasp cage, and we didn't
+    #' adequately respond to this.
+    #'
+    filter(rep != 7) %>%
     mutate(date = as.Date(date, format = "%m/%d/%Y"),
            start_date = as.Date(start_date, format = "%m/%d/%Y"),
            days = difftime(date, start_date, units = "days") %>%
@@ -184,8 +188,8 @@ wasp_mod <- max(max(wasp_cage_df$wasps),
 # of plots:
 max_N <- max(aphid_cage_df$aphids) / 0.9
 
-# "Raw" plots without annotations:
-exp_p_list_raw <- aphid_cage_df %>%
+
+exp_p_list <- aphid_cage_df %>%
     distinct(treatment, rep) %>%
     arrange(treatment, rep) %>%
     .[["rep"]] %>%
@@ -205,7 +209,23 @@ exp_p_list_raw <- aphid_cage_df %>%
             filter(rep == r) %>%
             mutate(N = wasps / wasp_mod)
         p <- acd %>%
-            ggplot(aes(days, N / 1e3, color = line)) +
+            ggplot(aes(days, N / 1e3, color = line))
+        #'
+        #' On day 42 of reps 6, 8, 9, and 10 (2021-07-26), we started to remove
+        #' adult wasps twice per week.
+        #'
+        #' On day 70 of reps 6, 8, 9, and 10 (2021-08-23), we started to
+        #' disperse more alates and to remove adult wasps once per week.
+        #'
+        if (r %in% paste(6:10)) {
+            p <- p +
+                geom_segment(data = tibble(days = c(42, 70),
+                                           N = 0,
+                                           N2 = max_N * 1),
+                             aes(xend = days, yend = N2 / 1e3),
+                             color = "gray90", size = c(1, 0.5, 1, 0.5))
+        }
+        p <- p +
             geom_area(data = wcd, fill = "gray80", color = NA) +
             geom_hline(yintercept = 0, color = "gray70") +
             # Points for number of alates input:
@@ -220,64 +240,36 @@ exp_p_list_raw <- aphid_cage_df %>%
                                limits = c(0, max_N / 1000),
                                breaks = 0:2 * 2) +
             scale_x_continuous("Days", limits = c(0, 250),
-                               breaks = 0:4 * 50) +
-            facet_grid(rep ~ cage, scales = "fixed") +
-            theme(strip.text.x = element_blank(),
-                  strip.text.y = element_blank(),
+                               breaks = 0:5 * 50) +
+            facet_grid( ~ cage, scales = "fixed") +
+            theme(strip.text = element_blank(),
                   axis.title = element_blank(),
-                  axis.text.x = element_blank()) +
+                  axis.text.x = element_blank(),
+                  panel.background = element_rect(fill = "transparent"),
+                  plot.background = element_rect(fill = "transparent", color = NA),
+                  legend.background = element_rect(fill = "transparent"),
+                  legend.box.background = element_rect(fill = "transparent")) +
             coord_cartesian(clip = FALSE)
+        #'
+        #' On day 94 of rep 8 (2021-09-16), we added 3 female wasps to the
+        #' wasp cage.
+        #' On day 182 of rep 8 (2021-12-13), we added 3 UT3 alates to the
+        #' wasp cage.
+        #'
+        if (r == "8") {
+            p <- p +
+                geom_segment(data = tibble(cage = factor(names(cage_lvls)[1]),
+                                           days = c(94, 182),
+                                           N = max_N * 0.9,
+                                           N2 = N - (max_N * 0.1)),
+                             aes(xend = days, yend = N2 / 1e3),
+                             size = 0.5, linejoin = "mitre", color = "black",
+                             arrow = arrow(length = unit(0.1, "lines"),
+                                           type = "closed"))
+        }
         return(p)
     })
 
-
-ylab_left <- paste0(expression("Aphid abundance (" %*% 1000 * ")"))
-ylab_right <- paste0("Wasps (gray shading)\nDispersed aphids input (points)")
-
-
-#'
-#' On day 42 of reps 6, 8, 9, and 10 (2021-07-26), we started to remove
-#' adult wasps twice per week.
-#'
-#' On day 70 of reps 6, 8, 9, and 10 (2021-08-23), we started to disperse
-#' more alates and to remove adult wasps once per week.
-#'
-#'
-
-exp_p_list <- exp_p_list_raw
-
-# top bar height:
-.tbh <- 0.15
-
-for (r in paste((6:10)[-2])) {
-    # r = "6"
-    exp_p_list[[r]] <- exp_p_list[[r]] +
-        geom_rect(xmin = 0, xmax = 42,
-                  ymin = max_N * (1-.tbh) / 1e3, ymax = max_N * (1-.tbh/2) / 1e3,
-                  color = NA, fill = "dodgerblue3") +
-        geom_rect(xmin = 42, xmax = 70,
-                  ymin = max_N * (1-.tbh) / 1e3, ymax = max_N * (1-.tbh/2) / 1e3,
-                  color = NA, fill = "deepskyblue") +
-        geom_rect(xmin = 0, xmax = 70,
-                  ymin = max_N * (1-.tbh/2) / 1e3, ymax = max_N / 1e3,
-                  color = NA, fill = "goldenrod1")
-    # exp_p_list[[r]] <- exp_p_list[[r]] +
-    #     geom_vline(xintercept = 42, linetype = 2, color = "gray70") +
-    #     geom_vline(xintercept = 70, linetype = 3, color = "gray70")
-}
-
-#'
-#' On day 94 of rep 8 (2021-09-16), we added 3 female wasps to the wasp cage.
-#' On day 182 of rep 8 (2021-12-13), we added 3 UT3 alates to the wasp cage.
-#'
-exp_p_list[["8"]] <- exp_p_list[["8"]] +
-    geom_segment(data = tibble(cage = factor(names(cage_lvls)[1]),
-                               days = c(94, 182),
-                               N = max_N * 0.9,
-                               N2 = N - (max_N * 0.1)),
-                 aes(xend = days, yend = N2 / 1e3),
-                 size = 0.5, linejoin = "mitre", color = "black",
-                 arrow = arrow(length = unit(0.1, "lines"), type = "closed"))
 
 
 # wrap_plots(exp_p_list, ncol = 1)
