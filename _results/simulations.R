@@ -195,15 +195,16 @@ group_aphids <- function(.sim_aphids_df, .type) {
 
 
 main_sims <- rep(list(NA), 2)
-main_sims[[1]] <- do_base_sims()
-main_sims[[2]] <- do_base_sims(alate_field_disp_p = 0)
-names(main_sims) <- c("aphid dispersal", "no aphid dispersal")
+names(main_sims) <- c("no aphid dispersal", "aphid dispersal")
+main_sims[["no aphid dispersal"]] <- do_base_sims(alate_field_disp_p = 0)
+main_sims[["aphid dispersal"]] <- do_base_sims()
 for (d in names(main_sims)) {
     for (n in c("wasps", "aphids")) {
         main_sims[[d]][[n]] <- main_sims[[d]][[n]] %>%
             mutate(disp = d)
     }
 }
+
 
 main_aphids <- map_dfr(main_sims, ~ group_aphids(.x[["aphids"]], "living")) %>%
     mutate(disp = factor(disp, levels = names(main_sims)))
@@ -238,6 +239,7 @@ main_p_list <- map(
             facet_wrap( ~ field, nrow = 1) +
             theme(strip.text = element_text(size = 10),
                   plot.title = element_text(size = 12, hjust = 0.5,
+                                            face = "bold",
                                             margin = margin(0,0,0,b=6)))
     })
 
@@ -246,11 +248,11 @@ main_p_list[[1]] <- main_p_list[[1]] +
     geom_text(data = tibble(line = factor(c("susceptible", "resistant")),
                             field = factor(para_lvls[1], levels = para_lvls),
                             time = 250,
-                            N = c(520, 1700)),
+                            N = c(250, 1850)),
               aes(label = line, color = line),
-              size = 9 / 2.8, hjust = 1, vjust = 0) +
+              size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
     geom_text(data = tibble(field = factor(para_lvls[1], levels = para_lvls),
-                            time = 45, N = 1400),
+                            time = 40, N = 1400),
               aes(label = "wasps"), size = 9 / 2.8, hjust = 0.5, vjust = 0,
               color = "gray50")
 
@@ -263,6 +265,117 @@ main_p <- wrap_plots(main_p_list, ncol = 1) +
 
 # save_plot("_results/plots/sims-main.pdf", main_p, 6, 5)
 
+
+# If interested in discussing proportion of aphid dispersing
+# (to compare to experiments):
+main_sims[["aphid dispersal"]][["aphids"]] %>%
+    filter(type != "mummy") %>%
+    pivot_wider(names_from = type, values_from = N) %>%
+    mutate(total = alate + apterous + parasitized) %>%
+    group_by(time, field, line) %>%
+    summarize(p_disp = 0.1 * alate / total, .groups = "drop") %>%
+    # .[["p_disp"]] %>% mean()
+    ggplot(aes(time, p_disp)) +
+    geom_hline(yintercept = 0, color = "gray70") +
+    geom_line(aes(color = line)) +
+    scale_color_manual(values = clone_pal, guide = "none") +
+    scale_y_continuous("Proportion dispersed") +
+    scale_x_continuous("Days") +
+    facet_wrap( ~ field)
+
+
+
+
+# ============================================================================*
+# ============================================================================*
+
+# Starting wasp abundance ----
+
+# ============================================================================*
+# ============================================================================*
+
+
+#'
+#' Do a call to `sim_clonewars` that can vary by the proportion of alates
+#' that move between fields every day (`alate_field_disp_p`).
+#' How does dispersal affect maintenance of diversity in the resistance trait?
+#'
+do_wasp_sims <- function(.wasp_density_0, .max_t = 500) {
+
+    stopifnot(is.numeric(.wasp_density_0) && length(.wasp_density_0) == 1 &&
+                  .wasp_density_0 > 0)
+
+    .sims <- do_base_sims(wasp_density_0 = c(.wasp_density_0, 0),
+                          max_t = .max_t)
+
+    for (n in c("wasps", "aphids")) .sims[[n]] <- .sims[[n]] %>%
+            mutate(wasps0 = .wasp_density_0)
+
+    return(.sims)
+}
+
+
+
+wasp_sims <- mclapply(c(1, 2, 3, 10), do_wasp_sims)
+
+
+wasp_aphids <- map_dfr(wasp_sims, ~ group_aphids(.x[["aphids"]], "living")) %>%
+    mutate(wasps0 = factor(wasps0, labels = sprintf("starting wasp(s) = %i",
+                                                      sort(unique(wasps0)))))
+wasp_mummies <- map_dfr(wasp_sims, ~ group_aphids(.x[["aphids"]], "mummies")) %>%
+    mutate(wasps0 = factor(wasps0, labels = sprintf("starting wasp(s) = %i",
+                                                      sort(unique(wasps0)))))
+wasp_wasps <- map_dfr(wasp_sims, ~ .x[["wasps"]]) %>%
+    mutate(wasps0 = factor(wasps0, labels = sprintf("starting wasp(s) = %i",
+                                                      sort(unique(wasps0)))))
+
+
+wasp_p_list <- map(
+    levels(wasp_aphids$wasps0),
+    function(w0) {
+        aw0 <- wasp_aphids %>%
+            filter(wasps0 == w0, time <= 250)
+        ww0 <- wasp_wasps %>%
+            filter(wasps0 == w0, time <= 250)
+        aw0 %>%
+            ggplot(aes(time, N / 1e3)) +
+            ggtitle(w0) +
+            geom_hline(yintercept = 0, color = "gray70") +
+            geom_area(data = ww0 %>%
+                          mutate(N = wasps / wasp_mod),
+                      fill = "gray80", color = NA) +
+            geom_line(aes(color = line)) +
+            scale_color_manual(values = clone_pal, guide = "none") +
+            scale_y_continuous(expression("Aphid abundance (" %*% 1000 * ")"),
+                               breaks = 0:2, limits = ylims,
+                               sec.axis = sec_axis(~ . * wasp_mod * 1000,
+                                                   "Wasp abundance",
+                                                   breaks = 0:2 * 20)) +
+            scale_x_continuous("Days") +
+            facet_wrap( ~ field, nrow = 1) +
+            theme(strip.text = element_text(size = 10),
+                  plot.title = element_text(size = 12, hjust = 0.5))
+    })
+
+
+wasp_p_list[[1]] <- wasp_p_list[[1]] +
+    geom_text(data = tibble(line = factor(c("resistant", "susceptible")),
+                            field = factor(para_lvls[2], levels = para_lvls),
+                            time = 250, N = c(300, max(wasp_aphids$N) - 300)),
+              aes(label = line, color = line),
+              size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
+    geom_text(data = tibble(field = factor(para_lvls[1], levels = para_lvls),
+                            time = 230, N = 700),
+              aes(label = "wasps"), size = 9 / 2.8, hjust = 1, vjust = 0.5,
+              color = "gray50")
+
+
+wasp_p <- wrap_plots(wasp_p_list, ncol = 2) +
+    plot_annotation(tag_levels = "A") &
+    theme(plot.tag = element_text(size = 14, face = "bold"))
+
+
+# save_plot("_results/plots/sims-wasp.pdf", wasp_p, 10, 5)
 
 
 
