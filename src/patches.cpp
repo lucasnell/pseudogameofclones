@@ -696,6 +696,12 @@ void AllFields::set_new_pars(const double& K_,
         field.wasps.attack.a = a_;
         field.wasps.attack.k = k_;
         field.wasps.attack.h = h_;
+        /*
+         Since we're restarting this simulation, we don't want wasps to be
+         added when we would normally have added them in the original
+         simulation:
+         */
+        field.wasps.Y_0 = 0;
 
         for (uint32 j = 0; j < field.plants.size(); j++) {
 

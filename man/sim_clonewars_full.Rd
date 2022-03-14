@@ -11,7 +11,7 @@ sim_clonewars_full(
   n_plants = 1,
   max_t = 250,
   plant_check_gaps = 1,
-  max_plant_age = 1e+09,
+  max_plant_age = 0,
   clear_surv = 0,
   max_N = 0,
   temp = "low",
@@ -80,7 +80,7 @@ plant level.
 "Plant" can indicate a group of plants where the aphids can freely
 disperse across them.
 Aphids can disperse across plants via alate production and the
-`` argument.
+\code{alate_plant_disp_p} argument.
 Defaults to \code{1}.}
 
 \item{max_t}{How many days to simulate. Defaults to \code{250}.}
@@ -100,7 +100,7 @@ Defaults to \code{1}.}
 This can be useful to simulate harvesting fields.
 A value of \code{0} turns this off completely, but it also requires that
 \code{max_N > 0} because the internal code wants some threshold to look for.
-Defaults to \code{1e9} which effectively turns this off.}
+Defaults to \code{0} which effectively turns this off.}
 
 \item{clear_surv}{Survival of aphids and mummies when a harvest occurs.
 Defaults to \code{0}.}

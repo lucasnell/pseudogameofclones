@@ -7,6 +7,7 @@
 restart_experiment(
   sims_obj,
   new_starts = NULL,
+  stage_ts_out = FALSE,
   max_t = 250,
   save_every = 1,
   alate_field_disp_p = NULL,
@@ -35,6 +36,12 @@ new starting abundances for all populations (wasps, mummies,
 all aphid lines) and stages.
 It should be the exact same format as what's in \code{sims_obj$all_info}.
 (But don't change \code{sims_obj$all_info} to make this be true!)}
+
+\item{stage_ts_out}{Single logical for whether to output stage-structured
+information for all time points.
+If \code{TRUE}, the output object will contain this information in the
+\code{stage_ts} field, which will be a list of data frames.
+Defaults to \code{FALSE}.}
 
 \item{max_t}{How many days to simulate. Defaults to \code{250}.}
 
@@ -110,7 +117,7 @@ Defaults to \code{1}.}
 This can be useful to simulate harvesting fields.
 A value of \code{0} turns this off completely, but it also requires that
 \code{max_N > 0} because the internal code wants some threshold to look for.
-Defaults to \code{1e9} which effectively turns this off.}
+Defaults to \code{0} which effectively turns this off.}
 
 \item{clear_surv}{Survival of aphids and mummies when a harvest occurs.
 Defaults to \code{0}.}

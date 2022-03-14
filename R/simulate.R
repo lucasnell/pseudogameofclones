@@ -385,7 +385,7 @@ cube_list_check <- function(x, n) {
 #'     "Plant" can indicate a group of plants where the aphids can freely
 #'     disperse across them.
 #'     Aphids can disperse across plants via alate production and the
-#'     `` argument.
+#'     `alate_plant_disp_p` argument.
 #'     Defaults to `1`.
 #' @param max_t How many days to simulate. Defaults to `250`.
 #' @param plant_check_gaps Gap(s) between when plants are check on.
@@ -402,7 +402,7 @@ cube_list_check <- function(x, n) {
 #'     This can be useful to simulate harvesting fields.
 #'     A value of `0` turns this off completely, but it also requires that
 #'     `max_N > 0` because the internal code wants some threshold to look for.
-#'     Defaults to `1e9` which effectively turns this off.
+#'     Defaults to `0` which effectively turns this off.
 #' @param clear_surv Survival of aphids and mummies when a harvest occurs.
 #'     Defaults to `0`.
 #' @param max_N Maximum number of aphids at which plants are cleared.
@@ -562,7 +562,7 @@ sim_clonewars_full <- function(n_reps,
                                n_plants = 1,
                                max_t = 250,
                                plant_check_gaps = 1,
-                               max_plant_age = 1e9,
+                               max_plant_age = 0,
                                clear_surv = 0,
                                max_N = 0,
                                temp = "low",
@@ -877,7 +877,7 @@ sim_experiments <- function(clonal_lines,
                             save_every = 1,
                             perturb = NULL,
                             plant_check_gaps = 1,
-                            max_plant_age = 1e9,
+                            max_plant_age = 0,
                             clear_surv = 0,
                             show_progress = FALSE) {
 
@@ -997,15 +997,11 @@ restart_experiment <- function(sims_obj,
                                clear_surv = NULL,
                                show_progress = NULL) {
 
-    # This is like match.call but includes default arguments and
-    # evaluates everything
-    call_ <- mget(names(formals()), sys.frame(sys.nframe()))
-
-
-    stopifnot(inherits(sims_obj, "cloneSims"))
+    stopifnot(inherits(sims_obj, "cloneSims") |
+                  inherits(sims_obj, "cloneSimsRestart"))
     if (!inherits(sims_obj$all_info_xptr, "externalptr")) {
         stop("\nSomething has happened to the \"all_info_xptr\" field ",
-             "in this `cloneSims` object. Please re-run simulation.")
+             "in this `cloneSims*` object. Please re-run simulation.")
     }
 
     # If `new_starts` is provided, check it carefully then adjust the
@@ -1050,7 +1046,8 @@ restart_experiment <- function(sims_obj,
             }
         }
         N_vecs <- lapply(new_starts, function(x) x[["N"]])
-        fields_from_vectors(sims_obj$all_info_xptr, N_vecs)
+    } else {
+        N_vecs <- list()
     }
 
 
@@ -1089,6 +1086,13 @@ restart_experiment <- function(sims_obj,
     if (length(s_y) == 1) s_y <- rep(s_y, n_fields)
 
 
+    # This is like match.call but includes default arguments and
+    # evaluates everything
+    call_ <- mget(names(formals()), sys.frame(sys.nframe()))
+    call_$n_fields <- n_fields
+    call_$n_lines <- n_lines
+
+
     # Check validity of arguments:
     uint_check(max_t, "max_t", .min = 1)
     uint_check(save_every, "save_every", .min = 1)
@@ -1118,10 +1122,13 @@ restart_experiment <- function(sims_obj,
                                                  s_y, a, k, h, wasp_disp_p,
                                                  mum_smooth, pred_rate,
                                                  max_plant_age, clear_surv)
-
+    # Now fill in abundances if they were input:
+    if (length(N_vecs) > 0) {
+        fields_from_vectors(new_all_info_xptr, N_vecs)
+    }
 
     sims <- restart_experiments_cpp(new_all_info_xptr, max_t, save_every,
-                                    check_for_clear, show_progress)
+                                    check_for_clear, stage_ts_out, show_progress)
 
     sims[["aphids"]] <- sims[["aphids"]] %>%
         mutate(across(c("rep", "time", "plant"), as.integer)) %>%

@@ -680,21 +680,6 @@ void check_args(const uint32& n_reps,
     positive_check<std::vector<uint32>>(living_days, "living_days");
 
 
-
-    /*
-     ===============================================================
-     Other checks
-     ===============================================================
-     */
-
-    if (max_plant_age > 0 && max_N > 0) {
-        stop("\nERROR: max_plant_age > 0 && max_N > 0\n");
-    }
-    if (max_plant_age == 0 && max_N <= 0) {
-        stop("\nERROR: max_plant_age == 0 && max_N <= 0\n");
-    }
-
-
     return;
 }
 

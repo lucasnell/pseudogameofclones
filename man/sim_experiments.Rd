@@ -28,7 +28,7 @@ sim_experiments(
   save_every = 1,
   perturb = NULL,
   plant_check_gaps = 1,
-  max_plant_age = 1e+09,
+  max_plant_age = 0,
   clear_surv = 0,
   show_progress = FALSE
 )
@@ -161,7 +161,7 @@ Defaults to \code{1}.}
 This can be useful to simulate harvesting fields.
 A value of \code{0} turns this off completely, but it also requires that
 \code{max_N > 0} because the internal code wants some threshold to look for.
-Defaults to \code{1e9} which effectively turns this off.}
+Defaults to \code{0} which effectively turns this off.}
 
 \item{clear_surv}{Survival of aphids and mummies when a harvest occurs.
 Defaults to \code{0}.}
