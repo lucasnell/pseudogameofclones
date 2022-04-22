@@ -1,3 +1,6 @@
+
+
+
 library(tidyverse)
 library(clonewars)
 library(patchwork)
@@ -51,7 +54,7 @@ exp_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
                factor(levels = c("dispersal", "isolated")),
            cage = cage %>%
                tolower() %>%
-               factor(levels = c("wasp", "no wasp")),
+               factor(levels = c("no wasp", "wasp")),
            rep = factor(rep, levels = sort(unique(rep)))) %>%
     select(everything(), -start_date, -red_line,
            -green_line) %>%
@@ -82,6 +85,8 @@ pesky_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
                             .pesky_date, "_pesky-wasps.csv"),
                      col_types = cols()) %>%
     select(rep, date, mummies, starts_with("adult")) %>%
+    #' On 3/16 and 3/22 I removed wasps/mummies but didn't record the number.
+    filter(!is.na(mummies)) %>%
     rename(females = `adult females`, males = `adult males`, unsexed = `adults unk.`) %>%
     mutate(wasps = females + males + unsexed,
            date = as.Date(date, "%d-%b-%y")) %>%
@@ -99,7 +104,8 @@ pesky_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
                as.Date(),
            days = difftime(date, start_date, units = "days") %>%
                as.integer()) %>%
-    select(-start_date)
+    select(-start_date) %>%
+    filter(date <= max(exp_df$date))
 
 
 
@@ -179,14 +185,16 @@ alate_cage_df <- exp_df %>%
 # ============================================================================*
 
 
+# Adjust this if you'd prefer to use log-transformed or raw scale:
+aphid_y <- c("aphids", "log_aphids")[2]
 
 wasp_mod <- max(max(wasp_cage_df$wasps),
                 max(alate_cage_df$alates_in, na.rm = TRUE)) /
-    max(aphid_cage_df$aphids, na.rm = TRUE)
+    max(aphid_cage_df[[aphid_y]], na.rm = TRUE)
 
 # maximum N used to define y axis limits and items that are near the top
 # of plots:
-max_N <- max(aphid_cage_df$aphids) / 0.9
+max_N <- max(aphid_cage_df[[aphid_y]]) / 0.9
 
 
 exp_p_list <- aphid_cage_df %>%
@@ -201,44 +209,56 @@ exp_p_list <- aphid_cage_df %>%
         # rm(r, acd, lcd, wcd, trt_title)
         acd <- aphid_cage_df %>%
             filter(rep == r) %>%
-            rename(N = aphids)
+            rename(N = !!sym(aphid_y))
         lcd <- alate_cage_df %>%
             filter(rep == r, alates_in > 0) %>%
             mutate(N = alates_in / wasp_mod)
         wcd <- wasp_cage_df %>%
             filter(rep == r) %>%
             mutate(N = wasps / wasp_mod)
-        p <- acd %>%
-            ggplot(aes(days, N / 1e3, color = line))
-        #'
-        #' On day 42 of reps 6, 8, 9, and 10 (2021-07-26), we started to remove
-        #' adult wasps twice per week.
-        #'
-        #' On day 70 of reps 6, 8, 9, and 10 (2021-08-23), we started to
-        #' disperse more alates and to remove adult wasps once per week.
-        #'
-        if (r %in% paste(6:10)) {
-            p <- p +
-                geom_segment(data = tibble(days = c(42, 70),
-                                           N = 0,
-                                           N2 = max_N * 1),
-                             aes(xend = days, yend = N2 / 1e3),
-                             color = "gray90", size = c(1, 0.5, 1, 0.5))
+        #' Y breaks and labels will differ depending on whether we're
+        #' using log1p(aphids) or just aphids.
+        if (aphid_y == "aphids") {
+            y_breaks <- 0:2 * 2e3
+            y_labs <- paste0(0:2 * 2, "k")
+        } else {
+            y_breaks <- c(0, log1p(4 * 10^c(1,3)))
+            y_labs <- c(0, 4 * 10^c(1,3))
         }
+        p <- acd %>%
+            ggplot(aes(days, N, color = line))
+        #' #'
+        #' #' On day 42 of reps 6, 8, 9, and 10 (2021-07-26), we started to remove
+        #' #' adult wasps twice per week.
+        #' #'
+        #' #' On day 70 of reps 6, 8, 9, and 10 (2021-08-23), we started to
+        #' #' disperse more alates and to remove adult wasps once per week.
+        #' #'
+        #' if (r %in% paste(6:10)) {
+        #'     p <- p +
+        #'         geom_segment(data = tibble(days = c(42, 70),
+        #'                                    N = 0,
+        #'                                    N2 = max_N * 1),
+        #'                      aes(xend = days, yend = N2),
+        #'                      color = "gray90", size = c(1, 0.5, 1, 0.5))
+        #' }
         p <- p +
-            geom_area(data = wcd, fill = "gray80", color = NA) +
+            # Vertical line(s) for early termination:
+            geom_vline(data = acd %>% filter(terminated),
+                       aes(xintercept = days),
+                       size = 0.5, linetype = "22", color = "gray60") +
+            geom_area(data = wcd, fill = "gray60", color = NA) +
             geom_hline(yintercept = 0, color = "gray70") +
-            # Points for number of alates input:
-            geom_point(data = lcd, size = 0.5) +
+            # # Points for number of alates input:
+            # geom_point(data = lcd, size = 0.5) +
             # Main abundance lines:
             geom_line() +
             # Points for early termination:
-            geom_point(data = acd %>% filter(terminated), shape = 4, size = 3) +
+            # geom_point(data = acd %>% filter(terminated), shape = 4, size = 3) +
             scale_color_manual(values = clone_pal, guide = "none") +
-            scale_y_continuous(sec.axis = sec_axis(~ . * wasp_mod * 1000,
+            scale_y_continuous(sec.axis = sec_axis(~ . * wasp_mod,
                                                    breaks = 0:2 * 40),
-                               limits = c(0, max_N / 1000),
-                               breaks = 0:2 * 2) +
+                               breaks = y_breaks, labels = y_labs) +
             scale_x_continuous("Days", limits = c(0, 250),
                                breaks = 0:5 * 50) +
             facet_grid( ~ cage, scales = "fixed") +
@@ -249,7 +269,7 @@ exp_p_list <- aphid_cage_df %>%
                   plot.background = element_rect(fill = "transparent", color = NA),
                   legend.background = element_rect(fill = "transparent"),
                   legend.box.background = element_rect(fill = "transparent")) +
-            coord_cartesian(clip = FALSE)
+            coord_cartesian(clip = FALSE, ylim = c(0, max_N))
         #'
         #' On day 94 of rep 8 (2021-09-16), we added 3 female wasps to the
         #' wasp cage.
@@ -260,9 +280,9 @@ exp_p_list <- aphid_cage_df %>%
             p <- p +
                 geom_segment(data = tibble(cage = factor(names(cage_lvls)[1]),
                                            days = c(94, 182),
-                                           N = max_N * 0.9,
-                                           N2 = N - (max_N * 0.1)),
-                             aes(xend = days, yend = N2 / 1e3),
+                                           N = max_N,
+                                           N2 = N - (max_N * 0.075)),
+                             aes(xend = days, yend = N2),
                              size = 0.5, linejoin = "mitre", color = "black",
                              arrow = arrow(length = unit(0.1, "lines"),
                                            type = "closed"))
@@ -278,11 +298,8 @@ exp_p_list <- aphid_cage_df %>%
 # for (i in 1:length(exp_p_list)) {
 #     fn <- sprintf("_results/plots/experiments/%i-rep%s.pdf",
 #                   i, names(exp_p_list)[i])
-#     save_plot(fn, exp_p_list[[i]], 5, 1.5)
+#     save_plot(fn, exp_p_list[[i]], 4, 1.25)
 # }
-
-
-
 
 
 
@@ -323,7 +340,7 @@ exp_rplants_p_list <- aphid_cage_df %>%
                 ggplot(aes(days, N / 1e3, color = line)) +
                 geom_hline(yintercept = 0, color = "gray70") +
                 # Lines for number of plants replaced:
-                geom_area(data = prd, fill = "gray80", color = NA) +
+                geom_area(data = prd, fill = "gray60", color = NA) +
                 # geom_line(data = prd, size = 0.5, color = "gray60") +
                 # Main abundance lines:
                 geom_line() +
@@ -366,7 +383,7 @@ exp_rplants_lm_p <- aphid_cage_df %>%
                    cage = dd$cage[1], line = dd$line[1])
     }) %>%
     ggplot(aes(n_replaced, pcg)) +
-    geom_hline(yintercept = 0, color = "gray80") +
+    geom_hline(yintercept = 0, color = "gray60") +
     geom_point(alpha = 0.25) +
     stat_smooth(formula = y ~ x, method = "lm", se = TRUE) +
     xlab(expression("Number of plants replaced on day " * italic(t))) +
@@ -431,4 +448,55 @@ left_join(aphid_cage_df, alate_cage_df,
     mutate(p_dispersed = dispersed / aphids) %>%
     group_by(cage, line) %>%
     summarize(p_dispersed = mean(p_dispersed), nobs = n(), .groups = "drop")
+
+
+
+
+
+
+# ============================================================================*
+# ============================================================================*
+
+# Stats on things the techs counted ----
+
+# ============================================================================*
+# ============================================================================*
+
+
+base_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
+                           .date, "_eco-evo_datasheet_round-2.csv"),
+                    col_types = cols()) %>%
+    filter(observer != "LAN") %>%
+    rowwise() %>%
+    mutate(n_aphids = sum(c_across(starts_with("plant"))),
+           n_alates_in = sum(c_across(starts_with("alates_in_")))) %>%
+    mutate(n_repl_plants = replaced_plants %>%
+               str_split(",") %>%
+               map_int(length)) %>%
+    select(-starts_with("plant"), -starts_with("alates_in_"), -replaced_plants)
+
+# Total aphids counted, alates dispersed, plants replaced:
+for (n in c("n_aphids", "n_alates_in", "n_repl_plants")) {
+    x <- base_df %>%
+        filter(!!sym(n) >= 0) %>%
+        .[[n]] %>%
+        sum()
+    cat(sprintf("Total %s = %i\n", n, x))
+}; rm(n, x)
+
+# Total wasps and mummies counted:
+for (n in c("wasps", "mummies")) {
+    x <- base_df %>%
+        filter(rep == 7) %>%
+        filter(!!sym(n) >= 0) %>%
+        filter(!is.na(!!sym(n))) %>%
+        .[[n]] %>%
+        sum()
+    y <- wasp_cage_df %>%
+        filter(!!sym(n) >= 0) %>%
+        filter(!is.na(!!sym(n))) %>%
+        .[[n]] %>%
+        sum()
+    cat(sprintf("Total %s = %i\n", n, x + y))
+}; rm(n, x, y)
 

@@ -56,7 +56,7 @@ line_r <- clonal_line("resistant",
                       surv_adult_apterous = "low",
                       repro_apterous = "low")
 
-para_lvls <- paste(c("parasitism", "no parasitism"), "patch")
+para_lvls <- paste(c("no parasitism", "parasitism"), "patch")
 
 # Palette for the two clonal lines.
 # Equivalent to `viridis::viridis(100)[c(70, 10)]`.
@@ -64,8 +64,16 @@ clone_pal <- c("#41BE71FF", "#482173FF")
 
 
 # To maintain the same y-axis limits:
-wasp_mod <- 0.0164459
-ylims <- c(0, 2.405)
+# wasp_mod <- 0.0164459  # <-- should be max(disp_wasps$wasps) / max(disp_aphids$N)
+# ylims <- c(0, 2405)  # <-- max is ceiling(max(disp_aphids$N))
+# y_breaks <- 0:2 * 1e3
+# y_labs <- paste0(0:2, "k")
+wasp_mod <- 5.078307  # <-- should be max(disp_wasps$wasps) / max(log1p(disp_aphids$N))
+ylims <- c(0, 7.785)  # <-- max is ceiling(max(log(disp_aphids$N)) * 1e3) / 1e3
+y_breaks <- log(10^(0:3))
+y_labs <- 10^(0:3)
+
+
 
 
 #'
@@ -88,13 +96,13 @@ do_base_sims <- function(...) {
     .sims[["wasps"]] <- .sims %>%
         .[["wasps"]] %>%
         select(-rep) %>%
-        mutate(field = factor(field, levels = 0:max(field),
+        mutate(field = factor(field, levels = 1:0,
                              labels = para_lvls))
 
     .sims[["aphids"]] <- .sims %>%
         .[["aphids"]] %>%
         select(-rep, -plant) %>%
-        mutate(field = factor(field, levels = 0:max(field),
+        mutate(field = factor(field, levels = 1:0,
                              labels = para_lvls),
                line = factor(line, levels = c("resistant", "susceptible")))
 
@@ -222,17 +230,21 @@ main_p_list <- map(
         wad <- main_wasps %>%
             filter(disp == d)
         mad %>%
-            ggplot(aes(time, N / 1e3)) +
+            mutate(N = ifelse(N == 0, NA, N),
+                   N = log(N)) %>%
+            ggplot(aes(time, N)) +
             ggtitle(d) +
             geom_hline(yintercept = 0, color = "gray70") +
             geom_area(data = wad %>%
                           mutate(N = wasps / wasp_mod),
-                      fill = "gray80", color = NA) +
+                      fill = "gray60", color = NA) +
             geom_line(aes(color = line)) +
             scale_color_manual(values = clone_pal, guide = "none") +
-            scale_y_continuous(expression("Aphid abundance (" %*% 1000 * ")"),
-                               breaks = 0:2, limits = ylims,
-                               sec.axis = sec_axis(~ . * wasp_mod * 1000,
+            scale_y_continuous("Aphid abundance",
+                               breaks = y_breaks,
+                               limits = ylims,
+                               labels = y_labs,
+                               sec.axis = sec_axis(~ . * wasp_mod,
                                                    "Wasp abundance",
                                                    breaks = 0:2 * 20)) +
             scale_x_continuous("Days") +
@@ -244,17 +256,17 @@ main_p_list <- map(
     })
 
 
-main_p_list[[1]] <- main_p_list[[1]] +
-    geom_text(data = tibble(line = factor(c("susceptible", "resistant")),
-                            field = factor(para_lvls[1], levels = para_lvls),
-                            time = 250,
-                            N = c(250, 1850)),
-              aes(label = line, color = line),
-              size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
-    geom_text(data = tibble(field = factor(para_lvls[1], levels = para_lvls),
-                            time = 40, N = 1400),
-              aes(label = "wasps"), size = 9 / 2.8, hjust = 0.5, vjust = 0,
-              color = "gray50")
+# main_p_list[[1]] <- main_p_list[[1]] +
+#     geom_text(data = tibble(line = factor(c("susceptible", "resistant")),
+#                             field = factor(para_lvls[2], levels = para_lvls),
+#                             time = 250,
+#                             N = log(c(250, 1700))),
+#               aes(label = line, color = line),
+#               size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
+#     geom_text(data = tibble(field = factor(para_lvls[2], levels = para_lvls),
+#                             time = 80, N = log(1.1)),
+#               aes(label = "wasps"), size = 9 / 2.8, hjust = 0, vjust = 0,
+#               color = "gray50")
 
 
 main_p <- wrap_plots(main_p_list, ncol = 1) +
@@ -338,17 +350,21 @@ wasp_p_list <- map(
         ww0 <- wasp_wasps %>%
             filter(wasps0 == w0, time <= 250)
         aw0 %>%
-            ggplot(aes(time, N / 1e3)) +
+            mutate(N = ifelse(N == 0, NA, N),
+                   N = log(N)) %>%
+            ggplot(aes(time, N)) +
             ggtitle(w0) +
             geom_hline(yintercept = 0, color = "gray70") +
             geom_area(data = ww0 %>%
                           mutate(N = wasps / wasp_mod),
-                      fill = "gray80", color = NA) +
+                      fill = "gray60", color = NA) +
             geom_line(aes(color = line)) +
             scale_color_manual(values = clone_pal, guide = "none") +
-            scale_y_continuous(expression("Aphid abundance (" %*% 1000 * ")"),
-                               breaks = 0:2, limits = ylims,
-                               sec.axis = sec_axis(~ . * wasp_mod * 1000,
+            scale_y_continuous("Aphid abundance",
+                               breaks = y_breaks,
+                               limits = ylims,
+                               labels = y_labs,
+                               sec.axis = sec_axis(~ . * wasp_mod,
                                                    "Wasp abundance",
                                                    breaks = 0:2 * 20)) +
             scale_x_continuous("Days") +
@@ -358,16 +374,17 @@ wasp_p_list <- map(
     })
 
 
-wasp_p_list[[1]] <- wasp_p_list[[1]] +
-    geom_text(data = tibble(line = factor(c("resistant", "susceptible")),
-                            field = factor(para_lvls[2], levels = para_lvls),
-                            time = 250, N = c(300, max(wasp_aphids$N) - 300)),
-              aes(label = line, color = line),
-              size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
-    geom_text(data = tibble(field = factor(para_lvls[1], levels = para_lvls),
-                            time = 230, N = 700),
-              aes(label = "wasps"), size = 9 / 2.8, hjust = 1, vjust = 0.5,
-              color = "gray50")
+# wasp_p_list[[1]] <- wasp_p_list[[1]] +
+#     geom_text(data = tibble(line = factor(c("resistant", "susceptible")),
+#                             field = factor(para_lvls[1], levels = para_lvls),
+#                             time = 250, N = c(300, max(wasp_aphids$N) - 300)),
+#               aes(label = line, color = line),
+#               size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
+#     geom_text(data = tibble(field = factor(para_lvls[2], levels = para_lvls),
+#                             time = 230, N = 700),
+#               aes(label = "wasps"), size = 9 / 2.8, hjust = 1, vjust = 0.5,
+#               color = "gray50")
+
 
 
 wasp_p <- wrap_plots(wasp_p_list, ncol = 2) +
@@ -425,43 +442,59 @@ disp_p_list <- map(
     levels(disp_aphids$alate_p),
     function(ap) {
         aap <- disp_aphids %>%
-            filter(alate_p == ap, time <= 500)
+            filter(alate_p == ap, time <= 500) %>%
+            mutate(N = ifelse(N == 0, NA, N),
+                   N = log(N))
         wap <- disp_wasps %>%
             filter(alate_p == ap, time <= 500)
-        aap %>%
-            ggplot(aes(time, N / 1e3)) +
+        p <- aap %>%
+            filter(!is.na(N)) %>%
+            ggplot(aes(time, N)) +
             ggtitle(ap) +
             geom_hline(yintercept = 0, color = "gray70") +
             geom_area(data = wap %>%
                           mutate(N = wasps / wasp_mod),
-                      fill = "gray80", color = NA) +
+                      fill = "gray60", color = NA) +
             geom_line(aes(color = line)) +
             scale_color_manual(values = clone_pal, guide = "none") +
-            scale_y_continuous(expression("Aphid abundance (" %*% 1000 * ")"),
-                               breaks = 0:2, limits = ylims,
-                               sec.axis = sec_axis(~ . * wasp_mod * 1000,
+            scale_y_continuous("Aphid abundance",
+                               breaks = y_breaks,
+                               limits = ylims,
+                               labels = y_labs,
+                               sec.axis = sec_axis(~ . * wasp_mod,
                                                    "Wasp abundance",
                                                    breaks = 0:2 * 20)) +
             scale_x_continuous("Days") +
             facet_wrap( ~ field, nrow = 1) +
             theme(strip.text = element_text(size = 10),
                   plot.title = element_text(size = 12, hjust = 0.5))
+        if (any(is.na(aap$N))) {
+            ext <- filter(aap, is.na(N)) %>%
+                group_by(field) %>%
+                filter(time == min(time)) %>%
+                ungroup() %>%
+                mutate(N = 0)
+            p <- p +
+                geom_point(data = ext, aes(color = line), shape = 4, size = 2)
+        }
+        return(p)
     })
 
 
-disp_p_list[[1]] <- disp_p_list[[1]] +
-    geom_text(data = tibble(line = factor(c("resistant", "susceptible")),
-                            field = factor(para_lvls[1], levels = para_lvls),
-                            time = c(500, 500), N = c(300, max(disp_aphids$N) - 300)),
-              aes(label = line, color = line),
-              size = 9 / 2.8, hjust = 1, vjust = c(0, 1))
+# disp_p_list[[1]] <- disp_p_list[[1]] +
+#     geom_text(data = tibble(line = factor(c("resistant", "susceptible")),
+#                             field = factor(para_lvls[2], levels = para_lvls),
+#                             time = c(500, 500), N = c(300, max(disp_aphids$N) - 300)),
+#               aes(label = line, color = line),
+#               size = 9 / 2.8, hjust = 1, vjust = c(0, 1))
 
 
-disp_p_list[[4]] <- disp_p_list[[4]] +
-    geom_text(data = tibble(field = factor(para_lvls[1], levels = para_lvls),
-                            time = 400, N = 1500),
-              aes(label = "wasps"), size = 9 / 2.8, hjust = 1, vjust = 0,
-              color = "gray50")
+# disp_p_list[[4]] <- disp_p_list[[4]] +
+#     geom_text(data = tibble(field = factor(para_lvls[2], levels = para_lvls),
+#                             time = 400, N = 1500),
+#               aes(label = "wasps"), size = 9 / 2.8, hjust = 1, vjust = 0,
+#               color = "gray50")
+
 
 
 disp_p <- wrap_plots(disp_p_list, ncol = 2) +
@@ -548,40 +581,55 @@ stable_start_p_list <- map(
     levels(stable_start_aphids$p_res),
     function(pr) {
         ssa <- stable_start_aphids %>%
-            filter(p_res == pr, time <= 500)
+            filter(p_res == pr, time <= 500) %>%
+            mutate(N = ifelse(N == 0, NA, N),
+                   N = log(N))
         ssw <- stable_start_wasps %>%
             filter(p_res == pr, time <= 500)
-        ssa %>%
-            ggplot(aes(time, N / 1e3)) +
+        p <- ssa %>%
+            filter(!is.na(N)) %>%
+            ggplot(aes(time, N)) +
             ggtitle(pr) +
             geom_hline(yintercept = 0, color = "gray70") +
             geom_area(data = ssw %>%
                           mutate(N = wasps / wasp_mod),
-                      fill = "gray80", color = NA) +
+                      fill = "gray60", color = NA) +
             geom_line(aes(color = line)) +
             scale_color_manual(values = clone_pal, guide = "none") +
-            scale_y_continuous(expression("Aphid abundance (" %*% 1000 * ")"),
-                               breaks = 0:2, limits = ylims,
-                               sec.axis = sec_axis(~ . * wasp_mod * 1000,
+            scale_y_continuous("Aphid abundance",
+                               breaks = y_breaks,
+                               limits = ylims,
+                               labels = y_labs,
+                               sec.axis = sec_axis(~ . * wasp_mod,
                                                    "Wasp abundance",
                                                    breaks = 0:2 * 20)) +
             scale_x_continuous("Days") +
             facet_wrap(~ field, nrow = 1) +
             theme(strip.text = element_text(size = 10),
                   plot.title = element_text(size = 12, hjust = 0.5))
+        if (any(is.na(ssa$N))) {
+            ext <- filter(ssa, is.na(N)) %>%
+                group_by(field) %>%
+                filter(time == min(time)) %>%
+                ungroup() %>%
+                mutate(N = 0)
+            p <- p +
+                geom_point(data = ext, aes(color = line), shape = 4, size = 2)
+        }
+        return(p)
     })
 
-stable_start_p_list[[1]] <- stable_start_p_list[[1]] +
-    geom_text(data = tibble(line = factor(c("resistant", "susceptible")),
-                            field = factor(para_lvls[2], levels = para_lvls),
-                            time = c(500, 500),
-                            N = c(300, max(stable_start_aphids$N) - 300)),
-              aes(label = line, color = line),
-              size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
-    geom_text(data = tibble(field = factor(para_lvls[1], levels = para_lvls),
-                            time = 400, N = 800),
-              aes(label = "wasps"), size = 9 / 2.8, hjust = 0.5, vjust = 0.5,
-              color = "gray50")
+# stable_start_p_list[[1]] <- stable_start_p_list[[1]] +
+#     geom_text(data = tibble(line = factor(c("resistant", "susceptible")),
+#                             field = factor(para_lvls[1], levels = para_lvls),
+#                             time = c(500, 500),
+#                             N = c(300, max(stable_start_aphids$N) - 300)),
+#               aes(label = line, color = line),
+#               size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
+#     geom_text(data = tibble(field = factor(para_lvls[2], levels = para_lvls),
+#                             time = 400, N = 800),
+#               aes(label = "wasps"), size = 9 / 2.8, hjust = 0.5, vjust = 0.5,
+#               color = "gray50")
 
 stable_start_p <- wrap_plots(stable_start_p_list, ncol = 2) +
     plot_annotation(tag_levels = "A") &
@@ -675,17 +723,21 @@ stable_perturb_p_list <- map(
         ssw <- stable_perturb_wasps %>%
             filter(who == w)
         ssa %>%
-            ggplot(aes(time, N / 1e3)) +
+            mutate(N = ifelse(N == 0, NA, N),
+                   N = log(N)) %>%
+            ggplot(aes(time, N)) +
             ggtitle(w) +
             geom_hline(yintercept = 0, color = "gray70") +
             geom_area(data = ssw %>%
                           mutate(N = wasps / wasp_mod),
-                      fill = "gray80", color = NA) +
+                      fill = "gray60", color = NA) +
             geom_line(aes(color = line)) +
             scale_color_manual(values = clone_pal, guide = "none") +
-            scale_y_continuous(expression("Aphid abundance (" %*% 1000 * ")"),
-                               breaks = 0:2, limits = ylims,
-                               sec.axis = sec_axis(~ . * wasp_mod * 1000,
+            scale_y_continuous("Aphid abundance",
+                               breaks = y_breaks,
+                               limits = ylims,
+                               labels = y_labs,
+                               sec.axis = sec_axis(~ . * wasp_mod,
                                                    "Wasp abundance",
                                                    breaks = 0:2 * 20)) +
             scale_x_continuous("Days") +
@@ -694,17 +746,17 @@ stable_perturb_p_list <- map(
                   plot.title = element_text(size = 12, hjust = 0.5))
     })
 
-stable_perturb_p_list[[1]] <- stable_perturb_p_list[[1]] +
-    geom_text(data = tibble(line = factor(c("resistant", "susceptible")),
-                            field = factor(para_lvls[2], levels = para_lvls),
-                            time = 10.5e3,
-                            N = c(420, max(stable_perturb_aphids$N) - 300)),
-              aes(label = line, color = line),
-              size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
-    geom_text(data = tibble(field = factor(para_lvls[1], levels = para_lvls),
-                            time = 10200, N = 110),
-              aes(label = "wasps"), size = 9 / 2.8, hjust = 0, vjust = 0.5,
-              color = "gray50")
+# stable_perturb_p_list[[1]] <- stable_perturb_p_list[[1]] +
+#     geom_text(data = tibble(line = factor(c("resistant", "susceptible")),
+#                             field = factor(para_lvls[1], levels = para_lvls),
+#                             time = 10.5e3,
+#                             N = c(420, max(stable_perturb_aphids$N) - 300)),
+#               aes(label = line, color = line),
+#               size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
+#     geom_text(data = tibble(field = factor(para_lvls[2], levels = para_lvls),
+#                             time = 10200, N = 110),
+#               aes(label = "wasps"), size = 9 / 2.8, hjust = 0, vjust = 0.5,
+#               color = "gray50")
 
 
 stable_perturb_p <- wrap_plots(stable_perturb_p_list, ncol = 2) +
@@ -790,7 +842,7 @@ comm_mat_perturb_df <- list(
                 select(-wasps)
         })) %>%
     bind_rows() %>%
-    mutate(perturb_where = factor(perturb_where, levels = 1:2,
+    mutate(perturb_where = factor(perturb_where, levels = 2:1,
                                   labels = para_lvls)) %>%
     rename(who = type, where = field)
 
