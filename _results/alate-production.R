@@ -9,7 +9,7 @@
 
 library(lme4)
 library(tidyverse)
-library(clonewars)
+library(gameofclones)
 
 
 col_counts <- paste0("~/Box Sync/eco-evo_experiments/prelim_assays/alates/",

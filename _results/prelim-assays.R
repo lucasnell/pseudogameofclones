@@ -13,10 +13,12 @@ library(grid)
 library(tidyverse)
 library(readxl)
 library(patchwork)
-library(clonewars)
+library(gameofclones)
 library(lme4)
 
-assay_excel_file <- paste0("~/Box Sync/eco-evo_experiments/prelim_assays/",
+source(".Rprofile")
+
+assay_excel_file <- paste0("~/Box Sync/gameofclones/prelim_assays/",
                            "eco-evo-prelims.xlsx")
 
 
@@ -29,8 +31,8 @@ assay_excel_file <- paste0("~/Box Sync/eco-evo_experiments/prelim_assays/",
 # ========================================================================*
 
 # Palette for the two clonal lines.
-# Equivalent to `viridis::viridis(100)[c(70, 10)]`.
-clone_pal <- c("#41BE71FF", "#482173FF")
+# Equivalent to `viridis::viridis(100)[c(85, 10)]`.
+clone_pal <- c("#99D83DFF", "#482173FF")
 
 # -----------------------------------------------`
 # __pop. growth ----
@@ -59,13 +61,16 @@ pop_df <- read_excel(assay_excel_file,
 
 pop_p <- pop_df %>%
     mutate(zero = factor(num == 0)) %>%
-    ggplot(aes(date, num, color = line)) +
+    ggplot(aes(date, log1p(num), color = line)) +
+    geom_hline(yintercept = 0, color = "gray70") +
     geom_line() +
     geom_point(aes(shape = zero), size = 2) +
     facet_wrap(~ rep, nrow = 2) +
     scale_color_manual(values = clone_pal) +
     scale_shape_manual(values = c(19, 4), guide = "none") +
-    scale_y_continuous("Number of aphids") +
+    scale_y_continuous("Aphid abundance",
+                       breaks = log1p(c(0, 3 * 10^(0:2))),
+                       labels = c(0, 3 * 10^(0:2))) +
     scale_x_continuous("Days after start") +
     theme(legend.title = element_blank(),
           strip.text = element_blank()) +
@@ -90,7 +95,9 @@ pop_p <- pop_df %>%
 # ========================================================================*
 
 #'
-#' In the first set of wasp-resistance assays, we added 10 juveniles
+#' We did two sets of wasp-resistance assays: choice and no-choice.
+#'
+#' In the choice assays, we added 10 juveniles
 #' of each aphid line into a deli container with two fava bean leaves.
 #' We then added 3 female wasps to the containers for about 2 hours.
 #' These wasps were mated but had not been exposed to aphids because
@@ -102,9 +109,9 @@ pop_p <- pop_df %>%
 #' We kept these at 20ºC for 10 days, after which we counted the number
 #' of mummies and living aphids.
 #'
-#' In the second set, we first exposed 10 juvenile aphids of a single line to
-#' wasps for about 3 hours, then exposed 10 juveniles of the other line to
-#' the same wasps for the same duration.
+#' In the no-choice assays, we first exposed 10 juvenile aphids of a single
+#' line to wasps for about 3 hours, then exposed 10 juveniles of the other
+#' line to the same wasps for the same duration.
 #' We did this for both aphid lines being the first to be exposed.
 #'
 
@@ -115,7 +122,10 @@ wasp_df <- bind_rows(
     read_excel(assay_excel_file, sheet = "wasp-resistance_2") %>%
         select(wasp_group, round, line,
                starts_with(c("juv", "adult-", "mumm"))) %>%
-        mutate(set = 2L)) %>%
+        mutate(set = 2L,
+               #' Because there were 10 groups in the first set of assays,
+               #' and these groups differ from those used in set 1
+               wasp_group = wasp_group + 10)) %>%
     select(set, round, everything()) %>%
     rename_with(function(x) gsub("-", "_", x)) %>%
     mutate(survived = pmin(juv_assayed - mummy_end, adult_end),
@@ -126,23 +136,46 @@ wasp_df <- bind_rows(
            line = factor(line, levels = c("UT3", "WIA-5D"),
                          labels = c("resistant", "susceptible")),
            set = factor(set, levels = 1:2,
-                        labels = c("set 1", "set 2")),
+                        labels = c("choice", "no-choice")),
            across(c(round, wasp_group), factor),
-           id = case_when(set == 1 ~ 0L,
+           id = case_when(set == "choice" ~ 0L,
                           round == 1 ~ 1L,
                           TRUE ~ 2L) %>%
                factor(),
            obs = 1:n())
 
 
+set.seed(1257460453)
+wasp_boots <- lapply(1:2000, function(i) {
+    si <- sample(which(wasp_df$line == "susceptible"), replace = TRUE)
+    ri <- sample(which(wasp_df$line == "resistant"), replace = TRUE)
+    od <- wasp_df[c(si[1], ri[1]), "line"]
+    od[["rep"]] <- i
+    for (x in c("p_mummy", "juvenile_end", "p_survived")) {
+        od[[x]] <- c(mean(wasp_df[[x]][si]), mean(wasp_df[[x]][ri]))
+    }
+    return(od)
+}) %>%
+    do.call(what = bind_rows)
+
+wasp_boot_ci <- wasp_boots %>%
+    group_by(line) %>%
+    summarize(across(p_mummy:p_survived, list(~ quantile(.x, 0.025),
+                                              ~ quantile(.x, 0.5),
+                                              ~ quantile(.x, 0.975)))) %>%
+    rename_with(~ gsub("_2", "", .x), ends_with("_2"))
+
 
 
 mummy_p <- wasp_df %>%
     ggplot(aes(line, p_mummy, color = line)) +
     geom_hline(yintercept = 0, color = "gray70") +
-    geom_jitter(height = 0, width = 0.25, shape = 1) +
-    stat_summary(fun.data = "mean_cl_boot", color = "black") +
+    geom_jitter(aes(shape = set), height = 0, width = 0.25, alpha = 0.5) +
+    stat_summary(geom = "point", fun = mean, size = 3) +
+    geom_linerange(data = wasp_boot_ci,
+                    aes(ymin = p_mummy_1, ymax = p_mummy_3)) +
     scale_color_manual(values = clone_pal, guide = "none") +
+    scale_shape_manual(NULL, values = c(15, 17)) +
     ylab("Mummy proportion") +
     NULL
 
@@ -150,12 +183,17 @@ mummy_p <- wasp_df %>%
 
 
 
+
 juv_p <- wasp_df %>%
     ggplot(aes(line, juvenile_end, color = line)) +
     geom_hline(yintercept = 0, color = "gray70") +
-    geom_jitter(height = 0, width = 0.25, shape = 1) +
-    stat_summary(fun.data = "mean_cl_boot", color = "black") +
+    geom_jitter(aes(shape = set), height = 0, width = 0.25, alpha = 0.5) +
+    stat_summary(geom = "point", fun = mean, size = 3) +
+    geom_linerange(data = wasp_boot_ci,
+                    aes(ymin = juvenile_end_1,
+                        ymax = juvenile_end_3)) +
     scale_color_manual(values = clone_pal, guide = "none") +
+    scale_shape_manual(NULL, values = c(15, 17)) +
     scale_y_continuous("Number of juveniles") +
     NULL
 
@@ -167,9 +205,13 @@ juv_p <- wasp_df %>%
 surv_p <- wasp_df %>%
     ggplot(aes(line, p_survived, color = line)) +
     geom_hline(yintercept = 0, color = "gray70") +
-    geom_jitter(height = 0, width = 0.25, shape = 1) +
-    stat_summary(fun.data = "mean_cl_boot", color = "black") +
+    geom_jitter(aes(shape = set), height = 0, width = 0.25, alpha = 0.5) +
+    stat_summary(geom = "point", fun = mean, size = 3) +
+    geom_linerange(data = wasp_boot_ci,
+                    aes(ymin = p_survived_1,
+                        ymax = p_survived_3)) +
     scale_color_manual(values = clone_pal, guide = "none") +
+    scale_shape_manual(NULL, values = c(15, 17)) +
     ylab("Survival proportion") +
     NULL
 
@@ -179,7 +221,7 @@ surv_p <- wasp_df %>%
 
 wasp_p <- mummy_p + surv_p + juv_p +
     plot_annotation(tag_levels = "A") +
-    plot_layout(nrow = 1) &
+    plot_layout(nrow = 1, guides = "collect") &
     theme(plot.tag = element_text(size = 14, face = "bold"),
           axis.text.x = element_text(size = 9, color = "black", angle = 45,
                                      vjust = 1, hjust = 1),
@@ -283,16 +325,15 @@ mean(abs(surv_perms) >= abs(obs_surv))
 #'
 #' For survival and number of juveniles, there were some differences caused by
 #' assay set / round.
-#' I made a factor variable called `id` with three levels: (1) assay set 1,
-#' (2) assay set 2 round 1, and (3) assay set 2 round 2.
-#' I then did some regressions below to show that this doesn't affect our
-#' conclusions based on the permutation tests.
+#' Because the `wasp_group` factor differs by assay type / round, we included
+#' that as a random effect in the regressions below to show that this
+#' doesn't affect our conclusions based on the permutation tests.
 #' If anything, the permutations appear to be conservative, so they are
 #' what I present in the main text.
 #'
 
-surv_mod <- glmer(cbind(survived, non_survived) ~ line + id +
-                      (1 | wasp_group),
+
+surv_mod <- glmer(cbind(survived, non_survived) ~ line + id + (1 | wasp_group),
                   wasp_df, family = binomial)
 surv_mod %>% summary()
 
@@ -302,7 +343,7 @@ surv_mod_boot <- bootMer(surv_mod, function(x) fixef(x)[["linesusceptible"]],
 # hist(surv_mod_boot$t)
 quantile(surv_mod_boot$t, c(0.025, 0.5, 0.975))
 #      2.5%       50%     97.5%
-# -2.466044 -1.870173 -1.353917
+# -2.469087 -1.883217 -1.362103
 
 juv_mod <- glmer(juvenile_end ~ line + id + (1 | wasp_group),
                  wasp_df, family = poisson)
@@ -314,5 +355,5 @@ juv_mod_boot <- bootMer(juv_mod, function(x) fixef(x)[["linesusceptible"]],
 # hist(juv_mod_boot$t)
 quantile(juv_mod_boot$t, c(0.025, 0.5, 0.975))
 #       2.5%        50%      97.5%
-# -1.0961211 -0.9703011 -0.8497353
+# -2.3586386 -1.5429184 -0.8087831
 

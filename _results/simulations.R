@@ -1,6 +1,6 @@
 
 library(tidyverse)
-library(clonewars)
+library(gameofclones)
 library(parallel)
 library(patchwork)
 
@@ -59,8 +59,8 @@ line_r <- clonal_line("resistant",
 para_lvls <- paste(c("no parasitism", "parasitism"), "patch")
 
 # Palette for the two clonal lines.
-# Equivalent to `viridis::viridis(100)[c(70, 10)]`.
-clone_pal <- c("#41BE71FF", "#482173FF")
+# Equivalent to `viridis::viridis(100)[c(85, 10)]`.
+clone_pal <- c("#99D83DFF", "#482173FF")
 
 
 # To maintain the same y-axis limits:
@@ -117,7 +117,7 @@ do_base_sims <- function(...) {
 #' This is a separate function from `do_base_sims` so that output from
 #' `do_base_sims` can be used to look at alates, etc.
 #'
-#' `.sim_aphids_df` should be the `"aphids"` field from `sim_clonewars` output
+#' `.sim_aphids_df` should be the `"aphids"` field from `sim_gameofclones` output
 #'
 #' `.type` takes the following options:
 #'     * `"living"`: all aphids including parasitized;
@@ -256,17 +256,18 @@ main_p_list <- map(
     })
 
 
-# main_p_list[[1]] <- main_p_list[[1]] +
-#     geom_text(data = tibble(line = factor(c("susceptible", "resistant")),
-#                             field = factor(para_lvls[2], levels = para_lvls),
-#                             time = 250,
-#                             N = log(c(250, 1700))),
-#               aes(label = line, color = line),
-#               size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
-#     geom_text(data = tibble(field = factor(para_lvls[2], levels = para_lvls),
-#                             time = 80, N = log(1.1)),
-#               aes(label = "wasps"), size = 9 / 2.8, hjust = 0, vjust = 0,
-#               color = "gray50")
+main_p_list[[1]] <- main_p_list[[1]] +
+    geom_text(data = tibble(line = factor(c("resistant", "susceptible")),
+                            field = factor(para_lvls[1], levels = para_lvls),
+                            time = 250,
+                            N = log(c(4.5, 1700))),
+              aes(label = line, color = line),
+              size = 9 / 2.8, hjust = 1, vjust = c(0, 1), fontface = "bold") +
+    geom_text(data = tibble(field = factor(para_lvls[2], levels = para_lvls),
+                            time = 70, N = log(1.1)),
+              aes(label = "wasps"), size = 9 / 2.8, hjust = 0, vjust = 0,
+              color = "gray50", fontface = "bold") +
+    NULL
 
 
 main_p <- wrap_plots(main_p_list, ncol = 1) +
@@ -308,7 +309,7 @@ main_sims[["aphid dispersal"]][["aphids"]] %>%
 
 
 #'
-#' Do a call to `sim_clonewars` that can vary by the proportion of alates
+#' Do a call to `sim_gameofclones` that can vary by the proportion of alates
 #' that move between fields every day (`alate_field_disp_p`).
 #' How does dispersal affect maintenance of diversity in the resistance trait?
 #'
@@ -359,7 +360,7 @@ wasp_p_list <- map(
                           mutate(N = wasps / wasp_mod),
                       fill = "gray60", color = NA) +
             geom_line(aes(color = line)) +
-            scale_color_manual(values = clone_pal, guide = "none") +
+            scale_color_manual(NULL, values = clone_pal) +
             scale_y_continuous("Aphid abundance",
                                breaks = y_breaks,
                                limits = ylims,
@@ -374,20 +375,15 @@ wasp_p_list <- map(
     })
 
 
-# wasp_p_list[[1]] <- wasp_p_list[[1]] +
-#     geom_text(data = tibble(line = factor(c("resistant", "susceptible")),
-#                             field = factor(para_lvls[1], levels = para_lvls),
-#                             time = 250, N = c(300, max(wasp_aphids$N) - 300)),
-#               aes(label = line, color = line),
-#               size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
-#     geom_text(data = tibble(field = factor(para_lvls[2], levels = para_lvls),
-#                             time = 230, N = 700),
-#               aes(label = "wasps"), size = 9 / 2.8, hjust = 1, vjust = 0.5,
-#               color = "gray50")
+wasp_p_list[[1]] <- wasp_p_list[[1]] +
+    geom_text(data = tibble(field = factor(para_lvls[2], levels = para_lvls),
+                            time = 150, N = log(5)),
+              aes(label = "wasps"), size = 9 / 2.8, hjust = 1, vjust = 0.5,
+              color = "gray30")
 
 
 
-wasp_p <- wrap_plots(wasp_p_list, ncol = 2) +
+wasp_p <- wrap_plots(wasp_p_list, ncol = 2, guides = "collect") +
     plot_annotation(tag_levels = "A") &
     theme(plot.tag = element_text(size = 14, face = "bold"))
 
@@ -407,7 +403,7 @@ wasp_p <- wrap_plots(wasp_p_list, ncol = 2) +
 
 
 #'
-#' Do a call to `sim_clonewars` that can vary by the proportion of alates
+#' Do a call to `sim_gameofclones` that can vary by the proportion of alates
 #' that move between fields every day (`alate_field_disp_p`).
 #' How does dispersal affect maintenance of diversity in the resistance trait?
 #'
@@ -456,7 +452,7 @@ disp_p_list <- map(
                           mutate(N = wasps / wasp_mod),
                       fill = "gray60", color = NA) +
             geom_line(aes(color = line)) +
-            scale_color_manual(values = clone_pal, guide = "none") +
+            scale_color_manual(NULL, values = clone_pal) +
             scale_y_continuous("Aphid abundance",
                                breaks = y_breaks,
                                limits = ylims,
@@ -476,6 +472,8 @@ disp_p_list <- map(
                 mutate(N = 0)
             p <- p +
                 geom_point(data = ext, aes(color = line), shape = 4, size = 2)
+        } else {
+            p <- p + theme(legend.position = "none")
         }
         return(p)
     })
@@ -489,15 +487,15 @@ disp_p_list <- map(
 #               size = 9 / 2.8, hjust = 1, vjust = c(0, 1))
 
 
-# disp_p_list[[4]] <- disp_p_list[[4]] +
-#     geom_text(data = tibble(field = factor(para_lvls[2], levels = para_lvls),
-#                             time = 400, N = 1500),
-#               aes(label = "wasps"), size = 9 / 2.8, hjust = 1, vjust = 0,
-#               color = "gray50")
+disp_p_list[[4]] <- disp_p_list[[4]] +
+    geom_text(data = tibble(field = factor(para_lvls[2], levels = para_lvls),
+                            time = 450, N = log(20)),
+              aes(label = "wasps"), size = 9 / 2.8, hjust = 1, vjust = 0,
+              color = "gray30")
 
 
 
-disp_p <- wrap_plots(disp_p_list, ncol = 2) +
+disp_p <- wrap_plots(disp_p_list, ncol = 2, guides = "collect") +
     plot_annotation(tag_levels = "A") &
     theme(plot.tag = element_text(size = 14, face = "bold"))
 
@@ -595,7 +593,7 @@ stable_start_p_list <- map(
                           mutate(N = wasps / wasp_mod),
                       fill = "gray60", color = NA) +
             geom_line(aes(color = line)) +
-            scale_color_manual(values = clone_pal, guide = "none") +
+            scale_color_manual(NULL, values = clone_pal) +
             scale_y_continuous("Aphid abundance",
                                breaks = y_breaks,
                                limits = ylims,
@@ -615,23 +613,25 @@ stable_start_p_list <- map(
                 mutate(N = 0)
             p <- p +
                 geom_point(data = ext, aes(color = line), shape = 4, size = 2)
+        } else {
+            p <- p + theme(legend.position = "none")
         }
         return(p)
     })
 
-# stable_start_p_list[[1]] <- stable_start_p_list[[1]] +
+stable_start_p_list[[1]] <- stable_start_p_list[[1]] +
 #     geom_text(data = tibble(line = factor(c("resistant", "susceptible")),
 #                             field = factor(para_lvls[1], levels = para_lvls),
 #                             time = c(500, 500),
 #                             N = c(300, max(stable_start_aphids$N) - 300)),
 #               aes(label = line, color = line),
 #               size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
-#     geom_text(data = tibble(field = factor(para_lvls[2], levels = para_lvls),
-#                             time = 400, N = 800),
-#               aes(label = "wasps"), size = 9 / 2.8, hjust = 0.5, vjust = 0.5,
-#               color = "gray50")
+    geom_text(data = tibble(field = factor(para_lvls[2], levels = para_lvls),
+                            time = 450, N = log(9)),
+              aes(label = "wasps"), size = 9 / 2.8, hjust = 1, vjust = 0.5,
+              color = "gray30")
 
-stable_start_p <- wrap_plots(stable_start_p_list, ncol = 2) +
+stable_start_p <- wrap_plots(stable_start_p_list, ncol = 2, guides = "collect") +
     plot_annotation(tag_levels = "A") &
     theme(plot.tag = element_text(size = 14, face = "bold"))
 
@@ -732,7 +732,7 @@ stable_perturb_p_list <- map(
                           mutate(N = wasps / wasp_mod),
                       fill = "gray60", color = NA) +
             geom_line(aes(color = line)) +
-            scale_color_manual(values = clone_pal, guide = "none") +
+            scale_color_manual(NULL, values = clone_pal) +
             scale_y_continuous("Aphid abundance",
                                breaks = y_breaks,
                                limits = ylims,
@@ -746,20 +746,20 @@ stable_perturb_p_list <- map(
                   plot.title = element_text(size = 12, hjust = 0.5))
     })
 
-# stable_perturb_p_list[[1]] <- stable_perturb_p_list[[1]] +
+stable_perturb_p_list[[1]] <- stable_perturb_p_list[[1]] +
 #     geom_text(data = tibble(line = factor(c("resistant", "susceptible")),
 #                             field = factor(para_lvls[1], levels = para_lvls),
 #                             time = 10.5e3,
 #                             N = c(420, max(stable_perturb_aphids$N) - 300)),
 #               aes(label = line, color = line),
 #               size = 9 / 2.8, hjust = 1, vjust = c(0, 1)) +
-#     geom_text(data = tibble(field = factor(para_lvls[2], levels = para_lvls),
-#                             time = 10200, N = 110),
-#               aes(label = "wasps"), size = 9 / 2.8, hjust = 0, vjust = 0.5,
-#               color = "gray50")
+    geom_text(data = tibble(field = factor(para_lvls[2], levels = para_lvls),
+                            time = 10200, N = log(3.5)),
+              aes(label = "wasps"), size = 9 / 2.8, hjust = 0, vjust = 0.5,
+              color = "gray30")
 
 
-stable_perturb_p <- wrap_plots(stable_perturb_p_list, ncol = 2) +
+stable_perturb_p <- wrap_plots(stable_perturb_p_list, ncol = 2, guides = "collect") +
     plot_annotation(tag_levels = "A") &
     theme(plot.tag = element_text(size = 14, face = "bold"))
 
@@ -884,5 +884,74 @@ eigen(comm_mat)$values
 
 # # To share with Tony:
 # saveRDS(comm_mat, "~/Desktop/eco-evo_comm_mat.rds")
+
+
+
+
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+# Transient issues from Tony
+
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+
+library(tidyverse)
+library(gameofclones)
+library(parallel)
+library(patchwork)
+
+
+if (file.exists(".Rprofile")) source(".Rprofile")
+
+options(mc.cores = max(parallel::detectCores()-2L, 1L))
+
+clone_pal <- c("#41BE71FF", "#482173FF")
+
+
+# Define clonal lines. Don't re-define these!
+# Susceptible line: no resistance, high population growth rate
+line_s <- clonal_line("susceptible",
+                      density_0 = cbind(c(0,0,0,0,32), rep(0, 5)),
+                      surv_juv_apterous = "high",
+                      surv_adult_apterous = "high",
+                      repro_apterous = "high")
+# Resistant line: high resistance, low population growth rate
+line_r <- clonal_line("resistant",
+                      density_0 = cbind(c(0,0,0,0,32), rep(0, 5)),
+                      resistant = TRUE,
+                      surv_paras = 0.57,
+                      surv_juv_apterous = "low",
+                      surv_adult_apterous = "low",
+                      repro_apterous = "low")
+
+alate_field_disp_p <- 0.23058
+sims <- sim_experiments(clonal_lines = c(line_s, line_r),
+                        alate_field_disp_p = alate_field_disp_p,
+                        wasp_density_0 = c(1, 0),
+                        extinct_N = 1e-6,
+                        max_t = 2*1e3, save_every = 1e1)
+
+sims$aphids %>%
+    filter(type != "mummy") %>%
+    group_by(field, time, line) %>%
+    summarize(N = sum(N), .groups = "drop") %>%
+    ggplot(aes(time, N)) +
+    geom_line(aes(color = line)) +
+    geom_line(data = sims$wasps, aes(y = wasps), color = "gray60") +
+    scale_color_manual(values = clone_pal, guide = "none") +
+    scale_y_continuous("log(abundance)",
+                       trans = "log", breaks = c(1, 5, 50, 500)) +
+    scale_x_continuous("Days") +
+    facet_wrap( ~ field, nrow = 1) +
+    theme(strip.text = element_text(size = 10)) +
+    coord_cartesian(ylim = c(1, NA))
+
 
 

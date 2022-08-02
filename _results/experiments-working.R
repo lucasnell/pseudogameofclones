@@ -5,7 +5,7 @@
 #'
 
 library(tidyverse)
-library(clonewars)
+library(gameofclones)
 
 source(".Rprofile")
 

@@ -2,7 +2,7 @@
 
 
 library(tidyverse)
-library(clonewars)
+library(gameofclones)
 library(patchwork)
 library(grid)
 
@@ -10,14 +10,14 @@ source(".Rprofile")
 
 
 # Palette for the two clonal lines.
-# Equivalent to `viridis::viridis(100)[c(70, 10)]`.
-clone_pal <- c("#41BE71FF", "#482173FF")
+# Equivalent to `viridis::viridis(100)[c(85, 10)]`.
+clone_pal <- c("#99D83DFF", "#482173FF")
 
 # What to name wasp and no wasp cages for plot:
 cage_lvls <- c("parasitism cage" = "wasp", "no parasitism cage" = "no wasp")
 
 # Date of most recent downloaded datasheet:
-.date <- "~/Box Sync/eco-evo_experiments/results_csv/" %>%
+.date <- "~/Box Sync/gameofclones/results_csv/" %>%
     list.files("_eco-evo_datasheet_round-2.csv") %>%
     str_split("_") %>%
     map_chr(~ .x[[1]]) %>%
@@ -25,7 +25,7 @@ cage_lvls <- c("parasitism cage" = "wasp", "no parasitism cage" = "no wasp")
     max()
 
 
-exp_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
+exp_df <- read_csv(paste0("~/Box Sync/gameofclones/results_csv/",
                           .date, "_eco-evo_datasheet_round-2.csv"),
          col_types = cols()) %>%
     #'
@@ -37,7 +37,7 @@ exp_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
            start_date = as.Date(start_date, format = "%m/%d/%Y"),
            days = difftime(date, start_date, units = "days") %>%
                as.integer(),
-           # Adjusting for Calvin's different way of counting alate OUT
+           # Adjusting for CES's different way of counting alate OUT
            # before "2021-08-05"
            alates_total_red = ifelse(date < as.Date("2021-08-05") &
                                        observer == "CES",
@@ -73,7 +73,7 @@ exp_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
 # "Pesky" wasps - wasps that made it into no-wasp cages:
 
 # Get date for latest pesky wasp datasheet:
-.pesky_date <- "~/Box Sync/eco-evo_experiments/results_csv/" %>%
+.pesky_date <- "~/Box Sync/gameofclones/results_csv/" %>%
     list.files("pesky-wasps.csv") %>%
     str_split("_") %>%
     map_chr(~ .x[[1]]) %>%
@@ -81,13 +81,15 @@ exp_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
     max()
 
 
-pesky_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
+pesky_df <- read_csv(paste0("~/Box Sync/gameofclones/results_csv/",
                             .pesky_date, "_pesky-wasps.csv"),
                      col_types = cols()) %>%
     select(rep, date, mummies, starts_with("adult")) %>%
     #' On 3/16 and 3/22 I removed wasps/mummies but didn't record the number.
     filter(!is.na(mummies)) %>%
-    rename(females = `adult females`, males = `adult males`, unsexed = `adults unk.`) %>%
+    rename(females = `adult females`,
+           males = `adult males`,
+           unsexed = `adults unk.`) %>%
     mutate(wasps = females + males + unsexed,
            date = as.Date(date, "%d-%b-%y")) %>%
     select(rep, date, mummies, wasps, everything()) %>%
@@ -227,21 +229,6 @@ exp_p_list <- aphid_cage_df %>%
         }
         p <- acd %>%
             ggplot(aes(days, N, color = line))
-        #' #'
-        #' #' On day 42 of reps 6, 8, 9, and 10 (2021-07-26), we started to remove
-        #' #' adult wasps twice per week.
-        #' #'
-        #' #' On day 70 of reps 6, 8, 9, and 10 (2021-08-23), we started to
-        #' #' disperse more alates and to remove adult wasps once per week.
-        #' #'
-        #' if (r %in% paste(6:10)) {
-        #'     p <- p +
-        #'         geom_segment(data = tibble(days = c(42, 70),
-        #'                                    N = 0,
-        #'                                    N2 = max_N * 1),
-        #'                      aes(xend = days, yend = N2),
-        #'                      color = "gray90", size = c(1, 0.5, 1, 0.5))
-        #' }
         p <- p +
             # Vertical line(s) for early termination:
             geom_vline(data = acd %>% filter(terminated),
@@ -249,13 +236,10 @@ exp_p_list <- aphid_cage_df %>%
                        size = 0.5, linetype = "22", color = "gray60") +
             geom_area(data = wcd, fill = "gray60", color = NA) +
             geom_hline(yintercept = 0, color = "gray70") +
-            # # Points for number of alates input:
-            # geom_point(data = lcd, size = 0.5) +
             # Main abundance lines:
             geom_line() +
-            # Points for early termination:
-            # geom_point(data = acd %>% filter(terminated), shape = 4, size = 3) +
-            scale_color_manual(values = clone_pal, guide = "none") +
+            scale_color_manual(values = viridis::viridis(100)[c(85, 10)],
+                               guide = "none") +
             scale_y_continuous(sec.axis = sec_axis(~ . * wasp_mod,
                                                    breaks = 0:2 * 40),
                                breaks = y_breaks, labels = y_labs) +
@@ -266,27 +250,33 @@ exp_p_list <- aphid_cage_df %>%
                   axis.title = element_blank(),
                   axis.text.x = element_blank(),
                   panel.background = element_rect(fill = "transparent"),
-                  plot.background = element_rect(fill = "transparent", color = NA),
+                  plot.background = element_rect(fill = "transparent",
+                                                 color = NA),
                   legend.background = element_rect(fill = "transparent"),
                   legend.box.background = element_rect(fill = "transparent")) +
             coord_cartesian(clip = FALSE, ylim = c(0, max_N))
         #'
-        #' On day 94 of rep 8 (2021-09-16), we added 3 female wasps to the
-        #' wasp cage.
-        #' On day 182 of rep 8 (2021-12-13), we added 3 UT3 alates to the
-        #' wasp cage.
+        #' EDIT: not doing either one in main text.
+        #' Providing both in supplement.
         #'
-        if (r == "8") {
-            p <- p +
-                geom_segment(data = tibble(cage = factor(names(cage_lvls)[1]),
-                                           days = c(94, 182),
-                                           N = max_N,
-                                           N2 = N - (max_N * 0.075)),
-                             aes(xend = days, yend = N2),
-                             size = 0.5, linejoin = "mitre", color = "black",
-                             arrow = arrow(length = unit(0.1, "lines"),
-                                           type = "closed"))
-        }
+        #' #' On day 94 of rep 8 (2021-09-16), we added 3 female wasps to the
+        #' #' wasp cage.
+        #' #' On day 182 of rep 8 (2021-12-13), we added 3 UT3 alates to the
+        #' #' wasp cage.
+        #' #' I'm only adding an arrow for the former, and I'll mention the
+        #' #' latter in the text.
+        #' #'
+        #' if (r == "8") {
+        #'     p <- p +
+        #'         geom_segment(data = tibble(cage = factor(names(cage_lvls)[1]),
+        #'                                    days = 94,
+        #'                                    N = max_N,
+        #'                                    N2 = N - (max_N * 0.075)),
+        #'                      aes(xend = days, yend = N2),
+        #'                      size = 0.3, linejoin = "mitre", color = "black",
+        #'                      arrow = arrow(length = unit(0.1, "lines"),
+        #'                                    type = "closed"))
+        #' }
         return(p)
     })
 
@@ -300,6 +290,54 @@ exp_p_list <- aphid_cage_df %>%
 #                   i, names(exp_p_list)[i])
 #     save_plot(fn, exp_p_list[[i]], 4, 1.25)
 # }
+
+
+
+
+
+# ============================================================================*
+# ============================================================================*
+
+# Wasp culling effects ----
+
+# ============================================================================*
+# ============================================================================*
+
+
+#' We started culling adult wasps 2x / week on 26 July 2021.
+#' We reduced this to 1x / week on 23 Aug 2021.
+#' This only affected reps 6, 8, and 10 because the only other rep going
+#' at that time (rep 9) had already lost all its aphids by the time we
+#' started culling 2x / week.
+
+
+cull_df <- exp_df %>%
+    filter(date <= as.Date("2021-08-23"), rep %in% c(6,8,10),
+           cage == "wasp", days >= 7) %>%
+    select(rep, date, wasps, mummies)
+
+#' Differences in peak wasp and mummy abundances before and after we
+#' started culling:
+cull_df %>%
+    mutate(cull = date >= as.Date("2021-07-26")) %>%
+    group_by(cull, rep) %>%
+    summarize(wasps = max(wasps),
+              mummies = max(mummies),
+              .groups = "drop") %>%
+    group_by(cull) %>%
+    summarize(wasps = mean(wasps),
+              mummies = mean(mummies))
+
+
+
+cull_df %>%
+    ggplot(aes(date, wasps)) +
+    geom_line() +
+    geom_point() +
+    facet_wrap(~ rep, ncol = 1)
+
+
+
 
 
 
@@ -463,7 +501,7 @@ left_join(aphid_cage_df, alate_cage_df,
 # ============================================================================*
 
 
-base_df <- read_csv(paste0("~/Box Sync/eco-evo_experiments/results_csv/",
+base_df <- read_csv(paste0("~/Box Sync/gameofclones/results_csv/",
                            .date, "_eco-evo_datasheet_round-2.csv"),
                     col_types = cols()) %>%
     filter(observer != "LAN") %>%

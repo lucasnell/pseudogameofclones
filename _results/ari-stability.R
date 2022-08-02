@@ -1,11 +1,11 @@
 
 #'
-#' Install `clonewars` package from GitHub:
+#' Install `gameofclones` package from GitHub:
 #'
-if (!require("clonewars")) {
+if (!require("gameofclones")) {
     if (!require("remotes")) install.packages("remotes")
-    remotes::install_github("lucasnell/clonewars")
-    library(clonewars)
+    remotes::install_github("lucasnell/gameofclones")
+    library(gameofclones)
 }
 
 #'

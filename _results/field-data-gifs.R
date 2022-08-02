@@ -2,7 +2,7 @@
 library(tidyverse)
 library(readxl)
 library(lubridate)
-library(clonewars)
+library(gameofclones)
 library(viridisLite)
 library(patchwork)
 library(sf)

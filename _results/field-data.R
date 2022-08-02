@@ -2,7 +2,7 @@
 library(tidyverse)
 library(readxl)
 library(lubridate)
-library(clonewars)
+library(gameofclones)
 library(viridisLite)
 library(patchwork)
 library(sf)
@@ -92,7 +92,7 @@ rel_res_fitness <- function(para, p_res = 0.48) {
     rr_rs <- sapply(para, function(p) {
         nearest <- which(abs(para_lookup - p) < 1.5e-5)
 
-        # dealing with know discontinuity when p_res = 0.48 (default):
+        # dealing with known discontinuity when p_res = 0.48 (default):
         if (length(nearest) == 0 &&
             p > para_lookup[rr_rs_df$a == 1.0581] &&
             p < para_lookup[rr_rs_df$a == 1.0582]) {
@@ -112,7 +112,7 @@ rel_res_fitness <- function(para, p_res = 0.48) {
 # Main dataset:
 
 par_df <- list(
-    read_excel(paste0("~/Box Sync/eco-evo_experiments/field-data/",
+    read_excel(paste0("~/Box Sync/gameofclones/field-data/",
                       "field-data.xlsx"), sheet = "parasitism",
                na = c("", "NA")) %>%
         select(field, Cycle, DateFormat, year, day, para, paraN) %>%
@@ -127,7 +127,7 @@ par_df <- list(
                field = ifelse(field == "506.1", "506S", field),
                date = as.Date(date)) %>%
         filter(!is.na(para), !is.na(para_n)),
-    list.files("~/Box Sync/eco-evo_experiments/field-data/2017--2019", "*.csv",
+    list.files("~/Box Sync/gameofclones/field-data/2017--2019", "*.csv",
                full.names = TRUE) %>%
         map_dfr(read_csv, show_col_types = FALSE) %>%
         # I can't find this one in any of the Arlington maps...
@@ -348,11 +348,25 @@ obs_par_df <- obs_par_df %>%
 #     NULL
 
 
+obs_par_df %>%
+    filter(obs_n >= 5) %>%
+    group_by(obs_date) %>%
+    summarize(para = sd(para)) %>%
+    summarize(median = median(para),
+              mean = mean(para))
+
+
+obs_par_df %>%
+    group_by(field, year) %>%
+    summarize(para = sd(para), .groups = "drop") %>%
+    summarize(median = median(para),
+              mean = mean(para))
+
 
 # maps ----
 
 
-fields_sf <- st_read(paste0("~/Box Sync/eco-evo_experiments/field-data/",
+fields_sf <- st_read(paste0("~/Box Sync/gameofclones/field-data/",
                             "arlington-fields/Arlington.gpkg")) %>%
     st_transform(st_crs(32616)) %>%
     mutate(geom = st_centroid(geom))
@@ -451,7 +465,7 @@ mosaic_p <- par_ts_p + fields_par_p +
 
 
 
-wi_bounds <- paste0("~/Box Sync/eco-evo_experiments/field-data/",
+wi_bounds <- paste0("~/Box Sync/gameofclones/field-data/",
                     "WI-boundary/Wisconsin_State_Boundary_24K.gpkg") %>%
     st_read() %>%
     st_transform(st_crs(32616))
