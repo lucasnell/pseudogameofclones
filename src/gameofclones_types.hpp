@@ -1,5 +1,5 @@
-# ifndef __CLONEWARS_TYPES_H
-# define __CLONEWARS_TYPES_H
+# ifndef __GAMEOFCLONES_TYPES_H
+# define __GAMEOFCLONES_TYPES_H
 
 
 /*

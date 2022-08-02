@@ -20,6 +20,6 @@ being parasitized: living and dead ("mummy"), respectively.}
 dev_times
 }
 \description{
-See \code{vignette("internals", "clonewars")} for the exact values here.
+See \code{vignette("internals", "gameofclones")} for the exact values here.
 }
 \keyword{datasets}

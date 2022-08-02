@@ -1,5 +1,5 @@
-# ifndef __CLONEWARS_WASPS_H
-# define __CLONEWARS_WASPS_H
+# ifndef __GAMEOFCLONES_WASPS_H
+# define __GAMEOFCLONES_WASPS_H
 
 
 #include <RcppArmadillo.h>      // arma namespace
@@ -9,7 +9,7 @@
 #include <cstdint>              // integer types
 #include <algorithm>            // find
 #include <pcg/pcg_random.hpp>   // pcg prng
-#include "clonewars_types.hpp"  // integer types
+#include "gameofclones_types.hpp"  // integer types
 
 
 

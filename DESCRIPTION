@@ -1,4 +1,4 @@
-Package: clonewars
+Package: gameofclones
 Version: 0.0.0.9000
 Title: Clonal Evolution in Aphid Metapopulations
 Description: Analyses and simulations related to aphid metapopulation clonal evolution experiments.
@@ -30,9 +30,9 @@ LinkingTo:
     RcppProgress
 SystemRequirements: GNU make, C++11
 NeedsCompilation: yes
-RoxygenNote: 7.1.2
-URL: https://github.com/lucasnell/clonewars
-BugReports: https://github.com/lucasnell/clonewars/issues
+RoxygenNote: 7.2.0
+URL: https://github.com/lucasnell/gameofclones
+BugReports: https://github.com/lucasnell/gameofclones/issues
 Suggests:
     knitr,
     rmarkdown,

@@ -4,7 +4,7 @@
 #include <functional>           // std::greater
 #include <random>               // normal distribution
 #include <pcg/pcg_random.hpp>   // pcg prng
-#include "clonewars_types.hpp"  // integer types
+#include "gameofclones_types.hpp"  // integer types
 #include "patches.hpp"          // field and plant classes
 #include "math.hpp"             // combine_leslies fxn
 

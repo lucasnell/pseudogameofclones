@@ -20,7 +20,7 @@
 #endif
 
 
-#include "clonewars_types.hpp"  // integer types
+#include "gameofclones_types.hpp"  // integer types
 #include "aphids.hpp"           // aphid classes
 #include "patches.hpp"          // field and plant classes
 #include "pcg.hpp"              // mt_seeds seed_pcg fxns
@@ -751,7 +751,7 @@ void check_args(const uint32& n_reps,
 
 
 //[[Rcpp::export]]
-List sim_clonewars_cpp(const uint32& n_reps,
+List sim_gameofclones_cpp(const uint32& n_reps,
                        const uint32& n_fields,
                        const uint32& max_plant_age,
                        const double& max_N,

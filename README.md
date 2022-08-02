@@ -5,8 +5,9 @@
 has not yet been a stable, usable release suitable for the
 public.](http://www.repostatus.org/badges/latest/wip.svg)](http://www.repostatus.org/#wip)
 
-# clonewars <img src="logo.svg" align="right" height="150" />
+# gameofclones <img src="logo.svg" align="right" height="150" />
 
-This package contains code for the simulation of aphid metapopulations.
+This package contains code for the simulation of eco-evo dynamics in
+aphid metapopulations.
 
 ## Project description

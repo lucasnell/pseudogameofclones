@@ -1,10 +1,10 @@
 ---
-title: "clonewars parameters"
+title: "gameofclones parameters"
 author: "Lucas A. Nell"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{clonewars parameters}
+  %\VignetteIndexEntry{gameofclones parameters}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
@@ -12,7 +12,7 @@ editor_options:
 ---
 
 ```{r setup, include = FALSE}
-library(clonewars)
+library(gameofclones)
 knitr::opts_chunk$set(comment = "")
 ```
 
@@ -62,7 +62,7 @@ Below, the "Default-value expression" is the code necessary to access and, in so
 cases, manipulate an internal-data object to compute the default value.
 Here, `NA` means it is not stored internally.
 Note also that although the default value for `attack_surv`  is not stored internally,
-the object `clonewars::wasp_attack$attack_surv` stores values for a resistant line of aphids.
+the object `gameofclones::wasp_attack$attack_surv` stores values for a resistant line of aphids.
 
 I first created this function for the calls to `Reduce`.
 ```{r meanfun}
@@ -72,31 +72,31 @@ mf <- function(x, y) (x + y) / 2
 
 | Argument name       | Default-value expression                  | Default value                                            |
 |:--------------------|:------------------------------------------|:---------------------------------------------------------|
-| `aphid_density_0`   | `clonewars::populations$aphids_0`               | <code>`r clonewars::populations$aphids_0`</code>               |
-| `aphid_surv_juv`    | `Reduce(mf,clonewars::populations$surv_juv)`    | <code>`r Reduce(mf,clonewars::populations$surv_juv)`</code>    |
-| `aphid_surv_adult`  | `Reduce(mf,clonewars::populations$surv_adult)`  | <code>`r Reduce(mf,clonewars::populations$surv_adult)`</code>  |
-| `aphid_repro`       | `Reduce(mf,clonewars::populations$repro)`       | <code>`r Reduce(mf,clonewars::populations$repro)`</code>       |
-| `K`                 | `clonewars::populations$K`                      | <code>`r clonewars::populations$K`</code>                      |
-| `wasp_density_0`    | `clonewars::populations$wasps_0`                | <code>`r clonewars::populations$wasps_0`</code>                |
-| `K_y`               | `clonewars::populations$K_y`                    | <code>`r clonewars::populations$K_y`</code>                    |
-| `s_y`               | `clonewars::populations$s_y`                    | <code>`r clonewars::populations$s_y`</code>                    |
-| `wasp_sex_ratio`    | `clonewars::populations$sex_ratio`              | <code>`r clonewars::populations$sex_ratio`</code>              |
-| `aphid_instar_days` | `clonewars::dev_times$instar_days$highT`        | <code>`r clonewars::dev_times$instar_days$highT`</code>        |
-| `mum_days`          | `clonewars::dev_times$mum_days`                 | <code>`r clonewars::dev_times$mum_days`</code>                 |
-| `rel_attack`        | `clonewars::wasp_attack$rel_attack$highT`       | <code>`r clonewars::wasp_attack$rel_attack$highT`</code>       |
-| `a`                 | `clonewars::wasp_attack$a`                      | <code>`r clonewars::wasp_attack$a`</code>                      |
-| `k`                 | `clonewars::wasp_attack$k`                      | <code>`r clonewars::wasp_attack$k`</code>                      |
-| `h`                 | `clonewars::wasp_attack$h`                      | <code>`r clonewars::wasp_attack$h`</code>                      |
-| `attack_surv`       | `clonewars::wasp_attack$attack_surv / 2`        | <code>`r clonewars::wasp_attack$attack_surv / 2`</code>        |
-| `sigma_x`           | `clonewars::environ$sigma_x`                    | <code>`r clonewars::environ$sigma_x`</code>                    |
-| `sigma_y`           | `clonewars::environ$sigma_y`                    | <code>`r clonewars::environ$sigma_y`</code>                    |
-| `rho`               | `clonewars::environ$rho`                        | <code>`r clonewars::environ$rho`</code>                        |
+| `aphid_density_0`   | `gameofclones::populations$aphids_0`               | <code>`r gameofclones::populations$aphids_0`</code>               |
+| `aphid_surv_juv`    | `Reduce(mf,gameofclones::populations$surv_juv)`    | <code>`r Reduce(mf,gameofclones::populations$surv_juv)`</code>    |
+| `aphid_surv_adult`  | `Reduce(mf,gameofclones::populations$surv_adult)`  | <code>`r Reduce(mf,gameofclones::populations$surv_adult)`</code>  |
+| `aphid_repro`       | `Reduce(mf,gameofclones::populations$repro)`       | <code>`r Reduce(mf,gameofclones::populations$repro)`</code>       |
+| `K`                 | `gameofclones::populations$K`                      | <code>`r gameofclones::populations$K`</code>                      |
+| `wasp_density_0`    | `gameofclones::populations$wasps_0`                | <code>`r gameofclones::populations$wasps_0`</code>                |
+| `K_y`               | `gameofclones::populations$K_y`                    | <code>`r gameofclones::populations$K_y`</code>                    |
+| `s_y`               | `gameofclones::populations$s_y`                    | <code>`r gameofclones::populations$s_y`</code>                    |
+| `wasp_sex_ratio`    | `gameofclones::populations$sex_ratio`              | <code>`r gameofclones::populations$sex_ratio`</code>              |
+| `aphid_instar_days` | `gameofclones::dev_times$instar_days$highT`        | <code>`r gameofclones::dev_times$instar_days$highT`</code>        |
+| `mum_days`          | `gameofclones::dev_times$mum_days`                 | <code>`r gameofclones::dev_times$mum_days`</code>                 |
+| `rel_attack`        | `gameofclones::wasp_attack$rel_attack$highT`       | <code>`r gameofclones::wasp_attack$rel_attack$highT`</code>       |
+| `a`                 | `gameofclones::wasp_attack$a`                      | <code>`r gameofclones::wasp_attack$a`</code>                      |
+| `k`                 | `gameofclones::wasp_attack$k`                      | <code>`r gameofclones::wasp_attack$k`</code>                      |
+| `h`                 | `gameofclones::wasp_attack$h`                      | <code>`r gameofclones::wasp_attack$h`</code>                      |
+| `attack_surv`       | `gameofclones::wasp_attack$attack_surv / 2`        | <code>`r gameofclones::wasp_attack$attack_surv / 2`</code>        |
+| `sigma_x`           | `gameofclones::environ$sigma_x`                    | <code>`r gameofclones::environ$sigma_x`</code>                    |
+| `sigma_y`           | `gameofclones::environ$sigma_y`                    | <code>`r gameofclones::environ$sigma_y`</code>                    |
+| `rho`               | `gameofclones::environ$rho`                        | <code>`r gameofclones::environ$rho`</code>                        |
 | `demog_mult`        | `NA`                                      | <code>`r 1`</code>                                       |
-| `harvest_surv`      | `clonewars::environ$harvest_surv`               | <code>`r clonewars::environ$harvest_surv`</code>               |
-| `disp_aphid`        | `clonewars::environ$disp_aphid`                 | <code>`r clonewars::environ$disp_aphid`</code>                 |
-| `disp_wasp`         | `clonewars::environ$disp_wasp`                  | <code>`r clonewars::environ$disp_wasp`</code>                  |
-| `disp_start`        | `clonewars::environ$disp_start$highT`           | <code>`r clonewars::environ$disp_start$highT`</code>           |
-| `pred_rate`         | `clonewars::environ$pred_rate`                  | <code>`r clonewars::environ$pred_rate`</code>                  |
+| `harvest_surv`      | `gameofclones::environ$harvest_surv`               | <code>`r gameofclones::environ$harvest_surv`</code>               |
+| `disp_aphid`        | `gameofclones::environ$disp_aphid`                 | <code>`r gameofclones::environ$disp_aphid`</code>                 |
+| `disp_wasp`         | `gameofclones::environ$disp_wasp`                  | <code>`r gameofclones::environ$disp_wasp`</code>                  |
+| `disp_start`        | `gameofclones::environ$disp_start$highT`           | <code>`r gameofclones::environ$disp_start$highT`</code>           |
+| `pred_rate`         | `gameofclones::environ$pred_rate`                  | <code>`r gameofclones::environ$pred_rate`</code>                  |
 
 
 
@@ -111,16 +111,16 @@ offset, but with a vector of harvest times; this made little difference, though.
 The following parameter values were different from default values:
 
 ```{r dens_vals, echo = FALSE}
-sus_dens <- (1 - clonewars::populations$prop_resist) * clonewars::populations$aphids_0
-res_dens <- clonewars::populations$prop_resist * clonewars::populations$aphids_0
+sus_dens <- (1 - gameofclones::populations$prop_resist) * gameofclones::populations$aphids_0
+res_dens <- gameofclones::populations$prop_resist * gameofclones::populations$aphids_0
 
-res_surv <- clonewars::wasp_attack$attack_surv
+res_surv <- gameofclones::wasp_attack$attack_surv
 
-sus_adult <- clonewars::populations$surv_adult$high[1:32]
-res_adult <- clonewars::populations$surv_adult$low[1:32]
+sus_adult <- gameofclones::populations$surv_adult$high[1:32]
+res_adult <- gameofclones::populations$surv_adult$low[1:32]
 
-sus_repro <- clonewars::populations$repro$high[1:32]
-res_repro <- clonewars::populations$repro$low[1:32]
+sus_repro <- gameofclones::populations$repro$high[1:32]
+res_repro <- gameofclones::populations$repro$low[1:32]
 ```
 
 | Argument name      | Susceptible                | Resistant                  |

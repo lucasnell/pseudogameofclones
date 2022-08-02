@@ -1,10 +1,10 @@
 ---
-title: "clonewars internals"
+title: "gameofclones internals"
 author: "Lucas A. Nell"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{clonewars internals}
+  %\VignetteIndexEntry{gameofclones internals}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
@@ -16,8 +16,8 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
 
-This vignette outlines the internal data present in `clonewars`. 
-These data inform the default parameters (see `vignette("parameters", "clonewars")`).
+This vignette outlines the internal data present in `gameofclones`. 
+These data inform the default parameters (see `vignette("parameters", "gameofclones")`).
 
 
 The code was initially set up for 2 clones that have different life histories.
@@ -224,7 +224,7 @@ environ[["rho"]] <- signif(
 
 # Saving data
 
-Saving the created objects as internal data for `clonewars`.
+Saving the created objects as internal data for `gameofclones`.
 
 ```{r save_data, eval = FALSE}
 usethis::use_data(dev_times, populations, wasp_attack, environ)

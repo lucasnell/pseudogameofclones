@@ -1,12 +1,12 @@
-#' The 'clonewars' package.
+#' The 'gameofclones' package.
 #'
 #' @description Analyses and simulations related to aphid--parasitoid
 #'     eco-evo dynamics experiments.
 #'
 #' @docType package
-#' @name clonewars-package
-#' @aliases clonewars
-#' @useDynLib clonewars, .registration = TRUE
+#' @name gameofclones-package
+#' @aliases gameofclones
+#' @useDynLib gameofclones, .registration = TRUE
 #' @import methods
 #' @import Rcpp
 #'

@@ -2,7 +2,7 @@
 #include <cmath>
 
 #include "math.hpp"
-#include "clonewars_types.hpp"
+#include "gameofclones_types.hpp"
 
 using namespace Rcpp;
 

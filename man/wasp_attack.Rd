@@ -37,7 +37,7 @@ Anthony Ives.
 wasp_attack
 }
 \description{
-See \code{vignette("internals", "clonewars")} for more information and
+See \code{vignette("internals", "gameofclones")} for more information and
 for the exact values used.
 }
 \keyword{datasets}

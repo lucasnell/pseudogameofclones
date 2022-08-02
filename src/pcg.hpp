@@ -1,5 +1,5 @@
-#ifndef __CLONEWARS_PCG_H
-#define __CLONEWARS_PCG_H
+#ifndef __GAMEOFCLONES_PCG_H
+#define __GAMEOFCLONES_PCG_H
 
 #include <RcppArmadillo.h>
 #include <vector>
@@ -7,7 +7,7 @@
 #include <pcg/pcg_extras.hpp>  // pcg 128-bit integer type
 #include <pcg/pcg_random.hpp> // pcg prng
 
-#include "clonewars_types.hpp"
+#include "gameofclones_types.hpp"
 
 using namespace Rcpp;
 

@@ -60,7 +60,7 @@
 #'     adulthood instead.
 #'     Defaults to `0.5`.
 #'
-#' @return A list with the necessary info to pass onto sim_clonewars.
+#' @return A list with the necessary info to pass onto sim_gameofclones.
 #'
 #' @export
 #'
@@ -353,7 +353,7 @@ cube_list_check <- function(x, n) {
 # full fun docs ----
 #' Simulate multiple reps and simplify output - all options.
 #'
-#' This mainly differs from `sim_clonewars` in that it allows for
+#' This mainly differs from `sim_gameofclones` in that it allows for
 #' stochasticity and for simulating the process of plants dying and
 #' being replaced.
 #' The latter process doesn't appear important except for very small scales
@@ -525,7 +525,7 @@ cube_list_check <- function(x, n) {
 #'     Defaults to `1`.
 #' @param n_threads Number of threads to use if OpenMP is enabled
 #'     (ignored otherwise).
-#'     Find out whether it's enabled using `clonewars:::using_openmp()`.
+#'     Find out whether it's enabled using `gameofclones:::using_openmp()`.
 #'     Defaults to `1`.
 #' @param show_progress Boolean for whether to show progress bar.
 #'     Defaults to `FALSE`.
@@ -556,7 +556,7 @@ cube_list_check <- function(x, n) {
 #' @export
 #'
 # full fun code ----
-sim_clonewars_full <- function(n_reps,
+sim_gameofclones_full <- function(n_reps,
                                clonal_lines,
                                n_fields = 2,
                                n_plants = 1,
@@ -787,7 +787,7 @@ sim_clonewars_full <- function(n_reps,
     stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
 
 
-    sims <- sim_clonewars_cpp(n_reps, n_fields, max_plant_age, max_N,
+    sims <- sim_gameofclones_cpp(n_reps, n_fields, max_plant_age, max_N,
                               check_for_clear, clear_surv,
                               max_t, save_every, mean_K, sd_K, K_y_mult,
                               wilted_prop, shape1_wilted_mort,
@@ -833,7 +833,7 @@ sim_clonewars_full <- function(n_reps,
 #' Deterministic simulations of multiple fields of aphids and wasps.
 #'
 #'
-#' @inheritParams sim_clonewars_full
+#' @inheritParams sim_gameofclones_full
 #'
 #' @param K Aphid density dependence.
 #'     Defaults to `12.5e3` because this caused simulations to
@@ -882,7 +882,7 @@ sim_experiments <- function(clonal_lines,
                             show_progress = FALSE) {
 
 
-    sims <- sim_clonewars_full(clonal_lines = clonal_lines,
+    sims <- sim_gameofclones_full(clonal_lines = clonal_lines,
                                n_fields = n_fields,
                                max_t = max_t,
                                plant_check_gaps = plant_check_gaps,
@@ -932,7 +932,7 @@ sim_experiments <- function(clonal_lines,
                                shape2_wilted_mort = 5.777129,
                                n_threads = 1)
 
-    # Adjusting for different name from `sim_clonewars_full`:
+    # Adjusting for different name from `sim_gameofclones_full`:
     sims$call[["K"]] <- sims$call[["mean_K"]]
     sims$call[["mean_K"]] <- NULL
 
@@ -1020,7 +1020,7 @@ restart_experiment <- function(sims_obj,
             stop("\nPlease do not directly edit `sims_obj$all_info`. ",
                  "You can try to fix this problem by running ",
                  "`sims_obj$all_info <- ",
-                 "clonewars:::make_all_info(sims_obj)`")
+                 "gameofclones:::make_all_info(sims_obj)`")
         }
         if (is.data.frame(new_starts)) {
             new_starts <- rep(list(new_starts), n_reps)
@@ -1048,7 +1048,7 @@ restart_experiment <- function(sims_obj,
                 stop("\nPlease do not directly edit `sims_obj$all_info`. ",
                      "You can try to fix this problem by running ",
                      "`sims_obj$all_info <- ",
-                     "clonewars:::make_all_info(sims_obj)`")
+                     "gameofclones:::make_all_info(sims_obj)`")
             }
         }
         N_vecs <- lapply(new_starts, function(x) x[["N"]])

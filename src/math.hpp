@@ -1,5 +1,5 @@
-# ifndef __CLONEWARS_MATH_H
-# define __CLONEWARS_MATH_H
+# ifndef __GAMEOFCLONES_MATH_H
+# define __GAMEOFCLONES_MATH_H
 
 
 #include <RcppArmadillo.h>
@@ -7,7 +7,7 @@
 #include <random>
 
 #include <pcg/pcg_random.hpp>   // pcg prng
-#include "clonewars_types.hpp"
+#include "gameofclones_types.hpp"
 #include "pcg.hpp"              // runif_ab fxn
 
 

@@ -1,12 +1,12 @@
-# ifndef __CLONEWARS_PATCHES_H
-# define __CLONEWARS_PATCHES_H
+# ifndef __GAMEOFCLONES_PATCHES_H
+# define __GAMEOFCLONES_PATCHES_H
 
 
 #include <RcppArmadillo.h>      // arma namespace
 #include <vector>               // vector class
 #include <random>               // normal distribution
 #include <pcg/pcg_random.hpp>   // pcg prng
-#include "clonewars_types.hpp"  // integer types
+#include "gameofclones_types.hpp"  // integer types
 #include "math.hpp"             // distributions
 #include "aphids.hpp"           // aphid classes
 #include "wasps.hpp"            // wasp classes
