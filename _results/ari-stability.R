@@ -127,10 +127,6 @@ head(ss_df)
 #'    simulation object (`sims` in this case).
 #'    Always copy to a new object before editing.
 #' 2) You should only change the `N` column and leave everything else the same.
-#' 3) Only try perturbation on output from `sim_experiments`, not on output
-#'    from `restart_experiments`. If you need to do multiple perturbations,
-#'    the `perturb` argument to the `sim_experiments` function is a better
-#'    option.
 #'
 #'
 #' Here are some examples:
