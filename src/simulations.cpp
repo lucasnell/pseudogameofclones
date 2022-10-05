@@ -1008,7 +1008,11 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
                              const uint32& save_every,
                              const std::deque<uint32>& check_for_clear,
                              const bool& stage_ts_out,
-                             const bool& show_progress) {
+                             const bool& show_progress,
+                             const std::vector<uint32>& perturb_when,
+                             const std::vector<uint32>& perturb_where,
+                             const std::vector<uint32>& perturb_who,
+                             const std::vector<double>& perturb_how) {
 
 
     XPtr<std::vector<AllFields>> all_fields_vec_xptr(all_fields_ptr);
@@ -1019,10 +1023,6 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
     // No perturbations allowed here:
     Progress prog_bar(max_t * n_reps, show_progress);
     int status_code = 0;
-    std::vector<uint32> perturb_when(0);
-    std::vector<uint32> perturb_where(0);
-    std::vector<uint32> perturb_who(0);
-    std::vector<double> perturb_how(0);
 
     std::vector<RepSummary> summaries(n_reps);
 

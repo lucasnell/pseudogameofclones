@@ -25,7 +25,9 @@ restart_experiment(
   plant_check_gaps = NULL,
   max_plant_age = NULL,
   clear_surv = NULL,
-  show_progress = NULL
+  show_progress = NULL,
+  perturb = NULL,
+  no_warns = FALSE
 )
 }
 \arguments{
@@ -124,9 +126,40 @@ Defaults to \code{0}.}
 
 \item{show_progress}{Boolean for whether to show progress bar.
 Defaults to \code{FALSE}.}
+
+\item{perturb}{Information for perturbing populations in the simulations.
+It should be a dataframe with 4 columns:
+* \code{when}: Integers indicating at what timepoint(s) to do the
+perturbations. These can be repeated if you want to perturb
+multiple things at the same time.
+* \code{where}: What field to do the perturbations in.
+* \code{who}: Which population to perturb.
+This can be a character vector where values must be the name of an
+aphid line, \code{"wasps"}, or \code{"mummies"}.
+It can also be an integer vector where, for \code{n} aphid lines,
+values \verb{<= n} indicate an aphid line,
+values \verb{== n+1} indicate mummies,
+and values \verb{== n+2} indicate adult wasps.
+Note that perturbing the mummy population also perturbs the
+still-living but parasitized aphids, too.
+* \code{how}: Numbers \verb{>= 0} that are multiplied by the desired population
+to cause the perturbation.}
 }
 \description{
-Note that defaults for all this function's arguments except for
-\code{sims_obj}, \code{new_starts}, \code{max_t}, and \code{save_every} are \code{NULL},
+Note for most of this function's arguments, their default value is \code{NULL},
 which results in them being the same as for the original simulations.
+The exceptions to this are the arguments \code{sims_obj}, \code{new_starts},
+\code{stage_ts_out}, \code{max_t}, \code{save_every}, \code{perturb}, and \code{no_warns}.
+Arguments \code{sims_obj}, \code{new_starts}, and \code{stage_ts_out} are new to this
+function (see their documentation below for details).
+Arguments \code{max_t} and \code{save_every} are set to \code{250} and \code{1}, respectively,
+which results in a shorter time series with greater resolution, the typical
+use case for this function.
+Argument \code{perturb} has a default value of \code{NULL} which results in no
+perturbations.
+You can input a new data frame if you want to perturb these restarted
+experiments.
+If the initial simulations had perturbations but the new one won't,
+this function will provide a warning indicating this.
+You can suppress this warning by setting \code{no_warns = TRUE}.
 }

@@ -195,8 +195,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // restart_experiments_cpp
-List restart_experiments_cpp(SEXP all_fields_ptr, const uint32& max_t, const uint32& save_every, const std::deque<uint32>& check_for_clear, const bool& stage_ts_out, const bool& show_progress);
-RcppExport SEXP _gameofclones_restart_experiments_cpp(SEXP all_fields_ptrSEXP, SEXP max_tSEXP, SEXP save_everySEXP, SEXP check_for_clearSEXP, SEXP stage_ts_outSEXP, SEXP show_progressSEXP) {
+List restart_experiments_cpp(SEXP all_fields_ptr, const uint32& max_t, const uint32& save_every, const std::deque<uint32>& check_for_clear, const bool& stage_ts_out, const bool& show_progress, const std::vector<uint32>& perturb_when, const std::vector<uint32>& perturb_where, const std::vector<uint32>& perturb_who, const std::vector<double>& perturb_how);
+RcppExport SEXP _gameofclones_restart_experiments_cpp(SEXP all_fields_ptrSEXP, SEXP max_tSEXP, SEXP save_everySEXP, SEXP check_for_clearSEXP, SEXP stage_ts_outSEXP, SEXP show_progressSEXP, SEXP perturb_whenSEXP, SEXP perturb_whereSEXP, SEXP perturb_whoSEXP, SEXP perturb_howSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -206,7 +206,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const std::deque<uint32>& >::type check_for_clear(check_for_clearSEXP);
     Rcpp::traits::input_parameter< const bool& >::type stage_ts_out(stage_ts_outSEXP);
     Rcpp::traits::input_parameter< const bool& >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(restart_experiments_cpp(all_fields_ptr, max_t, save_every, check_for_clear, stage_ts_out, show_progress));
+    Rcpp::traits::input_parameter< const std::vector<uint32>& >::type perturb_when(perturb_whenSEXP);
+    Rcpp::traits::input_parameter< const std::vector<uint32>& >::type perturb_where(perturb_whereSEXP);
+    Rcpp::traits::input_parameter< const std::vector<uint32>& >::type perturb_who(perturb_whoSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type perturb_how(perturb_howSEXP);
+    rcpp_result_gen = Rcpp::wrap(restart_experiments_cpp(all_fields_ptr, max_t, save_every, check_for_clear, stage_ts_out, show_progress, perturb_when, perturb_where, perturb_who, perturb_how));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -222,7 +226,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gameofclones_using_openmp", (DL_FUNC) &_gameofclones_using_openmp, 0},
     {"_gameofclones_sim_gameofclones_cpp", (DL_FUNC) &_gameofclones_sim_gameofclones_cpp, 51},
     {"_gameofclones_restart_fill_other_pars", (DL_FUNC) &_gameofclones_restart_fill_other_pars, 15},
-    {"_gameofclones_restart_experiments_cpp", (DL_FUNC) &_gameofclones_restart_experiments_cpp, 6},
+    {"_gameofclones_restart_experiments_cpp", (DL_FUNC) &_gameofclones_restart_experiments_cpp, 10},
     {NULL, NULL, 0}
 };
 

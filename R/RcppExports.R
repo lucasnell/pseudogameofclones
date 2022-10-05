@@ -86,7 +86,7 @@ restart_fill_other_pars <- function(all_fields_in_ptr, K, alate_b0, alate_b1, al
     .Call(`_gameofclones_restart_fill_other_pars`, all_fields_in_ptr, K, alate_b0, alate_b1, alate_field_disp_p, K_y_mult, s_y, a, k, h, wasp_disp_p, mum_smooth, pred_rate, max_plant_age, clear_surv)
 }
 
-restart_experiments_cpp <- function(all_fields_ptr, max_t, save_every, check_for_clear, stage_ts_out, show_progress) {
-    .Call(`_gameofclones_restart_experiments_cpp`, all_fields_ptr, max_t, save_every, check_for_clear, stage_ts_out, show_progress)
+restart_experiments_cpp <- function(all_fields_ptr, max_t, save_every, check_for_clear, stage_ts_out, show_progress, perturb_when, perturb_where, perturb_who, perturb_how) {
+    .Call(`_gameofclones_restart_experiments_cpp`, all_fields_ptr, max_t, save_every, check_for_clear, stage_ts_out, show_progress, perturb_when, perturb_where, perturb_who, perturb_how)
 }
 

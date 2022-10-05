@@ -350,6 +350,53 @@ cube_list_check <- function(x, n) {
     }
 }
 
+
+# Less basic checks, alterations ----
+
+
+# Check `perturb` dataframe and return a list that's properly formatted for use
+# in cpp code.
+make_perturb_list <- function(perturb, n_fields, aphid_names) {
+
+    if (is.null(perturb)) {
+        perturb_when = integer(0)
+        perturb_where = integer(0)
+        perturb_who = integer(0)
+        perturb_how = numeric(0)
+    } else {
+        stopifnot(inherits(perturb, "data.frame"))
+        stopifnot(all(c("when", "where", "who", "how") %in% colnames(perturb)))
+        perturb <- dplyr::arrange(perturb, when)
+        perturb_when <- perturb$when
+        stopifnot(all(perturb$where <= n_fields & perturb$where > 0))
+        perturb_where <- perturb$where - 1
+        perturb_how <- perturb$how
+        n_lines <- length(aphid_names)
+        if (is.character(perturb$who)) {
+            stopifnot(all(perturb$who %in% c(aphid_names, "mummies", "wasps")))
+            perturb_who <- integer(length(perturb$who))
+            perturb_who[perturb$who %in% aphid_names] <- -1 +
+                match(perturb$who[perturb$who %in% aphid_names], aphid_names)
+            perturb_who[perturb$who == "mummies"] <- n_lines
+            perturb_who[perturb$who == "wasps"] <- n_lines + 1
+        } else {
+            stopifnot(all(perturb$who <= (n_lines+2) & perturb$who > 0))
+            perturb_who <- perturb$who - 1
+        }
+    }
+
+    perturb_list <- list(when = perturb_when,
+                         where = perturb_where,
+                         who = perturb_who,
+                         how = perturb_how)
+    uint_vec_check(perturb_list$when, "perturb_list$when")
+    uint_vec_check(perturb_list$where, "perturb_list$where")
+    uint_vec_check(perturb_list$who, "perturb_list$who")
+    dbl_vec_check(perturb_list$how, "perturb_list$how", .min = 0)
+
+    return(perturb_list)
+}
+
 # full fun docs ----
 #' Simulate multiple reps and simplify output - all options.
 #'
@@ -708,31 +755,9 @@ sim_gameofclones_full <- function(n_reps,
         rel_attack <- do.call(c, rel_attack__)
     } else stopifnot(length(rel_attack) == nrow(leslie_cubes[[1]]))
 
-    if (is.null(perturb)) {
-        perturb_when = integer(0)
-        perturb_where = integer(0)
-        perturb_who = integer(0)
-        perturb_how = numeric(0)
-    } else {
-        stopifnot(inherits(perturb, "data.frame"))
-        stopifnot(all(c("when", "where", "who", "how") %in% colnames(perturb)))
-        perturb <- dplyr::arrange(perturb, when)
-        perturb_when <- perturb$when
-        stopifnot(all(perturb$where <= n_fields & perturb$where > 0))
-        perturb_where <- perturb$where - 1
-        perturb_how <- perturb$how
-        if (is.character(perturb$who)) {
-            stopifnot(all(perturb$who %in% c(aphid_names, "mummies", "wasps")))
-            perturb_who <- integer(length(perturb$who))
-            perturb_who[perturb$who %in% aphid_names] <- -1 +
-                match(perturb$who[perturb$who %in% aphid_names], aphid_names)
-            perturb_who[perturb$who == "mummies"] <- length(aphid_names)
-            perturb_who[perturb$who == "wasps"] <- length(aphid_names) + 1
-        } else {
-            stopifnot(all(perturb$who <= (n_lines+2) & perturb$who > 0))
-            perturb_who <- perturb$who - 1
-        }
-    }
+
+    perturb_list <- make_perturb_list(perturb, n_fields, aphid_names)
+
 
     uint_check(n_reps, "n_reps", .min = 1)
     uint_check(n_fields, "n_fields", .min = 1)
@@ -779,10 +804,6 @@ sim_gameofclones_full <- function(n_reps,
     dbl_check(sex_ratio, "sex_ratio")
     dbl_vec_check(s_y, "s_y")
     stopifnot(inherits(constant_wasps, "logical"))
-    uint_vec_check(perturb_when, "perturb_when")
-    uint_vec_check(perturb_where, "perturb_where")
-    uint_vec_check(perturb_who, "perturb_who")
-    dbl_vec_check(perturb_how, "perturb_how", .min = 0)
     uint_check(n_threads, "n_threads", .min = 1)
     stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
 
@@ -803,8 +824,8 @@ sim_gameofclones_full <- function(n_reps,
                               rel_attack, a, k, h,
                               wasp_density_0, wasp_delay, wasp_disp_p,
                               sex_ratio, s_y, constant_wasps,
-                              perturb_when, perturb_where,
-                              perturb_who, perturb_how,
+                              perturb_list$when, perturb_list$where,
+                              perturb_list$who, perturb_list$how,
                               n_threads, show_progress)
 
     sims[["aphids"]] <- sims[["aphids"]] %>%
@@ -971,9 +992,23 @@ make_all_info <- function(sims_obj) {
 
 #' Restart experimental simulations.
 #'
-#' Note that defaults for all this function's arguments except for
-#' `sims_obj`, `new_starts`, `max_t`, and `save_every` are `NULL`,
+#' Note for most of this function's arguments, their default value is `NULL`,
 #' which results in them being the same as for the original simulations.
+#' The exceptions to this are the arguments `sims_obj`, `new_starts`,
+#' `stage_ts_out`, `max_t`, `save_every`, `perturb`, and `no_warns`.
+#' Arguments `sims_obj`, `new_starts`, and `stage_ts_out` are new to this
+#' function (see their documentation below for details).
+#' Arguments `max_t` and `save_every` are set to `250` and `1`, respectively,
+#' which results in a shorter time series with greater resolution, the typical
+#' use case for this function.
+#' Argument `perturb` has a default value of `NULL` which results in no
+#' perturbations.
+#' You can input a new data frame if you want to perturb these restarted
+#' experiments.
+#' If the initial simulations had perturbations but the new one won't,
+#' this function will provide a warning indicating this.
+#' You can suppress this warning by setting `no_warns = TRUE`.
+#'
 #'
 #' @param sims_obj A `cloneSims` object output from `sim_experiments`.
 #' @param new_starts A dataframe or list of dataframes indicating the
@@ -1010,7 +1045,9 @@ restart_experiment <- function(sims_obj,
                                plant_check_gaps = NULL,
                                max_plant_age = NULL,
                                clear_surv = NULL,
-                               show_progress = NULL) {
+                               show_progress = NULL,
+                               perturb = NULL,
+                               no_warns = FALSE) {
 
     stopifnot(inherits(sims_obj, "cloneSims") |
                   inherits(sims_obj, "cloneSimsRestart"))
@@ -1100,6 +1137,16 @@ restart_experiment <- function(sims_obj,
     if (length(K_y_mult) == 1) K_y_mult <- rep(K_y_mult, n_fields)
     if (length(s_y) == 1) s_y <- rep(s_y, n_fields)
 
+    stopifnot(inherits(no_warns, "logical") && length(no_warns) == 1)
+    if (!no_warns && !is.null(sims_obj$call$perturb) && is.null(perturb)) {
+        warning(paste("\nThe initial simulations had perturbations, but the",
+                      "new one won't. Provide a dataframe to the `perturb`",
+                      "argument to `restart_experiments` to add",
+                      "perturbations."))
+    }
+    aphid_names <- names(sims_obj$call$clonal_lines)
+    perturb_list <- make_perturb_list(perturb, n_fields, aphid_names)
+
 
     # This is like match.call but includes default arguments and
     # evaluates everything
@@ -1144,7 +1191,10 @@ restart_experiment <- function(sims_obj,
     }
 
     sims <- restart_experiments_cpp(new_all_info_xptr, max_t, save_every,
-                                    check_for_clear, stage_ts_out, show_progress)
+                                    check_for_clear, stage_ts_out,
+                                    show_progress,
+                                    perturb_list$when, perturb_list$where,
+                                    perturb_list$who, perturb_list$how)
 
     sims[["aphids"]] <- sims[["aphids"]] %>%
         mutate(across(c("rep", "time", "field", "plant"), as.integer)) %>%
