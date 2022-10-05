@@ -808,10 +808,13 @@ sim_gameofclones_full <- function(n_reps,
                               n_threads, show_progress)
 
     sims[["aphids"]] <- sims[["aphids"]] %>%
-        mutate(across(c("rep", "time", "plant"), as.integer)) %>%
+        mutate(across(c("rep", "time", "field", "plant"), as.integer)) %>%
+        mutate(across(c("rep", "field", "plant"), ~ .x + 1L)) %>%
+        mutate(line = ifelse(type == "mummy", NA_character_, line)) %>%
         as_tibble()
     sims[["wasps"]] <- sims[["wasps"]] %>%
-        mutate(across(c("rep", "time"), as.integer)) %>%
+        mutate(across(c("rep", "time", "field"), as.integer)) %>%
+        mutate(across(c("rep", "field"), ~ .x + 1L)) %>%
         as_tibble()
 
     sims[["all_info"]] <- make_all_info(sims)
@@ -952,6 +955,12 @@ make_all_info <- function(sims_obj) {
     }
     all_info <- lapply(fields_to_list(sims_obj$all_info_xptr),
                                 as.data.frame)
+    for (i in 1:length(all_info)) {
+        is_wasp <- all_info[[i]][["type"]] == "wasp"
+        is_mummy <- all_info[[i]][["type"]] == "mummy"
+        all_info[[i]][["plant"]][is_wasp] <- NA
+        all_info[[i]][["line"]][is_wasp | is_mummy] <- NA
+    }
     return(all_info)
 }
 
@@ -1138,10 +1147,13 @@ restart_experiment <- function(sims_obj,
                                     check_for_clear, stage_ts_out, show_progress)
 
     sims[["aphids"]] <- sims[["aphids"]] %>%
-        mutate(across(c("rep", "time", "plant"), as.integer)) %>%
+        mutate(across(c("rep", "time", "field", "plant"), as.integer)) %>%
+        mutate(across(c("rep", "field", "plant"), ~ .x + 1L)) %>%
+        mutate(line = ifelse(type == "mummy", NA_character_, line)) %>%
         as_tibble()
     sims[["wasps"]] <- sims[["wasps"]] %>%
-        mutate(across(c("rep", "time"), as.integer)) %>%
+        mutate(across(c("rep", "time", "field"), as.integer)) %>%
+        mutate(across(c("rep", "field"), ~ .x + 1L)) %>%
         as_tibble()
 
     sims[["all_info"]] <- make_all_info(sims)
