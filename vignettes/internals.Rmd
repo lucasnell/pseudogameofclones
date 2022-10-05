@@ -138,8 +138,7 @@ good starting point for a resistant line.
 * `a`: parasitoid attack rate
 * `k`: aggregation parameter of the negative binomial distribution
 * `h`: parasitoid attack rate handling time
-* `rel_attack`: relative attack rate for low (20º C; `lowT`) and 
-  high (27º C; `highT`) temperatures
+* `rel_attack`: relative attack rates on the different instars
 * `attack_surv`: the survivals of singly attacked and multiply attacked
   resistant aphids
 
@@ -148,13 +147,7 @@ wasp_attack <- list(
     a = 2.32,
     k = 0.35,
     h = 0.008,
-    rel_attack = list(
-        lowT = c(mapply(c(0.12, 0.27, 0.39, 0.16, 0.06), 
-                        dev_times$instar_days$lowT, FUN = rep), 
-                 recursive = TRUE),
-        highT = c(mapply(c(0.12, 0.27, 0.39, 0.16, 0.06), 
-                         dev_times$instar_days$highT, FUN = rep), 
-                  recursive = TRUE)),
+    rel_attack = c(0.12, 0.27, 0.39, 0.16, 0.06),
     attack_surv = c(0.9, 0.6)
 )
 ```

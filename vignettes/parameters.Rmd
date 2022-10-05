@@ -83,7 +83,7 @@ mf <- function(x, y) (x + y) / 2
 | `wasp_sex_ratio`    | `gameofclones::populations$sex_ratio`              | <code>`r gameofclones::populations$sex_ratio`</code>              |
 | `aphid_instar_days` | `gameofclones::dev_times$instar_days$highT`        | <code>`r gameofclones::dev_times$instar_days$highT`</code>        |
 | `mum_days`          | `gameofclones::dev_times$mum_days`                 | <code>`r gameofclones::dev_times$mum_days`</code>                 |
-| `rel_attack`        | `gameofclones::wasp_attack$rel_attack$highT`       | <code>`r gameofclones::wasp_attack$rel_attack$highT`</code>       |
+| `rel_attack`        | `gameofclones::wasp_attack$rel_attack`       | <code>`r gameofclones::wasp_attack$rel_attack`</code>       |
 | `a`                 | `gameofclones::wasp_attack$a`                      | <code>`r gameofclones::wasp_attack$a`</code>                      |
 | `k`                 | `gameofclones::wasp_attack$k`                      | <code>`r gameofclones::wasp_attack$k`</code>                      |
 | `h`                 | `gameofclones::wasp_attack$h`                      | <code>`r gameofclones::wasp_attack$h`</code>                      |
