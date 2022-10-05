@@ -125,7 +125,7 @@ clonal_line <- function(name,
                     leslie_args[[arg_name]] <- populations[[arg_name]][[
                         inputs[[y]]]]
                 } else {
-                    msg <- paste0("\nERROR: input argument `", y,
+                    msg <- paste0("\ninput argument `", y,
                                   "` to the `clonal_line` function should be ",
                                   "NULL, a numeric vector, \"low\", or ",
                                   "\"high\"")
@@ -138,7 +138,7 @@ clonal_line <- function(name,
 
     if (!identical(dim(leslie[[1]]), dim(leslie[[2]])) ||
         !identical(dim(leslie[[1]]), dim(leslie[[3]]))) {
-        stop("\nERROR: Leslie matrices for apterous, alates, and parasitized",
+        stop("\nLeslie matrices for apterous, alates, and parasitized",
              " aphids must all be of the same dimensions\n")
     }
 
@@ -183,7 +183,7 @@ clonal_line <- function(name,
     d0_mn2 <- is.numeric(density_0) && is.matrix(density_0) &&
         identical(dim(density_0), c(ns, 2L))
     if (!(d0_dbl || d0_m52 || d0_mn2)) {
-        stop("\nERROR: The `density_0` arg to the ",
+        stop("\nThe `density_0` arg to the ",
              "`clonal_line` function must be a single number or a 5x2 or ",
              ns, "x2 numeric matrix")
     }
@@ -210,7 +210,7 @@ clonal_line <- function(name,
         }
     }
     if (any(density_0 < 0)) {
-        stop("\nERROR: The `density_0` arg to the `clonal_line` function ",
+        stop("\nThe `density_0` arg to the `clonal_line` function ",
              "cannot contain values < 0.")
     }
 
@@ -277,11 +277,11 @@ uint_check <- function(x, n, .max = NULL, .min = NULL) {
                    "unsigned integer.\n"))
     }
     if (!is.null(.min) && x < .min) {
-        stop(paste0("\nERROR: ", n, " is below the minimum allowed value (",
+        stop(paste0("\n", n, " is below the minimum allowed value (",
                     .min, ").\n"))
     }
     if (!is.null(.max) && x > .max) {
-        stop(paste0("\nERROR: ", n, " is above the maximum allowed value (",
+        stop(paste0("\n", n, " is above the maximum allowed value (",
                     .max, ").\n"))
     }
 }
@@ -291,11 +291,11 @@ uint_vec_check <- function(x, n, .max = NULL, .min = NULL) {
                    "unsigned integer vector.\n"))
     }
     if (!is.null(.min) && any(x < .min)) {
-        stop(paste0("\nERROR: ", n, " contains values below the minimum ",
+        stop(paste0("\n", n, " contains values below the minimum ",
                     "allowed (", .min, ").\n"))
     }
     if (!is.null(.max) && any(x > .max)) {
-        stop(paste0("\nERROR: ", n, " contains values above the maximum ",
+        stop(paste0("\n", n, " contains values above the maximum ",
                     "allowed (", .max, ").\n"))
     }
 }
@@ -305,11 +305,11 @@ dbl_check <- function(x, n, .max = NULL, .min = NULL) {
                    "double.\n"))
     }
     if (!is.null(.min) && x < .min) {
-        stop(paste0("\nERROR: ", n, " is below the minimum allowed value (",
+        stop(paste0("\n", n, " is below the minimum allowed value (",
                    .min, ").\n"))
     }
     if (!is.null(.max) && x > .max) {
-        stop(paste0("\nERROR: ", n, " is above the maximum allowed value (",
+        stop(paste0("\n", n, " is above the maximum allowed value (",
                    .max, ").\n"))
     }
 }
@@ -319,11 +319,11 @@ dbl_vec_check <- function(x, n, .max = NULL, .min = NULL) {
                    "numeric vector.\n"))
     }
     if (!is.null(.min) && any(x < .min)) {
-        stop(paste0("\nERROR: ", n, " contains values below the minimum ",
+        stop(paste0("\n", n, " contains values below the minimum ",
                     "allowed (", .min, ").\n"))
     }
     if (!is.null(.max) && any(x > .max)) {
-        stop(paste0("\nERROR: ", n, " contains values above the maximum ",
+        stop(paste0("\n", n, " contains values above the maximum ",
                     "allowed (", .max, ").\n"))
     }
 }
@@ -333,11 +333,11 @@ dbl_mat_check <- function(x, n, .max = NULL, .min = NULL) {
                    "numeric matrix.\n"))
     }
     if (!is.null(.min) && any(x < .min)) {
-        stop(paste0("\nERROR: ", n, " contains values below the minimum ",
+        stop(paste0("\n", n, " contains values below the minimum ",
                     "allowed (", .min, ").\n"))
     }
     if (!is.null(.max) && any(x > .max)) {
-        stop(paste0("\nERROR: ", n, " contains values above the maximum ",
+        stop(paste0("\n", n, " contains values above the maximum ",
                     "allowed (", .max, ").\n"))
     }
 }
@@ -659,7 +659,7 @@ sim_gameofclones_full <- function(n_reps,
     if (!inherits(clonal_lines, "multiAphid")) {
         if (inherits(clonal_lines, "aphid")) {
             clonal_lines <- c(clonal_lines)
-        } else stop("\nERROR: `clonal_lines` must be a multiAphid object.\n")
+        } else stop("\n`clonal_lines` must be a multiAphid object.\n")
     }
 
     temp <- match.arg(temp, c("low", "high"))
@@ -726,8 +726,7 @@ sim_gameofclones_full <- function(n_reps,
 
     densities_0 <- lapply(clonal_lines, function(x) x$density_0)
     if (!length(unique(sapply(densities_0, nrow))) == 1) {
-        stop("\nERROR: All aphid lines must have the same sized density ",
-             "matrices\n")
+        stop("\nAll aphid lines must have the same sized density matrices\n")
     }
     aphid_density_0 <- array(do.call(c, densities_0),
                              dim = c(dim(densities_0[[1]]), n_lines))
