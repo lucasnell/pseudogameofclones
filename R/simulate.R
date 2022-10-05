@@ -1055,6 +1055,21 @@ restart_experiment <- function(sims_obj,
              "in this `cloneSims*` object. Please re-run simulation.")
     }
 
+    # Extract aphid line info (the location differs depending on whether it's
+    # a restart)
+    if (inherits(sims_obj, "cloneSimsRestart")) {
+        clonal_lines <- sims_obj$clonal_lines
+    } else {
+        clonal_lines <- sims_obj$call$clonal_lines
+    }
+    stopifnot(!is.null(clonal_lines))
+    if (!inherits(clonal_lines, "multiAphid")) {
+        if (inherits(clonal_lines, "aphid")) {
+            clonal_lines <- c(clonal_lines)
+        } else stop("\n`clonal_lines` must be a multiAphid/aphid object.")
+    }
+
+
     # If `new_starts` is provided, check it carefully then adjust the
     # underlying C++ objects accordingly.
     if (!is.null(new_starts)) {
@@ -1124,9 +1139,30 @@ restart_experiment <- function(sims_obj,
     if (is.null(show_progress)) show_progress <-
             sims_obj$call[["show_progress"]]
 
+    # Error if any of these are still NULL, since this means they weren't in
+    # `sims_obj$call`
+    stopifnot(!is.null(alate_field_disp_p))
+    stopifnot(!is.null(K))
+    stopifnot(!is.null(alate_b0))
+    stopifnot(!is.null(alate_b1))
+    stopifnot(!is.null(K_y_mult))
+    stopifnot(!is.null(s_y))
+    stopifnot(!is.null(a))
+    stopifnot(!is.null(k))
+    stopifnot(!is.null(h))
+    stopifnot(!is.null(wasp_disp_p))
+    stopifnot(!is.null(mum_smooth))
+    stopifnot(!is.null(pred_rate))
+    stopifnot(!is.null(plant_check_gaps))
+    stopifnot(!is.null(max_plant_age))
+    stopifnot(!is.null(clear_surv))
+    stopifnot(!is.null(show_progress))
+
     # Create / edit some items:
     n_fields <- sims_obj$call$n_fields
-    n_lines <- length(sims_obj$call$clonal_lines)
+    n_lines <- length(clonal_lines)
+    uint_check(n_fields, "n_fields", .min = 1)
+    uint_check(n_lines, "n_lines", .min = 1)
     check_for_clear <- cumsum(rep(plant_check_gaps,
                                   ceiling(max_t / sum(plant_check_gaps))))
     check_for_clear <- check_for_clear[check_for_clear <= max_t]
@@ -1143,7 +1179,7 @@ restart_experiment <- function(sims_obj,
                       "argument to `restart_experiments` to add",
                       "perturbations."))
     }
-    aphid_names <- names(sims_obj$call$clonal_lines)
+    aphid_names <- names(clonal_lines)
     perturb_list <- make_perturb_list(perturb, n_fields, aphid_names)
 
 
@@ -1208,6 +1244,9 @@ restart_experiment <- function(sims_obj,
     sims[["all_info"]] <- make_all_info(sims)
 
     sims[["call"]] <- call_
+
+    # This is important if you want to restart output from this function.
+    sims[["clonal_lines"]] <- clonal_lines
 
     if (stage_ts_out) {
         sims[["stage_ts"]] <- lapply(sims[["stage_ts"]], as.data.frame)
