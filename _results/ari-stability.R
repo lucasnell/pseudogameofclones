@@ -43,6 +43,42 @@ line_r <- clonal_line("resistant",
                       surv_adult_apterous = "low",
                       repro_apterous = "low")
 
+
+#' >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+#' >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+#' >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+#'
+#' Testing `perturb` argument...
+z <- sim_experiments(clonal_lines = c(line_s, line_r),
+                     alate_field_disp_p = 0,
+                     perturb = tibble(when = 50, where = 1, who = "resistant", how = 10),
+                     max_t = 100, save_every = 1) %>%
+    .[["aphids"]] %>%
+    filter(type != "mummy") %>%
+    group_by(time, field, line) %>%
+    summarize(N = sum(N), .groups = "drop")
+x <- sim_experiments(clonal_lines = c(line_s, line_r),
+                     alate_field_disp_p = 0,
+                     max_t = 100, save_every = 1) %>%
+    .[["aphids"]] %>%
+    filter(type != "mummy") %>%
+    group_by(time, field, line) %>%
+    summarize(N = sum(N), .groups = "drop")
+
+z %>%
+    ggplot(aes(time, N)) +
+    geom_line(aes(color = line)) +
+    geom_line(data = x, aes(group = line), color = "black", linetype = 2) +
+    facet_wrap(~ field)
+
+#' <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#' <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#' <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+
 #'
 #' The resulting `aphid` objects have the following fields:
 #'
