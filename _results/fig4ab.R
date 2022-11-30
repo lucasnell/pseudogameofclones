@@ -2,24 +2,6 @@
 library(numDeriv)
 library(gameofclones)
 
-clone_traj <- function(sim, delta, category = "resistant", max_t = 400,
-                       perturb = NULL){
-
-    new.starts <- sim$all_info[[1]]
-    pick <- !is.na(new.starts$line) & (new.starts$line == category)
-    new.starts[pick, "N"] <- delta * new.starts[pick, "N"]
-
-    new.sim <- restart_experiment(sim, new_starts = new.starts, max_t = max_t,
-                                  perturb = perturb)
-    new.sim <- rm_tibs(new.sim)
-    d <- new.sim$aphids
-    d$line.type <- paste0(d$line,".", d$type)
-    d$line.type[d$line.type == "NA.mummy"] <- "mummy"
-    d <- d[,-c(1,5,6)]
-    d <- spread(d, "line.type", "N")
-    d <- cbind(delta = delta, d, wasps = new.sim$wasps[,4])
-    return(d)
-}
 rm_tibs <- function(.sims) {
     for (n in c("aphids", "wasps")) {
         .sims[[n]] <- as.data.frame(.sims[[n]])
@@ -99,7 +81,7 @@ sim0 <- sim
 # between here and `shared end` is from figS8 ----
 
 # Re-run simulations?
-rerun_sims <- TRUE
+rerun_sims <- !file.exists("_results/fig4ab.csv")
 
 
 
@@ -214,8 +196,15 @@ if (rerun_sims) {
             if (verbose) show(df[df$disp == i.disp,])
         }
     }
+    write.csv(df, "_results/Fig4ab.csv", row.names = FALSE)
+
+} else {
+
+    df <- read.csv("_results/Fig4ab.csv")
+
 }
-# write.table(df, "df_Fig4ab_18Nov22.csv", sep=",", row.names=F)
+
+
 
 
 ########################*
@@ -259,12 +248,18 @@ ww$unstable.equil.spline <- predict(ww.spline, ww$disp)$y
 
 www <- w[w$disp <= 0.2585,]
 
+# This prevents line from continuing to the end for resistant aphids:
+w$peak.resistant[tail(which(w$peak.resistant == log10(.0001)), -1)] <- NA
+w$trough.resistant[tail(which(w$trough.resistant == log10(.0001)), -1)] <- NA
+
+
+
 
 # ============================================================================*
 # figure itself ----
 # ============================================================================*
 
-# cairo_pdf(filename = "_results/plots/fig_4ab.pdf", height = 8, width = 6)
+cairo_pdf(filename = "_results/plots/fig_4ab.pdf", height = 8, width = 6)
 
 par(mfrow = c(2,1), mai=c(1,1,.1,.1))
 plot(peak.resistant ~ disp, data = w, typ="l", ylab = "Abundance", xlab = "Aphid dispersal", col="#CCCC00", lwd = 2, xlim = c(0,.28), ylim = c(-4,4), yaxt = "n")
@@ -287,5 +282,6 @@ points(stable.equil1 ~ disp, data = www[www$disp > .04 & www$disp <= .15,], col=
 points(stable.equil2 ~ disp, data = www[www$disp > .04 & www$disp <= .15,], col="green")
 lines(unstable.equil.spline ~ disp, data = ww, col = "black", lwd = 2)
 
-# dev.off()
+dev.off()
+
 
