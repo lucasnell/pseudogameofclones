@@ -7,7 +7,8 @@ library(grid)
 col_pal <- list(r = "#CCCC00", s = "blue", w = "red")
 
 # File name for figure:
-file_out <- "_results/plots/fig_S9.pdf"
+file_out <- "_results/plots/fig_S10.pdf"
+
 
 rm_tibs <- function(.sims) {
     for (n in c("aphids", "wasps")) {
@@ -15,6 +16,13 @@ rm_tibs <- function(.sims) {
     }
     return(.sims)
 }
+
+
+
+#'
+#' Define aphid line information.
+#' Both lines start with 32 adult aphids.
+#'
 
 # Susceptible line: no resistance, high population growth rate
 line_s <- clonal_line("susceptible",
@@ -39,8 +47,6 @@ delta.list <- exp(.5*(-10:10))
 
 # baseline
 wasp.disp.list <- sort(c(.002*(0:25), .001,.003))
-pick.wasp.disp <- 10
-wasp.disp <- wasp.disp.list[pick.wasp.disp]
 
 disp <- .2
 a <- 2.32
@@ -70,11 +76,13 @@ perturb$how[perturb$who == "mummies"] <- 0
 
 perturb <- perturb[1:(3*n.events),]
 
+pick.wasp.disp.list <- 16:17
 
 cairo_pdf(file_out, width = 7, height = 7)
-	for(remove in c(TRUE,FALSE)){
+	for(pick.wasp.disp in pick.wasp.disp.list){
 
-		if(remove) {
+		wasp.disp <- wasp.disp.list[pick.wasp.disp]
+		if(pick.wasp.disp == pick.wasp.disp.list[1]) {
 			par(mfrow=c(2,1), mai=c(.1,1,.8,.1))
 			xaxt <- "n"
 			plab <- "A"
@@ -86,16 +94,7 @@ cairo_pdf(file_out, width = 7, height = 7)
 			plab_y <- 0.5
 		}
 
-		if(remove) density_0 <- cbind(c(0,0,0,0,0), rep(0, 5)) else density_0 <- cbind(c(0,0,0,0,32), rep(0, 5))
-		line_r_pert <- clonal_line("resistant",
-	                      density_0 = density_0,
-	                      resistant = TRUE,
-	                      surv_paras = 0.57,
-	                      surv_juv_apterous = "low",
-	                      surv_adult_apterous = "low",
-	                      repro_apterous = "low")
-
-		sim <- sim_experiments(clonal_lines = c(line_s, line_r_pert),
+		sim <- sim_experiments(clonal_lines = c(line_s, line_r),
 								n_fields = n_fields,
 								wasp_density_0 = wasp_density_0,
 								alate_field_disp_p = disp,
@@ -134,19 +133,18 @@ cairo_pdf(file_out, width = 7, height = 7)
 		})
 		axis(2,at=aty,labels=y_labels, las=1)
 		grid.text(plab, x = unit(0, "npc"), y = unit(plab_y, "npc"),
-		                just = c("left", "top"),
-		                gp = gpar(fontsize = 18, fontface = "bold"))
+		          just = c("left", "top"),
+		          gp = gpar(fontsize = 18, fontface = "bold"))
 		lines(N ~ time0, data=w[w$field == i.field & w$line == "susceptible" & w$type == "apterous",], col=col_pal$s, lwd = 2)
 		lines(wasps ~ time0, data=ww[ww$field == i.field,], col=col_pal$w, lwd = 2)
 		for(i.field in c(1,3,4)){
-		    lines(N ~ time0, data=w[w$field == i.field & w$line == "resistant" & w$type == "apterous",], col=alpha(col_pal$r, .alpha), lwd = .lwd, lty=.lty)
-		    lines(N ~ time0, data=w[w$field == i.field & w$line == "susceptible" & w$type == "apterous",], col=alpha(col_pal$s, .alpha), lwd = .lwd, lty=.lty)
-		    lines(wasps ~ time0, data=ww[ww$field == i.field,], col=alpha(col_pal$w, .alpha), lwd = .lwd, lty=.lty)
+			lines(N ~ time0, data=w[w$field == i.field & w$line == "resistant" & w$type == "apterous",], col=alpha(col_pal$r, .alpha), lwd = .lwd, lty=.lty)
+			lines(N ~ time0, data=w[w$field == i.field & w$line == "susceptible" & w$type == "apterous",], col=alpha(col_pal$s, .alpha), lwd = .lwd, lty=.lty)
+			lines(wasps ~ time0, data=ww[ww$field == i.field,], col=alpha(col_pal$w, .alpha), lwd = .lwd, lty=.lty)
 		}
-
-
 	}
 dev.off()
+
 
 
 #'
