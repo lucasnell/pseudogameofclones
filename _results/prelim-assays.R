@@ -11,15 +11,12 @@
 
 library(grid)
 library(tidyverse)
-library(readxl)
 library(patchwork)
 library(gameofclones)
 library(lme4)
+library(here)
 
-source(".Rprofile")
 
-assay_excel_file <- paste0("~/Box Sync/gameofclones/prelim_assays/",
-                           "eco-evo-prelims.xlsx")
 
 
 # ========================================================================*
@@ -39,28 +36,30 @@ clone_pal <- c("#99D83DFF", "#482173FF")
 # -----------------------------------------------`
 
 
-pop_df <- read_excel(assay_excel_file,
-                     sheet = "population-growth") %>%
+
+pop_df <- here("_results/_data/assays-population_growth.csv") |>
+    read_csv() |>
     mutate(date = as.Date(paste(year, month, day, sep = "-")),
-           rep = factor(rep)) %>%
-    group_by(rep, line) %>%
-    mutate(date = difftime(date, min(date), units = "days") %>% as.integer(),
+           rep = factor(rep)) |>
+    group_by(rep, line) |>
+    mutate(date = difftime(date, min(date), units = "days") |> as.integer(),
            line = factor(line, levels = c("UT3", "WIA-5D"),
-                         labels = c("resistant", "susceptible"))) %>%
-    select(rep, line, date, num) %>%
-    group_by(rep, date) %>%
-    mutate(extinct = factor(sum(num) == 0)) %>%
+                         labels = c("resistant", "susceptible"))) |>
+    select(rep, line, date, num) |>
+    mutate(extinct = factor(sum(num) == 0)) |>
     # Remove once they start declining bc this is due to plant death:
-    group_by(rep) %>%
-    filter(date <= date[which(num == max(num))]) %>%
-    ungroup() %>%
+    group_by(rep) |>
+    filter(date <= date[which(num == max(num))]) |>
+    ungroup() |>
     arrange(rep, date, line)
 
 
 
 
-pop_p <- pop_df %>%
-    mutate(zero = factor(num == 0)) %>%
+
+
+pop_p <- pop_df |>
+    mutate(zero = factor(num == 0)) |>
     ggplot(aes(date, log1p(num), color = line)) +
     geom_hline(yintercept = 0, color = "gray70") +
     geom_line() +
@@ -115,19 +114,27 @@ pop_p <- pop_df %>%
 #' We did this for both aphid lines being the first to be exposed.
 #'
 
+
+
+
+
+
+
 wasp_df <- bind_rows(
-    read_excel(assay_excel_file, sheet = "wasp-resistance_1") %>%
-        select(wasp_group, line, starts_with(c("juv","adult-", "mumm"))) %>%
+    here("_results/_data/assays-wasp_resistance_choice.csv") |>
+        read_csv(col_types = cols()) |>
+        select(wasp_group, line, starts_with(c("juv","adult-", "mumm"))) |>
         mutate(set = 1L),
-    read_excel(assay_excel_file, sheet = "wasp-resistance_2") %>%
+    here("_results/_data/assays-wasp_resistance_no_choice.csv") |>
+        read_csv(col_types = cols()) |>
         select(wasp_group, round, line,
-               starts_with(c("juv", "adult-", "mumm"))) %>%
+               starts_with(c("juv", "adult-", "mumm"))) |>
         mutate(set = 2L,
                #' Because there were 10 groups in the first set of assays,
                #' and these groups differ from those used in set 1
-               wasp_group = wasp_group + 10)) %>%
-    select(set, round, everything()) %>%
-    rename_with(function(x) gsub("-", "_", x)) %>%
+               wasp_group = wasp_group + 10)) |>
+    select(set, round, everything()) |>
+    rename_with(function(x) gsub("-", "_", x)) |>
     mutate(survived = pmin(juv_assayed - mummy_end, adult_end),
            p_survived = survived / juv_assayed,
            non_survived = juv_assayed - survived,
@@ -140,7 +147,7 @@ wasp_df <- bind_rows(
            across(c(round, wasp_group), factor),
            id = case_when(set == "choice" ~ 0L,
                           round == 1 ~ 1L,
-                          TRUE ~ 2L) %>%
+                          TRUE ~ 2L) |>
                factor(),
            obs = 1:n())
 
@@ -155,19 +162,19 @@ wasp_boots <- lapply(1:2000, function(i) {
         od[[x]] <- c(mean(wasp_df[[x]][si]), mean(wasp_df[[x]][ri]))
     }
     return(od)
-}) %>%
+}) |>
     do.call(what = bind_rows)
 
-wasp_boot_ci <- wasp_boots %>%
-    group_by(line) %>%
+wasp_boot_ci <- wasp_boots |>
+    group_by(line) |>
     summarize(across(p_mummy:p_survived, list(~ quantile(.x, 0.025),
                                               ~ quantile(.x, 0.5),
-                                              ~ quantile(.x, 0.975)))) %>%
+                                              ~ quantile(.x, 0.975)))) |>
     rename_with(~ gsub("_2", "", .x), ends_with("_2"))
 
 
 
-mummy_p <- wasp_df %>%
+mummy_p <- wasp_df |>
     ggplot(aes(line, p_mummy, color = line)) +
     geom_hline(yintercept = 0, color = "gray70") +
     geom_jitter(aes(shape = set), height = 0, width = 0.25, alpha = 0.5) +
@@ -184,7 +191,7 @@ mummy_p <- wasp_df %>%
 
 
 
-juv_p <- wasp_df %>%
+juv_p <- wasp_df |>
     ggplot(aes(line, juvenile_end, color = line)) +
     geom_hline(yintercept = 0, color = "gray70") +
     geom_jitter(aes(shape = set), height = 0, width = 0.25, alpha = 0.5) +
@@ -202,7 +209,7 @@ juv_p <- wasp_df %>%
 
 
 
-surv_p <- wasp_df %>%
+surv_p <- wasp_df |>
     ggplot(aes(line, p_survived, color = line)) +
     geom_hline(yintercept = 0, color = "gray70") +
     geom_jitter(aes(shape = set), height = 0, width = 0.25, alpha = 0.5) +
@@ -265,8 +272,8 @@ get_avg_diff <- function(.data, .trans = identity, .col = "num") {
 #' Simple permutation test of sum of total aphids across each time series.
 #' This should be a conservative assessment.
 #'
-sum_diffs <- pop_df %>%
-    group_by(rep, line) %>%
+sum_diffs <- pop_df |>
+    group_by(rep, line) |>
     summarize(num = sum(num), .groups = "drop")
 
 obs_diff <- get_avg_diff(sum_diffs)
@@ -335,7 +342,7 @@ mean(abs(surv_perms) >= abs(obs_surv))
 
 surv_mod <- glmer(cbind(survived, non_survived) ~ line + id + (1 | wasp_group),
                   wasp_df, family = binomial)
-surv_mod %>% summary()
+surv_mod |> summary()
 
 set.seed(9876345)
 surv_mod_boot <- bootMer(surv_mod, function(x) fixef(x)[["linesusceptible"]],
@@ -347,7 +354,7 @@ quantile(surv_mod_boot$t, c(0.025, 0.5, 0.975))
 
 juv_mod <- glmer(juvenile_end ~ line + id + (1 | wasp_group),
                  wasp_df, family = poisson)
-juv_mod %>% summary()
+juv_mod |> summary()
 
 set.seed(14253796)
 juv_mod_boot <- bootMer(juv_mod, function(x) fixef(x)[["linesusceptible"]],
@@ -355,5 +362,5 @@ juv_mod_boot <- bootMer(juv_mod, function(x) fixef(x)[["linesusceptible"]],
 # hist(juv_mod_boot$t)
 quantile(juv_mod_boot$t, c(0.025, 0.5, 0.975))
 #       2.5%        50%      97.5%
-# -2.3586386 -1.5429184 -0.8087831
+# -1.0873879 -0.9627950 -0.8421847
 

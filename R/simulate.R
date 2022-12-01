@@ -827,15 +827,20 @@ sim_gameofclones_full <- function(n_reps,
                               perturb_list$who, perturb_list$how,
                               n_threads, show_progress)
 
-    sims[["aphids"]] <- sims[["aphids"]] %>%
-        mutate(across(c("rep", "time", "field", "plant"), as.integer)) %>%
-        mutate(across(c("rep", "field", "plant"), ~ .x + 1L)) %>%
-        mutate(line = ifelse(type == "mummy", NA_character_, line)) %>%
-        as_tibble()
-    sims[["wasps"]] <- sims[["wasps"]] %>%
-        mutate(across(c("rep", "time", "field"), as.integer)) %>%
-        mutate(across(c("rep", "field"), ~ .x + 1L)) %>%
-        as_tibble()
+    sims[["aphids"]] <- mutate(sims[["aphids"]],
+                               across(c("rep", "time", "field", "plant"),
+                                      as.integer))
+    sims[["aphids"]] <- mutate(sims[["aphids"]],
+                               across(c("rep", "field", "plant"), ~ .x + 1L))
+    sims[["aphids"]] <- mutate(sims[["aphids"]],
+                               line = ifelse(type == "mummy", NA, line))
+    sims[["aphids"]] <- as_tibble(sims[["aphids"]])
+
+    sims[["wasps"]] <- mutate(sims[["wasps"]],
+                              across(c("rep", "time", "field"), as.integer))
+    sims[["wasps"]] <- mutate(sims[["wasps"]],
+                              across(c("rep", "field"), ~ .x + 1L))
+    sims[["wasps"]] <- as_tibble(sims[["wasps"]])
 
     sims[["all_info"]] <- make_all_info(sims)
 
@@ -1231,15 +1236,20 @@ restart_experiment <- function(sims_obj,
                                     perturb_list$when, perturb_list$where,
                                     perturb_list$who, perturb_list$how)
 
-    sims[["aphids"]] <- sims[["aphids"]] %>%
-        mutate(across(c("rep", "time", "field", "plant"), as.integer)) %>%
-        mutate(across(c("rep", "field", "plant"), ~ .x + 1L)) %>%
-        mutate(line = ifelse(type == "mummy", NA_character_, line)) %>%
-        as_tibble()
-    sims[["wasps"]] <- sims[["wasps"]] %>%
-        mutate(across(c("rep", "time", "field"), as.integer)) %>%
-        mutate(across(c("rep", "field"), ~ .x + 1L)) %>%
-        as_tibble()
+    sims[["aphids"]] <- mutate(sims[["aphids"]],
+                               across(c("rep", "time", "field", "plant"),
+                                      as.integer))
+    sims[["aphids"]] <- mutate(sims[["aphids"]],
+                               across(c("rep", "field", "plant"), ~ .x + 1L))
+    sims[["aphids"]] <- mutate(sims[["aphids"]],
+                               line = ifelse(type == "mummy", NA, line))
+    sims[["aphids"]] <- as_tibble(sims[["aphids"]])
+
+    sims[["wasps"]] <- mutate(sims[["wasps"]],
+                              across(c("rep", "time", "field"), as.integer))
+    sims[["wasps"]] <- mutate(sims[["wasps"]],
+                              across(c("rep", "field"), ~ .x + 1L))
+    sims[["wasps"]] <- as_tibble(sims[["wasps"]])
 
     sims[["all_info"]] <- make_all_info(sims)
 

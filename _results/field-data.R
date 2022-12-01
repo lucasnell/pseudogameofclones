@@ -1,6 +1,5 @@
 
 library(tidyverse)
-library(readxl)
 library(lubridate)
 library(gameofclones)
 library(viridisLite)
@@ -10,6 +9,7 @@ library(s2)
 library(transformr)
 library(ggsn)
 library(parallel)
+library(here)
 
 source(".Rprofile")
 
@@ -112,11 +112,10 @@ rel_res_fitness <- function(para, p_res = 0.48) {
 # Main dataset:
 
 par_df <- list(
-    read_excel(paste0("~/Box Sync/gameofclones/field-data/",
-                      "field-data.xlsx"), sheet = "parasitism",
-               na = c("", "NA")) %>%
-        select(field, Cycle, DateFormat, year, day, para, paraN) %>%
-        rename(cycle = Cycle, para_n = paraN, date = DateFormat) %>%
+    here("_results/_data/parasitism-2001-2016.csv") |>
+        read_csv(col_types = cols()) |>
+        select(field, Cycle, DateFormat, year, day, para, paraN) |>
+        rename(cycle = Cycle, para_n = paraN, date = DateFormat) |>
         mutate(field = paste(field),
                # Field 18 is the same as field 110; the numbers weren't fixed
                # until 2015
@@ -125,53 +124,53 @@ par_df <- list(
                # back to their original names:
                field = ifelse(field == "506.2", "506N", field),
                field = ifelse(field == "506.1", "506S", field),
-               date = as.Date(date)) %>%
+               date = as.Date(date)) |>
         filter(!is.na(para), !is.na(para_n)),
-    list.files("~/Box Sync/gameofclones/field-data/2017--2019", "*.csv",
-               full.names = TRUE) %>%
-        map_dfr(read_csv, show_col_types = FALSE) %>%
+    list.files(here("_results/_data"), "parasitism-....\\.csv",
+               full.names = TRUE) |>
+        map_dfr(read_csv, show_col_types = FALSE) |>
         # I can't find this one in any of the Arlington maps...
-        filter(Field != "N1902") %>%
+        filter(Field != "N1902") |>
         # This one had clover for part of it, but where isn't clear
-        filter(Field != "349 Clover") %>%
-        rename_with(tolower) %>%
-        select(field, cycle, date, starts_with("diss")) %>%
-        rename_with(function(.x) gsub("^diss_", "", gsub("\\+", "_", .x))) %>%
+        filter(Field != "349 Clover") |>
+        rename_with(tolower) |>
+        select(field, cycle, date, starts_with("diss")) |>
+        rename_with(function(.x) gsub("^diss_", "", gsub("\\+", "_", .x))) |>
         mutate(para = g_para + g_p_f + r_para + r_p_f,
                para_n = para + g_unpara + g_fungus + r_unpara + r_fungus,
-               para = para / para_n) %>%
-        filter(!is.na(para)) %>%
-        select(field, cycle, date, para, para_n) %>%
+               para = para / para_n) |>
+        filter(!is.na(para)) |>
+        select(field, cycle, date, para, para_n) |>
         # Because two date formats are used:
         mutate(date1 = as.Date(date, format = "%m/%d/%y"),
                date2 = as.Date(date, format = "%d-%b-%y"),
                # `structure(...` below is to keep `ifelse` from
                # changing to numeric
                date = structure(ifelse(is.na(date1), date2, date1),
-                                class = class(date2))) %>%
-        select(-date1, -date2) %>%
+                                class = class(date2))) |>
+        select(-date1, -date2) |>
         mutate(field = paste(field),
                field = ifelse(field == "506SE", "506S", field),
                year = year(date),
                day = yday(date) - 1)  # <- previous years set Jan 1 as day 0
-) %>%
-    do.call(what = bind_rows) %>%
+) |>
+    do.call(what = bind_rows) |>
     # Not sure why, but there's a 2020 data point in the 2019 dataset:
-    filter(year != 2020) %>%
+    filter(year != 2020) |>
     # We need to have at least 10 aphids dissected:
-    filter(para_n >= 10) %>%
+    filter(para_n >= 10) |>
     mutate(cycle = floor(cycle),
            harvest = lead(cycle, default = tail(cycle, 1)) - cycle > 0 |
                # This is to force the first cell be `1`
                c(TRUE, rep(FALSE, n()-1)),
-           year = factor(year, levels = sort(unique(year)))) %>%
+           year = factor(year, levels = sort(unique(year)))) |>
     #'
     #' I found that these dates have the same exact numbers for all fields
     #' on dates two days before.
     #' These must be duplicates, so I'm removing them.
     #'
     filter(!date %in% as.Date(c("2011-07-14", "2011-07-21", "2011-08-26",
-                                "2012-08-17", "2012-07-11", "2012-06-14"))) %>%
+                                "2012-08-17", "2012-07-11", "2012-06-14"))) |>
     # Add the relative fitness for resistance (r_r / r_s)
     mutate(rr_rs = rel_res_fitness(para))
 
@@ -184,7 +183,7 @@ rr_rs_pal <- with(list(pal = inferno, inds = c(80, 60, 20)),
 
 # Add factor that breaks rr_rs into bins for plotting:
 add_rr_rs_fct <- function(.df) {
-    .df %>%
+    .df |>
     mutate(rr_rs_fct = cut(rr_rs, c(0, 1, 1.05, 1.1, Inf),
                            labels = c("< 1", "1 – 1.05", "1.05 – 1.1", "> 1.1")),
            rr_rs_fct = factor(rr_rs_fct, levels = rev(levels(rr_rs_fct))))
@@ -215,21 +214,21 @@ maps_dates <- as.Date(c("2015-06-03", "2015-06-12", "2015-06-19",
 
 
 
-par_ts_p <- par_df %>%
-    split(.$year) %>%
-    map_dfr(~ mutate(.x, field_col = factor(field) %>% as.integer())) %>%
+par_ts_p <- par_df |>
+    split(~ year) |>
+    map_dfr(~ mutate(.x, field_col = factor(field) |> as.integer())) |>
     mutate(field_col = factor(field_col),
            # So they show as dates but can be plotted on same scale:
-           plot_date = as.Date(day, origin = "2022-01-01")) %>%
-    add_rr_rs_fct() %>%
+           plot_date = as.Date(day, origin = "2022-01-01")) |>
+    add_rr_rs_fct() |>
     ggplot(aes(plot_date, para)) +
-    geom_hline(yintercept = 0, color = "gray70", size = 0.5) +
-    geom_segment(data = tibble(plot_date = yday(maps_dates) %>%
+    geom_hline(yintercept = 0, color = "gray70", linewidth = 0.5) +
+    geom_segment(data = tibble(plot_date = yday(maps_dates) |>
                                    as.Date(origin = "2021-12-31"),
-                               year = year(maps_dates) %>% factor(),
+                               year = year(maps_dates) |> factor(),
                                para = -0.15),
                aes(xend = plot_date, yend = -0.05),
-               size = 0.5, linejoin = "mitre",
+               linewidth = 0.5, linejoin = "mitre",
                arrow = arrow(length = unit(0.1, "lines"), type = "closed")) +
     geom_point(aes(color = rr_rs_fct, fill = rr_rs_fct),
                size = 1, shape = 21) +
@@ -264,10 +263,10 @@ par_ts_p <- par_df %>%
 #' prepare the parasitism data for plotting by observation date, where
 #' the dates can be a bit different:
 #'
-obs_par_df <- par_df %>%
-    select(-cycle, -harvest) %>%
-    arrange(date) %>%
-    mutate(obs = cut.Date(date, breaks = "3 days", labels = FALSE) %>%
+obs_par_df <- par_df |>
+    select(-cycle, -harvest) |>
+    arrange(date) |>
+    mutate(obs = cut.Date(date, breaks = "3 days", labels = FALSE) |>
                as.numeric())
 
 #'
@@ -275,11 +274,11 @@ obs_par_df <- par_df %>%
 #' so I split them up further.
 #'
 #' ```
-#' obs_par_df %>%
-#'     group_by(obs) %>%
-#'     mutate(repeats = any(duplicated(field))) %>%
-#'     ungroup() %>%
-#'     filter(repeats) %>%
+#' obs_par_df |>
+#'     group_by(obs) |>
+#'     mutate(repeats = any(duplicated(field))) |>
+#'     ungroup() |>
+#'     filter(repeats) |>
 #'     distinct(year, obs)
 #'
 #' # # A tibble: 5 × 2
@@ -293,11 +292,12 @@ obs_par_df <- par_df %>%
 #' ```
 #'
 
-obs_par_df <- obs_par_df %>%
-    group_by(obs) %>%
-    mutate(repeats = any(duplicated(field))) %>%
-    ungroup() %>%
-    split(interaction(.$year, .$obs, drop = TRUE)) %>%
+obs_par_df <- obs_par_df |>
+    group_by(obs) |>
+    mutate(repeats = any(duplicated(field))) |>
+    ungroup() |>
+    mutate(tmpid = interaction(year, obs, drop = TRUE)) |>
+    split(~ tmpid) |>
     map_dfr(function(.dd) {
         unq_dates <- length(unique(.dd$date))
         if (.dd$repeats[1]) {
@@ -308,22 +308,22 @@ obs_par_df <- obs_par_df %>%
             }
         }
         return(.dd)
-    }) %>%
-    select(-repeats) %>%
+    }) |>
+    select(-repeats, -tmpid) |>
     # Plus I'm going to manually combine these dates because it's clear that
     # half the fields were sampled one day, half the next.
     mutate(obs = ifelse(date %in% as.Date(c("2016-06-13", "2016-06-14")),
                         mean(obs[date %in% as.Date(c("2016-06-13", "2016-06-14"))]),
-                        obs)) %>%
-    mutate(obs = factor(obs)) %>%
+                        obs)) |>
+    mutate(obs = factor(obs)) |>
     # I'm going to want to filter out groups that only sampled few fields:
-    group_by(year) %>%
-    mutate(n_fields = length(unique(field))) %>%
-    group_by(year, obs) %>%
-    mutate(obs_n = n()) %>%
+    group_by(year) |>
+    mutate(n_fields = length(unique(field))) |>
+    group_by(year, obs) |>
+    mutate(obs_n = n()) |>
     # To simplify plotting by having a single obs number by the obs
     mutate(obs_date = round(mean(date)),
-           obs_day = mean(day)) %>%
+           obs_day = mean(day)) |>
     ungroup()
 
 
@@ -331,10 +331,10 @@ obs_par_df <- obs_par_df %>%
 #' Plotting data through time where points are colored by obs.
 #' Looks like the splitting worked well.
 #'
-# obs_par_df %>%
-#     mutate(plot_date = as.Date(day, origin = "2022-01-01")) %>%
+# obs_par_df |>
+#     mutate(plot_date = as.Date(day, origin = "2022-01-01")) |>
 #     ggplot(aes(plot_date, para)) +
-#     geom_hline(yintercept = 0, color = "gray70", size = 0.5) +
+#     geom_hline(yintercept = 0, color = "gray70", linewidth = 0.5) +
 #     geom_point(aes(color = obs), alpha = 0.5, size = 1) +
 #     facet_wrap(~ year, ncol = 1) +
 #     scale_color_manual(values = rep(c("#1b9e77", "#d95f02", "#7570b3"), 100),
@@ -348,17 +348,17 @@ obs_par_df <- obs_par_df %>%
 #     NULL
 
 
-obs_par_df %>%
-    filter(obs_n >= 5) %>%
-    group_by(obs_date) %>%
-    summarize(para = sd(para)) %>%
+obs_par_df |>
+    filter(obs_n >= 5) |>
+    group_by(obs_date) |>
+    summarize(para = sd(para)) |>
     summarize(median = median(para),
               mean = mean(para))
 
 
-obs_par_df %>%
-    group_by(field, year) %>%
-    summarize(para = sd(para), .groups = "drop") %>%
+obs_par_df |>
+    group_by(field, year) |>
+    summarize(para = sd(para), .groups = "drop") |>
     summarize(median = median(para),
               mean = mean(para))
 
@@ -366,26 +366,26 @@ obs_par_df %>%
 # maps ----
 
 
-fields_sf <- st_read(paste0("~/Box Sync/gameofclones/field-data/",
-                            "arlington-fields/Arlington.gpkg")) %>%
-    st_transform(st_crs(32616)) %>%
-    mutate(geom = st_centroid(geom))
+fields_sf <- st_read(here("_results/_data/Arlington.geojson")) |>
+    st_transform(st_crs(32616)) |>
+    mutate(geometry = st_centroid(geometry)) |>
+    rename(geom = geometry)
 
 
 
-
-obs_fields_par <- obs_par_df %>%
-    filter(obs_date %in% maps_dates) %>%
+obs_fields_par <- obs_par_df |>
+    filter(obs_date %in% maps_dates) |>
     # Make sure all fields are present in all dates within year:
-    group_by(year, field) %>%
-    mutate(no = n()) %>%
-    ungroup() %>%
-    filter(no == 3) %>%
-    mutate(obs = obs %>% fct_drop()) %>%
-    split(1:nrow(.)) %>%
+    group_by(year, field) |>
+    mutate(no = n()) |>
+    ungroup() |>
+    filter(no == 3) |>
+    mutate(obs = obs |> fct_drop(),
+           tmpid = 1:n()) |>
+    split(~tmpid) |>
     map(function(.d) {
         stopifnot(nrow(.d) == 1)
-        .f <- fields_sf %>% filter(Name == .d$field)
+        .f <- fields_sf |> filter(Name == .d$field)
         stopifnot(nrow(.f) == 1)
         .f$year <- .d$year
         .f$date <- .d$date
@@ -395,34 +395,34 @@ obs_fields_par <- obs_par_df %>%
         .f$obs <- .d$obs
         .f$obs_date <- .d$obs_date
         return(.f)
-    }) %>%
-    do.call(what = rbind) %>%
+    }) |>
+    do.call(what = rbind) |>
     mutate(plot_date = factor(paste(obs_date),
                               levels = paste(sort(unique(obs_date))),
                               labels = format(sort(unique(obs_date)),
                                               "%Y\n%e %b")))
 
 
-xy_lims <- st_bbox(obs_fields_par) %>% as.list()
+xy_lims <- st_bbox(obs_fields_par) |> as.list()
 xy_lims$xmin <- xy_lims$xmin - 400
 xy_lims$xmax <- xy_lims$xmax + 400
 xy_lims$ymin <- xy_lims$ymin - 400
 xy_lims$ymax <- xy_lims$ymax + 400
 
-fields_par_p <- obs_fields_par %>%
-    add_rr_rs_fct() %>%
+fields_par_p <- obs_fields_par |>
+    add_rr_rs_fct() |>
     ggplot() +
     geom_rect(xmin = xy_lims$xmin, xmax = xy_lims$xmax,
               ymin = xy_lims$ymin, ymax = xy_lims$ymax,
-              fill = NA, color = "black", size = 0.5) +
+              fill = NA, color = "black", linewidth = 0.5) +
     geom_sf(aes(size = para, color = rr_rs_fct, fill = rr_rs_fct), shape = 21) +
     scale_color_manual(paste("'Relative fitness\nfor resistance\n('",
-                             "* r[r] / r[s] * ')'") %>%
+                             "* r[r] / r[s] * ')'") |>
                            str2expression(),
                        guide = "none",
                        values = rr_rs_pal$color) +
     scale_fill_manual(paste("'Relative fitness\nfor resistance\n('",
-                             "* r[r] / r[s] * ')'") %>%
+                             "* r[r] / r[s] * ')'") |>
                            str2expression(),
                        guide = "none",
                        values = rr_rs_pal$fill) +
@@ -456,60 +456,6 @@ mosaic_p <- par_ts_p + fields_par_p +
     theme(plot.tag = element_text(size = 14, face = "bold"))
 
 # save_plot("_results/plots/mosaic.pdf", mosaic_p, 7, 7)
-
-
-
-
-
-
-
-
-
-wi_bounds <- paste0("~/Box Sync/gameofclones/field-data/",
-                    "WI-boundary/Wisconsin_State_Boundary_24K.gpkg") %>%
-    st_read() %>%
-    st_transform(st_crs(32616))
-wi_xy_lims <- st_bbox(wi_bounds) %>% as.list()
-
-
-wi_inset <- wi_bounds %>%
-    ggplot() +
-    geom_sf(size = 0.25) +
-    # geom_rect(xmin = xy_lims$xmin, xmax = xy_lims$xmax,
-    #           ymin = xy_lims$ymin, ymax = xy_lims$ymax,
-    #           fill = "black", color = NA) +
-    geom_point(x = (xy_lims$xmin + xy_lims$xmax) / 2,
-               y = (xy_lims$ymin + xy_lims$ymax) / 2,
-               color = "black", shape = 20, size  = 4) +
-    coord_sf(datum = st_crs(32616)) +
-    # scalebar(dist = 100, dist_unit = "km", transform = FALSE,
-    #          border.size = 0.5, st.dist = 0.05,
-    #          st.size = 3, height = 0.02, location = "topleft",
-    #          x.min = wi_xy_lims$xmin, x.max = wi_xy_lims$xmax,
-    #          y.min = wi_xy_lims$ymin, y.max = wi_xy_lims$ymax + 50e3) +
-    north(location = "bottomleft", symbol = 10, scale = 0.2,
-          x.min = wi_xy_lims$xmin, x.max = wi_xy_lims$xmax,
-          y.min = wi_xy_lims$ymin, y.max = wi_xy_lims$ymax) +
-    theme_void() +
-    NULL
-
-# wi_inset
-
-# ggsave("~/Desktop/wi_inset.pdf", wi_inset, width = 3, height = 3)
-
-
-fig1bc <- fields_par_p
-
-# wi_inset + fields_par_p +
-#     plot_layout(design = c(area(1, 1, 2, 2),
-#                            area(1, 2, 10, 10)))
-
-
-
-fig1a + (fig1bc) +
-    plot_layout(nrow = 1, widths = c(1, 1.5)) +
-    plot_annotation(tag_levels = list(c("A", "B")))
-
 
 
 

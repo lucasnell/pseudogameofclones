@@ -14,6 +14,6 @@ Logit and inverse logit functions.
 }
 \section{Functions}{
 \itemize{
-\item \code{inv_logit}: 
-}}
+\item \code{inv_logit()}: 
 
+}}
