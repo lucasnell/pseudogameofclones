@@ -30,9 +30,12 @@ rel_res_fitness <- function(para, p_res = 0.48) {
     stopifnot(is.numeric(para) && is.null(dim(para)))
     stopifnot(is.numeric(p_res) && length(p_res) == 1)
 
-    if (file.exists("_results/rr_rs_lookup.rds")) {
+    # File of saved r_r / r_s lookup table (may not exist):
+    rr_rs_rds <- here("_results/_data/rr_rs_lookup.rds")
 
-        rr_rs_df <- readRDS("_results/rr_rs_lookup.rds")
+    if (file.exists(rr_rs_rds)) {
+
+        d <- readRDS(rr_rs_rds)
 
     } else {
 
@@ -62,7 +65,6 @@ rel_res_fitness <- function(para, p_res = 0.48) {
             B12 <- matrix(0,nrow=5, ncol=5)
             B22 <- yLeslie
             B <- rbind(cbind(B11, B12), cbind(B21, B22))
-            #colSums(B)
             SADA <- eigen(B)$vectors[,1]
             ps <- Re(sum(SADA[8:9])/sum(SADA[c(4:5,8:9)]))
             if (is.nan(ps)) ps <- 1
@@ -82,7 +84,7 @@ rel_res_fitness <- function(para, p_res = 0.48) {
         rr_rs_list <- mclapply(round(seq(-20, 5, 1e-4), 4), one_calc)
         rr_rs_df <- as.data.frame(do.call(rbind, rr_rs_list))
         colnames(rr_rs_df) <- c("a", "rs", "rr", "ps", "pr", "rr_rs")
-        # saveRDS(rr_rs_df, "rr_rs_lookup.rds")
+        saveRDS(rr_rs_df, rr_rs_rds)
     }
 
     # Now we look up values of relative fitnesses based on the attack rate

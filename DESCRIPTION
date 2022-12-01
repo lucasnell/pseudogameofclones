@@ -14,7 +14,7 @@ Depends:
     ggplot2,
     methods,
     purrr,
-    R (>= 3.4.0),
+    R (>= 4.1.0),
     Rcpp (>= 1.0.0),
     readr,
     tibble,
