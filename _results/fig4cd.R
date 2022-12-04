@@ -1,6 +1,20 @@
 
 library(gameofclones)
 library(scales)
+library(viridisLite)
+library(here)
+
+
+# colors for resistant, susceptible, and parasitoid wasps, respectively
+col_pal <- list(r = viridis(100)[50],
+                s = viridis(100)[95],
+                w = viridis(100)[1])
+
+# Name of plot produced here:
+plot_out <- here("_results/_plots/fig_4cd.pdf")
+# Name of temporary results file produced here:
+tmp_results <- here("_results/_data/fig4cd.csv")
+
 
 
 rm_tibs <- function(.sims) {
@@ -129,7 +143,7 @@ sim0 <- sim
 verbose <- FALSE
 
 # Re-run simulations?
-rerun_sims <- !file.exists("_results/fig4cd.csv")
+rerun_sims <- !file.exists(tmp_results)
 
 
 
@@ -239,9 +253,9 @@ if (rerun_sims) {
                 w <- new.sim$aphids[new.sim$aphids$time %% harvesting.length == 0 & new.sim$aphids$time > harvesting.length*400,]
                 ww <- new.sim$wasps[new.sim$wasps$time %% harvesting.length == 0 & new.sim$wasps$time > harvesting.length*400,]
                 for(i.field in 1:7){
-                    plot(N ~ time, data=w[w$field == i.field & w$line == "resistant" & w$type == "apterous",], typ="l", col="blue", log="y", xlab="", ylim = c(.01,10000))
+                    plot(N ~ time, data=w[w$field == i.field & w$line == "resistant" & w$type == "apterous",], typ="l", col=col_pal$s, log="y", xlab="", ylim = c(.01,10000))
                     lines(N ~ time, data=w[w$field == i.field & w$line == "susceptible" & w$type == "apterous",])
-                    lines(wasps ~ time, data=ww[ww$field == i.field,], col="red")
+                    lines(wasps ~ time, data=ww[ww$field == i.field,], col=col_pal$w)
                 }
 
             }
@@ -250,12 +264,12 @@ if (rerun_sims) {
         }
     }
 
-    write.csv(df, "_results/fig4cd.csv", row.names = FALSE)
+    write.csv(df, tmp_results, row.names = FALSE)
 
 } else {
 
     ########################*
-    df <- read.csv("_results/fig4cd.csv")
+    df <- read.csv(tmp_results)
 
 }
 
@@ -299,13 +313,13 @@ for(i.resist in c(0,1)) for(i.wasp.disp in w$wasp.disp){
         w$upper[w$wasp.disp == i.wasp.disp] <- www$prop.delta[nrow(www)]
     }
 }
-w
+# w
 
 for(i in 1:3){
     # w[,i + 1 + 3*(0:3)] <- log10(w[,i + 1 + 3*(0:3)]/max(w[,i + 1 + 3*(0:3)], na.rm = TRUE)+.0001)
     w[,i + 1 + 3*(0:3)] <- log10(w[,i + 1 + 3*(0:3)]+.0001)
 }
-w[,2 + 3*(0:3)]
+# w[,2 + 3*(0:3)]
 
 w$upper[is.na(w$upper)] <- 0
 w$upper[23] <- .85
@@ -314,53 +328,58 @@ w$upper[23] <- .85
 # w.spline <- smooth.spline(x = w$s, y = w$unstable.equil, df = 6)
 # w$unstable.equil.spline <- predict(w.spline, w$s)$y
 
+
+
+
+
 # figure itself ----
-cairo_pdf(filename = "_results/plots/fig_4cd.pdf", height = 8, width = 6)
+
+cairo_pdf(filename = plot_out, height = 8, width = 6)
+
 par(mfrow = c(2,1), mai=c(1,1,.1,.1))
 
-plot(peak.resistant1 ~ wasp.disp, data = w, typ="l", ylab = "Abundance", xlab = "Wasp dispersal", col="#CCCC00", lty = 2-w$resistance.flag, ylim = c(-4,4), yaxt = "n")
-# mtext(side = 2, at=2*(-2:2), text=c(expression(10^-4), expression(10^-2), expression(10^0), expression(10^2), expression(10^4)), las=2, adj=1.2)
+plot(peak.resistant1 ~ wasp.disp, data = w, typ="l", ylab = "Abundance", xlab = "Wasp dispersal", col=col_pal$r, lty = 2, ylim = c(-4,4), yaxt = "n")
 aty <- axTicks(2)
 y_labels <- sapply(aty,function(i) {
     as.expression(bquote(10^ .(i)))
 })
 axis(2,at=aty,labels=y_labels, las=1)
 
-col <- alpha("#CCCC00", 0.30)
+col <- alpha(col_pal$r, 0.30)
 conf_bounds(x = w$wasp.disp, y.lower = w$peak.resistant2, y.upper = w$peak.resistant1, col=col)
 conf_bounds(x = w$wasp.disp, y.lower = w$trough.resistant2, y.upper = w$trough.resistant1, col=col)
-lines(peak.resistant1 ~ wasp.disp, data = w, col="#999900")
-lines(peak.resistant2 ~ wasp.disp, data = w, col="#999900")
-lines(trough.resistant1 ~ wasp.disp, data = w, col="#999900", lty = 2)
-lines(trough.resistant2 ~ wasp.disp, data = w, col="#999900", lty = 2)
+lines(peak.resistant1 ~ wasp.disp, data = w, col=col_pal$r, lwd = 2)
+lines(peak.resistant2 ~ wasp.disp, data = w, col=col_pal$r, lwd = 2)
+lines(trough.resistant1 ~ wasp.disp, data = w, col=col_pal$r, lty = 2, lwd = 2)
+lines(trough.resistant2 ~ wasp.disp, data = w, col=col_pal$r, lty = 2, lwd = 2)
 
-col <- alpha("blue", 0.30)
+col <- alpha(col_pal$s, 0.30)
 conf_bounds(x = w$wasp.disp, y.lower = w$peak.susceptible2, y.upper = w$peak.susceptible1, col=col)
 conf_bounds(x = w$wasp.disp, y.lower = w$trough.susceptible2, y.upper = w$trough.susceptible1, col=col)
-lines(peak.susceptible1 ~ wasp.disp, data = w, col="blue")
-lines(peak.susceptible2 ~ wasp.disp, data = w, col="blue")
-lines(trough.susceptible1 ~ wasp.disp, data = w, col="blue", lty = 2)
-lines(trough.susceptible2 ~ wasp.disp, data = w, col="blue", lty = 2)
+lines(peak.susceptible1 ~ wasp.disp, data = w, col=col_pal$s, lwd = 2)
+lines(peak.susceptible2 ~ wasp.disp, data = w, col=col_pal$s, lwd = 2)
+lines(trough.susceptible1 ~ wasp.disp, data = w, col=col_pal$s, lty = 2, lwd = 2)
+lines(trough.susceptible2 ~ wasp.disp, data = w, col=col_pal$s, lty = 2, lwd = 2)
 
-col <- alpha("red", 0.30)
+col <- alpha(col_pal$w, 0.30)
 conf_bounds(x = w$wasp.disp, y.lower = w$peak.wasps2, y.upper = w$peak.wasps1, col=col)
 conf_bounds(x = w$wasp.disp, y.lower = w$trough.wasps2, y.upper = w$trough.wasps1, col=col)
-lines(peak.wasps1 ~ wasp.disp, data = w, col="red")
-lines(peak.wasps2 ~ wasp.disp, data = w, col="red")
-lines(trough.wasps1 ~ wasp.disp, data = w, col="red", lty = 2)
-lines(trough.wasps2 ~ wasp.disp, data = w, col="red", lty = 2)
+lines(peak.wasps1 ~ wasp.disp, data = w, col=col_pal$w, lwd = 2)
+lines(peak.wasps2 ~ wasp.disp, data = w, col=col_pal$w, lwd = 2)
+lines(trough.wasps1 ~ wasp.disp, data = w, col=col_pal$w, lty = 2, lwd = 2)
+lines(trough.wasps2 ~ wasp.disp, data = w, col=col_pal$w, lty = 2, lwd = 2)
 
 plot(peak.prop1 ~ wasp.disp, data = w, typ="l", ylim = c(0,1), ylab = "Proportion resistant", xlab = "Wasp dispersal")
 
 conf_bounds(x = w$wasp.disp[!is.na(w$upper)], y.lower = w$upper[!is.na(w$upper)], y.upper = rep(1,sum(!is.na(w$upper))), col="lightgray")
 conf_bounds(x = w$wasp.disp[!is.na(w$lower)], y.upper = w$lower[!is.na(w$lower)], y.lower = rep(0,sum(!is.na(w$lower))), col="lightgray")
-conf_bounds(x = w$wasp.disp, y.lower = w$peak.prop2, y.upper = w$peak.prop1, col="lightgreen")
-conf_bounds(x = w$wasp.disp, y.lower = w$trough.prop2, y.upper = w$trough.prop1, col="lightgreen")
+conf_bounds(x = w$wasp.disp, y.lower = w$peak.prop2, y.upper = w$peak.prop1, col=alpha("dodgerblue", 0.30))
+conf_bounds(x = w$wasp.disp, y.lower = w$trough.prop2, y.upper = w$trough.prop1, col=alpha("dodgerblue", 0.30))
 
-lines(peak.prop1 ~ wasp.disp, data = w, col="darkgreen")
-lines(peak.prop2 ~ wasp.disp, data = w, col="darkgreen")
-lines(trough.prop1 ~ wasp.disp, data = w, lty = 2, col="darkgreen")
-lines(trough.prop2 ~ wasp.disp, data = w, lty = 2, col="darkgreen")
+lines(peak.prop1 ~ wasp.disp, data = w, col="dodgerblue3", lwd = 2)
+lines(peak.prop2 ~ wasp.disp, data = w, col="dodgerblue3", lwd = 2)
+lines(trough.prop1 ~ wasp.disp, data = w, lty = 2, col="dodgerblue3", lwd = 2)
+lines(trough.prop2 ~ wasp.disp, data = w, lty = 2, col="dodgerblue3", lwd = 2)
 
 
 dev.off()

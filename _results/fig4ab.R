@@ -1,6 +1,20 @@
 
 library(numDeriv)
 library(gameofclones)
+library(viridisLite)
+library(here)
+
+# colors for resistant, susceptible, and parasitoid wasps, respectively
+col_pal <- list(r = viridis(100)[50],
+                s = viridis(100)[95],
+                w = viridis(100)[1])
+
+# Name of plot produced here:
+plot_out <- here("_results/_plots/fig_4ab.pdf")
+# Name of temporary results file produced here:
+tmp_results <- here("_results/_data/fig4ab.csv")
+
+
 
 rm_tibs <- function(.sims) {
     for (n in c("aphids", "wasps")) {
@@ -81,7 +95,7 @@ sim0 <- sim
 # between here and `shared end` is from figS8 ----
 
 # Re-run simulations?
-rerun_sims <- !file.exists("_results/fig4ab.csv")
+rerun_sims <- !file.exists(tmp_results)
 
 
 
@@ -196,11 +210,11 @@ if (rerun_sims) {
             if (verbose) show(df[df$disp == i.disp,])
         }
     }
-    write.csv(df, "_results/Fig4ab.csv", row.names = FALSE)
+    write.csv(df, tmp_results, row.names = FALSE)
 
 } else {
 
-    df <- read.csv("_results/Fig4ab.csv")
+    df <- read.csv(tmp_results)
 
 }
 
@@ -259,16 +273,21 @@ w$trough.resistant[tail(which(w$trough.resistant == log10(.0001)), -1)] <- NA
 # figure itself ----
 # ============================================================================*
 
-cairo_pdf(filename = "_results/plots/fig_4ab.pdf", height = 8, width = 6)
+cairo_pdf(filename = plot_out, height = 8, width = 6)
 
 par(mfrow = c(2,1), mai=c(1,1,.1,.1))
-plot(peak.resistant ~ disp, data = w, typ="l", ylab = "Abundance", xlab = "Aphid dispersal", col="#CCCC00", lwd = 2, xlim = c(0,.28), ylim = c(-4,4), yaxt = "n")
-mtext(side = 2, at=2*(-2:2), text=c(expression(10^-4), expression(10^-2), expression(10^0), expression(10^2), expression(10^4)), las=2, adj=1.2)
-lines(trough.resistant ~ disp, data = w, col="#CCCC00", lwd = 2)
-lines(peak.susceptible ~ disp, data = w, col="blue", lwd = 2)
-lines(trough.susceptible ~ disp, data = w, col="blue", lwd = 2)
-lines(peak.wasps ~ disp, data = w, col="red", lwd = 2)
-lines(trough.wasps ~ disp, data = w, col="red", lwd = 2)
+plot(peak.resistant ~ disp, data = w, typ="l", ylab = "Abundance", xlab = "Aphid dispersal", col=col_pal$r, lwd = 3, xlim = c(0,.28), ylim = c(-4,4), yaxt = "n")
+# mtext(side = 2, at=2*(-2:2), text=c(expression(10^-4), expression(10^-2), expression(10^0), expression(10^2), expression(10^4)), las=2, adj=1.2)
+aty <- axTicks(2)
+y_labels <- sapply(aty,function(i) {
+    as.expression(bquote(10^ .(i)))
+})
+axis(2,at=aty,labels=y_labels, las=1)
+lines(trough.resistant ~ disp, data = w, col=col_pal$r, lwd = 3)
+lines(peak.susceptible ~ disp, data = w, col=col_pal$s, lwd = 3)
+lines(trough.susceptible ~ disp, data = w, col=col_pal$s, lwd = 3)
+lines(peak.wasps ~ disp, data = w, col=col_pal$w, lwd = 3)
+lines(trough.wasps ~ disp, data = w, col=col_pal$w, lwd = 3)
 
 plot(stable.equil1 ~ disp, data = www, typ="l", xlim = c(0,.28), ylim = c(0,1), ylab = "Proportion resistant", xlab = "Aphid dispersal")
 
@@ -276,11 +295,11 @@ conf_bounds(x = ww$disp, y.lower = ww$upper, y.upper = rep(1,nrow(ww)), col="lig
 conf_bounds(x = ww$disp, y.upper = ww$unstable.equil.spline, y.lower = rep(0,nrow(ww)), col="lightgray")
 conf_bounds(x = c(0.2584, .28), y.lower = c(0,0), y.upper = c(1,1), col="lightgray")
 
-lines(stable.equil1 ~ disp, data = www, lwd = 2, col="green")
-lines(stable.equil2 ~ disp, data = www, lwd = 2, col="green")
-points(stable.equil1 ~ disp, data = www[www$disp > .04 & www$disp <= .15,], col="green")
-points(stable.equil2 ~ disp, data = www[www$disp > .04 & www$disp <= .15,], col="green")
-lines(unstable.equil.spline ~ disp, data = ww, col = "black", lwd = 2)
+lines(stable.equil1 ~ disp, data = www, lwd = 3, col="dodgerblue")
+lines(stable.equil2 ~ disp, data = www, lwd = 3, col="dodgerblue")
+points(stable.equil1 ~ disp, data = www[www$disp > .04 & www$disp <= .15,], col="dodgerblue")
+points(stable.equil2 ~ disp, data = www[www$disp > .04 & www$disp <= .15,], col="dodgerblue")
+lines(unstable.equil.spline ~ disp, data = ww, col = "black", lwd = 3)
 
 dev.off()
 
