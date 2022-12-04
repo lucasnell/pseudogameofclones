@@ -5,14 +5,22 @@ library(tidyverse)
 library(gameofclones)
 library(patchwork)
 library(grid)
+library(scales)
+library(viridisLite)
 library(here)
 
 source(".Rprofile")
 
 
-# Palette for the two clonal lines.
-# Equivalent to `viridis::viridis(100)[c(85, 10)]`.
-clone_pal <- c("#99D83DFF", "#482173FF")
+# colors for resistant, susceptible, and parasitoid wasps, respectively
+col_pal <- list(r = viridis(100)[50],
+                s = viridis(100)[95],
+                w = viridis(100)[1])
+# Just for two clones:
+clone_pal <- c(col_pal$r, col_pal$s)
+# Reduce opacity for parasitoid fill:
+wasp_fill <- alpha(col_pal$w, 0.6)
+
 
 # What to name wasp and no wasp cages for plot:
 cage_lvls <- c("parasitism cage" = "wasp", "no parasitism cage" = "no wasp")
@@ -179,77 +187,92 @@ wasp_mod <- max(max(wasp_cage_df$wasps),
 max_N <- max(aphid_cage_df[[aphid_y]]) / 0.9
 
 
+#' Function to plot experiments.
+#' `r` is a string representing the rep (should be `%in% aphid_cage_df$rep`)
+#' `ontop` is a logical for whether to have sub-plots (by cage) on top of each
+#' other, rather than side by side.
+#' Defaults to `FALSE` which is used in most cases, but I set it to `TRUE`
+#' for the plot used to explain the contamination in rep 11.
+#'
+experiment_plotter <- function(r, ontop = FALSE) {
+    # r = "11"
+    # rm(r, acd, lcd, wcd, p)
+    acd <- aphid_cage_df |>
+        filter(rep == r) |>
+        rename(N = !!sym(aphid_y))
+    lcd <- alate_cage_df |>
+        filter(rep == r, alates_in > 0) |>
+        mutate(N = alates_in / wasp_mod)
+    wcd <- wasp_cage_df |>
+        filter(rep == r) |>
+        mutate(N = wasps / wasp_mod)
+    #' Y breaks and labels will differ depending on whether we're
+    #' using log1p(aphids) or just aphids.
+    if (aphid_y == "aphids") {
+        y_breaks <- 0:2 * 2e3
+        y_labs <- paste0(0:2 * 2, "k")
+    } else {
+        y_breaks <- c(0, log1p(4 * 10^c(1,3)))
+        y_labs <- c(0, 4 * 10^c(1,3))
+    }
+    p <- acd |>
+        ggplot(aes(days, N, color = line))
+    if (ontop) {
+        p <- p +
+            facet_grid(rows = vars(cage)) +
+            theme(panel.spacing = unit(2, "lines"))
+    } else {
+        p <- p +
+            facet_grid(cols = vars(cage))
+    }
+    p <- p +
+        # Vertical line(s) for early termination:
+        geom_vline(data = acd |> filter(terminated),
+                   aes(xintercept = days),
+                   linewidth = 0.5, linetype = "22", color = "gray60") +
+        geom_area(data = wcd, fill = wasp_fill, color = NA) +
+        geom_hline(yintercept = 0, color = "gray70") +
+        # Main abundance lines:
+        geom_line() +
+        scale_color_manual(values = clone_pal, guide = "none") +
+        scale_y_continuous(sec.axis = sec_axis(~ . * wasp_mod,
+                                               breaks = 0:2 * 40),
+                           breaks = y_breaks, labels = y_labs) +
+        scale_x_continuous("Days", limits = c(0, 250),
+                           breaks = 0:5 * 50) +
+        theme(strip.text = element_blank(),
+              axis.title = element_blank(),
+              axis.text.x = element_blank(),
+              panel.background = element_rect(fill = "transparent"),
+              plot.background = element_rect(fill = "transparent",
+                                             color = NA)) +
+        coord_cartesian(clip = FALSE, ylim = c(0, max_N))
+    return(p)
+}
+
+
 exp_p_list <- aphid_cage_df |>
     distinct(treatment, rep) |>
     arrange(treatment, rep) |>
     getElement("rep") |>
     paste() |>
     set_names() |>
-    map(
-    function(r) {
-        # r = levels(aphid_cage_df$rep)[1]
-        # rm(r, acd, lcd, wcd, trt_title)
-        acd <- aphid_cage_df |>
-            filter(rep == r) |>
-            rename(N = !!sym(aphid_y))
-        lcd <- alate_cage_df |>
-            filter(rep == r, alates_in > 0) |>
-            mutate(N = alates_in / wasp_mod)
-        wcd <- wasp_cage_df |>
-            filter(rep == r) |>
-            mutate(N = wasps / wasp_mod)
-        #' Y breaks and labels will differ depending on whether we're
-        #' using log1p(aphids) or just aphids.
-        if (aphid_y == "aphids") {
-            y_breaks <- 0:2 * 2e3
-            y_labs <- paste0(0:2 * 2, "k")
-        } else {
-            y_breaks <- c(0, log1p(4 * 10^c(1,3)))
-            y_labs <- c(0, 4 * 10^c(1,3))
-        }
-        p <- acd |>
-            ggplot(aes(days, N, color = line))
-        p <- p +
-            # Vertical line(s) for early termination:
-            geom_vline(data = acd |> filter(terminated),
-                       aes(xintercept = days),
-                       linewidth = 0.5, linetype = "22", color = "gray60") +
-            geom_area(data = wcd, fill = "gray60", color = NA) +
-            geom_hline(yintercept = 0, color = "gray70") +
-            # Main abundance lines:
-            geom_line() +
-            scale_color_manual(values = viridis::viridis(100)[c(85, 10)],
-                               guide = "none") +
-            scale_y_continuous(sec.axis = sec_axis(~ . * wasp_mod,
-                                                   breaks = 0:2 * 40),
-                               breaks = y_breaks, labels = y_labs) +
-            scale_x_continuous("Days", limits = c(0, 250),
-                               breaks = 0:5 * 50) +
-            facet_grid( ~ cage, scales = "fixed") +
-            theme(strip.text = element_blank(),
-                  axis.title = element_blank(),
-                  axis.text.x = element_blank(),
-                  panel.background = element_rect(fill = "transparent"),
-                  plot.background = element_rect(fill = "transparent",
-                                                 color = NA),
-                  legend.background = element_rect(fill = "transparent"),
-                  legend.box.background = element_rect(fill = "transparent")) +
-            coord_cartesian(clip = FALSE, ylim = c(0, max_N))
-        return(p)
-    })
-
+    map(experiment_plotter)
 
 
 # wrap_plots(exp_p_list, ncol = 1)
 
 
 # for (i in 1:length(exp_p_list)) {
-#     fn <- paste0(here("_results/plots/experiments/"),
+#     fn <- paste0(here("_results/_plots/sims-and-exps/"),
 #                  sprintf("%i-rep%s.pdf", i, names(exp_p_list)[i]))
 #     save_plot(fn, exp_p_list[[i]], 4, 1.25)
 # }; rm(i, fn)
 
 
+#' Plot used to explain the contamination in rep 11.
+# save_plot(here("_results/_plots/sims-and-exps/99-rep11-ontop.pdf"),
+#           experiment_plotter("11", TRUE), 3, 3)
 
 
 
@@ -363,8 +386,6 @@ exp_rplants_p_list <- aphid_cage_df |>
         })
 
 
-exp_rplants_p_list[[2]]
-
 
 exp_rplants_lm_p <- aphid_cage_df |>
     mutate(id = interaction(treatment, rep, cage, line, drop = TRUE)) |>
@@ -407,10 +428,10 @@ exp_rplants_p <- wrap_elements(grid::textGrob(expression("Aphid abundance ("
 
 
 
+# exp_rplants_p
 
 
-
-# save_plot("_results/plots/repl-plants.pdf", exp_rplants_p, 6, 12)
+# save_plot("_results/_plots/repl-plants.pdf", exp_rplants_p, 6, 12)
 
 
 
