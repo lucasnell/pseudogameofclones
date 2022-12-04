@@ -11,7 +11,7 @@ if (!require("gameofclones")) {
 
 
 
-# cairo_pdf(filename = sprintf("_results/plots/%s", fn), width = w, height = h, ...)
+# cairo_pdf(filename = sprintf("_results/_plots/%s", fn), width = w, height = h, ...)
 # dev.off()
 
 

@@ -36,7 +36,7 @@ col_counts |>
     ggplot(aes(total, p)) +
     geom_point(aes(color = line)) +
     scale_color_manual(guide = "none",
-                       values = viridisLite::viridis(10)[
+                       values = viridisLite::rocket(10)[
                            do.call(c, map(1:5, ~ .x + c(0,5)))]) +
     scale_y_continuous("Proportion alates") +
     xlab("Total aphids")
