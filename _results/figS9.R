@@ -2,12 +2,19 @@
 library(gameofclones)
 library(scales)
 library(grid)
+library(viridisLite)
+library(here)
 
-# colors for resistant, susceptible, and parasitoid wasps, respectively
-col_pal <- list(r = "#CCCC00", s = "blue", w = "red")
 
 # File name for figure:
-file_out <- "_results/plots/fig_S9.pdf"
+file_out <- here("_results/_plots/trajectories-field.pdf")
+
+
+# colors for resistant, susceptible, and parasitoid wasps, respectively
+col_pal <- list(r = viridis(100)[50],
+                s = viridis(100)[95],
+                w = viridis(100)[1])
+
 
 rm_tibs <- function(.sims) {
     for (n in c("aphids", "wasps")) {
@@ -69,6 +76,7 @@ perturb <- data.frame(when=rep(day.interval*(1:n.events), each=3), where=rep(1:n
 perturb$how[perturb$who == "mummies"] <- 0
 
 perturb <- perturb[1:(3*n.events),]
+
 
 
 cairo_pdf(file_out, width = 7, height = 7)
@@ -142,6 +150,13 @@ cairo_pdf(file_out, width = 7, height = 7)
 		    lines(N ~ time0, data=w[w$field == i.field & w$line == "resistant" & w$type == "apterous",], col=alpha(col_pal$r, .alpha), lwd = .lwd, lty=.lty)
 		    lines(N ~ time0, data=w[w$field == i.field & w$line == "susceptible" & w$type == "apterous",], col=alpha(col_pal$s, .alpha), lwd = .lwd, lty=.lty)
 		    lines(wasps ~ time0, data=ww[ww$field == i.field,], col=alpha(col_pal$w, .alpha), lwd = .lwd, lty=.lty)
+		}
+
+		if (remove) {
+		    text(c(0, 0), c(1e-3, 3e3), col = c(col_pal$w, col_pal$s), font = 2,
+		         labels = c("parasitoids", "susceptible"), adj = c(0,0.5))
+		} else {
+		    text(110, 2e3, col = col_pal$r, labels = "resistant", adj = c(0,0.5), font = 2)
 		}
 
 

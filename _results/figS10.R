@@ -2,12 +2,17 @@
 library(gameofclones)
 library(scales)
 library(grid)
-
-# colors for resistant, susceptible, and parasitoid wasps, respectively
-col_pal <- list(r = "#CCCC00", s = "blue", w = "red")
+library(viridisLite)
+library(here)
 
 # File name for figure:
-file_out <- "_results/plots/fig_S10.pdf"
+file_out <- here("_results/_plots/trajectories-greater-dispersal.pdf")
+
+
+# colors for resistant, susceptible, and parasitoid wasps, respectively
+col_pal <- list(r = viridis(100)[50],
+                s = viridis(100)[95],
+                w = viridis(100)[1])
 
 
 rm_tibs <- function(.sims) {
@@ -78,6 +83,10 @@ perturb <- perturb[1:(3*n.events),]
 
 pick.wasp.disp.list <- 16:17
 
+
+
+
+
 cairo_pdf(file_out, width = 7, height = 7)
 	for(pick.wasp.disp in pick.wasp.disp.list){
 
@@ -141,6 +150,12 @@ cairo_pdf(file_out, width = 7, height = 7)
 			lines(N ~ time0, data=w[w$field == i.field & w$line == "resistant" & w$type == "apterous",], col=alpha(col_pal$r, .alpha), lwd = .lwd, lty=.lty)
 			lines(N ~ time0, data=w[w$field == i.field & w$line == "susceptible" & w$type == "apterous",], col=alpha(col_pal$s, .alpha), lwd = .lwd, lty=.lty)
 			lines(wasps ~ time0, data=ww[ww$field == i.field,], col=alpha(col_pal$w, .alpha), lwd = .lwd, lty=.lty)
+		}
+
+		if(pick.wasp.disp == pick.wasp.disp.list[1]) {
+		    text(c(60, 190, 250), c(3e-1, 1e3, 1e-4),
+		         col = unlist(col_pal[c("r","s","w")]), font=2, adj=c(0,0.5),
+		         labels = c("resistant", "susceptible", "parasitoids"))
 		}
 	}
 dev.off()

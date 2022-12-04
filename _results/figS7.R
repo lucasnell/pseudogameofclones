@@ -1,5 +1,13 @@
 
 library(gameofclones)
+library(grid)
+library(here)
+
+
+# File name for figure:
+file_out <- here("_results/_plots/trajectories-experiment.pdf")
+
+
 
 rm_tibs <- function(.sims) {
     for (n in c("aphids", "wasps")) {
@@ -44,6 +52,7 @@ clone_converge <- function(sim, delta, category = "resistant", max_t = 1e4,
 }
 clone_plot <- function(sim, delta.list, labels = "", max_t = 1e3,
                        max_t.converge = 1e4, perturb = NULL){
+
     d <- sim$aphids
     d$line.type <- paste0(d$line,".", d$type)
     d$line.type[d$line.type == "NA.mummy"] <- "mummy"
@@ -76,6 +85,9 @@ clone_plot <- function(sim, delta.list, labels = "", max_t = 1e3,
     par(mfrow=c(3,1), mai = c(.6,.7,.1,.1))
     plot(prop ~ time, data=d[d$delta == 1 & d$field == 1,], typ="l",
          ylim=c(0,1), ylab = "Resistant (field 1)", xlab = "Time")
+    grid.text("A", x = unit(0, "npc"), y = unit(1, "npc"),
+              just = c("left", "top"),
+              gp = gpar(fontsize = 18, fontface = "bold"))
     for (i.delta in delta.list) {
         lines(prop ~ time, data=d[d$delta == i.delta & d$field == 1,],
               col=col, lty=2-as.numeric(converge))
@@ -85,6 +97,9 @@ clone_plot <- function(sim, delta.list, labels = "", max_t = 1e3,
 
     plot(prop ~ time, data=d[d$delta == 1 & d$field == 2,], typ="l",
          ylim=c(0,1), ylab = "Resistant (field 2)", xlab = "Time")
+    grid.text("B", x = unit(0, "npc"), y = unit(0.66, "npc"),
+              just = c("left", "top"),
+              gp = gpar(fontsize = 18, fontface = "bold"))
     for (i.delta in delta.list) {
         lines(prop ~ time, data=d[d$delta == i.delta & d$field == 2,],
               col=col, lty=2-as.numeric(converge))
@@ -93,12 +108,16 @@ clone_plot <- function(sim, delta.list, labels = "", max_t = 1e3,
 
     plot(wasps ~ time, data=d[d$delta == 1 & d$field == 1,], typ="l",
          ylim = c(0, max(d$wasps)), ylab = "Wasps (field 1)", xlab = "Time")
+    grid.text("C", x = unit(0, "npc"), y = unit(0.33, "npc"),
+              just = c("left", "top"),
+              gp = gpar(fontsize = 18, fontface = "bold"))
     for(i.delta in delta.list) {
         lines(wasps ~ time, data=d[d$delta == i.delta & d$field == 1,],
               col=col, lty=2-as.numeric(converge))
     }
     lines(wasps ~ time, data=d[d$delta == 1 & d$field == 1,])
 }
+
 
 # Susceptible line: no resistance, high population growth rate
 line_s <- clonal_line("susceptible",
@@ -133,7 +152,9 @@ sim <- sim_experiments(clonal_lines = c(line_s, line_r),
                        extinct_N = 1e-10,
                        max_t = max_t, save_every = 1e0)
 
-# S8 ----
-cairo_pdf(filename = "_results/plots/fig_S8.pdf", width = 5, height = 7)
+
+
+# figure itself ----
+cairo_pdf(filename = file_out, width = 5, height = 7)
 clone_plot(sim, delta.list, max_t = 500)
 dev.off()

@@ -1,8 +1,15 @@
 
 library(numDeriv)
-library(lattice)
 library(plot3D)
+library(grid)
 library(gameofclones)
+library(here)
+
+
+# File name for figure:
+file_out <- here("_results/_plots/stationary-points.pdf")
+
+
 
 clone_traj <- function(sim, delta, category = "resistant", max_t = 400,
                        perturb = NULL){
@@ -74,13 +81,19 @@ d <- d[d$time > 100,]
 d$prop <- d$resistant/(d$susceptible + d$resistant)
 
 
-cairo_pdf(filename = "_results/plots/fig_S9.pdf", width = 10, height = 4)
+
+
+
+
+cairo_pdf(filename = file_out, width = 10, height = 4)
+
 par(mfrow=c(1,3))
 
 dd <- d[d$delta == delta.list[1],]
 lines3D(dd$resistant, dd$susceptible, dd$wasps, colvar = dd$wasps,
         colkey = FALSE, theta = 0, phi = 0, xlab = "Resistant",
         ylab = "Susceptible", zlab = "Wasps")
+mtext("A", side = 3, adj = 0, font = 2, cex = 1.5, line = 2)
 for(i.delta in delta.list[2:length(delta.list)]) {
     dd <- d[d$delta == i.delta,]
     lines3D(dd$resistant, dd$susceptible, dd$wasps, colvar = dd$wasps,
@@ -90,6 +103,7 @@ for(i.delta in delta.list[2:length(delta.list)]) {
 dd <- d[d$delta == delta.list[1],]
 lines2D(dd$resistant, dd$susceptible, colvar = dd$wasps, colkey = FALSE,
         xlab = "Resistant", ylab = "Susceptible")
+mtext("B", side = 3, adj = 0, font = 2, cex = 1.5, line = 2)
 points2D(dd$resistant[nrow(dd)], dd$susceptible[nrow(dd)], add=TRUE)
 for(i.delta in delta.list[2:length(delta.list)]) {
     dd <- d[d$delta == i.delta,]
@@ -101,8 +115,10 @@ for(i.delta in delta.list[2:length(delta.list)]) {
 dd <- d[d$delta == delta.list[1],]
 lines2D(dd$time, dd$prop, colvar = dd$wasps, colkey = FALSE, xlab = "Time",
         ylab = "Proportion resistant")
+mtext("C", side = 3, adj = 0, font = 2, cex = 1.5, line = 2)
 for(i.delta in delta.list[2:length(delta.list)]) {
     dd <- d[d$delta == i.delta,]
     lines2D(dd$time, dd$prop, add = TRUE, colvar = dd$wasps, colkey = FALSE)
 }
+
 dev.off()
