@@ -5,16 +5,10 @@
 .Rprofile
 *.png
 inst/doc
-data-raw/*.rds
 *.rds
-figs
 *.ai
 
-## Symlinks:
-data-raw/big
-host_shift
-
-## Test files:
-under_constr/*/_test.*
+## Symlink:
+_results/_plots/_illustrator-figures
 
 *.pdf
