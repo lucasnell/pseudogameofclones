@@ -4,7 +4,7 @@
 #' Save a plot to a PDF file using `cairo_pdf`
 #'
 #' @param fn Filename of plot
-#' @param p Plot object
+#' @param p Plot object or function to create plot
 #' @param w Width in inches
 #' @param h Height in inches
 #' @param seed Integer to seed RNG for consistent jittering.
@@ -20,7 +20,11 @@ save_plot <- function(fn, p, w, h, seed = NULL, ...) {
     if (!dir.exists(fn_dir)) stop("ERROR: `", fn_dir, "` doesn't exist")
     if (!is.null(seed)) set.seed(seed)
     cairo_pdf(filename = fn, width = w, height = h, ...)
-    plot(p)
+    if (is.function(p)) {
+        p()
+    } else {
+        plot(p)
+    }
     dev.off()
     invisible(NULL)
 }

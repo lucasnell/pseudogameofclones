@@ -1,5 +1,6 @@
 
 library(tidyverse)
+library(ggtext)
 library(lubridate)
 library(gameofclones)
 library(viridisLite)
@@ -35,7 +36,7 @@ rel_res_fitness <- function(para, p_res = 0.48) {
 
     if (file.exists(rr_rs_rds)) {
 
-        d <- readRDS(rr_rs_rds)
+        rr_rs_df <- readRDS(rr_rs_rds)
 
     } else {
 
@@ -213,7 +214,9 @@ maps_dates <- as.Date(c("2015-06-03", "2015-06-12", "2015-06-19",
 
 
 
-
+# This is used for both time series and map
+rr_rs_legend_title <- str_c("Relative fitness for<br>resistant aphids<br>",
+                          "(*r<sub>r</sub>* / *r<sub>s</sub>*)")
 
 
 par_ts_p <- par_df |>
@@ -235,18 +238,16 @@ par_ts_p <- par_df |>
     geom_point(aes(color = rr_rs_fct, fill = rr_rs_fct),
                size = 1, shape = 21) +
     facet_wrap(~ year, ncol = 3) +
-    scale_color_manual(paste0("Relative fitness for\nresistant aphids\n",
-                              "(r\U1D63 / r\U209B)"),
+    scale_color_manual(rr_rs_legend_title,
                       values = rr_rs_pal$color) +
-    scale_fill_manual(paste0("Relative fitness for\nresistant aphids\n",
-                              "(r\U1D63 / r\U209B)"),
+    scale_fill_manual(rr_rs_legend_title,
                       values = rr_rs_pal$fill2) +
     guides(color = guide_legend(override.aes = list(alpha = 1, size = 3))) +
     scale_x_date(date_breaks = "1 month", date_labels = "%b") +
     scale_y_continuous("Parasitism", breaks = 0.4*0:2) +
     theme(axis.title.x = element_blank(),
           axis.text.x = element_text(color = "black", size = 8),
-          legend.title = element_text(hjust = 0),
+          legend.title = element_markdown(hjust = 0),
           strip.text = element_text(size = 9)) +
     NULL
 
@@ -402,14 +403,30 @@ obs_fields_par <- obs_par_df |>
     mutate(plot_date = factor(paste(obs_date),
                               levels = paste(sort(unique(obs_date))),
                               labels = format(sort(unique(obs_date)),
-                                              "%Y\n%e %b")))
+                                              "%e %b")),
+           plot_date_by_yr = (as.integer(plot_date) - 1) %% 3 + 1,
+           plot_date_by_yr = factor(plot_date_by_yr))
 
 
-xy_lims <- st_bbox(obs_fields_par) |> as.list()
-xy_lims$xmin <- xy_lims$xmin - 400
-xy_lims$xmax <- xy_lims$xmax + 400
-xy_lims$ymin <- xy_lims$ymin - 400
-xy_lims$ymax <- xy_lims$ymax + 400
+xy_lims <- st_bbox(obs_fields_par) |>
+    as.list() |> as_tibble() |>
+    mutate(xmin = xmin - 400,
+           xmax = xmax + 400,
+           ymin = ymin - 400,
+           ymax = ymax + 400)
+
+fields_par_scale_df <- st_bbox(obs_fields_par) |>
+    as.list() |> as_tibble() |>
+    mutate(xmax = xmin + 1000,
+           ymin = ymax - 100,
+           ymax = ymin + 200,
+           year = "2013", plot_date_by_yr = "1")
+fields_par_lab_df <- obs_fields_par |>
+    distinct(year, plot_date_by_yr, plot_date) |>
+    mutate(x = xy_lims$xmin + 100,
+           x = (xy_lims$xmin + xy_lims$xmax) / 2,
+           y = xy_lims$ymax - 100,
+           y = xy_lims$ymax + 100)
 
 fields_par_p <- obs_fields_par |>
     add_rr_rs_fct() |>
@@ -418,26 +435,38 @@ fields_par_p <- obs_fields_par |>
               ymin = xy_lims$ymin, ymax = xy_lims$ymax,
               fill = NA, color = "black", linewidth = 0.5) +
     geom_sf(aes(size = para, color = rr_rs_fct, fill = rr_rs_fct), shape = 21) +
-    scale_color_manual(paste("'Relative fitness\nfor resistance\n('",
-                             "* r[r] / r[s] * ')'") |>
-                           str2expression(),
-                       guide = "none",
+    # geom_text(data = fields_par_lab_df, aes(x, y, label = plot_date),
+    #           size = 9 / 2.83465, hjust = 0.5, vjust = 0) +
+    # # ------*
+    # # DIY scale bar:
+    # geom_rect(data = fields_par_scale_df,
+    #              aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+    #              fill = "black", color = NA) +
+    # geom_text(data = fields_par_scale_df |>
+    #               mutate(x = (xmin + xmax) / 2, y = ymin - 200),
+    #           aes(x = x, y = y), label = "1 km",
+    #           size = 9 / 2.83465, vjust = 1) +
+    # ------*
+    scale_color_manual(rr_rs_legend_title, guide = "none",
                        values = rr_rs_pal$color) +
-    scale_fill_manual(paste("'Relative fitness\nfor resistance\n('",
-                             "* r[r] / r[s] * ')'") |>
-                           str2expression(),
-                       guide = "none",
-                       values = rr_rs_pal$fill) +
+    scale_fill_manual(rr_rs_legend_title, guide = "none",
+                      values = rr_rs_pal$fill) +
     scale_size("Parasitism", limits = c(0, 0.85), range = c(0.5, 8),
                breaks = 0.2 * 0:4) +
     guides(size = guide_legend(override.aes = list(shape = 16))) +
     coord_sf(datum = st_crs(32616),
              xlim = as.numeric(xy_lims[c("xmin", "xmax")]),
-             ylim = as.numeric(xy_lims[c("ymin", "ymax")])) +
+             ylim = as.numeric(xy_lims[c("ymin", "ymax")]),
+             clip = "off") +
     facet_wrap(~ plot_date, nrow = 2) +
+    # facet_grid(year ~ plot_date_by_yr, switch = "y") +
     theme_void() +
-    theme(plot.title = element_text(size = 8, margin = margin(0,0,0,t=3))) +
-    theme(strip.text = element_text(size = 8, margin = margin(0,0,0,t=3))) +
+    theme(strip.text = element_text(size = 9, margin = margin(0,0,b=3,t=3))) +
+    # theme(strip.text.x = element_blank(),
+    #       strip.text.y.left = element_text(size = 12, angle = 0,
+    #                                        margin = margin(0,0,0,r=6)),
+    #       panel.spacing.y = unit(9, "pt")) +
+    #       # plot.margin = margin(0,0,0,t=9)) +
     scalebar(data = obs_fields_par,
              dist = 1, dist_unit = "km", transform = FALSE,
              border.size = 0.5, st.dist = 0.06,
@@ -446,21 +475,57 @@ fields_par_p <- obs_fields_par |>
              y.min = xy_lims$ymin, y.max = xy_lims$ymax - 600,
              facet.var = "plot_date",
              facet.lev = levels(obs_fields_par$plot_date)[1]) +
+             # facet.var = c("plot_date_by_yr", "year"),
+             # facet.lev = c("1", "2013")) +
     NULL
 
 
 
 
 
-mosaic_p <- par_ts_p + fields_par_p +
-    plot_annotation(tag_levels = "A") +
-    plot_layout(nrow = 2, heights = c(1, 1.5)) &
-    theme(plot.tag = element_text(size = 14, face = "bold"))
-
-# save_plot("_results/_plots/mosaic.pdf", mosaic_p, 7, 7)
 
 
+mosaic_p <- function() {
+    p <- par_ts_p + fields_par_p +
+        plot_annotation(tag_levels = "A") +
+        plot_layout(nrow = 2, heights = c(1, 1.5)) &
+        theme(plot.tag = element_text(size = 14, face = "bold"))
+    plot(p)
+    grid.text("2013", x = unit(0.08, "npc"), y = unit(0.385, "npc"),
+              just = c("right", "center"))
+    grid.text("2015", x = unit(0.08, "npc"), y = unit(0.135, "npc"),
+              just = c("right", "center"))
+}
+
+# mosaic_p()
 
 
 
+# save_plot(here("_results/_plots/mosaic.pdf"), mosaic_p, 7, 7)
+
+
+
+
+
+# --------------------------------------------------------*
+# Hamiltonella frequencies ----
+# These will be listed in text.
+# --------------------------------------------------------*
+
+#'
+#' Frequencies of Hamiltonella by field and time
+#'
+ham_df <- here("_results/_data/symbionts-2012-2017.csv") |>
+    read_csv(col_types = cols()) |>
+    select(year, late, date, field, Hamiltonella) |>
+    group_by(year, late, date, field) |>
+    summarize(ham = mean(Hamiltonella), n = n(), .groups = "drop")
+
+#' Average number of aphids assayed:
+ham_df$n |> mean()
+
+#' Some summaries of Hamiltonella frequencies:
+ham_df$ham |> mean()
+ham_df$ham |> sd()
+ham_df$ham |> range()
 

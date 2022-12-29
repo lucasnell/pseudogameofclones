@@ -9,7 +9,7 @@ save_plot(fn, p, w, h, seed = NULL, ...)
 \arguments{
 \item{fn}{Filename of plot}
 
-\item{p}{Plot object}
+\item{p}{Plot object or function to create plot}
 
 \item{w}{Width in inches}
 
