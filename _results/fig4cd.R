@@ -1,4 +1,3 @@
-
 library(gameofclones)
 library(scales)
 library(viridisLite)
@@ -10,10 +9,14 @@ col_pal <- list(r = viridis(100)[50],
                 s = viridis(100)[95],
                 w = viridis(100)[1])
 
-# Name of plot produced here:
-plot_out <- here("_results/_plots/fig_4cd.pdf")
+# Directory where plots produced here will be added:
+plot_dir_out <- here("_results/_plots/stable-sims")
+if (!dir.exists(plot_dir_out)) dir.create(plot_dir_out, recursive = TRUE)
+# Names of files produced here:
+plots_out <- list(N = paste0(plot_dir_out, "/stable-sims-wasp_d-abundance.pdf"),
+                  P = paste0(plot_dir_out, "/stable-sims-wasp_d-resistance.pdf"))
 # Name of temporary results file produced here:
-tmp_results <- here("_results/_data/fig4cd.csv")
+tmp_results <- here("_results/_data/stable-sims-wasp_d.csv")
 
 
 
@@ -278,11 +281,11 @@ if (rerun_sims) {
 
 
 
-########################*
-# pretty figure
+# ============================================================================*
+# pre-processing for figures ----
+# ============================================================================*
 
-# df <- df[df$wasp.disp <= .18,]
-# df <- df[df$wasp.disp >=.01,]
+
 w <- data.frame(wasp.disp = unique(df$wasp.disp))
 for(i.resist in c(0,1)) for(i.wasp.disp in w$wasp.disp){
 
@@ -313,73 +316,95 @@ for(i.resist in c(0,1)) for(i.wasp.disp in w$wasp.disp){
         w$upper[w$wasp.disp == i.wasp.disp] <- www$prop.delta[nrow(www)]
     }
 }
-# w
 
 for(i in 1:3){
-    # w[,i + 1 + 3*(0:3)] <- log10(w[,i + 1 + 3*(0:3)]/max(w[,i + 1 + 3*(0:3)], na.rm = TRUE)+.0001)
     w[,i + 1 + 3*(0:3)] <- log10(w[,i + 1 + 3*(0:3)]+.0001)
 }
-# w[,2 + 3*(0:3)]
 
 w$upper[is.na(w$upper)] <- 0
 w$upper[23] <- .85
 
 
-# w.spline <- smooth.spline(x = w$s, y = w$unstable.equil, df = 6)
-# w$unstable.equil.spline <- predict(w.spline, w$s)$y
 
 
 
+# ============================================================================*
+# figures themselves ----
+# ============================================================================*
 
 
-# figure itself ----
+# For equilibrium abundances ~ wasp dispersal
 
-cairo_pdf(filename = plot_out, height = 8, width = 6)
+cairo_pdf(filename = plots_out$N, height = 4, width = 6)
+{
+    par(mai=c(0.9, 0.9, 0.1, 0.1))
 
-par(mfrow = c(2,1), mai=c(1,1,.1,.1))
+    plot(peak.resistant1 ~ wasp.disp, data = w, typ="l", ylab = "Abundance",
+         xlab = "Wasp dispersal", col=col_pal$r, lty = 2,
+         ylim = c(-4,4), yaxt = "n")
+    aty <- axTicks(2)
+    y_labels <- sapply(aty,function(i) as.expression(bquote(10^ .(i))))
+    axis(2,at=aty,labels=y_labels, las=1)
 
-plot(peak.resistant1 ~ wasp.disp, data = w, typ="l", ylab = "Abundance", xlab = "Wasp dispersal", col=col_pal$r, lty = 2, ylim = c(-4,4), yaxt = "n")
-aty <- axTicks(2)
-y_labels <- sapply(aty,function(i) {
-    as.expression(bquote(10^ .(i)))
-})
-axis(2,at=aty,labels=y_labels, las=1)
+    col <- alpha(col_pal$r, 0.30)
+    conf_bounds(x = w$wasp.disp, y.lower = w$peak.resistant2,
+                y.upper = w$peak.resistant1, col=col)
+    conf_bounds(x = w$wasp.disp, y.lower = w$trough.resistant2,
+                y.upper = w$trough.resistant1, col=col)
+    lines(peak.resistant1 ~ wasp.disp, data = w, col=col_pal$r, lwd = 2)
+    lines(peak.resistant2 ~ wasp.disp, data = w, col=col_pal$r, lwd = 2)
+    lines(trough.resistant1 ~ wasp.disp, data = w, col=col_pal$r, lty = 2, lwd = 2)
+    lines(trough.resistant2 ~ wasp.disp, data = w, col=col_pal$r, lty = 2, lwd = 2)
 
-col <- alpha(col_pal$r, 0.30)
-conf_bounds(x = w$wasp.disp, y.lower = w$peak.resistant2, y.upper = w$peak.resistant1, col=col)
-conf_bounds(x = w$wasp.disp, y.lower = w$trough.resistant2, y.upper = w$trough.resistant1, col=col)
-lines(peak.resistant1 ~ wasp.disp, data = w, col=col_pal$r, lwd = 2)
-lines(peak.resistant2 ~ wasp.disp, data = w, col=col_pal$r, lwd = 2)
-lines(trough.resistant1 ~ wasp.disp, data = w, col=col_pal$r, lty = 2, lwd = 2)
-lines(trough.resistant2 ~ wasp.disp, data = w, col=col_pal$r, lty = 2, lwd = 2)
+    col <- alpha(col_pal$s, 0.30)
+    conf_bounds(x = w$wasp.disp, y.lower = w$peak.susceptible2,
+                y.upper = w$peak.susceptible1, col=col)
+    conf_bounds(x = w$wasp.disp, y.lower = w$trough.susceptible2,
+                y.upper = w$trough.susceptible1, col=col)
+    lines(peak.susceptible1 ~ wasp.disp, data = w, col=col_pal$s, lwd = 2)
+    lines(peak.susceptible2 ~ wasp.disp, data = w, col=col_pal$s, lwd = 2)
+    lines(trough.susceptible1 ~ wasp.disp, data = w, col=col_pal$s,
+          lty = 2, lwd = 2)
+    lines(trough.susceptible2 ~ wasp.disp, data = w, col=col_pal$s,
+          lty = 2, lwd = 2)
 
-col <- alpha(col_pal$s, 0.30)
-conf_bounds(x = w$wasp.disp, y.lower = w$peak.susceptible2, y.upper = w$peak.susceptible1, col=col)
-conf_bounds(x = w$wasp.disp, y.lower = w$trough.susceptible2, y.upper = w$trough.susceptible1, col=col)
-lines(peak.susceptible1 ~ wasp.disp, data = w, col=col_pal$s, lwd = 2)
-lines(peak.susceptible2 ~ wasp.disp, data = w, col=col_pal$s, lwd = 2)
-lines(trough.susceptible1 ~ wasp.disp, data = w, col=col_pal$s, lty = 2, lwd = 2)
-lines(trough.susceptible2 ~ wasp.disp, data = w, col=col_pal$s, lty = 2, lwd = 2)
-
-col <- alpha(col_pal$w, 0.30)
-conf_bounds(x = w$wasp.disp, y.lower = w$peak.wasps2, y.upper = w$peak.wasps1, col=col)
-conf_bounds(x = w$wasp.disp, y.lower = w$trough.wasps2, y.upper = w$trough.wasps1, col=col)
-lines(peak.wasps1 ~ wasp.disp, data = w, col=col_pal$w, lwd = 2)
-lines(peak.wasps2 ~ wasp.disp, data = w, col=col_pal$w, lwd = 2)
-lines(trough.wasps1 ~ wasp.disp, data = w, col=col_pal$w, lty = 2, lwd = 2)
-lines(trough.wasps2 ~ wasp.disp, data = w, col=col_pal$w, lty = 2, lwd = 2)
-
-plot(peak.prop1 ~ wasp.disp, data = w, typ="l", ylim = c(0,1), ylab = "Proportion resistant", xlab = "Wasp dispersal")
-
-conf_bounds(x = w$wasp.disp[!is.na(w$upper)], y.lower = w$upper[!is.na(w$upper)], y.upper = rep(1,sum(!is.na(w$upper))), col="lightgray")
-conf_bounds(x = w$wasp.disp[!is.na(w$lower)], y.upper = w$lower[!is.na(w$lower)], y.lower = rep(0,sum(!is.na(w$lower))), col="lightgray")
-conf_bounds(x = w$wasp.disp, y.lower = w$peak.prop2, y.upper = w$peak.prop1, col=alpha("dodgerblue", 0.30))
-conf_bounds(x = w$wasp.disp, y.lower = w$trough.prop2, y.upper = w$trough.prop1, col=alpha("dodgerblue", 0.30))
-
-lines(peak.prop1 ~ wasp.disp, data = w, col="dodgerblue3", lwd = 2)
-lines(peak.prop2 ~ wasp.disp, data = w, col="dodgerblue3", lwd = 2)
-lines(trough.prop1 ~ wasp.disp, data = w, lty = 2, col="dodgerblue3", lwd = 2)
-lines(trough.prop2 ~ wasp.disp, data = w, lty = 2, col="dodgerblue3", lwd = 2)
+    col <- alpha(col_pal$w, 0.30)
+    conf_bounds(x = w$wasp.disp, y.lower = w$peak.wasps2,
+                y.upper = w$peak.wasps1, col=col)
+    conf_bounds(x = w$wasp.disp, y.lower = w$trough.wasps2,
+                y.upper = w$trough.wasps1, col=col)
+    lines(peak.wasps1 ~ wasp.disp, data = w, col=col_pal$w, lwd = 2)
+    lines(peak.wasps2 ~ wasp.disp, data = w, col=col_pal$w, lwd = 2)
+    lines(trough.wasps1 ~ wasp.disp, data = w, col=col_pal$w, lty = 2, lwd = 2)
+    lines(trough.wasps2 ~ wasp.disp, data = w, col=col_pal$w, lty = 2, lwd = 2)
+}
+dev.off()
 
 
+
+# For equilibrium proportion resistance ~ wasp dispersal
+
+cairo_pdf(filename = plots_out$P, height = 4, width = 6)
+{
+    par(mai=c(0.9, 0.9, 0.1, 0.1))
+
+    plot(peak.prop1 ~ wasp.disp, data = w, typ="l", ylim = c(0,1),
+         ylab = "Proportion resistant", xlab = "Wasp dispersal")
+
+    conf_bounds(x = w$wasp.disp[!is.na(w$upper)],
+                y.lower = w$upper[!is.na(w$upper)],
+                y.upper = rep(1,sum(!is.na(w$upper))), col="lightgray")
+    conf_bounds(x = w$wasp.disp[!is.na(w$lower)],
+                y.upper = w$lower[!is.na(w$lower)],
+                y.lower = rep(0,sum(!is.na(w$lower))), col="lightgray")
+    conf_bounds(x = w$wasp.disp, y.lower = w$peak.prop2, y.upper = w$peak.prop1,
+                col=alpha("dodgerblue", 0.30))
+    conf_bounds(x = w$wasp.disp, y.lower = w$trough.prop2,
+                y.upper = w$trough.prop1, col=alpha("dodgerblue", 0.30))
+
+    lines(peak.prop1 ~ wasp.disp, data = w, col="dodgerblue3", lwd=2)
+    lines(peak.prop2 ~ wasp.disp, data = w, col="dodgerblue3", lwd=2)
+    lines(trough.prop1 ~ wasp.disp, data = w, lty = 2, col="dodgerblue3", lwd=2)
+    lines(trough.prop2 ~ wasp.disp, data = w, lty = 2, col="dodgerblue3", lwd=2)
+}
 dev.off()

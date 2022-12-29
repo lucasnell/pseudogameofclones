@@ -9,10 +9,14 @@ col_pal <- list(r = viridis(100)[50],
                 s = viridis(100)[95],
                 w = viridis(100)[1])
 
-# Name of plot produced here:
-plot_out <- here("_results/_plots/fig_4ab.pdf")
+# Directory where plots produced here will be added:
+plot_dir_out <- here("_results/_plots/stable-sims")
+if (!dir.exists(plot_dir_out)) dir.create(plot_dir_out, recursive = TRUE)
+# Names of files produced here:
+plots_out <- list(N = paste0(plot_dir_out, "/stable-sims-aphid_d-abundance.pdf"),
+                  P = paste0(plot_dir_out, "/stable-sims-aphid_d-resistance.pdf"))
 # Name of temporary results file produced here:
-tmp_results <- here("_results/_data/fig4ab.csv")
+tmp_results <- here("_results/_data/stable-sims-aphid_d.csv")
 
 
 
@@ -221,11 +225,11 @@ if (rerun_sims) {
 
 
 
-########################*
-# pretty figure
-########################*
+# ============================================================================*
+# pre-processing for figures ----
+# ============================================================================*
 
-# pre-processing
+
 w <- data.frame(disp = unique(df$disp), stable.equil1 = NA, stable.equil2 = NA, unstable.equil = NA, upper = NA)
 for(i.disp in rev(w$disp)){
     ww <- df[df$disp == i.disp,]
@@ -270,37 +274,56 @@ w$trough.resistant[tail(which(w$trough.resistant == log10(.0001)), -1)] <- NA
 
 
 # ============================================================================*
-# figure itself ----
+# figures themselves ----
 # ============================================================================*
 
-cairo_pdf(filename = plot_out, height = 8, width = 6)
 
-par(mfrow = c(2,1), mai=c(1,1,.1,.1))
-plot(peak.resistant ~ disp, data = w, typ="l", ylab = "Abundance", xlab = "Aphid dispersal", col=col_pal$r, lwd = 3, xlim = c(0,.28), ylim = c(-4,4), yaxt = "n")
-# mtext(side = 2, at=2*(-2:2), text=c(expression(10^-4), expression(10^-2), expression(10^0), expression(10^2), expression(10^4)), las=2, adj=1.2)
-aty <- axTicks(2)
-y_labels <- sapply(aty,function(i) {
-    as.expression(bquote(10^ .(i)))
-})
-axis(2,at=aty,labels=y_labels, las=1)
-lines(trough.resistant ~ disp, data = w, col=col_pal$r, lwd = 3)
-lines(peak.susceptible ~ disp, data = w, col=col_pal$s, lwd = 3)
-lines(trough.susceptible ~ disp, data = w, col=col_pal$s, lwd = 3)
-lines(peak.wasps ~ disp, data = w, col=col_pal$w, lwd = 3)
-lines(trough.wasps ~ disp, data = w, col=col_pal$w, lwd = 3)
+# For equilibrium abundances ~ aphid dispersal
 
-plot(stable.equil1 ~ disp, data = www, typ="l", xlim = c(0,.28), ylim = c(0,1), ylab = "Proportion resistant", xlab = "Aphid dispersal")
+cairo_pdf(filename = plots_out$N, height = 4, width = 6)
+{
+    par(mai=c(0.9, 0.9, 0.1, 0.1))
 
-conf_bounds(x = ww$disp, y.lower = ww$upper, y.upper = rep(1,nrow(ww)), col="lightgray")
-conf_bounds(x = ww$disp, y.upper = ww$unstable.equil.spline, y.lower = rep(0,nrow(ww)), col="lightgray")
-conf_bounds(x = c(0.2584, .28), y.lower = c(0,0), y.upper = c(1,1), col="lightgray")
+    plot(peak.resistant ~ disp, data = w, typ="l", ylab = "Abundance",
+         xlab = "Aphid dispersal", col=col_pal$r, lwd = 3, xlim = c(0,.28),
+         ylim = c(-4,4), yaxt = "n")
+    aty <- axTicks(2)
+    y_labels <- sapply(aty,function(i) as.expression(bquote(10^ .(i))))
+    axis(2,at=aty,labels=y_labels, las=1)
+    lines(trough.resistant ~ disp, data = w, col=col_pal$r, lwd = 3)
+    lines(peak.susceptible ~ disp, data = w, col=col_pal$s, lwd = 3)
+    lines(trough.susceptible ~ disp, data = w, col=col_pal$s, lwd = 3)
+    lines(peak.wasps ~ disp, data = w, col=col_pal$w, lwd = 3)
+    lines(trough.wasps ~ disp, data = w, col=col_pal$w, lwd = 3)
+}
+dev.off()
 
-lines(stable.equil1 ~ disp, data = www, lwd = 3, col="dodgerblue")
-lines(stable.equil2 ~ disp, data = www, lwd = 3, col="dodgerblue")
-points(stable.equil1 ~ disp, data = www[www$disp > .04 & www$disp <= .15,], col="dodgerblue")
-points(stable.equil2 ~ disp, data = www[www$disp > .04 & www$disp <= .15,], col="dodgerblue")
-lines(unstable.equil.spline ~ disp, data = ww, col = "black", lwd = 3)
 
+
+# For equilibrium proportion resistance ~ aphid dispersal
+
+cairo_pdf(filename = plots_out$P, height = 4, width = 6)
+{
+    par(mai=c(0.9, 0.9, 0.1, 0.1))
+
+    plot(stable.equil1 ~ disp, data = www, typ="l", xlim = c(0,.28),
+         ylim = c(0,1), ylab = "Proportion resistant", xlab = "Aphid dispersal")
+
+    conf_bounds(x = ww$disp, y.lower = ww$upper, y.upper = rep(1,nrow(ww)),
+                col="lightgray")
+    conf_bounds(x = ww$disp, y.upper = ww$unstable.equil.spline,
+                y.lower = rep(0,nrow(ww)), col="lightgray")
+    conf_bounds(x = c(0.2584, .28), y.lower = c(0,0), y.upper = c(1,1),
+                col="lightgray")
+
+    lines(stable.equil1 ~ disp, data = www, lwd = 3, col="dodgerblue")
+    lines(stable.equil2 ~ disp, data = www, lwd = 3, col="dodgerblue")
+    points(stable.equil1 ~ disp, data = www[www$disp > .04 & www$disp <= .15,],
+           col="dodgerblue")
+    points(stable.equil2 ~ disp, data = www[www$disp > .04 & www$disp <= .15,],
+           col="dodgerblue")
+    lines(unstable.equil.spline ~ disp, data = ww, col = "black", lwd = 3)
+}
 dev.off()
 
 
