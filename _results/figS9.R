@@ -107,7 +107,7 @@ cairo_pdf(file_out, width = 7, height = 7)
 								n_fields = n_fields,
 								wasp_density_0 = wasp_density_0,
 								alate_field_disp_p = disp,
-								wasp_disp_p = wasp.disp,
+								wasp_disp_m0 = wasp.disp,
 								perturb = perturb,
 								a = a,
 								K = 12500,

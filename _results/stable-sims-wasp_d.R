@@ -132,7 +132,7 @@ sim <- sim_experiments(clonal_lines = c(line_s, line_r),
                        n_fields = n_fields,
                        wasp_density_0 = wasp_density_0,
                        alate_field_disp_p = disp,
-                       wasp_disp_p = wasp.disp,
+                       wasp_disp_m0 = wasp.disp,
                        perturb = perturb,
                        a = a,
                        K = 12500,
@@ -170,9 +170,9 @@ if (rerun_sims) {
             if (verbose) show(i.wasp.disp)
 
             old.sim <- new.sim
-            new.sim <- restart_experiment(old.sim, new_starts = new.starts, max_t = max_t, perturb = perturb, wasp_disp_p = i.wasp.disp)
+            new.sim <- restart_experiment(old.sim, new_starts = new.starts, max_t = max_t, perturb = perturb, wasp_disp_m0 = i.wasp.disp)
             new.starts <- new.sim$all_info[[1]]
-            #new.sim <- restart_experiment(sim, max_t = max_t, perturb = perturb, wasp_disp_p = i.wasp.disp)
+            #new.sim <- restart_experiment(sim, max_t = max_t, perturb = perturb, wasp_disp_m0 = i.wasp.disp)
 
             S.resistant <- sum(new.starts$N[!is.na(new.starts$line) & new.starts$line == "resistant"])
             S.susceptible <- sum(new.starts$N[!is.na(new.starts$line) & new.starts$line == "susceptible"])
@@ -279,8 +279,6 @@ if (rerun_sims) {
 
 
 
-
-
 # ============================================================================*
 # pre-processing for figures ----
 # ============================================================================*
@@ -377,19 +375,32 @@ cairo_pdf(filename = plots_out$N, height = 4, width = 6)
     lines(peak.wasps2 ~ wasp.disp, data = w, col=col_pal$w, lwd = 2)
     lines(trough.wasps1 ~ wasp.disp, data = w, col=col_pal$w, lty = 2, lwd = 2)
     lines(trough.wasps2 ~ wasp.disp, data = w, col=col_pal$w, lty = 2, lwd = 2)
+
+    text(x = max(w$wasp.disp), y = 0.9, labels = "parasitoid", col=col_pal$w,
+         adj = c(1, 1), font = 2)
+    text(x = 0.039, y = 2.5, labels = "resistant", col=col_pal$r,
+         adj = c(0, 0.5), font = 2)
+    text(x = max(w$wasp.disp), y = 3.9, labels = "susceptible", col=col_pal$s,
+         adj = c(1, 1), font = 2)
 }
 dev.off()
 
 
 
+
+
+
+
 # For equilibrium proportion resistance ~ wasp dispersal
 
-cairo_pdf(filename = plots_out$P, height = 4, width = 6)
+cairo_pdf(filename = plots_out$P, height = 3.6, width = 5.5)
 {
-    par(mai=c(0.9, 0.9, 0.1, 0.1))
+    par(mai=c(0.1, 0.5, 0.5, 0.1))
 
-    plot(peak.prop1 ~ wasp.disp, data = w, typ="l", ylim = c(0,1),
-         ylab = "Proportion resistant", xlab = "Wasp dispersal")
+    plot(peak.prop1 ~ wasp.disp, data = w, typ="l", ylim = c(0,1), xaxt = "n",
+         ylab = "", xlab = "")
+         # ylab = "Proportion resistant", xlab = "Wasp dispersal")
+    axis(3)
 
     conf_bounds(x = w$wasp.disp[!is.na(w$upper)],
                 y.lower = w$upper[!is.na(w$upper)],

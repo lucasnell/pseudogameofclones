@@ -295,6 +295,14 @@ cairo_pdf(filename = plots_out$N, height = 4, width = 6)
     lines(trough.susceptible ~ disp, data = w, col=col_pal$s, lwd = 3)
     lines(peak.wasps ~ disp, data = w, col=col_pal$w, lwd = 3)
     lines(trough.wasps ~ disp, data = w, col=col_pal$w, lwd = 3)
+
+    text(x = 0.05, y = 0, labels = "parasitoid", col=col_pal$w,
+         adj = c(0, 1), font = 2)
+    text(x = 0.25, y = -2, labels = "resistant", col=col_pal$r,
+         adj = c(1, 0.5), font = 2)
+    text(x = max(w$disp), y = 4, labels = "susceptible", col=col_pal$s,
+         adj = c(1, 1), font = 2)
+
 }
 dev.off()
 
@@ -302,12 +310,15 @@ dev.off()
 
 # For equilibrium proportion resistance ~ aphid dispersal
 
-cairo_pdf(filename = plots_out$P, height = 4, width = 6)
+cairo_pdf(filename = plots_out$P, height = 3.6, width = 5.5)
 {
-    par(mai=c(0.9, 0.9, 0.1, 0.1))
+    par(mai=c(0.1, 0.5, 0.5, 0.1))
 
     plot(stable.equil1 ~ disp, data = www, typ="l", xlim = c(0,.28),
-         ylim = c(0,1), ylab = "Proportion resistant", xlab = "Aphid dispersal")
+         ylim = c(0,1), xaxt = "n",
+         ylab = "", xlab = "")
+         # ylab = "Proportion resistant", xlab = "Aphid dispersal")
+    axis(3)
 
     conf_bounds(x = ww$disp, y.lower = ww$upper, y.upper = rep(1,nrow(ww)),
                 col="lightgray")

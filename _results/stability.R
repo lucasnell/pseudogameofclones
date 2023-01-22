@@ -914,7 +914,7 @@ sim <- sim_experiments(clonal_lines = c(line_s, line_r),
 						n_fields = n_fields,
 						wasp_density_0 = wasp_density_0,
 						alate_field_disp_p = disp,
-						wasp_disp_p = wasp.disp,
+						wasp_disp_m0 = wasp.disp,
 						perturb = perturb,
 						a = a,
 						K = 12500,
@@ -965,9 +965,9 @@ for(case in 1:2){
 		show(i.wasp.disp)
 
 		old.sim <- new.sim
-		new.sim <- restart_experiment(old.sim, new_starts = new.starts, max_t = max_t, perturb = perturb, wasp_disp_p = i.wasp.disp)
+		new.sim <- restart_experiment(old.sim, new_starts = new.starts, max_t = max_t, perturb = perturb, wasp_disp_m0 = i.wasp.disp)
 		new.starts <- new.sim$all_info[[1]]
-		#new.sim <- restart_experiment(sim, max_t = max_t, perturb = perturb, wasp_disp_p = i.wasp.disp)
+		#new.sim <- restart_experiment(sim, max_t = max_t, perturb = perturb, wasp_disp_m0 = i.wasp.disp)
 
 		S.resistant <- sum(new.starts$N[!is.na(new.starts$line) & new.starts$line == "resistant"])
 		S.susceptible <- sum(new.starts$N[!is.na(new.starts$line) & new.starts$line == "susceptible"])
@@ -1230,7 +1230,7 @@ pdf("Nell fig S10.pdf", width = 7, height = 7)
 								n_fields = n_fields,
 								wasp_density_0 = wasp_density_0,
 								alate_field_disp_p = disp,
-								wasp_disp_p = wasp.disp,
+								wasp_disp_m0 = wasp.disp,
 								perturb = perturb,
 								a = a,
 								K = 12500,
@@ -1368,7 +1368,7 @@ pdf("Nell fig S11.pdf", width = 7, height = 7)
 								n_fields = n_fields,
 								wasp_density_0 = wasp_density_0,
 								alate_field_disp_p = disp,
-								wasp_disp_p = wasp.disp,
+								wasp_disp_m0 = wasp.disp,
 								perturb = perturb,
 								a = a,
 								K = 12500,

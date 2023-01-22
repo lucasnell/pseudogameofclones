@@ -194,7 +194,7 @@ max_N <- max(aphid_cage_df[[aphid_y]]) / 0.9
 #' Defaults to `FALSE` which is used in most cases, but I set it to `TRUE`
 #' for the plot used to explain the contamination in rep 11.
 #'
-experiment_plotter <- function(r, ontop = FALSE) {
+experiment_plotter <- function(r, ontop = FALSE, show_terminations = TRUE) {
     # r = "11"
     # rm(r, acd, lcd, wcd, p)
     acd <- aphid_cage_df |>
@@ -225,11 +225,14 @@ experiment_plotter <- function(r, ontop = FALSE) {
         p <- p +
             facet_grid(cols = vars(cage))
     }
+    if (show_terminations) {
+        p <- p +
+            # Vertical line(s) for early termination:
+            geom_vline(data = acd |> filter(terminated),
+                       aes(xintercept = days),
+                       linewidth = 0.5, linetype = "22", color = "gray60")
+    }
     p <- p +
-        # Vertical line(s) for early termination:
-        geom_vline(data = acd |> filter(terminated),
-                   aes(xintercept = days),
-                   linewidth = 0.5, linetype = "22", color = "gray60") +
         geom_area(data = wcd, fill = wasp_fill, color = NA) +
         geom_hline(yintercept = 0, color = "gray70") +
         # Main abundance lines:
