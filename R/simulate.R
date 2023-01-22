@@ -421,8 +421,8 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #'     Wasps operate at the field level, whereas aphids operate at the
 #'     plant level.
 #'     Both wasps and aphids operate separately across fields but can be
-#'     connected via dispersal (see arguments `wasp_disp_p` and
-#'     `alate_field_disp_p`).
+#'     connected via dispersal (see arguments `wasp_disp_m0`, `wasp_disp_m1`,
+#'     and `alate_field_disp_p`).
 #'     Defaults to `2`.
 #' @param n_plants The number of plants per field.
 #'     This argument is only useful if you want to simulate the process
@@ -506,11 +506,15 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #'     wasps are added.
 #'     This can be a single integer or a `n_fields`-length vector.
 #'     Defaults to `8`.
-#' @param wasp_disp_p Proportion of adult wasps from each field that
-#'     are added to the dispersal pool.
+#' @param wasp_disp_m0 Proportion of adult wasps from each field that
+#'     are added to the dispersal pool when there are no aphids present.
 #'     After adding wasps to the pool, they are then evenly distributed
 #'     to all fields.
 #'     This happens only on days indicated by `plant_check_gaps`.
+#'     Defaults to `0`.
+#' @param wasp_disp_m1 Effect of aphid density on wasp emigration from a patch.
+#'     Emigration is `wasp_disp_m0 * exp(-wasp_disp_m1 * z)`, where `z` is
+#'     the total number of living aphids in the patch.
 #'     Defaults to `0`.
 #' @param sex_ratio Sex ratio of adult wasps. Defaults to `0.5`.
 #' @param s_y Daily survival rate of adult wasps.
@@ -630,7 +634,8 @@ sim_gameofclones_full <- function(n_reps,
                                h = wasp_attack$h,
                                wasp_density_0 = c(3, 0),
                                wasp_delay = 8,
-                               wasp_disp_p = 0,
+                               wasp_disp_m0 = 0,
+                               wasp_disp_m1 = 0,
                                sex_ratio = populations$sex_ratio,
                                s_y = populations$s_y,
                                constant_wasps = FALSE,
@@ -799,7 +804,8 @@ sim_gameofclones_full <- function(n_reps,
     dbl_check(h, "h")
     dbl_vec_check(wasp_density_0, "wasp_density_0")
     uint_vec_check(wasp_delay, "wasp_delay")
-    dbl_check(wasp_disp_p, "wasp_disp_p", .min = 0, .max = 1)
+    dbl_check(wasp_disp_m0, "wasp_disp_m0", .min = 0, .max = 1)
+    dbl_check(wasp_disp_m1, "wasp_disp_m1")
     dbl_check(sex_ratio, "sex_ratio")
     dbl_vec_check(s_y, "s_y")
     stopifnot(inherits(constant_wasps, "logical"))
@@ -821,7 +827,8 @@ sim_gameofclones_full <- function(n_reps,
                               living_days, pred_rate,
                               mum_density_0, mum_smooth, max_mum_density,
                               rel_attack, a, k, h,
-                              wasp_density_0, wasp_delay, wasp_disp_p,
+                              wasp_density_0, wasp_delay,
+                              wasp_disp_m0, wasp_disp_m1,
                               sex_ratio, s_y, constant_wasps,
                               perturb_list$when, perturb_list$where,
                               perturb_list$who, perturb_list$how,
@@ -897,7 +904,8 @@ sim_experiments <- function(clonal_lines,
                             rel_attack = wasp_attack$rel_attack,
                             wasp_density_0 = c(3, 0),
                             wasp_delay = 8,
-                            wasp_disp_p = 0,
+                            wasp_disp_m0 = 0,
+                            wasp_disp_m1 = 0,
                             constant_wasps = FALSE,
                             mum_smooth = 0.4,
                             pred_rate = 0.1,
@@ -923,7 +931,8 @@ sim_experiments <- function(clonal_lines,
                                h = h,
                                wasp_density_0 = wasp_density_0,
                                wasp_delay = wasp_delay,
-                               wasp_disp_p = wasp_disp_p,
+                               wasp_disp_m0 = wasp_disp_m0,
+                               wasp_disp_m1 = wasp_disp_m1,
                                s_y = s_y,
                                constant_wasps = constant_wasps,
                                rel_attack = rel_attack,
@@ -1043,7 +1052,8 @@ restart_experiment <- function(sims_obj,
                                a = NULL,
                                k = NULL,
                                h = NULL,
-                               wasp_disp_p = NULL,
+                               wasp_disp_m0 = NULL,
+                               wasp_disp_m1 = NULL,
                                mum_smooth = NULL,
                                pred_rate = NULL,
                                plant_check_gaps = NULL,
@@ -1133,7 +1143,8 @@ restart_experiment <- function(sims_obj,
     if (is.null(a)) a <- sims_obj$call[["a"]]
     if (is.null(k)) k <- sims_obj$call[["k"]]
     if (is.null(h)) h <- sims_obj$call[["h"]]
-    if (is.null(wasp_disp_p)) wasp_disp_p <- sims_obj$call[["wasp_disp_p"]]
+    if (is.null(wasp_disp_m0)) wasp_disp_m0 <- sims_obj$call[["wasp_disp_m0"]]
+    if (is.null(wasp_disp_m1)) wasp_disp_m1 <- sims_obj$call[["wasp_disp_m1"]]
     if (is.null(mum_smooth)) mum_smooth <- sims_obj$call[["mum_smooth"]]
     if (is.null(pred_rate)) pred_rate <- sims_obj$call[["pred_rate"]]
     if (is.null(plant_check_gaps)) plant_check_gaps <-
@@ -1155,7 +1166,8 @@ restart_experiment <- function(sims_obj,
     stopifnot(!is.null(a))
     stopifnot(!is.null(k))
     stopifnot(!is.null(h))
-    stopifnot(!is.null(wasp_disp_p))
+    stopifnot(!is.null(wasp_disp_m0))
+    stopifnot(!is.null(wasp_disp_m1))
     stopifnot(!is.null(mum_smooth))
     stopifnot(!is.null(pred_rate))
     stopifnot(!is.null(plant_check_gaps))
@@ -1207,7 +1219,8 @@ restart_experiment <- function(sims_obj,
     dbl_check(a, "a", .min = 0)
     dbl_check(k, "k", .min = 0)
     dbl_check(h, "h", .min = 0)
-    dbl_check(wasp_disp_p, "wasp_disp_p", .min = 0, .max = 1)
+    dbl_check(wasp_disp_m0, "wasp_disp_m0", .min = 0, .max = 1)
+    dbl_check(wasp_disp_m1, "wasp_disp_m1")
     dbl_check(mum_smooth, "mum_smooth", .min = 0, .max = 1)
     dbl_vec_check(pred_rate, "pred_rate", .min = 0, .max = 1)
     uint_vec_check(check_for_clear, "check_for_clear")
@@ -1222,7 +1235,8 @@ restart_experiment <- function(sims_obj,
     new_all_info_xptr <- restart_fill_other_pars(sims_obj$all_info_xptr,
                                                  K, alate_b0, alate_b1,
                                                  alate_field_disp_p, K_y_mult,
-                                                 s_y, a, k, h, wasp_disp_p,
+                                                 s_y, a, k, h,
+                                                 wasp_disp_m0, wasp_disp_m1,
                                                  mum_smooth, pred_rate,
                                                  max_plant_age, clear_surv)
     # Now fill in abundances if they were input:

@@ -698,6 +698,16 @@ public:
                        pcg32& eng);
 
 
+    // Total (living) aphids in patch
+    inline double total_aphids() const {
+        double ta = 0;
+        for (const OnePlant& op : plants) {
+            ta += op.total_aphids();
+        }
+        return ta;
+    }
+
+
 };
 
 
@@ -733,7 +743,8 @@ public:
 
     double clear_surv;
     double alate_field_disp_p;
-    double wasp_disp_p;
+    double wasp_disp_m0;
+    double wasp_disp_m1;
     bool disp_error;
     bool process_error;
     double extinct_N;
@@ -743,8 +754,8 @@ public:
 
     AllFields()
         : eng(), max_age(), max_N(), fields(), clear_surv(),
-          alate_field_disp_p(), wasp_disp_p(), disp_error(), process_error(),
-          extinct_N(), total_stages() {};
+          alate_field_disp_p(), wasp_disp_m0(), wasp_disp_m1(),
+          disp_error(), process_error(), extinct_N(), total_stages() {};
 
     AllFields(const AllFields& other)
         : eng(other.eng),
@@ -752,7 +763,8 @@ public:
           fields(other.fields),
           clear_surv(other.clear_surv),
           alate_field_disp_p(other.alate_field_disp_p),
-          wasp_disp_p(other.wasp_disp_p),
+          wasp_disp_m0(other.wasp_disp_m0),
+          wasp_disp_m1(other.wasp_disp_m1),
           disp_error(other.disp_error),
           process_error(other.process_error),
           extinct_N(other.extinct_N),
@@ -765,7 +777,8 @@ public:
         fields = other.fields;
         clear_surv = other.clear_surv;
         alate_field_disp_p = other.alate_field_disp_p;
-        wasp_disp_p = other.wasp_disp_p;
+        wasp_disp_m0 = other.wasp_disp_m0;
+        wasp_disp_m1 = other.wasp_disp_m1;
         disp_error = other.disp_error;
         process_error = other.process_error;
         extinct_N = other.extinct_N;
@@ -814,13 +827,15 @@ public:
               const std::vector<bool>& constant_wasps,
               const double& clear_surv_,
               const double& alate_field_disp_p_,
-              const double& wasp_disp_p_,
+              const double& wasp_disp_m0_,
+              const double& wasp_disp_m1_,
               const std::vector<uint64>& seeds)
         : eng(), max_age(max_age_), max_N(max_N_),
           fields(),
           clear_surv(clear_surv_),
           alate_field_disp_p(alate_field_disp_p_),
-          wasp_disp_p(wasp_disp_p_),
+          wasp_disp_m0(wasp_disp_m0_),
+          wasp_disp_m1(wasp_disp_m1_),
           disp_error(disp_error_),
           process_error((sigma_x > 0) || (sigma_y > 0)),
           extinct_N(extinct_N_),
@@ -897,13 +912,25 @@ public:
 
     // Wasp dispersal across fields:
     void across_field_disp_wasps() {
-        if (fields.size() > 1 && wasp_disp_p > 0) {
+        if (fields.size() > 1 && wasp_disp_m0 > 0) {
             double from_wasp_pool = 0;
-            for (OneField& field : fields) from_wasp_pool += field.wasps.Y;
+            if (wasp_disp_m1 != 0) {
+                double p_out, z;
+                for (OneField& field : fields) {
+                    z = field.total_aphids();
+                    p_out = wasp_disp_m0 * std::exp(-wasp_disp_m1 * z);
+                    from_wasp_pool += (field.wasps.Y * p_out);
+                    field.wasps.Y *= (1 - p_out);
+                }
+            } else {
+                for (OneField& field : fields) {
+                    from_wasp_pool += field.wasps.Y;
+                    field.wasps.Y *= (1 - wasp_disp_m0);
+                }
+                from_wasp_pool *= wasp_disp_m0;
+            }
             from_wasp_pool /= static_cast<double>(fields.size());
-            from_wasp_pool *= wasp_disp_p;
             for (OneField& field : fields) {
-                field.wasps.Y *= (1 - wasp_disp_p);
                 field.wasps.Y += from_wasp_pool;
             }
         }
@@ -940,7 +967,8 @@ public:
                       const double& a_,
                       const double& k_,
                       const double& h_,
-                      const double& wasp_disp_p_,
+                      const double& wasp_disp_m0_,
+                      const double& wasp_disp_m1_,
                       const double& mum_smooth_,
                       const std::vector<double>& pred_rate_,
                       const uint32& max_plant_age_,

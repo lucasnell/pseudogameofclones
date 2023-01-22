@@ -675,14 +675,16 @@ void AllFields::set_new_pars(const double& K_,
                              const double& a_,
                              const double& k_,
                              const double& h_,
-                             const double& wasp_disp_p_,
+                             const double& wasp_disp_m0_,
+                             const double& wasp_disp_m1_,
                              const double& mum_smooth_,
                              const std::vector<double>& pred_rate_,
                              const uint32& max_plant_age_,
                              const double& clear_surv_) {
 
     this->alate_field_disp_p = alate_field_disp_p_;
-    this->wasp_disp_p = wasp_disp_p_;
+    this->wasp_disp_m0 = wasp_disp_m0_;
+    this->wasp_disp_m1 = wasp_disp_m1_;
     this->max_age = max_plant_age_;
     this->clear_surv = clear_surv_;
 

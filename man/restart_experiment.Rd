@@ -19,7 +19,8 @@ restart_experiment(
   a = NULL,
   k = NULL,
   h = NULL,
-  wasp_disp_p = NULL,
+  wasp_disp_m0 = NULL,
+  wasp_disp_m1 = NULL,
   mum_smooth = NULL,
   pred_rate = NULL,
   plant_check_gaps = NULL,
@@ -89,11 +90,16 @@ which is from Meisner et al. (2014).}
 \item{h}{Parasitoid handling time. Defaults to the internal object
 \code{wasp_attack$h}, which is from Meisner et al. (2014).}
 
-\item{wasp_disp_p}{Proportion of adult wasps from each field that
-are added to the dispersal pool.
+\item{wasp_disp_m0}{Proportion of adult wasps from each field that
+are added to the dispersal pool when there are no aphids present.
 After adding wasps to the pool, they are then evenly distributed
 to all fields.
 This happens only on days indicated by \code{plant_check_gaps}.
+Defaults to \code{0}.}
+
+\item{wasp_disp_m1}{Effect of aphid density on wasp emigration from a patch.
+Emigration is \code{wasp_disp_m0 * exp(-wasp_disp_m1 * z)}, where \code{z} is
+the total number of living aphids in the patch.
 Defaults to \code{0}.}
 
 \item{mum_smooth}{Proportion of mummies that will NOT take exactly 3 days

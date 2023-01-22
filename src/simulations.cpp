@@ -550,7 +550,8 @@ void check_args(const uint32& n_reps,
                 const double& h,
                 const std::vector<double>& wasp_density_0,
                 const std::vector<uint32>& wasp_delay,
-                const double& wasp_disp_p,
+                const double& wasp_disp_m0,
+                const double& wasp_disp_m1,
                 const double& sex_ratio,
                 const std::vector<double>& s_y,
                 const std::vector<bool>& constant_wasps,
@@ -726,7 +727,8 @@ void check_args(const uint32& n_reps,
     one_non_prop_check(mum_smooth, "mum_smooth");
     one_non_prop_check(clear_surv, "clear_surv");
     one_non_prop_check(sex_ratio, "sex_ratio");
-    one_non_prop_check(wasp_disp_p, "wasp_disp_p");
+    one_non_prop_check(wasp_disp_m0, "wasp_disp_m0");
+    // one_non_prop_check(wasp_disp_m1, "wasp_disp_m1");  // << this can be anything
     non_prop_check<std::vector<double>>(s_y, "s_y");
 
     // below top rows should be >= 0 and <= 1:
@@ -792,7 +794,8 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                        const double& h,
                        const std::vector<double>& wasp_density_0,
                        const std::vector<uint32>& wasp_delay,
-                       const double& wasp_disp_p,
+                       const double& wasp_disp_m0,
+                       const double& wasp_disp_m1,
                        const double& sex_ratio,
                        const std::vector<double>& s_y,
                        const std::vector<bool>& constant_wasps,
@@ -816,7 +819,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                leslie_mat, aphid_density_0, alate_b0, alate_b1,
                alate_plant_disp_p, disp_mort, disp_start, living_days,
                pred_rate, mum_density_0, mum_smooth, rel_attack, a, k, h,
-               wasp_density_0, wasp_delay, wasp_disp_p,
+               wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1,
                sex_ratio, s_y, constant_wasps,
                perturb_when, perturb_where, perturb_who, perturb_how, n_threads);
 
@@ -852,7 +855,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
         mum_density_0, mum_smooth, max_mum_density,
         rel_attack, a, k, h, wasp_density_0, sex_ratio,
         s_y, constant_wasps,
-        clear_surv, alate_field_disp_p, wasp_disp_p, seeds[0]);
+        clear_surv, alate_field_disp_p, wasp_disp_m0, wasp_disp_m1, seeds[0]);
     for (uint32 i = 1; i < n_reps; i++){
         all_fields_vec[i] = all_fields_vec[0];
         all_fields_vec[i].reseed(seeds[i]);
@@ -943,7 +946,8 @@ SEXP restart_fill_other_pars(SEXP all_fields_in_ptr,
                              const double& a,
                              const double& k,
                              const double& h,
-                             const double& wasp_disp_p,
+                             const double& wasp_disp_m0,
+                             const double& wasp_disp_m1,
                              const double& mum_smooth,
                              const std::vector<double>& pred_rate,
                              const uint32& max_plant_age,
@@ -988,8 +992,8 @@ SEXP restart_fill_other_pars(SEXP all_fields_in_ptr,
     for (AllFields& fields : all_fields_vec) {
 
         fields.set_new_pars(K, alate_b0, alate_b1, alate_field_disp_p,
-                            K_y_mult, s_y, a, k, h, wasp_disp_p, mum_smooth,
-                            pred_rate, max_plant_age, clear_surv);
+                            K_y_mult, s_y, a, k, h, wasp_disp_m0, wasp_disp_m1,
+                            mum_smooth, pred_rate, max_plant_age, clear_surv);
 
     }
 

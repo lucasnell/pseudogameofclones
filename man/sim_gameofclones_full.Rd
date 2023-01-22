@@ -32,7 +32,8 @@ sim_gameofclones_full(
   h = wasp_attack$h,
   wasp_density_0 = c(3, 0),
   wasp_delay = 8,
-  wasp_disp_p = 0,
+  wasp_disp_m0 = 0,
+  wasp_disp_m1 = 0,
   sex_ratio = populations$sex_ratio,
   s_y = populations$s_y,
   constant_wasps = FALSE,
@@ -68,8 +69,8 @@ Combine them using \code{c(aphid_obj1, aphid_obj2)}.}
 Wasps operate at the field level, whereas aphids operate at the
 plant level.
 Both wasps and aphids operate separately across fields but can be
-connected via dispersal (see arguments \code{wasp_disp_p} and
-\code{alate_field_disp_p}).
+connected via dispersal (see arguments \code{wasp_disp_m0}, \code{wasp_disp_m1},
+and \code{alate_field_disp_p}).
 Defaults to \code{2}.}
 
 \item{n_plants}{The number of plants per field.
@@ -178,11 +179,16 @@ wasps are added.
 This can be a single integer or a \code{n_fields}-length vector.
 Defaults to \code{8}.}
 
-\item{wasp_disp_p}{Proportion of adult wasps from each field that
-are added to the dispersal pool.
+\item{wasp_disp_m0}{Proportion of adult wasps from each field that
+are added to the dispersal pool when there are no aphids present.
 After adding wasps to the pool, they are then evenly distributed
 to all fields.
 This happens only on days indicated by \code{plant_check_gaps}.
+Defaults to \code{0}.}
+
+\item{wasp_disp_m1}{Effect of aphid density on wasp emigration from a patch.
+Emigration is \code{wasp_disp_m0 * exp(-wasp_disp_m1 * z)}, where \code{z} is
+the total number of living aphids in the patch.
 Defaults to \code{0}.}
 
 \item{sex_ratio}{Sex ratio of adult wasps. Defaults to \code{0.5}.}
