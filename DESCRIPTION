@@ -2,7 +2,7 @@ Package: gameofclones
 Version: 0.0.0.9000
 Title: Clonal Evolution in Aphid Metapopulations
 Description: Analyses and simulations related to aphid metapopulation clonal evolution experiments.
-Authors@R: person(c("Lucas", "A."), "Nell", email = "lucas@lucasnell.com",
+Authors@R: person(c("Lucas", "A."), "Nell", email = "lucnell@gmail.com",
                   role = c("cph", "aut", "cre"),
                   comment = c(ORCID = "0000-0003-3209-0517"))
 License: GPL (>=3)
