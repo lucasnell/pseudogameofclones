@@ -10,6 +10,7 @@ library(s2)
 library(transformr)
 library(ggsn)
 library(parallel)
+library(readxl)
 library(here)
 
 source(".Rprofile")
@@ -17,6 +18,16 @@ source(".Rprofile")
 
 options(mc.cores = max(1, detectCores()-2))
 
+#'
+#' Much of the data here are from https://doi.org/10.6084/m9.figshare.11828865.v1
+#'
+#' To run the scripts below, download this dataset, then rename
+#' `Ives et al. 2020 Data Fig2_1.csv` to `parasitism-2001-2016.csv`
+#' and
+#' `Ives et al. 2020 Data Fig3A.csv` to `symbionts-2012-2017.csv`
+#'
+#' Then put both inside the `gameofclones/_results/_data` folder.
+#'
 
 
 #'
@@ -112,7 +123,12 @@ rel_res_fitness <- function(para, p_res = 0.48) {
 
 
 
-# Main dataset:
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
+# Parasitism dataset - read and organize ----
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
+
 
 par_df <- list(
     here("_results/_data/parasitism-2001-2016.csv") |>
@@ -198,11 +214,29 @@ add_rr_rs_fct <- function(.df) {
 maps_dates <- as.Date(c("2015-06-03", "2015-06-12", "2015-06-19",
                         "2013-08-01", "2013-08-09", "2013-08-19"))
 
+#' Function to create time series plots and keep axes and font sizes consistent.
+ts_p_maker <- function(.df, .y, .ylab, ...) {
+    ggplot(.df, aes(plot_date, {{ .y }})) +
+        geom_hline(yintercept = 0, color = "gray70", linewidth = 0.5) +
+        list(...) +
+        facet_wrap(~ year, ncol = 3, drop = FALSE) +
+        scale_x_date(date_breaks = "1 month", date_labels = "%b",
+                     limits = as.Date(c("2022-04-27", "2022-10-30"))) +
+        scale_y_continuous(.ylab, limits = c(-0.2, 0.9), breaks = 0.4*0:2) +
+        theme(axis.title.x = element_blank(),
+              axis.text.x = element_text(color = "black", size = 8),
+              axis.title.y = element_markdown(hjust = 0.5),
+              legend.title = element_markdown(hjust = 0),
+              strip.text = element_text(size = 9))
+}
 
 
 
-
-# Time series plot ----
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
+# Parasitism time series plot ----
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
 
 #'
 #' This essentially replicates (and updates) Nature E&E paper.
@@ -226,30 +260,21 @@ par_ts_p <- par_df |>
            # So they show as dates but can be plotted on same scale:
            plot_date = as.Date(day, origin = "2022-01-01")) |>
     add_rr_rs_fct() |>
-    ggplot(aes(plot_date, para)) +
-    geom_hline(yintercept = 0, color = "gray70", linewidth = 0.5) +
-    geom_segment(data = tibble(plot_date = yday(maps_dates) |>
-                                   as.Date(origin = "2021-12-31"),
-                               year = year(maps_dates) |> factor(),
-                               para = -0.15),
-               aes(xend = plot_date, yend = -0.05),
-               linewidth = 0.5, linejoin = "mitre",
-               arrow = arrow(length = unit(0.1, "lines"), type = "closed")) +
-    geom_point(aes(color = rr_rs_fct, fill = rr_rs_fct),
-               size = 1, shape = 21) +
-    facet_wrap(~ year, ncol = 3) +
+    ts_p_maker(para, "Proportion parasitized",
+               geom_segment(data = tibble(plot_date = yday(maps_dates) |>
+                                              as.Date(origin = "2021-12-31"),
+                                          year = year(maps_dates) |> factor(),
+                                          para = -0.15),
+                            aes(xend = plot_date, yend = -0.05),
+                            linewidth = 0.5, linejoin = "mitre",
+                            arrow = arrow(length = unit(0.1, "lines"), type = "closed")),
+                   geom_point(aes(color = rr_rs_fct, fill = rr_rs_fct),
+                              size = 1, shape = 21)) +
     scale_color_manual(rr_rs_legend_title,
-                      values = rr_rs_pal$color) +
+                       values = rr_rs_pal$color) +
     scale_fill_manual(rr_rs_legend_title,
                       values = rr_rs_pal$fill2) +
-    guides(color = guide_legend(override.aes = list(alpha = 1, size = 3))) +
-    scale_x_date(date_breaks = "1 month", date_labels = "%b") +
-    scale_y_continuous("Parasitism", breaks = 0.4*0:2) +
-    theme(axis.title.x = element_blank(),
-          axis.text.x = element_text(color = "black", size = 8),
-          legend.title = element_markdown(hjust = 0),
-          strip.text = element_text(size = 9)) +
-    NULL
+    guides(color = guide_legend(override.aes = list(alpha = 1, size = 3)))
 
 # par_ts_p
 
@@ -260,7 +285,12 @@ par_ts_p <- par_df |>
 
 
 
-# splitting into periods ----
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
+# Split parasitism into periods ----
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
+
 #'
 #' To combine the field polygons with the parasitism data, I first need to
 #' prepare the parasitism data for plotting by observation date, where
@@ -366,7 +396,13 @@ obs_par_df |>
               mean = mean(para))
 
 
-# maps ----
+
+
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
+# Parasitism maps ----
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
 
 
 fields_sf <- st_read(here("_results/_data/Arlington.geojson")) |>
@@ -483,17 +519,108 @@ fields_par_p <- obs_fields_par |>
 
 
 
+legend <- fields_par_p |>
+    (function(a.gplot){
+        tmp <- ggplot_gtable(ggplot_build(a.gplot))
+        leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+        legend <- tmp$grobs[[leg]]
+        legend
+    })()
+
+grid.newpage()
+grid.draw(legend)
+
+
+
+
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
+# Hamiltonella dataset - read and organize ----
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
+
+
+ham_df <- list(
+    here("_results/_data/symbionts-2012-2017.csv") |>
+        read_csv(col_types = cols()) |>
+        mutate(season = case_when(is.na(date) ~ "fall",
+                                  late == 1 ~ "fall",
+                                  late == 0 ~ "spring")) |>
+        select(year, season, date, field, Hamiltonella) |>
+        rename(ham = Hamiltonella) |>
+        # filler date until I can get the real one:
+        mutate(date = ifelse(year == 2012, "9/20/12", date),
+               date = as.Date(date, format = "%m/%d/%y")),
+    c("WI_2018_Spring", "WI_2018_Fall", "WI_2019_Spring",
+      "WI_2019_Summer", "WI_2019_Fall") |>
+        map_dfr(
+            function(.sheet) {
+                .date <- here("_results/_data/symbionts-2018-2019.xlsx") |>
+                    read_excel(.sheet, col_names = paste(1:16)) |>
+                    getElement("5") |> getElement(1) |>
+                    str_remove("Collect Date: ") |>
+                    as.Date(format = "%m/%d/%Y")
+                .season <- str_split(.sheet, "_")[[1]][[3]] |> tolower()
+                .df <- here("_results/_data/symbionts-2018-2019.xlsx") |>
+                    read_excel(.sheet, skip = 2) |>
+                    select(Field, `H. defensa`) |>
+                    rename(field = Field, ham = `H. defensa`) |>
+                    mutate(date = .date, year = year(.date),
+                           field = paste(field), season = .season)
+                return(.df)
+            }
+        )) |>
+    do.call(what = bind_rows) |>
+    #' filter for fields where at least 10 aphids were surveyed:
+    group_by(year, season, date, field) |>
+    mutate(n_surveyed = n()) |>
+    ungroup() |>
+    filter(n_surveyed >= 10) |>
+    select(-n_surveyed) |>
+    group_by(year, season, date, field) |>
+    summarize(ham = mean(ham), n = n(), .groups = "drop") |>
+    split(~ year) |>
+    map_dfr(~ mutate(.x, field_col = factor(field) |> as.integer())) |>
+    mutate(field_col = factor(field_col),
+           # So they show as dates but can be plotted on same scale:
+           plot_date = as.Date(yday(date), origin = "2022-01-01"),
+           field_id = interaction(field, year, drop = TRUE),
+           year = factor(year, levels = 2011:2019))
+
+
+#' If you want just some basic stats:
+ham_df |>
+    summarize(n = mean(n), mean = mean(ham), sd = sd(ham),
+              min = min(ham), max = max(ham))
+
+
+
+ham_ts_p <- ham_df |>
+    ts_p_maker(ham, "Proportion *H. defensa*",
+               geom_line(aes(group = field_id), color = "gray60"),
+               geom_jitter(size = 1, shape = 1, width = 3, height = 0))
+
+ham_ts_p
+
+
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
+# Combine to make final plot ----
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
+
+
 
 
 mosaic_p <- function() {
-    p <- par_ts_p + fields_par_p +
+    p <- par_ts_p + ham_ts_p + fields_par_p +
         plot_annotation(tag_levels = "A") +
-        plot_layout(nrow = 2, heights = c(1, 1.5)) &
+        plot_layout(ncol = 1, heights = c(1, 1, 1.5)) &
         theme(plot.tag = element_text(size = 14, face = "bold"))
     plot(p)
-    grid.text("2013", x = unit(0.08, "npc"), y = unit(0.385, "npc"),
+    grid.text("2013", x = unit(0.08, "npc"), y = unit(0.27, "npc"),
               just = c("right", "center"))
-    grid.text("2015", x = unit(0.08, "npc"), y = unit(0.135, "npc"),
+    grid.text("2015", x = unit(0.08, "npc"), y = unit(0.1, "npc"),
               just = c("right", "center"))
 }
 
@@ -501,31 +628,4 @@ mosaic_p <- function() {
 
 
 
-# save_plot(here("_results/_plots/mosaic.pdf"), mosaic_p, 7, 7)
-
-
-
-
-
-# --------------------------------------------------------*
-# Hamiltonella frequencies ----
-# These will be listed in text.
-# --------------------------------------------------------*
-
-#'
-#' Frequencies of Hamiltonella by field and time
-#'
-ham_df <- here("_results/_data/symbionts-2012-2017.csv") |>
-    read_csv(col_types = cols()) |>
-    select(year, late, date, field, Hamiltonella) |>
-    group_by(year, late, date, field) |>
-    summarize(ham = mean(Hamiltonella), n = n(), .groups = "drop")
-
-#' Average number of aphids assayed:
-ham_df$n |> mean()
-
-#' Some summaries of Hamiltonella frequencies:
-ham_df$ham |> mean()
-ham_df$ham |> sd()
-ham_df$ham |> range()
-
+save_plot(here("_results/_plots/mosaic.pdf"), mosaic_p, w = 7, h = 10, seed = 380247925)
