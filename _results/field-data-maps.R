@@ -1,19 +1,22 @@
 
 library(tidyverse)
 library(gameofclones)
-library(ggtext)         # element_markdown
-library(lubridate)      # yday, year
-library(viridisLite)    # inferno
-library(here)           # here
-library(grid)           # grid.newpage, grid.draw
-library(sf)             # st_* (e.g., st_read, st_transform, st_crs)
-library(ggmap)          # get_googlemap
+library(ggtext)             # element_markdown
+library(lubridate)          # yday, year
+library(viridisLite)        # inferno
+library(here)               # here
+library(grid)               # grid.newpage, grid.draw
+library(sf)                 # st_* (e.g., st_read, st_transform, st_crs)
+library(ggmap)              # get_googlemap
+library(rnaturalearth)      # ne_countries
+library(rnaturalearthdata)  # used for ne_countries
 
-# library(ggsn)         # scalebar, north
-# library(s2)
-# library(transformr)
 
 source(".Rprofile")
+
+
+
+
 
 
 
@@ -28,39 +31,6 @@ source(".Rprofile")
 #' Then put both inside the `gameofclones/_results/_data` folder.
 #'
 
-
-
-
-# library(tidyverse)
-# library(terra)
-# library(stars)
-# library(here)
-#
-# wi1 <- "~/Desktop/wiscland2/wiscland2_dataset/level1/wiscland2_level1.tif" |>
-#     rast()
-#     # read_stars(RasterIO = list(nXOff = 5e3, nYOff = 1500, nXSize = 5e3, nYSize = 5e3))
-#
-# # |>
-# #     st_transform(st_crs(3857))
-#
-# plot(wi1)
-#
-#
-# wi11 <- st_as_stars(wi1)
-#
-# plot(wi11)
-#
-# wi1p <- wi1 |>
-#     pull(1)
-#
-#
-# ggplot() +
-#     geom_stars(data = wi11) +
-#     coord_equal() +
-#     theme_void() +
-#     scale_fill_viridis_d() +
-#     scale_x_discrete(expand = c(0, 0)) +
-#     scale_y_discrete(expand = c(0, 0))
 
 
 
@@ -324,16 +294,16 @@ fields_par_p <- obs_fields_par |>
               ymin = xy_lims$ymin, ymax = xy_lims$ymax,
               fill = NA, color = "black", linewidth = 0.5) +
     geom_sf(aes(size = para, color = rr_rs_fct, fill = rr_rs_fct), shape = 21) +
-    # ------*
-    # DIY scale bar:
-    geom_rect(data = fields_par_scale_df,
-                 aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
-                 fill = "black", color = NA) +
-    geom_text(data = fields_par_scale_df |>
-                  mutate(x = (xmin + xmax) / 2, y = ymin - 200),
-              aes(x = x, y = y), label = "1 km",
-              size = 9 / 2.83465, vjust = 1) +
-    # ------*
+    # # ------*
+    # # DIY scale bar:
+    # geom_rect(data = fields_par_scale_df,
+    #              aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+    #              fill = "black", color = NA) +
+    # geom_text(data = fields_par_scale_df |>
+    #               mutate(x = (xmin + xmax) / 2, y = ymin - 200),
+    #           aes(x = x, y = y), label = "1 km",
+    #           size = 9 / 2.83465, vjust = 1) +
+    # # ------*
     scale_color_manual(NULL, guide = "none",
                        values = rr_rs_pal$color) +
     scale_fill_manual(NULL, guide = "none",
@@ -354,10 +324,16 @@ fields_par_p <- obs_fields_par |>
 
 fields_par_p
 
-save_plot(here("_results/_plots/field-data/par-map.pdf"), fields_par_p, w = 5, h = 3.5)
+save_plot(here("_results/_plots/field-data/par-map.pdf"), fields_par_p,
+          w = 3.5, h = 2.5)
 
 
 
+
+
+#' ----------------------
+# Parasitism map separate legend
+#' ----------------------
 
 
 fields_par_p_leg <- function() {
@@ -373,7 +349,47 @@ fields_par_p_leg <- function() {
 }
 
 save_plot(here("_results/_plots/field-data/par-map-legend.pdf"), fields_par_p_leg,
-          w = 2, h = 4.2)
+          w = 2, h = 3.5)
+
+
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
+# USA map inset ----
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
+
+
+usa_map_p <- ne_countries(country = "united states of america",
+                          scale = "medium", returnclass = "sf") |>
+    st_cast("POLYGON") |>
+    (\(polies) {
+        #' Find the polygon whose western edge is the furthest west without
+        #' being in the eastern hemisphere. This should be the contiguous USA.
+        bbx = lapply(1:nrow(polies),
+                     \(i) st_bbox(polies[i,])[["xmax"]]) |>
+            do.call(what = c)
+        i <- which(bbx == max(bbx[bbx < 0]))
+        return(polies[i,])
+    })() |>
+    st_transform(st_crs(3857)) |>
+    ggplot() +
+    geom_sf(size = 0.25) +
+    geom_point(data = tibble(x = (xy_lims$xmin + xy_lims$xmax) / 2,
+                             y = (xy_lims$ymin + xy_lims$ymax) / 2),
+               aes(x, y), color = "black", shape = 20, size  = 4) +
+    coord_sf(datum = st_crs(3857)) +
+    theme_void()
+
+# usa_map_p
+
+save_plot(here("_results/_plots/field-data/par-map-usa-inset.pdf"), usa_map_p,
+          w = 2.5, h = 1.5)
+
+# If you have pdfcrop installed:
+# system(paste("pdfcrop", here("_results/_plots/field-data/par-map-usa-inset.pdf")))
+
+
+
 
 
 
@@ -397,26 +413,14 @@ save_plot(here("_results/_plots/field-data/par-map-legend.pdf"), fields_par_p_le
 wi_bounds  <- here("_results/_data/WI-boundary.geojson") |>
     st_read()
 
-wi_xy_lims <- st_bbox(wi_bounds) |> as.list()
 
 wi_inset <- wi_bounds |>
     ggplot() +
     geom_sf(size = 0.25) +
-    # geom_rect(xmin = xy_lims$xmin, xmax = xy_lims$xmax,
-    #           ymin = xy_lims$ymin, ymax = xy_lims$ymax,
-    #           fill = "black", color = NA) +
     geom_point(data = tibble(x = (xy_lims$xmin + xy_lims$xmax) / 2,
                              y = (xy_lims$ymin + xy_lims$ymax) / 2),
                aes(x, y), color = "black", shape = 20, size  = 4) +
     coord_sf(datum = st_crs(3857)) +
-    # scalebar(dist = 100, dist_unit = "km", transform = FALSE,
-    #          border.size = 0.5, st.dist = 0.05,
-    #          st.size = 3, height = 0.02, location = "topleft",
-    #          x.min = wi_xy_lims$xmin, x.max = wi_xy_lims$xmax,
-    #          y.min = wi_xy_lims$ymin, y.max = wi_xy_lims$ymax + 50e3) +
-    # north(location = "bottomleft", symbol = 10, scale = 0.2,
-    #       x.min = wi_xy_lims$xmin, x.max = wi_xy_lims$xmax,
-    #       y.min = wi_xy_lims$ymin, y.max = wi_xy_lims$ymax) +
     theme_void()
 
 # wi_inset
@@ -426,6 +430,11 @@ save_plot(here("_results/_plots/field-data/par-map-wi-inset.pdf"), wi_inset,
           w = 2, h = 2)
 
 
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
+# Satellite map ----
+#' ----------------------------------------------------------------------
+#' ----------------------------------------------------------------------
 
 arl_google <- get_googlemap(c(-89.35399, 43.30917), zoom = 13, maptype = "satellite")
 
@@ -442,3 +451,7 @@ arl_goog_p <- ggmap(arl_google) +
 
 save_plot(here("_results/_plots/field-data/par-map-google-inset.pdf"), arl_goog_p,
           w = 1.5, h = 1.5)
+
+
+
+

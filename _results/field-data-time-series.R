@@ -2,7 +2,7 @@
 library(tidyverse)
 library(gameofclones)
 library(ggtext)         # element_markdown
-library(lubridate)      # yday, year
+library(lubridate)      # yday, year, ymd
 library(viridisLite)    # inferno
 library(readxl)         # readxl
 library(here)           # here
@@ -54,7 +54,8 @@ ts_p_maker <- function(.df, .y, .ylab, ...) {
         geom_hline(yintercept = 0, color = "gray70", linewidth = 0.5) +
         list(...) +
         facet_wrap(~ year, ncol = 3, drop = FALSE) +
-        scale_x_date(date_breaks = "1 month", date_labels = "%b",
+        scale_x_date(breaks = ymd(sprintf("2022-%02i-01", 5:11)),
+                     labels = c("","Jun","","Aug", "","Oct",""),
                      limits = as.Date(c("2022-04-27", "2022-10-30"))) +
         scale_y_continuous(.ylab, limits = c(-0.2, 0.9), breaks = 0.4*0:2) +
         theme(axis.title.x = element_blank(),
@@ -258,7 +259,7 @@ par_ts_p <- par_df |>
 
 
 save_plot(here("_results/_plots/field-data/par-time.pdf"), par_ts_p,
-          w = 6, h = 2.8)
+          w = 4, h = 2.5)
 
 par_ts_p_leg <- function() {
     legend <- (par_ts_p + theme(legend.position = "right")) |>
@@ -273,7 +274,7 @@ par_ts_p_leg <- function() {
 }
 
 save_plot(here("_results/_plots/field-data/par-time-legend.pdf"), par_ts_p_leg,
-          w = 2, h = 2.8)
+          w = 2, h = 2.5)
 
 
 
@@ -285,4 +286,4 @@ ham_ts_p <- ham_df |>
 # ham_ts_p
 
 save_plot(here("_results/_plots/field-data/ham-time.pdf"), ham_ts_p,
-          w = 6, h = 2.8, seed = 380247925)
+          w = 4, h = 2.5, seed = 380247925)
