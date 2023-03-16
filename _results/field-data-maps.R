@@ -7,6 +7,7 @@ library(viridisLite)    # inferno
 library(here)           # here
 library(grid)           # grid.newpage, grid.draw
 library(sf)             # st_* (e.g., st_read, st_transform, st_crs)
+library(ggmap)          # get_googlemap
 
 # library(ggsn)         # scalebar, north
 # library(s2)
@@ -40,7 +41,7 @@ source(".Rprofile")
 #     # read_stars(RasterIO = list(nXOff = 5e3, nYOff = 1500, nXSize = 5e3, nYSize = 5e3))
 #
 # # |>
-# #     st_transform(st_crs(32616))
+# #     st_transform(st_crs(3857))
 #
 # plot(wi1)
 #
@@ -260,11 +261,12 @@ obs_par_df <- obs_par_df |>
 #' ----------------------------------------------------------------------
 
 
+
+
 fields_sf <- st_read(here("_results/_data/Arlington.geojson")) |>
-    st_transform(st_crs(32616)) |>
+    st_transform(st_crs(3857)) |>
     mutate(geometry = st_centroid(geometry)) |>
     rename(geom = geometry)
-
 
 
 obs_fields_par <- obs_par_df |>
@@ -296,7 +298,8 @@ obs_fields_par <- obs_par_df |>
                               labels = format(sort(unique(obs_date)),
                                               "%e %b")),
            plot_date_by_yr = (as.integer(plot_date) - 1) %% 3 + 1,
-           plot_date_by_yr = factor(plot_date_by_yr))
+           plot_date_by_yr = factor(plot_date_by_yr)) |>
+    add_rr_rs_fct()
 
 
 xy_lims <- st_bbox(obs_fields_par) |>
@@ -316,7 +319,6 @@ fields_par_scale_df <- st_bbox(obs_fields_par) |>
 
 
 fields_par_p <- obs_fields_par |>
-    add_rr_rs_fct() |>
     ggplot() +
     geom_rect(xmin = xy_lims$xmin, xmax = xy_lims$xmax,
               ymin = xy_lims$ymin, ymax = xy_lims$ymax,
@@ -336,10 +338,11 @@ fields_par_p <- obs_fields_par |>
                        values = rr_rs_pal$color) +
     scale_fill_manual(NULL, guide = "none",
                       values = rr_rs_pal$fill) +
-    scale_size("Parasitism", limits = c(0, 0.85), range = c(0.5, 8),
+    scale_size("Proportion\nparasitized",
+               limits = c(0, 0.85), range = c(0.5, 8),
                breaks = 0.2 * 0:4) +
     guides(size = guide_legend(override.aes = list(shape = 16))) +
-    coord_sf(datum = st_crs(32616),
+    coord_sf(datum = st_crs(3857),
              xlim = as.numeric(xy_lims[c("xmin", "xmax")]),
              ylim = as.numeric(xy_lims[c("ymin", "ymax")]),
              clip = "off") +
@@ -351,7 +354,10 @@ fields_par_p <- obs_fields_par |>
 
 fields_par_p
 
-save_plot(here("_results/_plots/field-data/par-map.pdf"), fields_par_p, w = 6, h = 4.2)
+save_plot(here("_results/_plots/field-data/par-map.pdf"), fields_par_p, w = 5, h = 3.5)
+
+
+
 
 
 fields_par_p_leg <- function() {
@@ -381,8 +387,8 @@ save_plot(here("_results/_plots/field-data/par-map-legend.pdf"), fields_par_p_le
 #' library(sf)
 #' library(here)
 #' wi_bounds_hires <- "Wisconsin_State_Boundary_24K.geojson" |>
-#' st_read() |>
-#'     st_transform(st_crs(32616))
+#'     st_read() |>
+#'     st_transform(st_crs(3857))
 #' wi_bounds <- wi_bounds_hires |> st_simplify(preserveTopology = FALSE, dTolerance = 1000)
 #' st_write(wi_bounds, here("_results/_data/WI-boundary.geojson"))
 #' ```
@@ -402,7 +408,7 @@ wi_inset <- wi_bounds |>
     geom_point(data = tibble(x = (xy_lims$xmin + xy_lims$xmax) / 2,
                              y = (xy_lims$ymin + xy_lims$ymax) / 2),
                aes(x, y), color = "black", shape = 20, size  = 4) +
-    coord_sf(datum = st_crs(32616)) +
+    coord_sf(datum = st_crs(3857)) +
     # scalebar(dist = 100, dist_unit = "km", transform = FALSE,
     #          border.size = 0.5, st.dist = 0.05,
     #          st.size = 3, height = 0.02, location = "topleft",
@@ -421,29 +427,18 @@ save_plot(here("_results/_plots/field-data/par-map-wi-inset.pdf"), wi_inset,
 
 
 
-xy_lims_google <- crossing(x = c(xy_lims$xmin, xy_lims$xmax),
-                           y = c(xy_lims$ymin, xy_lims$ymax)) |>
-    st_as_sf(coords = c("x", "y"), crs = 32616) |>
-    # # "WGS 84":
-    # st_transform(st_crs(4326)) |>
-    # EPSG 3857 (Pseudo-Mercator, what Google uses):
-    st_transform(st_crs(3857)) |>
-    st_coordinates()
-
-
-library(ggmap)
 arl_google <- get_googlemap(c(-89.35399, 43.30917), zoom = 13, maptype = "satellite")
 
-st_crs(arl_google)
+arl_goog_p <- ggmap(arl_google) +
+    # geom_rect(xmin = xy_lims$xmin, xmax = xy_lims$xmax,
+    #           ymin = xy_lims$ymin, ymax = xy_lims$ymax,
+    #           fill = NA, color = "black", linewidth = 0.5) +
+    coord_sf(datum = st_crs(3857),
+             xlim = as.numeric(xy_lims[c("xmin", "xmax")]),
+             ylim = as.numeric(xy_lims[c("ymin", "ymax")]),
+             clip = "on") +
+    theme_void()
 
-plot(st_transform(fields_sf, crs = 3857)[1], bgMap = arl_google)
 
-
-nc_shp <- st_read(system.file("shape/nc.shp", package = "sf"))
-nc_map <- get_googlemap("north carolina", maptype = "satellite", zoom = 6)
-
-st_crs(nc_map)
-# Coordinate Reference System: NA
-
-# assume the coordinate refence system is 3857
-plot(st_transform(nc_shp, crs = 3857)[1], bgMap = nc_map)
+save_plot(here("_results/_plots/field-data/par-map-google-inset.pdf"), arl_goog_p,
+          w = 1.5, h = 1.5)
