@@ -154,19 +154,15 @@ par_df <- list(
 #' ----------------------------------------------------------------------
 
 
-ham_df <- list(
-    here("_results/_data/symbionts-2012-2017.csv") |>
-        read_csv(col_types = cols()) |>
-        mutate(season = case_when(is.na(date) ~ "fall",
-                                  late == 1 ~ "fall",
-                                  late == 0 ~ "spring")) |>
-        select(year, season, date, field, Hamiltonella) |>
-        rename(ham = Hamiltonella) |>
-        # Filling in this date manually based on info from Kerry:
-        mutate(date = ifelse(year == 2012, "9/4/12", date),
-               date = as.Date(date, format = "%m/%d/%y")),
-    c("WI_2018_Spring", "WI_2018_Fall", "WI_2019_Spring",
-      "WI_2019_Summer", "WI_2019_Fall") |>
+
+#'
+#' For reproducibility, I've kept the original Excel file and below show how
+#' I converted it to the CSV file that I use after its creation.
+#'
+if (!file.exists(here("_results/_data/symbionts-2018-2019.csv"))) {
+
+    older_ham_df <- c("WI_2018_Spring", "WI_2018_Fall", "WI_2019_Spring",
+                      "WI_2019_Summer", "WI_2019_Fall") |>
         map_dfr(
             function(.sheet) {
                 .date <- here("_results/_data/symbionts-2018-2019.xlsx") |>
@@ -177,22 +173,39 @@ ham_df <- list(
                 .season <- str_split(.sheet, "_")[[1]][[3]] |> tolower()
                 .df <- here("_results/_data/symbionts-2018-2019.xlsx") |>
                     read_excel(.sheet, skip = 2) |>
-                    select(Field, `H. defensa`) |>
-                    rename(field = Field, ham = `H. defensa`) |>
+                    select(Field, Clone, `H. defensa`) |>
+                    rename(field = Field, clone = Clone, ham = `H. defensa`) |>
                     mutate(date = .date, year = year(.date),
                            field = paste(field), season = .season)
                 return(.df)
             }
-        )) |>
-    do.call(what = bind_rows) |>
-    #' filter for fields where at least 10 aphids were surveyed:
-    group_by(year, season, date, field) |>
-    mutate(n_surveyed = n()) |>
-    ungroup() |>
-    filter(n_surveyed >= 10) |>
-    select(-n_surveyed) |>
+        )
+    write_csv(older_ham_df, here("_results/_data/symbionts-2018-2019.csv"))
+} else {
+    older_ham_df <- here("_results/_data/symbionts-2018-2019.csv") |>
+        read_csv(col_types = cols()) |>
+        base::`[`()
+}
+
+
+
+newer_ham_df <- here("_results/_data/symbionts-2012-2017.csv") |>
+    read_csv(col_types = cols()) |>
+    mutate(season = case_when(is.na(date) ~ "fall",
+                              late == 1 ~ "fall",
+                              late == 0 ~ "spring")) |>
+    select(year, season, date, field, clone, Hamiltonella) |>
+    rename(ham = Hamiltonella) |>
+    # Filling in this date manually based on info from Kerry Oliver:
+    mutate(date = ifelse(year == 2012, "9/4/12", date),
+           date = as.Date(date, format = "%m/%d/%y"))
+
+
+ham_df <- bind_rows(newer_ham_df, older_ham_df) |>
     group_by(year, season, date, field) |>
     summarize(ham = mean(ham), n = n(), .groups = "drop") |>
+    #' filter for fields where at least 10 aphids were surveyed:
+    filter(n >= 10) |>
     split(~ year) |>
     map_dfr(~ mutate(.x, field_col = factor(field) |> as.integer())) |>
     mutate(field_col = factor(field_col),
