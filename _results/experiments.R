@@ -9,7 +9,6 @@ library(scales)
 library(viridisLite)
 library(here)
 
-source(".Rprofile")
 
 
 # colors for resistant, susceptible, and parasitoid wasps, respectively

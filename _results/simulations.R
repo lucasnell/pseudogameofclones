@@ -7,8 +7,6 @@ library(viridisLite)
 library(here)
 
 
-if (file.exists(".Rprofile")) source(".Rprofile")
-
 options(mc.cores = max(parallel::detectCores()-2L, 1L))
 
 # colors for resistant, susceptible, and parasitoid wasps, respectively

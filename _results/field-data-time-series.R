@@ -8,8 +8,6 @@ library(readxl)         # readxl
 library(here)           # here
 library(grid)           # grid.newpage, grid.draw
 
-source(".Rprofile")
-
 
 
 #'

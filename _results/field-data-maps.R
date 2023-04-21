@@ -12,11 +12,6 @@ library(rnaturalearth)      # ne_countries
 library(rnaturalearthdata)  # used for ne_countries
 
 
-source(".Rprofile")
-
-
-
-
 
 
 
@@ -392,46 +387,6 @@ save_plot(here("_results/_plots/field-data/par-map-usa-inset.pdf"), usa_map_p,
 # If you have pdfcrop installed:
 # system(paste("pdfcrop", here("_results/_plots/field-data/par-map-usa-inset.pdf")))
 
-
-
-
-
-
-#' For WI boundary, first download GeoJSON from here:
-#' https://data-wi-dnr.opendata.arcgis.com/datasets/wi-dnr::wisconsin-state-boundary-24k/explore?location=44.724029%2C-89.836300%2C8.61
-#' (I accessed this on 15 March 2023)
-#'
-#' I then reduced the resolution and wrote this to a smaller file using the
-#' following code in R:
-#' ```
-#' library(sf)
-#' library(here)
-#' wi_bounds_hires <- "Wisconsin_State_Boundary_24K.geojson" |>
-#'     st_read() |>
-#'     st_transform(st_crs(3857))
-#' wi_bounds <- wi_bounds_hires |> st_simplify(preserveTopology = FALSE, dTolerance = 1000)
-#' st_write(wi_bounds, here("_results/_data/WI-boundary.geojson"))
-#' ```
-
-
-wi_bounds  <- here("_results/_data/WI-boundary.geojson") |>
-    st_read()
-
-
-wi_inset <- wi_bounds |>
-    ggplot() +
-    geom_sf(size = 0.25) +
-    geom_point(data = tibble(x = (xy_lims$xmin + xy_lims$xmax) / 2,
-                             y = (xy_lims$ymin + xy_lims$ymax) / 2),
-               aes(x, y), color = "black", shape = 20, size  = 4) +
-    coord_sf(datum = st_crs(3857)) +
-    theme_void()
-
-# wi_inset
-
-
-save_plot(here("_results/_plots/field-data/par-map-wi-inset.pdf"), wi_inset,
-          w = 2, h = 2)
 
 
 #' ----------------------------------------------------------------------
