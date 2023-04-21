@@ -8,7 +8,8 @@ inst/doc
 *.rds
 *.ai
 
-## Symlink:
-_results/_plots/_illustrator-figures
+_results/_plots
 
 *.pdf
+
+Icon?
