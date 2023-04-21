@@ -155,37 +155,9 @@ par_df <- list(
 
 
 
-#'
-#' For reproducibility, I've kept the original Excel file and below show how
-#' I converted it to the CSV file that I use after its creation.
-#'
-if (!file.exists(here("_results/_data/symbionts-2018-2019.csv"))) {
-
-    older_ham_df <- c("WI_2018_Spring", "WI_2018_Fall", "WI_2019_Spring",
-                      "WI_2019_Summer", "WI_2019_Fall") |>
-        map_dfr(
-            function(.sheet) {
-                .date <- here("_results/_data/symbionts-2018-2019.xlsx") |>
-                    read_excel(.sheet, col_names = paste(1:16)) |>
-                    getElement("5") |> getElement(1) |>
-                    str_remove("Collect Date: ") |>
-                    as.Date(format = "%m/%d/%Y")
-                .season <- str_split(.sheet, "_")[[1]][[3]] |> tolower()
-                .df <- here("_results/_data/symbionts-2018-2019.xlsx") |>
-                    read_excel(.sheet, skip = 2) |>
-                    select(Field, Clone, `H. defensa`) |>
-                    rename(field = Field, clone = Clone, ham = `H. defensa`) |>
-                    mutate(date = .date, year = year(.date),
-                           field = paste(field), season = .season)
-                return(.df)
-            }
-        )
-    write_csv(older_ham_df, here("_results/_data/symbionts-2018-2019.csv"))
-} else {
-    older_ham_df <- here("_results/_data/symbionts-2018-2019.csv") |>
-        read_csv(col_types = cols()) |>
-        base::`[`()
-}
+older_ham_df <- here("_results/_data/symbionts-2018-2019.csv") |>
+    read_csv(col_types = cols()) |>
+    base::`[`()
 
 
 
