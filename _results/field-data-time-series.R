@@ -36,7 +36,7 @@ source(".Rprofile")
 
 # Color palettes to use in plots (using binned rr_rs values):
 rr_rs_pal <- with(list(pal = inferno, inds = c(80, 60, 20)),
-                  list(color = c(pal(100)[inds], "gray70"),
+                  list(color = c(pal(100)[inds], "gray40"),
                        fill = c(pal(100)[inds], "white"),
                        fill2 = c(pal(100, alpha = 0.5)[inds], "white")))
 
@@ -164,8 +164,8 @@ ham_df <- list(
                                   late == 0 ~ "spring")) |>
         select(year, season, date, field, Hamiltonella) |>
         rename(ham = Hamiltonella) |>
-        # filler date until I can get the real one:
-        mutate(date = ifelse(year == 2012, "9/20/12", date),
+        # Filling in this date manually based on info from Kerry:
+        mutate(date = ifelse(year == 2012, "9/4/12", date),
                date = as.Date(date, format = "%m/%d/%y")),
     c("WI_2018_Spring", "WI_2018_Fall", "WI_2019_Spring",
       "WI_2019_Summer", "WI_2019_Fall") |>
@@ -248,7 +248,7 @@ par_ts_p <- par_df |>
                             linewidth = 0.5, linejoin = "mitre",
                             arrow = arrow(length = unit(0.1, "lines"), type = "closed")),
                geom_point(aes(color = rr_rs_fct, fill = rr_rs_fct),
-                          size = 1, shape = 21)) +
+                          size = 1, shape = 21, stroke = 0.5)) +
     scale_color_manual(rr_rs_legend_title,
                        values = rr_rs_pal$color) +
     scale_fill_manual(rr_rs_legend_title,
@@ -256,7 +256,6 @@ par_ts_p <- par_df |>
     guides(color = guide_legend(override.aes = list(alpha = 1, size = 3)))
 
 # par_ts_p
-
 
 save_plot(here("_results/_plots/field-data/par-time.pdf"), par_ts_p,
           w = 4, h = 2.5)
@@ -278,6 +277,44 @@ save_plot(here("_results/_plots/field-data/par-time-legend.pdf"), par_ts_p_leg,
 
 
 
+#' Same thing but without coloring by fitness and with lines connecting fields.
+#' The stuff with `max_fc` is to keep the colors from all being similar when
+#' not many fields were sampled in a given year
+par_ts_wlines_p <- par_df |>
+    split(~ year) |>
+    map_dfr(~ mutate(.x, field_col = factor(field) |> as.integer(),
+                     max_fc = max(field_col))) |>
+    mutate(max_max_fc = max(max_fc)) |>
+    split(~ year) |>
+    map_dfr(\(x) {
+        mfc <- x[["max_fc"]][[1]]
+        mmfc <- x[["max_max_fc"]][[1]]
+        x |>
+            mutate(field_col = map_int(field_col,
+                                        \(i) {
+                                            ss <- seq(1, mmfc, length.out = mfc)
+                                            as.integer(round(ss))[i]
+                                        }))
+    }) |>
+    select(-ends_with("max_fc")) |>
+    mutate(field_col = factor(field_col),
+           # So they show as dates but can be plotted on same scale:
+           plot_date = as.Date(day, origin = "2022-01-01")) |>
+    add_rr_rs_fct() |>
+    ts_p_maker(para, "Proportion parasitized",
+               geom_line(aes(color = field_col), linewidth = 0.5),
+               geom_point(aes(color = field_col, fill = field_col),
+                          size = 0.5, shape = 21)) +
+    scale_color_viridis_d(guide = "none") +
+    scale_fill_viridis_d(guide = "none")
+
+save_plot(here("_results/_plots/par-time-by-field.pdf"), par_ts_wlines_p,
+          w = 6.5, h = 5)
+
+
+
+
+
 ham_ts_p <- ham_df |>
     ts_p_maker(ham, "Proportion *H. defensa*",
                geom_line(aes(group = field_id), color = "gray60"),
@@ -287,3 +324,4 @@ ham_ts_p <- ham_df |>
 
 save_plot(here("_results/_plots/field-data/ham-time.pdf"), ham_ts_p,
           w = 4, h = 2.5, seed = 380247925)
+

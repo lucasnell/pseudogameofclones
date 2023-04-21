@@ -107,7 +107,7 @@ par_df <- list(
 
 # Color palettes to use in plots (using binned rr_rs values):
 rr_rs_pal <- with(list(pal = inferno, inds = c(80, 60, 20)),
-                  list(color = c(pal(100)[inds], "gray70"),
+                  list(color = c(pal(100)[inds], "gray40"),
                        fill = c(pal(100)[inds], "white"),
                        fill2 = c(pal(100, alpha = 0.5)[inds], "white")))
 
@@ -293,7 +293,8 @@ fields_par_p <- obs_fields_par |>
     geom_rect(xmin = xy_lims$xmin, xmax = xy_lims$xmax,
               ymin = xy_lims$ymin, ymax = xy_lims$ymax,
               fill = NA, color = "black", linewidth = 0.5) +
-    geom_sf(aes(size = para, color = rr_rs_fct, fill = rr_rs_fct), shape = 21) +
+    geom_sf(aes(size = para, color = rr_rs_fct, fill = rr_rs_fct),
+            shape = 21, stroke = 0.75) +
     # # ------*
     # # DIY scale bar:
     # geom_rect(data = fields_par_scale_df,
@@ -319,13 +320,16 @@ fields_par_p <- obs_fields_par |>
     facet_wrap(~ plot_date, nrow = 2) +
     theme_void() +
     theme(strip.text = element_text(size = 9, margin = margin(0,0,b=3,t=3)),
-          legend.position = "none")
+          legend.position = "none",
+          panel.background = element_rect(fill = "transparent", color = NA),
+          plot.background = element_rect(fill = "transparent", color = NA),
+          legend.box.background = element_rect(fill = "transparent"))
 
 
-fields_par_p
+# fields_par_p
 
 save_plot(here("_results/_plots/field-data/par-map.pdf"), fields_par_p,
-          w = 3.5, h = 2.5)
+          w = 3.5, h = 2.5, bg = "transparent")
 
 
 
