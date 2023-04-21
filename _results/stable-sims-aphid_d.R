@@ -310,13 +310,15 @@ dev.off()
 
 # For equilibrium proportion resistance ~ aphid dispersal
 
+# Threshold to manually prevent crossing over of lines at bifurcation
+cot <- 0.2582
+
 cairo_pdf(filename = plots_out$P, height = 3.6, width = 5.5)
 {
     par(mai=c(0.1, 0.5, 0.5, 0.1))
 
-    plot(stable.equil1 ~ disp, data = www, typ="l", xlim = c(0,.28),
-         ylim = c(0,1), xaxt = "n",
-         ylab = "", xlab = "")
+    plot(stable.equil1 ~ disp, data = www[www$disp < cot,], typ="l",
+         xlim = c(0,.28), ylim = c(0,1), xaxt = "n", ylab = "", xlab = "")
          # ylab = "Proportion resistant", xlab = "Aphid dispersal")
     axis(3)
 
@@ -327,13 +329,15 @@ cairo_pdf(filename = plots_out$P, height = 3.6, width = 5.5)
     conf_bounds(x = c(0.2584, .28), y.lower = c(0,0), y.upper = c(1,1),
                 col="lightgray")
 
-    lines(stable.equil1 ~ disp, data = www, lwd = 3, col="dodgerblue")
-    lines(stable.equil2 ~ disp, data = www, lwd = 3, col="dodgerblue")
+    lines(stable.equil1 ~ disp, data = www[www$disp < cot,],
+          lwd = 3, col="dodgerblue")
+    lines(stable.equil2 ~ disp, data = www[www$disp < cot,],
+          lwd = 3, col="dodgerblue")
     points(stable.equil1 ~ disp, data = www[www$disp > .04 & www$disp <= .15,],
            col="dodgerblue")
     points(stable.equil2 ~ disp, data = www[www$disp > .04 & www$disp <= .15,],
            col="dodgerblue")
-    lines(unstable.equil.spline ~ disp, data = ww, col = "black", lwd = 3)
+    lines(unstable.equil.spline ~ disp, data = ww, col = "black", lwd = 3, lty = "45")
 }
 dev.off()
 

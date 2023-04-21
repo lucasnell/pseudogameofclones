@@ -415,7 +415,7 @@ cairo_pdf(filename = plots_out$P, height = 3.6, width = 5.5)
 
     lines(peak.prop1 ~ wasp.disp, data = w, col="dodgerblue3", lwd=2)
     lines(peak.prop2 ~ wasp.disp, data = w, col="dodgerblue3", lwd=2)
-    lines(trough.prop1 ~ wasp.disp, data = w, lty = 2, col="dodgerblue3", lwd=2)
-    lines(trough.prop2 ~ wasp.disp, data = w, lty = 2, col="dodgerblue3", lwd=2)
+    lines(trough.prop1 ~ wasp.disp, data = w, col="dodgerblue3", lwd=2)
+    lines(trough.prop2 ~ wasp.disp, data = w, col="dodgerblue3", lwd=2)
 }
 dev.off()
