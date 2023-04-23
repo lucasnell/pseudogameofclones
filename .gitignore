@@ -13,3 +13,5 @@ _results/_plots
 *.pdf
 
 Icon?
+/doc/
+/Meta/

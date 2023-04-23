@@ -1,12 +1,10 @@
 ^gameofclones\.Rproj$
 ^\.Rproj\.user$
 ^\.travis\.yml$
-^under_constr$
-^reports$
 ^data-raw$
 ^_pkgdown\.yml$
-^docs$
-^figs$
 ^README\.
 ^.*\.svg$
 ^_results$
+^doc$
+^Meta$
