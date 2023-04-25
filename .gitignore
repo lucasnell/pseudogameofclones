@@ -9,6 +9,7 @@ inst/doc
 *.ai
 
 _results/_plots
+_results/_data
 
 *.pdf
 
