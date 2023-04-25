@@ -5,7 +5,7 @@ Description: Analyses and simulations related to aphid metapopulation clonal evo
 Authors@R: person(c("Lucas", "A."), "Nell", email = "lucnell@gmail.com",
                   role = c("cph", "aut", "cre"),
                   comment = c(ORCID = "0000-0003-3209-0517"))
-License: GPL (>=3)
+License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
 ByteCompile: true
@@ -20,9 +20,7 @@ Depends:
     tibble,
     tidyr
 Imports:
-    RcppProgress (>= 0.1),
-    svglite,
-    zoo
+    RcppProgress (>= 0.1)
 LinkingTo:
     Rcpp (>= 1.0.0),
     RcppArmadillo,

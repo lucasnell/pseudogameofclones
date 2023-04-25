@@ -1,7 +1,7 @@
 #' The 'gameofclones' package.
 #'
 #' @description Analyses and simulations related to aphid--parasitoid
-#'     eco-evo dynamics experiments.
+#'     eco-evolutionary dynamics experiments.
 #'
 #' @docType package
 #' @name gameofclones-package
