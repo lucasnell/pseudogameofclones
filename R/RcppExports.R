@@ -26,7 +26,7 @@ inv_logit <- function(a) {
 #' @param repro Numeric vector of aphid reproductive rates by stage.
 #'
 #'
-#' @export
+#' @noRd
 leslie_matrix <- function(instar_days, surv_juv, surv_adult, repro) {
     .Call(`_gameofclones_leslie_matrix`, instar_days, surv_juv, surv_adult, repro)
 }
@@ -42,7 +42,7 @@ leslie_matrix <- function(instar_days, surv_juv, surv_adult, repro) {
 #' @param K The "carrying capacity" for this plant.
 #'
 #'
-#' @export
+#' @noRd
 carrying_capacity <- function(apterous, alates, alate_prop, disp_prop, disp_mort, disp_start, K) {
     .Call(`_gameofclones_carrying_capacity`, apterous, alates, alate_prop, disp_prop, disp_mort, disp_start, K)
 }
@@ -51,7 +51,7 @@ carrying_capacity <- function(apterous, alates, alate_prop, disp_prop, disp_mort
 #'
 #' @param leslie Leslie matrix of the population.
 #'
-#' @export
+#' @noRd
 #'
 #' @return Vector with the stable age distribution given the Leslie matrix.
 #'

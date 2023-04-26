@@ -412,18 +412,6 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #'
 #'
 #' @param n_reps Number of reps to simulate.
-#' @param clonal_lines A `multiAphid` object containing the aphid-line-specific
-#'     info for all the lines in the simulations.
-#'     Each object in the `multiAphid` is an `aphid` object that results from
-#'     the `clonal_line` function.
-#'     Combine them using `c(aphid_obj1, aphid_obj2)`.
-#' @param n_fields The number of fields to simulate.
-#'     Wasps operate at the field level, whereas aphids operate at the
-#'     plant level.
-#'     Both wasps and aphids operate separately across fields but can be
-#'     connected via dispersal (see arguments `wasp_disp_m0`, `wasp_disp_m1`,
-#'     and `alate_field_disp_p`).
-#'     Defaults to `2`.
 #' @param n_plants The number of plants per field.
 #'     This argument is only useful if you want to simulate the process
 #'     of plants or groups of plants dying.
@@ -434,24 +422,6 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #'     Aphids can disperse across plants via alate production and the
 #'     `alate_plant_disp_p` argument.
 #'     Defaults to `1`.
-#' @param max_t How many days to simulate. Defaults to `250`.
-#' @param plant_check_gaps Gap(s) between when plants are check on.
-#'     This is used if you want to see what will happen if you can't check
-#'     on things every day in an experiment.
-#'     You could use `c(3, 4)` for checking twice per week, for example.
-#'     Note that this argument determines how often
-#'     (1) wasps and alates disperse across fields and
-#'     (2) plants are check for exceeding `max_plant_age` or `max_N`.
-#'     So using this argument to simulate harvesting fields will also cause
-#'     wasp and alate dispersal to not occur daily.
-#'     Defaults to `1`.
-#' @param max_plant_age Age at which plants are cleared.
-#'     This can be useful to simulate harvesting fields.
-#'     A value of `0` turns this off completely, but it also requires that
-#'     `max_N > 0` because the internal code wants some threshold to look for.
-#'     Defaults to `0` which effectively turns this off.
-#' @param clear_surv Survival of aphids and mummies when a harvest occurs.
-#'     Defaults to `0`.
 #' @param max_N Maximum number of aphids at which plants are cleared.
 #'     This is useful for simulating an experiment where you have a threshold
 #'     at which you harvest plants.
@@ -484,53 +454,13 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #'     Defaults to `1 / 4.67e-4`, which is from Meisner et al. (2014).
 #' @param sd_K Mean of the distribution of `K` values (affecting aphid
 #'     density dependence) among plants. Defaults to `0`.
-#' @param K_y_mult The number multiplied by `K` to get density dependence for
-#'     parasitized aphids.
-#'     Defaults to `1 / 1.57`, which is from Meisner et al. (2014).
 #' @param wilted_prop Proportion of carrying capacity that causes the plant
 #'     to become wilted. Values > 1 cause this to be ignored.
 #'     Defaults to `1.1`.
 #' @param rho Environmental correlation among instars.
 #'     Defaults to `environ$rho`.
-#' @param a Parasitoid attack rate. Defaults to the internal object
-#'     `wasp_attack$a`, which is from Meisner et al. (2014).
-#' @param k Aggregation parameter of the negative binomial distribution.
-#'     Defaults to the internal object `wasp_attack$k`,
-#'     which is from Meisner et al. (2014).
-#' @param h Parasitoid handling time. Defaults to the internal object
-#'     `wasp_attack$h`, which is from Meisner et al. (2014).
-#' @param wasp_density_0 Starting adult wasp density.
-#'     Must be a single number or a `n_fields`-length vector.
-#'     Defaults to `c(3, 0)`.
-#' @param wasp_delay Delay in days between when the aphids start and the
-#'     wasps are added.
-#'     This can be a single integer or a `n_fields`-length vector.
-#'     Defaults to `8`.
-#' @param wasp_disp_m0 Proportion of adult wasps from each field that
-#'     are added to the dispersal pool when there are no aphids present.
-#'     After adding wasps to the pool, they are then evenly distributed
-#'     to all fields.
-#'     This happens only on days indicated by `plant_check_gaps`.
-#'     Defaults to `0`.
-#' @param wasp_disp_m1 Effect of aphid density on wasp emigration from a patch.
-#'     Emigration is `wasp_disp_m0 * exp(-wasp_disp_m1 * z)`, where `z` is
-#'     the total number of living aphids in the patch.
-#'     Defaults to `0`.
 #' @param sex_ratio Sex ratio of adult wasps. Defaults to `0.5`.
-#' @param s_y Daily survival rate of adult wasps.
-#'     Defaults to `populations$s_y`, which is from Meisner et al. (2014).
-#' @param constant_wasps Logical for whether to keep adult wasps at the same
-#'     density throughout simulations.
-#'     This can be a single logical or a `n_fields`-length vector.
-#'     Defaults to `FALSE`.
-#' @param rel_attack Relative parasitoid attack rate among instars.
-#'     Defaults to `wasp_attack$rel_attack`, which is from
-#'     Meisner et al. (2014).
 #' @param mum_density_0 Starting mummy density. Defaults to `0`.
-#' @param mum_smooth Proportion of mummies that will NOT take exactly 3 days
-#'     to develop. As this value approaches 2/3, it will provide greater
-#'     smoothing of wasp numbers through time.
-#'     Defaults to `0.4`.
 #' @param max_mum_density Maximum mummy density (ignored if zero).
 #'     Used to test the effects of a potential experimental treatment.
 #'     Defaults to `0`.
@@ -555,12 +485,6 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #'     `inv_logit(alate_b0 + alate_b1 * N)` where `N` is the total number of
 #'     aphids on that plant.
 #'     Defaults to `0`, which makes alate production not density dependent.
-#' @param alate_field_disp_p Proportion of alates from each field that
-#'     are added to the dispersal pool.
-#'     After adding alates to the pool, they are then evenly distributed
-#'     to all fields.
-#'     This happens only on days indicated by `plant_check_gaps`.
-#'     Defaults to `0.1`.
 #' @param shape1_wilted_mort Shape 1 for the beta distribution that generates
 #'     mortality parameters for aphid populations living on a wilted plant.
 #'     If `wilted_effects_error` is `FALSE`, then the wilted-plant-induced
@@ -570,33 +494,10 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #' @param shape2_wilted_mort Shape 2 for the beta distribution that generates
 #'     mortality parameters for aphid populations living on a wilted plant.
 #'     Defaults to `5.777129`, which is based on previous work in the lab.
-#' @param extinct_N Threshold below which a line is considered extinct.
-#'     Defaults to `1`.
-#' @param save_every Abundances will be stored every `save_every` time points.
-#'     Defaults to `1`.
 #' @param n_threads Number of threads to use if OpenMP is enabled
 #'     (ignored otherwise).
 #'     Find out whether it's enabled using `gameofclones:::using_openmp()`.
 #'     Defaults to `1`.
-#' @param show_progress Boolean for whether to show progress bar.
-#'     Defaults to `FALSE`.
-#' @param perturb Information for perturbing populations in the simulations.
-#'     It should be a dataframe with 4 columns:
-#'     * `when`: Integers indicating at what timepoint(s) to do the
-#'       perturbations. These can be repeated if you want to perturb
-#'       multiple things at the same time.
-#'     * `where`: What field to do the perturbations in.
-#'     * `who`: Which population to perturb.
-#'       This can be a character vector where values must be the name of an
-#'       aphid line, `"wasps"`, or `"mummies"`.
-#'       It can also be an integer vector where, for `n` aphid lines,
-#'       values `<= n` indicate an aphid line,
-#'       values `== n+1` indicate mummies,
-#'       and values `== n+2` indicate adult wasps.
-#'       Note that perturbing the mummy population also perturbs the
-#'       still-living but parasitized aphids, too.
-#'     * `how`: Numbers `>= 0` that are multiplied by the desired population
-#'       to cause the perturbation.
 #'
 #' @importFrom purrr map_dfr
 #' @importFrom dplyr as_tibble
@@ -604,7 +505,7 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #' @importFrom tidyr gather
 #' @importFrom dplyr arrange
 #'
-#' @export
+#' @noRd
 #'
 # full fun code ----
 sim_gameofclones_full <- function(n_reps,
@@ -863,13 +764,22 @@ sim_gameofclones_full <- function(n_reps,
 
 
 
-#' Relatively simple simulations to set up experiments.
-#'
 #' Deterministic simulations of multiple fields of aphids and wasps.
 #'
 #'
-#' @inheritParams sim_gameofclones_full
-#'
+#' @param clonal_lines A `multiAphid` object containing the aphid-line-specific
+#'     info for all the lines in the simulations.
+#'     Each object in the `multiAphid` is an `aphid` object that results from
+#'     the `clonal_line` function.
+#'     Combine them using `c(aphid_obj1, aphid_obj2)`.
+#' @param n_fields The number of fields to simulate.
+#'     Wasps operate at the field level, whereas aphids operate at the
+#'     plant level.
+#'     Both wasps and aphids operate separately across fields but can be
+#'     connected via dispersal (see arguments `wasp_disp_m0`, `wasp_disp_m1`,
+#'     and `alate_field_disp_p`).
+#'     Defaults to `2`.
+#' @param max_t How many days to simulate. Defaults to `250`.
 #' @param K Aphid density dependence.
 #'     Defaults to `12.5e3` because this caused simulations to
 #'     approximately match experiments.
@@ -882,8 +792,93 @@ sim_gameofclones_full <- function(n_reps,
 #'     aphids on that plant.
 #'     Defaults to `K * 1.76e-07`, which makes alate production only mildly
 #'     density dependent.
+#' @param alate_field_disp_p Proportion of alates from each field that
+#'     are added to the dispersal pool.
+#'     After adding alates to the pool, they are then evenly distributed
+#'     to all fields.
+#'     This happens only on days indicated by `plant_check_gaps`.
+#'     Defaults to `0.1`.
+#' @param K_y_mult The number multiplied by `K` to get density dependence for
+#'     parasitized aphids.
+#'     Defaults to `1 / 1.57`, which is from Meisner et al. (2014).
+#' @param s_y Daily survival rate of adult wasps.
+#'     Defaults to `populations$s_y`, which is from Meisner et al. (2014).
+#' @param a Parasitoid attack rate. Defaults to the internal object
+#'     `wasp_attack$a`, which is from Meisner et al. (2014).
+#' @param k Aggregation parameter of the negative binomial distribution.
+#'     Defaults to the internal object `wasp_attack$k`,
+#'     which is from Meisner et al. (2014).
+#' @param h Parasitoid handling time. Defaults to the internal object
+#'     `wasp_attack$h`, which is from Meisner et al. (2014).
+#' @param rel_attack Relative parasitoid attack rate among instars.
+#'     Defaults to `wasp_attack$rel_attack`, which is from
+#'     Meisner et al. (2014).
+#' @param wasp_density_0 Starting adult wasp density.
+#'     Must be a single number or a `n_fields`-length vector.
+#'     Defaults to `c(3, 0)`.
+#' @param wasp_delay Delay in days between when the aphids start and the
+#'     wasps are added.
+#'     This can be a single integer or a `n_fields`-length vector.
+#'     Defaults to `8`.
+#' @param wasp_disp_m0 Proportion of adult wasps from each field that
+#'     are added to the dispersal pool when there are no aphids present.
+#'     After adding wasps to the pool, they are then evenly distributed
+#'     to all fields.
+#'     This happens only on days indicated by `plant_check_gaps`.
+#'     Defaults to `0`.
+#' @param wasp_disp_m1 Effect of aphid density on wasp emigration from a patch.
+#'     Emigration is `wasp_disp_m0 * exp(-wasp_disp_m1 * z)`, where `z` is
+#'     the total number of living aphids in the patch.
+#'     Defaults to `0`.
+#' @param constant_wasps Logical for whether to keep adult wasps at the same
+#'     density throughout simulations.
+#'     This can be a single logical or a `n_fields`-length vector.
+#'     Defaults to `FALSE`.
+#' @param mum_smooth Proportion of mummies that will NOT take exactly 3 days
+#'     to develop. As this value approaches 2/3, it will provide greater
+#'     smoothing of wasp numbers through time.
+#'     Defaults to `0.4`.
 #' @param pred_rate Daily predation rate on aphids and mummies.
 #'     Defaults to `0.1` to compensate for losses from plants dying.
+#' @param extinct_N Threshold below which a line is considered extinct.
+#'     Defaults to `1`.
+#' @param save_every Abundances will be stored every `save_every` time points.
+#'     Defaults to `1`.
+#' @param perturb Information for perturbing populations in the simulations.
+#'     It should be a dataframe with 4 columns:
+#'     * `when`: Integers indicating at what timepoint(s) to do the
+#'       perturbations. These can be repeated if you want to perturb
+#'       multiple things at the same time.
+#'     * `where`: What field to do the perturbations in.
+#'     * `who`: Which population to perturb.
+#'       This can be a character vector where values must be the name of an
+#'       aphid line, `"wasps"`, or `"mummies"`.
+#'       It can also be an integer vector where, for `n` aphid lines,
+#'       values `<= n` indicate an aphid line,
+#'       values `== n+1` indicate mummies,
+#'       and values `== n+2` indicate adult wasps.
+#'       Note that perturbing the mummy population also perturbs the
+#'       still-living but parasitized aphids, too.
+#'     * `how`: Numbers `>= 0` that are multiplied by the desired population
+#'       to cause the perturbation.
+#' @param plant_check_gaps Gap(s) between when plants are check on.
+#'     This is used if you want to see what will happen if you can't check
+#'     on things every day in an experiment.
+#'     You could use `c(3, 4)` for checking twice per week, for example.
+#'     Note that this argument determines how often
+#'     (1) wasps and alates disperse across fields and
+#'     (2) plants are checked for exceeding `max_plant_age` or `max_N`.
+#'     So using this argument to simulate harvesting fields will also cause
+#'     wasp and alate dispersal to not occur daily.
+#'     Defaults to `1`.
+#' @param max_plant_age Age at which plants are cleared.
+#'     This can be useful to simulate harvesting fields.
+#'     Defaults to `0` which effectively turns this off.
+#' @param clear_surv Survival of aphids and mummies when a harvest occurs
+#'     (if harvesting is done via `plant_check_gaps`).
+#'     Defaults to `0`.
+#' @param show_progress Boolean for whether to show progress bar.
+#'     Defaults to `FALSE`.
 #'
 #'
 #' @export

@@ -116,18 +116,17 @@ on things every day in an experiment.
 You could use \code{c(3, 4)} for checking twice per week, for example.
 Note that this argument determines how often
 (1) wasps and alates disperse across fields and
-(2) plants are check for exceeding \code{max_plant_age} or \code{max_N}.
+(2) plants are checked for exceeding \code{max_plant_age} or \code{max_N}.
 So using this argument to simulate harvesting fields will also cause
 wasp and alate dispersal to not occur daily.
 Defaults to \code{1}.}
 
 \item{max_plant_age}{Age at which plants are cleared.
 This can be useful to simulate harvesting fields.
-A value of \code{0} turns this off completely, but it also requires that
-\code{max_N > 0} because the internal code wants some threshold to look for.
 Defaults to \code{0} which effectively turns this off.}
 
-\item{clear_surv}{Survival of aphids and mummies when a harvest occurs.
+\item{clear_surv}{Survival of aphids and mummies when a harvest occurs
+(if harvesting is done via \code{plant_check_gaps}).
 Defaults to \code{0}.}
 
 \item{show_progress}{Boolean for whether to show progress bar.

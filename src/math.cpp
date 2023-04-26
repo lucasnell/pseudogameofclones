@@ -60,7 +60,7 @@ NumericVector inv_logit(NumericVector a){
 //' @param repro Numeric vector of aphid reproductive rates by stage.
 //'
 //'
-//' @export
+//' @noRd
 //[[Rcpp::export]]
 NumericMatrix leslie_matrix(IntegerVector instar_days, const double& surv_juv,
                             NumericVector surv_adult, NumericVector repro) {
@@ -92,7 +92,7 @@ NumericMatrix leslie_matrix(IntegerVector instar_days, const double& surv_juv,
 //' @param K The "carrying capacity" for this plant.
 //'
 //'
-//' @export
+//' @noRd
 //[[Rcpp::export]]
 double carrying_capacity(const arma::mat& apterous,
                          const arma::mat& alates,
@@ -131,7 +131,7 @@ double carrying_capacity(const arma::mat& apterous,
 //'
 //' @param leslie Leslie matrix of the population.
 //'
-//' @export
+//' @noRd
 //'
 //' @return Vector with the stable age distribution given the Leslie matrix.
 //'
