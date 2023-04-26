@@ -1285,14 +1285,19 @@ restart_experiment <- function(sims_obj,
 #' @export
 #' @noRd
 #'
+#' @importFrom dplyr as_tibble
+#'
 print.cloneSims <- function(x, ...) {
     cat("< cloneSims object >\n\n")
     cat("$aphids\n")
-    print(head(x$aphids))
+    print(as_tibble(x$aphids), n = 5)
     cat("\n$wasps\n")
-    print(head(x$wasps))
+    print(as_tibble(x$wasps), n = 5)
     cat("\n$all_info\n")
-    print(lapply(x$all_info, head, n = 5))
+    for (i in 1:length(x$all_info)) {
+        cat(sprintf("[[%i]]\n", i))
+        print(as_tibble(x$all_info[[i]]), n = 5)
+    }
     invisible(x)
 }
 
@@ -1300,13 +1305,18 @@ print.cloneSims <- function(x, ...) {
 #' @export
 #' @noRd
 #'
+#' @importFrom dplyr as_tibble
+#'
 print.cloneSimsRestart <- function(x, ...) {
     cat("< cloneSimsRestart object >\n\n")
     cat("$aphids\n")
-    print(head(x$aphids))
+    print(as_tibble(x$aphids), n = 5)
     cat("\n$wasps\n")
-    print(head(x$wasps))
+    print(as_tibble(x$wasps), n = 5)
     cat("\n$all_info\n")
-    print(lapply(x$all_info, head, n = 5))
+    for (i in 1:length(x$all_info)) {
+        cat(sprintf("[[%i]]\n", i))
+        print(as_tibble(x$all_info[[i]]), n = 5)
+    }
     invisible(x)
 }
