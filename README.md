@@ -1,5 +1,6 @@
 
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![DOI](https://zenodo.org/badge/134013089.svg)](https://zenodo.org/badge/latestdoi/134013089)
 
 
 # gameofclones <img src="logo.svg" align="right" height="150" />
