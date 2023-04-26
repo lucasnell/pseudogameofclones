@@ -1,7 +1,7 @@
 Package: gameofclones
 Version: 0.0.0.9000
 Title: Clonal Evolution in Aphid Metapopulations
-Description: Analyses and simulations related to aphid metapopulation clonal evolution experiments.
+Description: Simulate pea aphid clonal evolution and parasitoids through time and space.
 Authors@R: person(c("Lucas", "A."), "Nell", email = "lucnell@gmail.com",
                   role = c("cph", "aut", "cre"),
                   comment = c(ORCID = "0000-0003-3209-0517"))
@@ -11,13 +11,10 @@ LazyData: true
 ByteCompile: true
 Depends: 
     dplyr,
-    ggplot2,
     methods,
     purrr,
     R (>= 4.1.0),
     Rcpp (>= 1.0.0),
-    readr,
-    tibble,
     tidyr
 Imports:
     RcppProgress (>= 0.1)
@@ -32,7 +29,6 @@ URL: https://github.com/lucasnell/gameofclones
 BugReports: https://github.com/lucasnell/gameofclones/issues
 Suggests:
     knitr,
-    rmarkdown,
-    testthat
+    rmarkdown
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)

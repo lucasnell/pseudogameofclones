@@ -1,37 +1,4 @@
 
-
-
-#' Save a plot to a PDF file using `cairo_pdf`
-#'
-#' @param fn Filename of plot
-#' @param p Plot object or function to create plot
-#' @param w Width in inches
-#' @param h Height in inches
-#' @param seed Integer to seed RNG for consistent jittering.
-#' @param ... Other arguments to `cairo_pdf`
-#'
-#' @return `NULL`
-#' @export
-#'
-save_plot <- function(fn, p, w, h, seed = NULL, ...) {
-    ext <- tail(strsplit(fn, "\\.")[[1]], 1)
-    if (ext != "pdf") stop("ERROR: file name extension must be \".pdf\"")
-    fn_dir <- dirname(fn)
-    if (!dir.exists(fn_dir)) stop("ERROR: `", fn_dir, "` doesn't exist")
-    if (!is.null(seed)) set.seed(seed)
-    cairo_pdf(filename = fn, width = w, height = h, ...)
-    if (is.function(p)) {
-        p()
-    } else {
-        plot(p)
-    }
-    dev.off()
-    invisible(NULL)
-}
-
-
-
-
 #' Calculate r_r / r_s (relative fitness for resistance vs susceptible aphids).
 #'
 #' This is almost directly from code in Ives et al. (2020).
@@ -79,5 +46,21 @@ rel_res_fitness <- function(para, p_res = 0.48) {
 }
 
 
-
-
+#' Remove tibbles from a cloneSims or cloneSimsRestart object
+#'
+#' @param sims_obj A cloneSims or cloneSimsRestart object
+#'
+#' @return
+#' The same class of object as input, but with the `aphids` and `wasps` fields
+#' converted to data frames instead of tibbles.
+#'
+#' @export
+#'
+rm_tibs <- function(sims_obj) {
+    stopifnot(inherits(sims_obj, "cloneSims") |
+                  inherits(sims_obj, "cloneSimsRestart"))
+    for (n in c("aphids", "wasps")) {
+        sims_obj[[n]] <- as.data.frame(sims_obj[[n]])
+    }
+    return(sims_obj)
+}

@@ -7,5 +7,5 @@
 \title{The 'gameofclones' package.}
 \description{
 Analyses and simulations related to aphid--parasitoid
-eco-evo dynamics experiments.
+eco-evolutionary dynamics experiments.
 }
