@@ -22,19 +22,20 @@ using namespace Rcpp;
 void AphidTypePop::process_error(const double& z,
                                  const double& sigma_x,
                                  const double& rho,
-                                 const double& demog_mult,
+                                 const bool& demog_error,
                                  std::normal_distribution<double>& norm_distr,
                                  pcg32& eng) {
 
-    if (demog_mult == 0 || sigma_x == 0) return;
+    if (!demog_error && sigma_x == 0) return;
 
     uint32 n_stages = X.n_elem;
 
-    arma::mat Se(n_stages, n_stages, arma::fill::zeros);
+    double stdev = sigma_x*sigma_x;
+    if (demog_error) stdev += std::min(0.5, 1 / (1 + z));
 
-    Se = (sigma_x*sigma_x + demog_mult * std::min(0.5, 1 / std::abs(1 + z))) *
-        (rho * arma::mat(n_stages,n_stages,arma::fill::ones) +
-        (1-rho) * arma::mat(n_stages,n_stages,arma::fill::eye));
+    arma::mat Se = stdev *
+        (rho * arma::mat(n_stages, n_stages, arma::fill::ones) +
+        (1 - rho) * arma::mat(n_stages, n_stages, arma::fill::eye));
 
     // chol doesn't work with zeros on diagonal
     arma::uvec non_zero = arma::find(Se.diag() > 0);
@@ -70,9 +71,9 @@ void AphidPop::process_error(const arma::vec& apterous_Xt,
                              const double& z,
                              pcg32& eng) {
 
-    apterous.process_error(z, sigma_x, rho, demog_mult, norm_distr, eng);
-    alates.process_error(z, sigma_x, rho, demog_mult, norm_distr, eng);
-    paras.process_error(z, sigma_x, rho, demog_mult, norm_distr, eng);
+    apterous.process_error(z, sigma_x, rho, demog_error, norm_distr, eng);
+    alates.process_error(z, sigma_x, rho, demog_error, norm_distr, eng);
+    paras.process_error(z, sigma_x, rho, demog_error, norm_distr, eng);
 
     /*
      Because we used normal distributions to approximate demographic and environmental

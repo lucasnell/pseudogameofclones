@@ -199,7 +199,7 @@ simulate the cages we are using for experiments.
 
 For their simulations, Meisner et al. (2014) multiplied the original estimated 
 values of `sigma_x` and `sigma_y` by half to "emphasize the demographic 
-stochasticity".
+stochasticity" (p 469).
 The values below are the original estimated values, not those used for their 
 simulations.
 
@@ -210,8 +210,7 @@ simulations.
 ```{r process_error}
 environ[["sigma_x"]] <- 0.44
 environ[["sigma_y"]] <- 0.70
-environ[["rho"]] <- signif(
-    2/(1+exp(-environ[["sigma_y"]]))-1, 2)
+environ[["rho"]] <- signif(2/(1+exp(-environ[["sigma_y"]]))-1, 2)
 ```
 
 

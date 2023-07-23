@@ -151,7 +151,7 @@ public:
      */
     OnePlant(const double& sigma_x,
              const double& rho,
-             const double& demog_mult,
+             const bool& demog_error,
              const arma::mat& attack_surv_,
              const double& K_,
              const double& K_y_,
@@ -192,7 +192,7 @@ public:
         aphids.reserve(n_lines);
 
         for (uint32 i = 0; i < n_lines; i++) {
-            AphidPop ap(aphid_name[i], sigma_x, rho, demog_mult,
+            AphidPop ap(aphid_name[i], sigma_x, rho, demog_error,
                         attack_surv_.col(i),
                         leslie_mat[i], aphid_density_0.slice(i),
                         alate_b0[i], alate_b1[i], alate_plant_disp_p[i],
@@ -461,7 +461,7 @@ public:
     OneField(const double& sigma_x,
                const double& sigma_y,
                const double& rho,
-               const double& demog_mult,
+               const bool& demog_error,
                const double& mean_K,
                const double& sd_K,
                const double& K_y_mult_,
@@ -538,7 +538,7 @@ public:
         for (uint32 j = 0; j < n_plants; j++) {
             set_K(K, K_y, eng);
             set_wilted_mort(wilted_mort, eng);
-            OnePlant ap(sigma_x, rho, demog_mult, attack_surv_,
+            OnePlant ap(sigma_x, rho, demog_error, attack_surv_,
                         K, K_y, wilted_prop, wilted_mort,
                         aphid_name, leslie_mat,
                         aphid_density_0[j], alate_b0, alate_b1,
@@ -794,7 +794,7 @@ public:
               const double& sigma_x,
               const double& sigma_y,
               const double& rho,
-              const double& demog_mult,
+              const bool& demog_error,
               const double& mean_K,
               const double& sd_K,
               const std::vector<double>& K_y_mult,
@@ -837,7 +837,7 @@ public:
           wasp_disp_m0(wasp_disp_m0_),
           wasp_disp_m1(wasp_disp_m1_),
           disp_error(disp_error_),
-          process_error((sigma_x > 0) || (sigma_y > 0)),
+          process_error(demog_error || (sigma_x > 0) || (sigma_y > 0)),
           extinct_N(extinct_N_),
           total_stages(0) {
 
@@ -846,7 +846,7 @@ public:
         fields.reserve(n_fields);
         for (uint32 i = 0; i < n_fields; i++) {
             fields.push_back(
-                OneField(sigma_x, sigma_y, rho, demog_mult,
+                OneField(sigma_x, sigma_y, rho, demog_error,
                          mean_K, sd_K, K_y_mult[i],
                          wilted_prop, shape1_wilted_mort, shape2_wilted_mort,
                          attack_surv, aphid_name, leslie_mat, aphid_density_0,

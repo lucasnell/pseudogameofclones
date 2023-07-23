@@ -78,7 +78,7 @@ public:
     void process_error(const double& z,
                        const double& sigma_x,
                        const double& rho,
-                       const double& demog_mult,
+                       const bool& demog_error,
                        std::normal_distribution<double>& norm_distr,
                        pcg32& eng);
 
@@ -207,8 +207,8 @@ public:
 class AphidPop {
 
     double sigma_x;          // environmental standard deviation for aphids
-    double rho;            // environmental correlation among instars
-    double demog_mult;     // multiplier for demographic stochasticity
+    double rho;              // environmental correlation among instars
+    bool demog_error;        // whether to include demographic stochasticity
     /*
      Vector of length 2 with survival rates of singly & multiply attacked
      aphids, respectively:
@@ -246,14 +246,14 @@ public:
      Constructors.
      */
     AphidPop()
-        : sigma_x(0), rho(0), demog_mult(0), attack_surv(2, arma::fill::zeros),
+        : sigma_x(0), rho(0), demog_error(false), attack_surv(2, arma::fill::zeros),
           aphid_name(""), apterous(), alates(), paras(), extinct(false) {};
 
     // Make sure `leslie_mat` has 3 slices and `aphid_density_0` has two columns!
     AphidPop(const std::string& aphid_name_,
              const double& sigma_x_,
              const double& rho_,
-             const double& demog_mult_,
+             const bool& demog_error_,
              const arma::vec& attack_surv_,
              const arma::cube& leslie_mat,
              const arma::mat& aphid_density_0,
@@ -265,7 +265,7 @@ public:
              const uint32& living_days)
         : sigma_x(sigma_x_),
           rho(rho_),
-          demog_mult(demog_mult_),
+          demog_error(demog_error_),
           attack_surv(attack_surv_),
           aphid_name(aphid_name_),
           apterous(leslie_mat.slice(0), aphid_density_0.col(0), alate_b0, alate_b1),
@@ -277,7 +277,7 @@ public:
     AphidPop(const AphidPop& other)
         : sigma_x(other.sigma_x),
           rho(other.rho),
-          demog_mult(other.demog_mult),
+          demog_error(other.demog_error),
           attack_surv(other.attack_surv),
           norm_distr(other.norm_distr),
           pois_distr(other.pois_distr),
@@ -292,7 +292,7 @@ public:
 
         sigma_x = other.sigma_x;
         rho = other.rho;
-        demog_mult = other.demog_mult;
+        demog_error = other.demog_error;
         attack_surv = other.attack_surv;
         norm_distr = other.norm_distr;
         pois_distr = other.pois_distr;

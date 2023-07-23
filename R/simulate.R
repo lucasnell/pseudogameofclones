@@ -584,10 +584,9 @@ sim_gameofclones_full <- function(n_reps,
         wilted_effects_error <- FALSE
     }
     if (!environ_error) {
-        demog_error <- FALSE
         sigma_x <- 0
         sigma_y <- 0
-    } else demog_error <- TRUE
+    }
     if (!plant_K_error) sd_K <- 0
 
     if (!wilted_effects_error) {
@@ -910,8 +909,14 @@ sim_experiments <- function(clonal_lines,
                             plant_check_gaps = 1,
                             max_plant_age = 0,
                             clear_surv = 0,
+                            demog_error = FALSE,
+                            environ_error = FALSE,
+                            sigma_x = environ$sigma_x,
+                            sigma_y = environ$sigma_y,
+                            rho = environ$rho,
                             show_progress = FALSE) {
 
+    no_error <- !(demog_error || environ_error)
 
     sims <- sim_gameofclones_full(clonal_lines = clonal_lines,
                                n_fields = n_fields,
@@ -939,22 +944,23 @@ sim_experiments <- function(clonal_lines,
                                extinct_N = extinct_N,
                                save_every = save_every,
                                perturb = perturb,
+                               no_error = no_error,
+                               demog_error = demog_error,
+                               environ_error = environ_error,
+                               sigma_x = sigma_x,
+                               sigma_y = sigma_y,
+                               rho = rho,
                                show_progress = show_progress,
                                # Things not changeable in this simpler version:
                                n_reps = 1,
                                n_plants = 1,
                                max_N = 0,
                                temp = "low",
-                               no_error = TRUE,
                                disp_error = FALSE,
-                               environ_error = FALSE,
                                plant_K_error = FALSE,
                                wilted_effects_error = FALSE,
-                               sigma_x = environ$sigma_x,
-                               sigma_y = environ$sigma_y,
                                sd_K = 0,
                                wilted_prop = 1.1,
-                               rho = environ$rho,
                                sex_ratio = populations$sex_ratio,
                                mum_density_0 = 0,
                                max_mum_density = 0,
@@ -967,6 +973,7 @@ sim_experiments <- function(clonal_lines,
     # Adjusting for different name from `sim_gameofclones_full`:
     sims$call[["K"]] <- sims$call[["mean_K"]]
     sims$call[["mean_K"]] <- NULL
+    sims$call[["no_error"]] <- no_error
 
     return(sims)
 

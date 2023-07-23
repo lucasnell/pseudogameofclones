@@ -841,12 +841,10 @@ List sim_gameofclones_cpp(const uint32& n_reps,
     XPtr<std::vector<AllFields>> all_fields_vec_xptr(
             new std::vector<AllFields>(n_reps), true);
     std::vector<AllFields>& all_fields_vec(*all_fields_vec_xptr);
-    // Only allowing 0 or 1 as multiplier of demographic stochasticity:
-    double demog_mult = (demog_error) ? 1 : 0;
     // Fill in first AllFields object, then copy that to the rest:
     all_fields_vec[0] = AllFields(
         n_fields, max_plant_age, max_N, wasp_delay,
-        sigma_x, sigma_y, rho, demog_mult,
+        sigma_x, sigma_y, rho, demog_error,
         mean_K, sd_K, K_y_mult, wilted_prop,
         shape1_wilted_mort, shape2_wilted_mort, attack_surv,
         aphid_name, leslie_mat, aphid_density_0,
