@@ -31,6 +31,11 @@ sim_experiments(
   plant_check_gaps = 1,
   max_plant_age = 0,
   clear_surv = 0,
+  demog_error = FALSE,
+  environ_error = FALSE,
+  sigma_x = environ$sigma_x,
+  sigma_y = environ$sigma_y,
+  rho = environ$rho,
   show_progress = FALSE
 )
 }
