@@ -677,6 +677,7 @@ void AllFields::set_new_pars(const double& K_,
                              const double& h_,
                              const double& wasp_disp_m0_,
                              const double& wasp_disp_m1_,
+                             const std::vector<double>& wasp_field_attract_,
                              const double& mum_smooth_,
                              const std::vector<double>& pred_rate_,
                              const uint32& max_plant_age_,
@@ -685,6 +686,12 @@ void AllFields::set_new_pars(const double& K_,
     this->alate_field_disp_p = alate_field_disp_p_;
     this->wasp_disp_m0 = wasp_disp_m0_;
     this->wasp_disp_m1 = wasp_disp_m1_;
+    this->wasp_field_attract = wasp_field_attract_;
+    //' Make sure `wasp_field_attract` sums to 1 (negative values
+    //' and a sum <= 0 are already checked for in sim_gameofclones_cpp):
+    double wfa_sum = std::accumulate(wasp_field_attract.begin(),
+                                     wasp_field_attract.end(), 0.0);
+    for (double& x : wasp_field_attract) x /= wfa_sum;
     this->max_age = max_plant_age_;
     this->clear_surv = clear_surv_;
 

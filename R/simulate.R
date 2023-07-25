@@ -538,6 +538,7 @@ sim_gameofclones_full <- function(n_reps,
                                wasp_delay = 8,
                                wasp_disp_m0 = 0,
                                wasp_disp_m1 = 0,
+                               wasp_field_attract = 1,
                                sex_ratio = populations$sex_ratio,
                                s_y = populations$s_y,
                                constant_wasps = FALSE,
@@ -611,6 +612,10 @@ sim_gameofclones_full <- function(n_reps,
     if (length(constant_wasps) == 1) constant_wasps <- rep(constant_wasps,
                                                            n_fields)
     if (length(wasp_delay) == 1) wasp_delay <- rep(wasp_delay, n_fields)
+    stopifnot(is.numeric(wasp_field_attract))
+    if (length(wasp_field_attract) == 1) {
+        wasp_field_attract <- rep(1 / n_fields, n_fields)
+    }
 
     stopifnot(length(rel_attack) == 5)
 
@@ -709,6 +714,8 @@ sim_gameofclones_full <- function(n_reps,
     dbl_check(wasp_disp_m1, "wasp_disp_m1")
     dbl_check(sex_ratio, "sex_ratio")
     dbl_vec_check(s_y, "s_y")
+    dbl_vec_check(wasp_field_attract, "wasp_field_attract", .min = 0)
+    stopifnot(sum(wasp_field_attract) > 0)
     stopifnot(inherits(constant_wasps, "logical"))
     uint_check(n_threads, "n_threads", .min = 1)
     stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
@@ -729,7 +736,7 @@ sim_gameofclones_full <- function(n_reps,
                               mum_density_0, mum_smooth, max_mum_density,
                               rel_attack, a, k, h,
                               wasp_density_0, wasp_delay,
-                              wasp_disp_m0, wasp_disp_m1,
+                              wasp_disp_m0, wasp_disp_m1, wasp_field_attract,
                               sex_ratio, s_y, constant_wasps,
                               perturb_list$when, perturb_list$where,
                               perturb_list$who, perturb_list$how,
@@ -830,6 +837,17 @@ sim_gameofclones_full <- function(n_reps,
 #'     Emigration is `wasp_disp_m0 * exp(-wasp_disp_m1 * z)`, where `z` is
 #'     the total number of living aphids in the patch.
 #'     Defaults to `0`.
+#' @param wasp_field_attract Relatively attractiveness of fields to wasps.
+#'     This affects the proportion of wasps that immigrate from the dispersal
+#'     pool to each field.
+#'     It doesn't change the number of wasps that leave fields.
+#'     This can be a single numeric or a numeric vector of length `n_fields`.
+#'     If a single numeric is provided, all fields are equally attractive
+#'     to wasps.
+#'     If a vector is provided, then the vector is divided by its sum
+#'     (to make it sum to 1), then those values are used as the proportion of
+#'     wasps from the dispersal pool that immigrate to each field.
+#'     Defaults to `1`.
 #' @param constant_wasps Logical for whether to keep adult wasps at the same
 #'     density throughout simulations.
 #'     This can be a single logical or a `n_fields`-length vector.
@@ -901,6 +919,7 @@ sim_experiments <- function(clonal_lines,
                             wasp_delay = 8,
                             wasp_disp_m0 = 0,
                             wasp_disp_m1 = 0,
+                            wasp_field_attract = 1,
                             constant_wasps = FALSE,
                             mum_smooth = 0.4,
                             pred_rate = 0.1,
@@ -1057,6 +1076,7 @@ restart_experiment <- function(sims_obj,
                                h = NULL,
                                wasp_disp_m0 = NULL,
                                wasp_disp_m1 = NULL,
+                               wasp_field_attract = NULL,
                                mum_smooth = NULL,
                                pred_rate = NULL,
                                plant_check_gaps = NULL,
@@ -1148,6 +1168,9 @@ restart_experiment <- function(sims_obj,
     if (is.null(h)) h <- sims_obj$call[["h"]]
     if (is.null(wasp_disp_m0)) wasp_disp_m0 <- sims_obj$call[["wasp_disp_m0"]]
     if (is.null(wasp_disp_m1)) wasp_disp_m1 <- sims_obj$call[["wasp_disp_m1"]]
+    if (is.null(wasp_field_attract)) {
+        wasp_field_attract <- sims_obj$call[["wasp_field_attract"]]
+    }
     if (is.null(mum_smooth)) mum_smooth <- sims_obj$call[["mum_smooth"]]
     if (is.null(pred_rate)) pred_rate <- sims_obj$call[["pred_rate"]]
     if (is.null(plant_check_gaps)) plant_check_gaps <-
@@ -1171,6 +1194,7 @@ restart_experiment <- function(sims_obj,
     stopifnot(!is.null(h))
     stopifnot(!is.null(wasp_disp_m0))
     stopifnot(!is.null(wasp_disp_m1))
+    stopifnot(!is.null(wasp_field_attract))
     stopifnot(!is.null(mum_smooth))
     stopifnot(!is.null(pred_rate))
     stopifnot(!is.null(plant_check_gaps))
@@ -1191,6 +1215,10 @@ restart_experiment <- function(sims_obj,
     if (length(alate_b1) == 1) alate_b1 <- rep(alate_b1, n_lines)
     if (length(K_y_mult) == 1) K_y_mult <- rep(K_y_mult, n_fields)
     if (length(s_y) == 1) s_y <- rep(s_y, n_fields)
+    stopifnot(is.numeric(wasp_field_attract))
+    if (length(wasp_field_attract) == 1) {
+        wasp_field_attract <- rep(1, n_fields)
+    }
 
     stopifnot(inherits(no_warns, "logical") && length(no_warns) == 1)
     if (!no_warns && !is.null(sims_obj$call$perturb) && is.null(perturb)) {
@@ -1224,6 +1252,8 @@ restart_experiment <- function(sims_obj,
     dbl_check(h, "h", .min = 0)
     dbl_check(wasp_disp_m0, "wasp_disp_m0", .min = 0, .max = 1)
     dbl_check(wasp_disp_m1, "wasp_disp_m1")
+    dbl_vec_check(wasp_field_attract, "wasp_field_attract", .min = 0)
+    stopifnot(sum(wasp_field_attract) > 0)
     dbl_check(mum_smooth, "mum_smooth", .min = 0, .max = 1)
     dbl_vec_check(pred_rate, "pred_rate", .min = 0, .max = 1)
     uint_vec_check(check_for_clear, "check_for_clear")
@@ -1240,6 +1270,7 @@ restart_experiment <- function(sims_obj,
                                                  alate_field_disp_p, K_y_mult,
                                                  s_y, a, k, h,
                                                  wasp_disp_m0, wasp_disp_m1,
+                                                 wasp_field_attract,
                                                  mum_smooth, pred_rate,
                                                  max_plant_age, clear_surv)
     # Now fill in abundances if they were input:

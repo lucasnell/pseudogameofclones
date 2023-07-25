@@ -21,6 +21,7 @@ restart_experiment(
   h = NULL,
   wasp_disp_m0 = NULL,
   wasp_disp_m1 = NULL,
+  wasp_field_attract = NULL,
   mum_smooth = NULL,
   pred_rate = NULL,
   plant_check_gaps = NULL,
@@ -101,6 +102,18 @@ Defaults to \code{0}.}
 Emigration is \code{wasp_disp_m0 * exp(-wasp_disp_m1 * z)}, where \code{z} is
 the total number of living aphids in the patch.
 Defaults to \code{0}.}
+
+\item{wasp_field_attract}{Relatively attractiveness of fields to wasps.
+This affects the proportion of wasps that immigrate from the dispersal
+pool to each field.
+It doesn't change the number of wasps that leave fields.
+This can be a single numeric or a numeric vector of length \code{n_fields}.
+If a single numeric is provided, all fields are equally attractive
+to wasps.
+If a vector is provided, then the vector is divided by its sum
+(to make it sum to 1), then those values are used as the proportion of
+wasps from the dispersal pool that immigrate to each field.
+Defaults to \code{1}.}
 
 \item{mum_smooth}{Proportion of mummies that will NOT take exactly 3 days
 to develop. As this value approaches 2/3, it will provide greater

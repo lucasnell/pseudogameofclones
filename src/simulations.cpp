@@ -552,6 +552,7 @@ void check_args(const uint32& n_reps,
                 const std::vector<uint32>& wasp_delay,
                 const double& wasp_disp_m0,
                 const double& wasp_disp_m1,
+                const std::vector<double>& wasp_field_attract,
                 const double& sex_ratio,
                 const std::vector<double>& s_y,
                 const std::vector<bool>& constant_wasps,
@@ -655,6 +656,9 @@ void check_args(const uint32& n_reps,
     if (wasp_delay.size() != n_fields) {
         stop("\nERROR: wasp_delay.size() != n_fields\n");
     }
+    if (wasp_field_attract.size() != n_fields) {
+        stop("\nERROR: wasp_field_attract.size() != n_fields\n");
+    }
     if (s_y.size() != n_fields) {
         stop("\nERROR: s_y.size() != n_fields\n");
     }
@@ -721,6 +725,7 @@ void check_args(const uint32& n_reps,
     negative_check<arma::mat>(mum_density_0, "mum_density_0");
     negative_check<arma::vec>(rel_attack, "rel_attack");
     negative_check<std::vector<double>>(wasp_density_0, "wasp_density_0");
+    negative_check<std::vector<double>>(wasp_field_attract, "wasp_field_attract");
 
 
     // doubles / double vectors that must be >= 0 and <= 1
@@ -744,6 +749,13 @@ void check_args(const uint32& n_reps,
     one_positive_check(max_t, "max_t");
     positive_check<std::vector<uint32>>(living_days, "living_days");
 
+    // This vector can have zeros, but can't have all zeros:
+    double wfa_sum = std::accumulate(wasp_field_attract.begin(),
+                                     wasp_field_attract.end(), 0.0);
+    if (wfa_sum <= 0) {
+        std::string msg = "\nERROR: wasp_field_attract sums to <= 0.\n";
+        stop(msg.c_str());
+    }
 
     return;
 }
@@ -796,6 +808,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                        const std::vector<uint32>& wasp_delay,
                        const double& wasp_disp_m0,
                        const double& wasp_disp_m1,
+                       const std::vector<double>& wasp_field_attract,
                        const double& sex_ratio,
                        const std::vector<double>& s_y,
                        const std::vector<bool>& constant_wasps,
@@ -820,6 +833,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                alate_plant_disp_p, disp_mort, disp_start, living_days,
                pred_rate, mum_density_0, mum_smooth, rel_attack, a, k, h,
                wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1,
+               wasp_field_attract,
                sex_ratio, s_y, constant_wasps,
                perturb_when, perturb_where, perturb_who, perturb_how, n_threads);
 
@@ -853,7 +867,8 @@ List sim_gameofclones_cpp(const uint32& n_reps,
         mum_density_0, mum_smooth, max_mum_density,
         rel_attack, a, k, h, wasp_density_0, sex_ratio,
         s_y, constant_wasps,
-        clear_surv, alate_field_disp_p, wasp_disp_m0, wasp_disp_m1, seeds[0]);
+        clear_surv, alate_field_disp_p, wasp_disp_m0, wasp_disp_m1,
+        wasp_field_attract, seeds[0]);
     for (uint32 i = 1; i < n_reps; i++){
         all_fields_vec[i] = all_fields_vec[0];
         all_fields_vec[i].reseed(seeds[i]);
@@ -946,6 +961,7 @@ SEXP restart_fill_other_pars(SEXP all_fields_in_ptr,
                              const double& h,
                              const double& wasp_disp_m0,
                              const double& wasp_disp_m1,
+                             const std::vector<double>& wasp_field_attract,
                              const double& mum_smooth,
                              const std::vector<double>& pred_rate,
                              const uint32& max_plant_age,
@@ -986,11 +1002,22 @@ SEXP restart_fill_other_pars(SEXP all_fields_in_ptr,
     if (pred_rate.size() != n_fields) {
         stop("\nERROR: pred_rate.size() != n_fields\n");
     }
+    if (wasp_field_attract.size() != n_fields) {
+        stop("\nERROR: wasp_field_attract.size() != n_fields\n");
+    }
+    // This vector can have zeros, but can't have all zeros:
+    double wfa_sum = std::accumulate(wasp_field_attract.begin(),
+                                     wasp_field_attract.end(), 0.0);
+    if (wfa_sum <= 0) {
+        std::string msg = "\nERROR: wasp_field_attract sums to <= 0.\n";
+        stop(msg.c_str());
+    }
 
     for (AllFields& fields : all_fields_vec) {
 
         fields.set_new_pars(K, alate_b0, alate_b1, alate_field_disp_p,
                             K_y_mult, s_y, a, k, h, wasp_disp_m0, wasp_disp_m1,
+                            wasp_field_attract,
                             mum_smooth, pred_rate, max_plant_age, clear_surv);
 
     }

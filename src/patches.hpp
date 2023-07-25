@@ -745,6 +745,7 @@ public:
     double alate_field_disp_p;
     double wasp_disp_m0;
     double wasp_disp_m1;
+    std::vector<double> wasp_field_attract;
     bool disp_error;
     bool process_error;
     double extinct_N;
@@ -755,6 +756,7 @@ public:
     AllFields()
         : eng(), max_age(), max_N(), fields(), clear_surv(),
           alate_field_disp_p(), wasp_disp_m0(), wasp_disp_m1(),
+          wasp_field_attract(),
           disp_error(), process_error(), extinct_N(), total_stages() {};
 
     AllFields(const AllFields& other)
@@ -765,6 +767,7 @@ public:
           alate_field_disp_p(other.alate_field_disp_p),
           wasp_disp_m0(other.wasp_disp_m0),
           wasp_disp_m1(other.wasp_disp_m1),
+          wasp_field_attract(other.wasp_field_attract),
           disp_error(other.disp_error),
           process_error(other.process_error),
           extinct_N(other.extinct_N),
@@ -779,6 +782,7 @@ public:
         alate_field_disp_p = other.alate_field_disp_p;
         wasp_disp_m0 = other.wasp_disp_m0;
         wasp_disp_m1 = other.wasp_disp_m1;
+        wasp_field_attract = other.wasp_field_attract;
         disp_error = other.disp_error;
         process_error = other.process_error;
         extinct_N = other.extinct_N;
@@ -829,6 +833,7 @@ public:
               const double& alate_field_disp_p_,
               const double& wasp_disp_m0_,
               const double& wasp_disp_m1_,
+              const std::vector<double>& wasp_field_attract_,
               const std::vector<uint64>& seeds)
         : eng(), max_age(max_age_), max_N(max_N_),
           fields(),
@@ -836,12 +841,19 @@ public:
           alate_field_disp_p(alate_field_disp_p_),
           wasp_disp_m0(wasp_disp_m0_),
           wasp_disp_m1(wasp_disp_m1_),
+          wasp_field_attract(wasp_field_attract_),
           disp_error(disp_error_),
           process_error(demog_error || (sigma_x > 0) || (sigma_y > 0)),
           extinct_N(extinct_N_),
           total_stages(0) {
 
         seed_pcg(eng, seeds);
+
+        //' Make sure `wasp_field_attract` sums to 1 (negative values
+        //' and a sum <= 0 are already checked for in sim_gameofclones_cpp):
+        double wfa_sum = std::accumulate(wasp_field_attract.begin(),
+                                         wasp_field_attract.end(), 0.0);
+        for (double& x : wasp_field_attract) x /= wfa_sum;
 
         fields.reserve(n_fields);
         for (uint32 i = 0; i < n_fields; i++) {
@@ -924,14 +936,13 @@ public:
                 }
             } else {
                 for (OneField& field : fields) {
-                    from_wasp_pool += field.wasps.Y;
+                    from_wasp_pool += (field.wasps.Y * wasp_disp_m0);
                     field.wasps.Y *= (1 - wasp_disp_m0);
                 }
-                from_wasp_pool *= wasp_disp_m0;
             }
-            from_wasp_pool /= static_cast<double>(fields.size());
-            for (OneField& field : fields) {
-                field.wasps.Y += from_wasp_pool;
+            for (uint32 i = 0; i < fields.size(); i++) {
+                OneField& field(fields[i]);
+                field.wasps.Y += (from_wasp_pool * wasp_field_attract[i]);
             }
         }
         return;
@@ -969,6 +980,7 @@ public:
                       const double& h_,
                       const double& wasp_disp_m0_,
                       const double& wasp_disp_m1_,
+                      const std::vector<double>& wasp_field_attract_,
                       const double& mum_smooth_,
                       const std::vector<double>& pred_rate_,
                       const uint32& max_plant_age_,

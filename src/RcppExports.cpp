@@ -109,8 +109,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // sim_gameofclones_cpp
-List sim_gameofclones_cpp(const uint32& n_reps, const uint32& n_fields, const uint32& max_plant_age, const double& max_N, const std::deque<uint32>& check_for_clear, const double& clear_surv, const uint32& max_t, const uint32& save_every, const double& mean_K, const double& sd_K, const std::vector<double>& K_y_mult, const double& wilted_prop, const double& shape1_wilted_mort, const double& shape2_wilted_mort, const arma::mat& attack_surv, const bool& disp_error, const bool& demog_error, const double& sigma_x, const double& sigma_y, const double& rho, const double& extinct_N, const std::vector<std::string>& aphid_name, const std::vector<arma::cube>& leslie_mat, const std::vector<arma::cube>& aphid_density_0, const std::vector<double>& alate_b0, const std::vector<double>& alate_b1, const double& alate_field_disp_p, const std::vector<double>& alate_plant_disp_p, const std::vector<double>& disp_mort, const std::vector<uint32>& disp_start, const std::vector<uint32>& living_days, const std::vector<double>& pred_rate, const arma::mat& mum_density_0, const double& mum_smooth, const double& max_mum_density, const arma::vec& rel_attack, const double& a, const double& k, const double& h, const std::vector<double>& wasp_density_0, const std::vector<uint32>& wasp_delay, const double& wasp_disp_m0, const double& wasp_disp_m1, const double& sex_ratio, const std::vector<double>& s_y, const std::vector<bool>& constant_wasps, const std::vector<uint32>& perturb_when, const std::vector<uint32>& perturb_where, const std::vector<uint32>& perturb_who, const std::vector<double>& perturb_how, uint32 n_threads, const bool& show_progress);
-RcppExport SEXP _gameofclones_sim_gameofclones_cpp(SEXP n_repsSEXP, SEXP n_fieldsSEXP, SEXP max_plant_ageSEXP, SEXP max_NSEXP, SEXP check_for_clearSEXP, SEXP clear_survSEXP, SEXP max_tSEXP, SEXP save_everySEXP, SEXP mean_KSEXP, SEXP sd_KSEXP, SEXP K_y_multSEXP, SEXP wilted_propSEXP, SEXP shape1_wilted_mortSEXP, SEXP shape2_wilted_mortSEXP, SEXP attack_survSEXP, SEXP disp_errorSEXP, SEXP demog_errorSEXP, SEXP sigma_xSEXP, SEXP sigma_ySEXP, SEXP rhoSEXP, SEXP extinct_NSEXP, SEXP aphid_nameSEXP, SEXP leslie_matSEXP, SEXP aphid_density_0SEXP, SEXP alate_b0SEXP, SEXP alate_b1SEXP, SEXP alate_field_disp_pSEXP, SEXP alate_plant_disp_pSEXP, SEXP disp_mortSEXP, SEXP disp_startSEXP, SEXP living_daysSEXP, SEXP pred_rateSEXP, SEXP mum_density_0SEXP, SEXP mum_smoothSEXP, SEXP max_mum_densitySEXP, SEXP rel_attackSEXP, SEXP aSEXP, SEXP kSEXP, SEXP hSEXP, SEXP wasp_density_0SEXP, SEXP wasp_delaySEXP, SEXP wasp_disp_m0SEXP, SEXP wasp_disp_m1SEXP, SEXP sex_ratioSEXP, SEXP s_ySEXP, SEXP constant_waspsSEXP, SEXP perturb_whenSEXP, SEXP perturb_whereSEXP, SEXP perturb_whoSEXP, SEXP perturb_howSEXP, SEXP n_threadsSEXP, SEXP show_progressSEXP) {
+List sim_gameofclones_cpp(const uint32& n_reps, const uint32& n_fields, const uint32& max_plant_age, const double& max_N, const std::deque<uint32>& check_for_clear, const double& clear_surv, const uint32& max_t, const uint32& save_every, const double& mean_K, const double& sd_K, const std::vector<double>& K_y_mult, const double& wilted_prop, const double& shape1_wilted_mort, const double& shape2_wilted_mort, const arma::mat& attack_surv, const bool& disp_error, const bool& demog_error, const double& sigma_x, const double& sigma_y, const double& rho, const double& extinct_N, const std::vector<std::string>& aphid_name, const std::vector<arma::cube>& leslie_mat, const std::vector<arma::cube>& aphid_density_0, const std::vector<double>& alate_b0, const std::vector<double>& alate_b1, const double& alate_field_disp_p, const std::vector<double>& alate_plant_disp_p, const std::vector<double>& disp_mort, const std::vector<uint32>& disp_start, const std::vector<uint32>& living_days, const std::vector<double>& pred_rate, const arma::mat& mum_density_0, const double& mum_smooth, const double& max_mum_density, const arma::vec& rel_attack, const double& a, const double& k, const double& h, const std::vector<double>& wasp_density_0, const std::vector<uint32>& wasp_delay, const double& wasp_disp_m0, const double& wasp_disp_m1, const std::vector<double>& wasp_field_attract, const double& sex_ratio, const std::vector<double>& s_y, const std::vector<bool>& constant_wasps, const std::vector<uint32>& perturb_when, const std::vector<uint32>& perturb_where, const std::vector<uint32>& perturb_who, const std::vector<double>& perturb_how, uint32 n_threads, const bool& show_progress);
+RcppExport SEXP _gameofclones_sim_gameofclones_cpp(SEXP n_repsSEXP, SEXP n_fieldsSEXP, SEXP max_plant_ageSEXP, SEXP max_NSEXP, SEXP check_for_clearSEXP, SEXP clear_survSEXP, SEXP max_tSEXP, SEXP save_everySEXP, SEXP mean_KSEXP, SEXP sd_KSEXP, SEXP K_y_multSEXP, SEXP wilted_propSEXP, SEXP shape1_wilted_mortSEXP, SEXP shape2_wilted_mortSEXP, SEXP attack_survSEXP, SEXP disp_errorSEXP, SEXP demog_errorSEXP, SEXP sigma_xSEXP, SEXP sigma_ySEXP, SEXP rhoSEXP, SEXP extinct_NSEXP, SEXP aphid_nameSEXP, SEXP leslie_matSEXP, SEXP aphid_density_0SEXP, SEXP alate_b0SEXP, SEXP alate_b1SEXP, SEXP alate_field_disp_pSEXP, SEXP alate_plant_disp_pSEXP, SEXP disp_mortSEXP, SEXP disp_startSEXP, SEXP living_daysSEXP, SEXP pred_rateSEXP, SEXP mum_density_0SEXP, SEXP mum_smoothSEXP, SEXP max_mum_densitySEXP, SEXP rel_attackSEXP, SEXP aSEXP, SEXP kSEXP, SEXP hSEXP, SEXP wasp_density_0SEXP, SEXP wasp_delaySEXP, SEXP wasp_disp_m0SEXP, SEXP wasp_disp_m1SEXP, SEXP wasp_field_attractSEXP, SEXP sex_ratioSEXP, SEXP s_ySEXP, SEXP constant_waspsSEXP, SEXP perturb_whenSEXP, SEXP perturb_whereSEXP, SEXP perturb_whoSEXP, SEXP perturb_howSEXP, SEXP n_threadsSEXP, SEXP show_progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -157,6 +157,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const std::vector<uint32>& >::type wasp_delay(wasp_delaySEXP);
     Rcpp::traits::input_parameter< const double& >::type wasp_disp_m0(wasp_disp_m0SEXP);
     Rcpp::traits::input_parameter< const double& >::type wasp_disp_m1(wasp_disp_m1SEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type wasp_field_attract(wasp_field_attractSEXP);
     Rcpp::traits::input_parameter< const double& >::type sex_ratio(sex_ratioSEXP);
     Rcpp::traits::input_parameter< const std::vector<double>& >::type s_y(s_ySEXP);
     Rcpp::traits::input_parameter< const std::vector<bool>& >::type constant_wasps(constant_waspsSEXP);
@@ -166,13 +167,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const std::vector<double>& >::type perturb_how(perturb_howSEXP);
     Rcpp::traits::input_parameter< uint32 >::type n_threads(n_threadsSEXP);
     Rcpp::traits::input_parameter< const bool& >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(sim_gameofclones_cpp(n_reps, n_fields, max_plant_age, max_N, check_for_clear, clear_surv, max_t, save_every, mean_K, sd_K, K_y_mult, wilted_prop, shape1_wilted_mort, shape2_wilted_mort, attack_surv, disp_error, demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, alate_plant_disp_p, disp_mort, disp_start, living_days, pred_rate, mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h, wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, n_threads, show_progress));
+    rcpp_result_gen = Rcpp::wrap(sim_gameofclones_cpp(n_reps, n_fields, max_plant_age, max_N, check_for_clear, clear_surv, max_t, save_every, mean_K, sd_K, K_y_mult, wilted_prop, shape1_wilted_mort, shape2_wilted_mort, attack_surv, disp_error, demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, alate_plant_disp_p, disp_mort, disp_start, living_days, pred_rate, mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h, wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, n_threads, show_progress));
     return rcpp_result_gen;
 END_RCPP
 }
 // restart_fill_other_pars
-SEXP restart_fill_other_pars(SEXP all_fields_in_ptr, const double& K, const std::vector<double>& alate_b0, const std::vector<double>& alate_b1, const double& alate_field_disp_p, const std::vector<double>& K_y_mult, const std::vector<double>& s_y, const double& a, const double& k, const double& h, const double& wasp_disp_m0, const double& wasp_disp_m1, const double& mum_smooth, const std::vector<double>& pred_rate, const uint32& max_plant_age, const double& clear_surv);
-RcppExport SEXP _gameofclones_restart_fill_other_pars(SEXP all_fields_in_ptrSEXP, SEXP KSEXP, SEXP alate_b0SEXP, SEXP alate_b1SEXP, SEXP alate_field_disp_pSEXP, SEXP K_y_multSEXP, SEXP s_ySEXP, SEXP aSEXP, SEXP kSEXP, SEXP hSEXP, SEXP wasp_disp_m0SEXP, SEXP wasp_disp_m1SEXP, SEXP mum_smoothSEXP, SEXP pred_rateSEXP, SEXP max_plant_ageSEXP, SEXP clear_survSEXP) {
+SEXP restart_fill_other_pars(SEXP all_fields_in_ptr, const double& K, const std::vector<double>& alate_b0, const std::vector<double>& alate_b1, const double& alate_field_disp_p, const std::vector<double>& K_y_mult, const std::vector<double>& s_y, const double& a, const double& k, const double& h, const double& wasp_disp_m0, const double& wasp_disp_m1, const std::vector<double>& wasp_field_attract, const double& mum_smooth, const std::vector<double>& pred_rate, const uint32& max_plant_age, const double& clear_surv);
+RcppExport SEXP _gameofclones_restart_fill_other_pars(SEXP all_fields_in_ptrSEXP, SEXP KSEXP, SEXP alate_b0SEXP, SEXP alate_b1SEXP, SEXP alate_field_disp_pSEXP, SEXP K_y_multSEXP, SEXP s_ySEXP, SEXP aSEXP, SEXP kSEXP, SEXP hSEXP, SEXP wasp_disp_m0SEXP, SEXP wasp_disp_m1SEXP, SEXP wasp_field_attractSEXP, SEXP mum_smoothSEXP, SEXP pred_rateSEXP, SEXP max_plant_ageSEXP, SEXP clear_survSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -188,11 +189,12 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double& >::type h(hSEXP);
     Rcpp::traits::input_parameter< const double& >::type wasp_disp_m0(wasp_disp_m0SEXP);
     Rcpp::traits::input_parameter< const double& >::type wasp_disp_m1(wasp_disp_m1SEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type wasp_field_attract(wasp_field_attractSEXP);
     Rcpp::traits::input_parameter< const double& >::type mum_smooth(mum_smoothSEXP);
     Rcpp::traits::input_parameter< const std::vector<double>& >::type pred_rate(pred_rateSEXP);
     Rcpp::traits::input_parameter< const uint32& >::type max_plant_age(max_plant_ageSEXP);
     Rcpp::traits::input_parameter< const double& >::type clear_surv(clear_survSEXP);
-    rcpp_result_gen = Rcpp::wrap(restart_fill_other_pars(all_fields_in_ptr, K, alate_b0, alate_b1, alate_field_disp_p, K_y_mult, s_y, a, k, h, wasp_disp_m0, wasp_disp_m1, mum_smooth, pred_rate, max_plant_age, clear_surv));
+    rcpp_result_gen = Rcpp::wrap(restart_fill_other_pars(all_fields_in_ptr, K, alate_b0, alate_b1, alate_field_disp_p, K_y_mult, s_y, a, k, h, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, mum_smooth, pred_rate, max_plant_age, clear_surv));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -226,8 +228,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gameofclones_fields_to_list", (DL_FUNC) &_gameofclones_fields_to_list, 1},
     {"_gameofclones_fields_from_vectors", (DL_FUNC) &_gameofclones_fields_from_vectors, 2},
     {"_gameofclones_using_openmp", (DL_FUNC) &_gameofclones_using_openmp, 0},
-    {"_gameofclones_sim_gameofclones_cpp", (DL_FUNC) &_gameofclones_sim_gameofclones_cpp, 52},
-    {"_gameofclones_restart_fill_other_pars", (DL_FUNC) &_gameofclones_restart_fill_other_pars, 16},
+    {"_gameofclones_sim_gameofclones_cpp", (DL_FUNC) &_gameofclones_sim_gameofclones_cpp, 53},
+    {"_gameofclones_restart_fill_other_pars", (DL_FUNC) &_gameofclones_restart_fill_other_pars, 17},
     {"_gameofclones_restart_experiments_cpp", (DL_FUNC) &_gameofclones_restart_experiments_cpp, 10},
     {NULL, NULL, 0}
 };
