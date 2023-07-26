@@ -124,8 +124,10 @@ void OnePlant::update(const arma::cube& emigrants,
     for (uint32 i = 0; i < aphids.size(); i++) {
 
 
-        // Update population, including process error and dispersal.
-        // Also return # newly mummified from that line
+        /*
+         Update population, including dispersal and (optionally) process error.
+         Also return # newly mummified from that line
+         */
         nm += aphids[i].update(this, wasps, emigrants.slice(i).col(this_j),
                                immigrants.slice(i).col(this_j), eng);
 
@@ -152,48 +154,6 @@ void OnePlant::update(const arma::cube& emigrants,
     return;
 
 }
-// Same but minus stochasticity
-void OnePlant::update(const arma::cube& emigrants,
-                      const arma::cube& immigrants,
-                      const WaspPop* wasps) {
-
-    update_z_wilted();
-
-    S = 1 / (1 + z / K);
-    S_y = 1 / (1 + z / K_y);
-
-    empty = true;
-
-    double nm = 0; // newly mummified
-
-    for (uint32 i = 0; i < aphids.size(); i++) {
-
-        nm += aphids[i].update(this, wasps, emigrants.slice(i).col(this_j),
-                               immigrants.slice(i).col(this_j));
-
-        if (wilted_) {
-            aphids[i].apterous.X *= wilted_mort;
-            aphids[i].alates.X *= wilted_mort;
-            aphids[i].paras.X *= wilted_mort;
-        }
-
-        extinct_colonize(i);
-
-    }
-
-    mummies.update(pred_rate, nm);
-    double mums = arma::accu(mummies.Y);
-    if (mums < extinct_N) mummies.Y.fill(0);
-    if (max_mum_density > 0 && mums > max_mum_density) {
-        mummies.Y *= (max_mum_density / mums);
-    }
-
-    age++;
-
-    return;
-
-}
-
 
 
 
@@ -428,9 +388,7 @@ bool AllFields::update(const uint32& t,
             field.calc_dispersal(eng);
         } else field.calc_dispersal();
 
-        if (process_error) {
-            field.update(eng);
-        } else field.update();
+        field.update(eng);
 
         if (all_empty) {
             for (const OnePlant& p : field.plants) {

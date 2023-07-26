@@ -75,7 +75,7 @@ public:
     }
 
     // Add process error:
-    void process_error(const double& z,
+    void process_error(const arma::vec& Xt,
                        const double& sigma_x,
                        const double& rho,
                        const bool& demog_error,
@@ -229,7 +229,6 @@ class AphidPop {
     void process_error(const arma::vec& apterous_Xt,
                        const arma::vec& alates_Xt,
                        const arma::vec& paras_Xt,
-                       const double& z,
                        pcg32& eng);
 
 
@@ -375,11 +374,6 @@ public:
                   const arma::vec& emigrants,
                   const arma::vec& immigrants,
                   pcg32& eng);
-    // Same as above, but no randomness in alate production:
-    double update(const OnePlant* plant,
-                  const WaspPop* wasps,
-                  const arma::vec& emigrants,
-                  const arma::vec& immigrants);
 
 };
 

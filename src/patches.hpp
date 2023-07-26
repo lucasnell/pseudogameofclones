@@ -151,7 +151,7 @@ public:
      */
     OnePlant(const double& sigma_x,
              const double& rho,
-             const bool& demog_error,
+             const bool& aphid_demog_error,
              const arma::mat& attack_surv_,
              const double& K_,
              const double& K_y_,
@@ -192,7 +192,7 @@ public:
         aphids.reserve(n_lines);
 
         for (uint32 i = 0; i < n_lines; i++) {
-            AphidPop ap(aphid_name[i], sigma_x, rho, demog_error,
+            AphidPop ap(aphid_name[i], sigma_x, rho, aphid_demog_error,
                         attack_surv_.col(i),
                         leslie_mat[i], aphid_density_0.slice(i),
                         alate_b0[i], alate_b1[i], alate_plant_disp_p[i],
@@ -352,10 +352,6 @@ public:
                 const arma::cube& immigrants,
                 const WaspPop* wasps,
                 pcg32& eng);
-    // Same but minus stochasticity
-    void update(const arma::cube& emigrants,
-                const arma::cube& immigrants,
-                const WaspPop* wasps);
 
 
 };
@@ -461,7 +457,8 @@ public:
     OneField(const double& sigma_x,
                const double& sigma_y,
                const double& rho,
-               const bool& demog_error,
+               const bool& aphid_demog_error,
+               const bool& wasp_demog_error,
                const double& mean_K,
                const double& sd_K,
                const double& K_y_mult_,
@@ -504,7 +501,7 @@ public:
           constant_wasps(constant_wasps_),
           plants(),
           wasps(rel_attack_, a_, k_, h_, wasp_density_0_, wasp_delay_,
-                sex_ratio_, s_y_, sigma_y),
+                sex_ratio_, s_y_, sigma_y, wasp_demog_error),
           emigrants(),
           immigrants() {
 
@@ -538,7 +535,7 @@ public:
         for (uint32 j = 0; j < n_plants; j++) {
             set_K(K, K_y, eng);
             set_wilted_mort(wilted_mort, eng);
-            OnePlant ap(sigma_x, rho, demog_error, attack_surv_,
+            OnePlant ap(sigma_x, rho, aphid_demog_error, attack_surv_,
                         K, K_y, wilted_prop, wilted_mort,
                         aphid_name, leslie_mat,
                         aphid_density_0[j], alate_b0, alate_b1,
@@ -675,18 +672,6 @@ public:
         }
         return;
     }
-    inline void update() {
-        double old_mums;
-        set_wasp_info(old_mums);
-        for (OnePlant& p : plants) {
-            p.update(emigrants, immigrants, &wasps);
-        }
-        if (!constant_wasps) {
-            wasps.update(old_mums);
-            if (wasps.Y < extinct_N) wasps.Y = 0;
-        }
-        return;
-    }
 
 
     // Clear plants by either a maximum age or total abundance
@@ -747,7 +732,6 @@ public:
     double wasp_disp_m1;
     std::vector<double> wasp_field_attract;
     bool disp_error;
-    bool process_error;
     double extinct_N;
 
     // Total stages for all wasps, mummies, and aphids. Used for output.
@@ -757,7 +741,7 @@ public:
         : eng(), max_age(), max_N(), fields(), clear_surv(),
           alate_field_disp_p(), wasp_disp_m0(), wasp_disp_m1(),
           wasp_field_attract(),
-          disp_error(), process_error(), extinct_N(), total_stages() {};
+          disp_error(), extinct_N(), total_stages() {};
 
     AllFields(const AllFields& other)
         : eng(other.eng),
@@ -769,7 +753,6 @@ public:
           wasp_disp_m1(other.wasp_disp_m1),
           wasp_field_attract(other.wasp_field_attract),
           disp_error(other.disp_error),
-          process_error(other.process_error),
           extinct_N(other.extinct_N),
           total_stages(other.total_stages){};
 
@@ -784,7 +767,6 @@ public:
         wasp_disp_m1 = other.wasp_disp_m1;
         wasp_field_attract = other.wasp_field_attract;
         disp_error = other.disp_error;
-        process_error = other.process_error;
         extinct_N = other.extinct_N;
         total_stages = other.total_stages;
         return *this;
@@ -798,7 +780,8 @@ public:
               const double& sigma_x,
               const double& sigma_y,
               const double& rho,
-              const bool& demog_error,
+              const bool& aphid_demog_error,
+              const bool& wasp_demog_error,
               const double& mean_K,
               const double& sd_K,
               const std::vector<double>& K_y_mult,
@@ -843,7 +826,6 @@ public:
           wasp_disp_m1(wasp_disp_m1_),
           wasp_field_attract(wasp_field_attract_),
           disp_error(disp_error_),
-          process_error(demog_error || (sigma_x > 0) || (sigma_y > 0)),
           extinct_N(extinct_N_),
           total_stages(0) {
 
@@ -858,7 +840,7 @@ public:
         fields.reserve(n_fields);
         for (uint32 i = 0; i < n_fields; i++) {
             fields.push_back(
-                OneField(sigma_x, sigma_y, rho, demog_error,
+                OneField(sigma_x, sigma_y, rho, aphid_demog_error, wasp_demog_error,
                          mean_K, sd_K, K_y_mult[i],
                          wilted_prop, shape1_wilted_mort, shape2_wilted_mort,
                          attack_surv, aphid_name, leslie_mat, aphid_density_0,

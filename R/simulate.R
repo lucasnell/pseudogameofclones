@@ -429,13 +429,8 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #' @param temp A string indicating which temperature to simulate.
 #'     Options are `"low"` (20ºC) or `"high"` (27ºC).
 #'     Defaults to `"low"`.
-#' @param no_error Logical for whether to have no error at all.
-#'     This being `TRUE` overrides all other `_error` arguments.
-#'     Defaults to `TRUE`.
 #' @param disp_error Logical for whether to have stochasticity in the
 #'     dispersal process.
-#'     Defaults to `FALSE`.
-#' @param environ_error Logical for whether to have environmental stochasticity
 #'     Defaults to `FALSE`.
 #' @param plant_K_error Logical for whether to have stochasticity in aphid
 #'     density dependence across plants.
@@ -443,12 +438,6 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #' @param wilted_effects_error Logical for whether to have stochasticity in
 #'     the effects of plants dying on aphid populations.
 #'     Defaults to `FALSE`.
-#' @param sigma_x Standard deviation of environmental stochasticity for aphids.
-#'     Defaults to the internal object `environ$sigma_x`,
-#'     which is from Meisner et al. (2014).
-#' @param sigma_y Standard deviation of environmental stochasticity for wasps.
-#'     Defaults to the internal object `environ$sigma_y`,
-#'     which is from Meisner et al. (2014).
 #' @param mean_K Mean of the distribution of `K` values (affecting aphid
 #'     density dependence) among plants.
 #'     Defaults to `1 / 4.67e-4`, which is from Meisner et al. (2014).
@@ -457,8 +446,6 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #' @param wilted_prop Proportion of carrying capacity that causes the plant
 #'     to become wilted. Values > 1 cause this to be ignored.
 #'     Defaults to `1.1`.
-#' @param rho Environmental correlation among instars.
-#'     Defaults to `environ$rho`.
 #' @param sex_ratio Sex ratio of adult wasps. Defaults to `0.5`.
 #' @param mum_density_0 Starting mummy density. Defaults to `0`.
 #' @param max_mum_density Maximum mummy density (ignored if zero).
@@ -498,6 +485,22 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #'     (ignored otherwise).
 #'     Find out whether it's enabled using `gameofclones:::using_openmp()`.
 #'     Defaults to `1`.
+#' @param plant_check_gaps Gap(s) between when plants are check on.
+#'     This is used if you want to see what will happen if you can't check
+#'     on things every day in an experiment.
+#'     You could use `c(3, 4)` for checking twice per week, for example.
+#'     Note that this argument determines how often
+#'     (1) wasps and alates disperse across fields and
+#'     (2) plants are checked for exceeding `max_plant_age` or `max_N`.
+#'     So using this argument to simulate harvesting fields will also cause
+#'     wasp and alate dispersal to not occur daily.
+#'     Defaults to `1`.
+#' @param max_plant_age Age at which plants are cleared.
+#'     This can be useful to simulate harvesting fields.
+#'     Defaults to `0` which effectively turns this off.
+#' @param clear_surv Survival of aphids and mummies when a harvest occurs
+#'     (if harvesting is done via `plant_check_gaps`).
+#'     Defaults to `0`.
 #'
 #' @importFrom purrr map_dfr
 #' @importFrom dplyr as_tibble
@@ -518,10 +521,10 @@ sim_gameofclones_full <- function(n_reps,
                                clear_surv = 0,
                                max_N = 0,
                                temp = "low",
-                               no_error = TRUE,
                                disp_error = FALSE,
                                environ_error = FALSE,
-                               demog_error = FALSE,
+                               aphid_demog_error = FALSE,
+                               wasp_demog_error = FALSE,
                                plant_K_error = FALSE,
                                wilted_effects_error = FALSE,
                                sigma_x = environ$sigma_x,
@@ -579,12 +582,6 @@ sim_gameofclones_full <- function(n_reps,
     check_for_clear <- check_for_clear[check_for_clear <= max_t]
 
 
-    if (no_error) {
-        disp_error <- FALSE
-        environ_error <- FALSE
-        plant_K_error <- FALSE
-        wilted_effects_error <- FALSE
-    }
     if (!environ_error) {
         sigma_x <- 0
         sigma_y <- 0
@@ -685,7 +682,8 @@ sim_gameofclones_full <- function(n_reps,
     dbl_check(shape2_wilted_mort, "shape2_wilted_mort")
     dbl_mat_check(attack_surv, "attack_surv")
     stopifnot(inherits(disp_error, "logical") && length(disp_error) == 1)
-    stopifnot(inherits(demog_error, "logical") && length(demog_error) == 1)
+    stopifnot(inherits(aphid_demog_error, "logical") && length(aphid_demog_error) == 1)
+    stopifnot(inherits(wasp_demog_error, "logical") && length(wasp_demog_error) == 1)
     dbl_check(sigma_x, "sigma_x")
     dbl_check(sigma_y, "sigma_y")
     dbl_check(rho, "rho")
@@ -726,8 +724,9 @@ sim_gameofclones_full <- function(n_reps,
                               max_t, save_every, mean_K, sd_K, K_y_mult,
                               wilted_prop, shape1_wilted_mort,
                               shape2_wilted_mort,
-                              attack_surv, disp_error, demog_error, sigma_x,
-                              sigma_y, rho, extinct_N, aphid_names,
+                              attack_surv, disp_error,
+                              aphid_demog_error, wasp_demog_error,
+                              sigma_x, sigma_y, rho, extinct_N, aphid_names,
                               leslie_cubes,
                               aphid_density_0, alate_b0, alate_b1,
                               alate_field_disp_p,
@@ -879,22 +878,20 @@ sim_gameofclones_full <- function(n_reps,
 #'       still-living but parasitized aphids, too.
 #'     * `how`: Numbers `>= 0` that are multiplied by the desired population
 #'       to cause the perturbation.
-#' @param plant_check_gaps Gap(s) between when plants are check on.
-#'     This is used if you want to see what will happen if you can't check
-#'     on things every day in an experiment.
-#'     You could use `c(3, 4)` for checking twice per week, for example.
-#'     Note that this argument determines how often
-#'     (1) wasps and alates disperse across fields and
-#'     (2) plants are checked for exceeding `max_plant_age` or `max_N`.
-#'     So using this argument to simulate harvesting fields will also cause
-#'     wasp and alate dispersal to not occur daily.
-#'     Defaults to `1`.
-#' @param max_plant_age Age at which plants are cleared.
-#'     This can be useful to simulate harvesting fields.
-#'     Defaults to `0` which effectively turns this off.
-#' @param clear_surv Survival of aphids and mummies when a harvest occurs
-#'     (if harvesting is done via `plant_check_gaps`).
-#'     Defaults to `0`.
+#' @param aphid_demog_error Logical for whether to have demographic
+#'     stochasticity for aphids. Defaults to `FALSE`.
+#' @param wasp_demog_error Logical for whether to have demographic
+#'     stochasticity for wasps. Defaults to `FALSE`.
+#' @param environ_error Logical for whether to have environmental stochasticity
+#'     Defaults to `FALSE`.
+#' @param sigma_x Standard deviation of environmental stochasticity for aphids.
+#'     Defaults to the internal object `environ$sigma_x`,
+#'     which is from Meisner et al. (2014).
+#' @param sigma_y Standard deviation of environmental stochasticity for wasps.
+#'     Defaults to the internal object `environ$sigma_y`,
+#'     which is from Meisner et al. (2014).
+#' @param rho Environmental correlation among instars.
+#'     Defaults to `environ$rho`.
 #' @param show_progress Boolean for whether to show progress bar.
 #'     Defaults to `FALSE`.
 #'
@@ -926,24 +923,19 @@ sim_experiments <- function(clonal_lines,
                             extinct_N = 1,
                             save_every = 1,
                             perturb = NULL,
-                            plant_check_gaps = 1,
-                            max_plant_age = 0,
-                            clear_surv = 0,
-                            demog_error = FALSE,
+                            aphid_demog_error = FALSE,
+                            wasp_demog_error = FALSE,
                             environ_error = FALSE,
                             sigma_x = environ$sigma_x,
                             sigma_y = environ$sigma_y,
                             rho = environ$rho,
                             show_progress = FALSE) {
 
-    no_error <- !(demog_error || environ_error)
+
 
     sims <- sim_gameofclones_full(clonal_lines = clonal_lines,
                                n_fields = n_fields,
                                max_t = max_t,
-                               plant_check_gaps = plant_check_gaps,
-                               max_plant_age = max_plant_age,
-                               clear_surv = clear_surv,
                                mean_K = K,
                                K_y_mult = K_y_mult,
                                a = a,
@@ -964,23 +956,33 @@ sim_experiments <- function(clonal_lines,
                                extinct_N = extinct_N,
                                save_every = save_every,
                                perturb = perturb,
-                               no_error = no_error,
-                               demog_error = demog_error,
+                               aphid_demog_error = aphid_demog_error,
+                               wasp_demog_error = wasp_demog_error,
                                environ_error = environ_error,
                                sigma_x = sigma_x,
                                sigma_y = sigma_y,
                                rho = rho,
                                show_progress = show_progress,
-                               # Things not changeable in this simpler version:
-                               n_reps = 1,
+                               #' ---------------------------------------------*
+                               #' Arguments only changeable indirectly in this
+                               #' simpler version:
+                               #' ---------------------------------------------*
+                               max_plant_age = 0,
+                               clear_surv = 0,
                                n_plants = 1,
-                               max_N = 0,
-                               temp = "low",
-                               disp_error = FALSE,
                                plant_K_error = FALSE,
                                wilted_effects_error = FALSE,
                                sd_K = 0,
                                wilted_prop = 1.1,
+                               #' ---------------------------------------------*
+                               #' Arguments not changeable at all in this
+                               #' simpler version:
+                               #' ---------------------------------------------*
+                               plant_check_gaps = 1,
+                               n_reps = 1,
+                               max_N = 0,
+                               temp = "low",
+                               disp_error = FALSE,
                                sex_ratio = populations$sex_ratio,
                                mum_density_0 = 0,
                                max_mum_density = 0,
@@ -993,7 +995,6 @@ sim_experiments <- function(clonal_lines,
     # Adjusting for different name from `sim_gameofclones_full`:
     sims$call[["K"]] <- sims$call[["mean_K"]]
     sims$call[["mean_K"]] <- NULL
-    sims$call[["no_error"]] <- no_error
 
     return(sims)
 
@@ -1079,9 +1080,6 @@ restart_experiment <- function(sims_obj,
                                wasp_field_attract = NULL,
                                mum_smooth = NULL,
                                pred_rate = NULL,
-                               plant_check_gaps = NULL,
-                               max_plant_age = NULL,
-                               clear_surv = NULL,
                                show_progress = NULL,
                                perturb = NULL,
                                no_warns = FALSE) {
@@ -1173,11 +1171,6 @@ restart_experiment <- function(sims_obj,
     }
     if (is.null(mum_smooth)) mum_smooth <- sims_obj$call[["mum_smooth"]]
     if (is.null(pred_rate)) pred_rate <- sims_obj$call[["pred_rate"]]
-    if (is.null(plant_check_gaps)) plant_check_gaps <-
-            sims_obj$call[["plant_check_gaps"]]
-    if (is.null(max_plant_age)) max_plant_age <-
-            sims_obj$call[["max_plant_age"]]
-    if (is.null(clear_surv)) clear_surv <- sims_obj$call[["clear_surv"]]
     if (is.null(show_progress)) show_progress <-
             sims_obj$call[["show_progress"]]
 
@@ -1197,9 +1190,6 @@ restart_experiment <- function(sims_obj,
     stopifnot(!is.null(wasp_field_attract))
     stopifnot(!is.null(mum_smooth))
     stopifnot(!is.null(pred_rate))
-    stopifnot(!is.null(plant_check_gaps))
-    stopifnot(!is.null(max_plant_age))
-    stopifnot(!is.null(clear_surv))
     stopifnot(!is.null(show_progress))
 
     # Create / edit some items:
@@ -1207,9 +1197,7 @@ restart_experiment <- function(sims_obj,
     n_lines <- length(clonal_lines)
     uint_check(n_fields, "n_fields", .min = 1)
     uint_check(n_lines, "n_lines", .min = 1)
-    check_for_clear <- cumsum(rep(plant_check_gaps,
-                                  ceiling(max_t / sum(plant_check_gaps))))
-    check_for_clear <- check_for_clear[check_for_clear <= max_t]
+    check_for_clear <- 1:max_t
     if (length(pred_rate) == 1) pred_rate <- rep(pred_rate, n_fields)
     if (length(alate_b0) == 1) alate_b0 <- rep(alate_b0, n_lines)
     if (length(alate_b1) == 1) alate_b1 <- rep(alate_b1, n_lines)

@@ -19,7 +19,7 @@ using namespace Rcpp;
 
 
 // Add process error
-void AphidTypePop::process_error(const double& z,
+void AphidTypePop::process_error(const arma::vec& Xt,
                                  const double& sigma_x,
                                  const double& rho,
                                  const bool& demog_error,
@@ -30,12 +30,27 @@ void AphidTypePop::process_error(const double& z,
 
     uint32 n_stages = X.n_elem;
 
-    double stdev = sigma_x*sigma_x;
-    if (demog_error) stdev += std::min(0.5, 1 / (1 + z));
+    // Standard deviations by stage (all the same if no demographic error):
+    arma::vec stdevs(n_stages, arma::fill::value(sigma_x));
+    if (demog_error) {
+        //' To add demographic error, convert to variances, combine,
+        //' then convert back to stdev:
+        stdevs *= sigma_x;
+        for (uint32 i = 0; i < n_stages; i++) {
+            stdevs(i) += std::min(0.5, 1 / (1 + Xt(i)));
+            stdevs(i) = std::sqrt(stdevs(i));
+        }
+    }
 
-    arma::mat Se = stdev *
-        (rho * arma::mat(n_stages, n_stages, arma::fill::ones) +
+    arma::mat Se = (rho * arma::mat(n_stages, n_stages, arma::fill::ones) +
         (1 - rho) * arma::mat(n_stages, n_stages, arma::fill::eye));
+    // Convert from matrix of correlations to variances and covariances:
+    for (uint32 i = 0; i < n_stages; i++) {
+        for (uint32 j = 0; j < n_stages; j++) {
+            Se(i,j) *= stdevs(i);
+            Se(i,j) *= stdevs(j);
+        }
+    }
 
     // chol doesn't work with zeros on diagonal
     arma::uvec non_zero = arma::find(Se.diag() > 0);
@@ -61,20 +76,6 @@ void AphidTypePop::process_error(const double& z,
         X(non_zero(i)) *= std::exp(E(i));
     }
 
-    return;
-
-}
-
-void AphidPop::process_error(const arma::vec& apterous_Xt,
-                             const arma::vec& alates_Xt,
-                             const arma::vec& paras_Xt,
-                             const double& z,
-                             pcg32& eng) {
-
-    apterous.process_error(z, sigma_x, rho, demog_error, norm_distr, eng);
-    alates.process_error(z, sigma_x, rho, demog_error, norm_distr, eng);
-    paras.process_error(z, sigma_x, rho, demog_error, norm_distr, eng);
-
     /*
      Because we used normal distributions to approximate demographic and environmental
      stochasticity, it is possible for aphids and parasitoids to
@@ -82,16 +83,23 @@ void AphidPop::process_error(const arma::vec& apterous_Xt,
      possibility, the number of aphids and parasitized aphids in a given age class
      on day t was not allowed to exceed the number in the preceding age class on
      day t – 1.
-    */
-    for (uint32 i = 1; i < apterous.X.n_elem; i++) {
-        if (apterous.X(i) > apterous_Xt(i-1)) apterous.X(i) = apterous_Xt(i-1);
+     */
+    for (uint32 i = 1; i < n_stages; i++) {
+        if (X(i) > Xt(i-1)) X(i) = Xt(i-1);
     }
-    for (uint32 i = 1; i < alates.X.n_elem; i++) {
-        if (alates.X(i) > alates_Xt(i-1)) alates.X(i) = alates_Xt(i-1);
-    }
-    for (uint32 i = 1; i < paras.X.n_elem; i++) {
-        if (paras.X(i) > paras_Xt(i-1)) paras.X(i) = paras_Xt(i-1);
-    }
+
+    return;
+
+}
+
+void AphidPop::process_error(const arma::vec& apterous_Xt,
+                             const arma::vec& alates_Xt,
+                             const arma::vec& paras_Xt,
+                             pcg32& eng) {
+
+    apterous.process_error(apterous_Xt, sigma_x, rho, demog_error, norm_distr, eng);
+    alates.process_error(alates_Xt, sigma_x, rho, demog_error, norm_distr, eng);
+    paras.process_error(paras_Xt, sigma_x, rho, demog_error, norm_distr, eng);
 
     return;
 
@@ -277,7 +285,6 @@ double AphidPop::update(const OnePlant* plant,
 
     if (total_aphids() > 0) {
 
-        const double& z(plant->z);
         const double& S(plant->S);
         const double& S_y(plant->S_y);
         arma::vec A_apt = wasps->A(attack_surv);
@@ -317,84 +324,32 @@ double AphidPop::update(const OnePlant* plant,
 
 
         // Process error
-        process_error(apterous_Xt, alates_Xt, paras_Xt, z, eng);
-
-
-        // Sample for # offspring from apterous aphids that are alates:
-        double new_alates = 0;
-        double alate_prop = apterous.alate_prop(plant);
-        if (alate_prop > 0 && apterous.X.front() > 0) {
-            double lambda_ = alate_prop * apterous.X.front();
-            pois_distr.param(std::poisson_distribution<uint32>::param_type(lambda_));
-            new_alates = static_cast<double>(pois_distr(eng));
-            if (new_alates > apterous.X.front()) new_alates = apterous.X.front();
+        if (demog_error || sigma_x > 0) {
+            process_error(apterous_Xt, alates_Xt, paras_Xt, eng);
         }
-
-        /*
-         All alate offspring are assumed to be apterous,
-         so the only way to get new alates is from apterous aphids.
-         */
-        apterous.X.front() -= new_alates;
-        apterous.X.front() += alates.X.front(); // <-- we assume alates make apterous
-        alates.X.front() = new_alates;
-
-    }
-
-    return nm;
-}
-
-// Same as above, but no randomness in alate production:
-double AphidPop::update(const OnePlant* plant,
-                        const WaspPop* wasps,
-                        const arma::vec& emigrants,
-                        const arma::vec& immigrants) {
-
-    // First subtract emigrants and add immigrants:
-    alates.X -= emigrants;
-    alates.X += immigrants;
-
-    double nm = 0; // newly mummified
-
-    if (total_aphids() > 0) {
-
-        const double& S(plant->S);
-        const double& S_y(plant->S_y);
-        arma::vec A_apt = wasps->A(attack_surv);
-        // making adult alates not able to be parasitized:
-        arma::vec A_ala = A_apt;
-        for (uint32 i = alates.disp_start_; i < alates.leslie_.n_cols; i++) {
-            A_ala[i] = 1;
-        }
-
-        double pred_surv = 1 - plant->pred_rate;
-
-        // Basic updates for unparasitized aphids:
-        arma::mat LX_apt = apterous.leslie_ * apterous.X;
-        arma::mat LX_ala = alates.leslie_ * alates.X;
-        apterous.X = (pred_surv * S * A_apt) % LX_apt;
-        alates.X = (pred_surv * S * A_ala) % LX_ala;
-
-        double np = 0; // newly parasitized
-        np += pred_surv * S_y * arma::as_scalar((1 - A_apt).t() * LX_apt);
-        np += pred_surv * S_y * arma::as_scalar((1 - A_ala).t() * LX_ala);
-
-        nm += pred_surv * paras.X.back();  // newly mummified
-
-        // alive but parasitized
-        if (paras.X.n_elem > 1) {
-            for (uint32 i = paras.X.n_elem - 1; i > 0; i--) {
-                paras.X(i) = pred_surv * paras.s(i) * S_y * paras.X(i-1);
-            }
-        }
-        paras.X.front() = np;
 
         // # offspring from apterous aphids that are alates:
-        double new_alates = apterous.alate_prop(plant);
-        new_alates *= apterous.X.front();
-
+        double alate_prop = apterous.alate_prop(plant);
+        double new_alates = apterous.X.front() * alate_prop;
 
         /*
-         All alate offspring are assumed to be apterous,
+         I previously sampled for alate vs apterous offspring, but this
+         isn't necessary with proper demographic stochasticity, plus
+         the implementation below would work strangely with the continuous
+         densities we use.
+         */
+        // // Sample for # offspring from apterous aphids that are alates:
+        // double new_alates = 0;
+        // double alate_prop = apterous.alate_prop(plant);
+        // if (alate_prop > 0 && apterous.X.front() > 0) {
+        //     double lambda_ = alate_prop * apterous.X.front();
+        //     pois_distr.param(std::poisson_distribution<uint32>::param_type(lambda_));
+        //     new_alates = static_cast<double>(pois_distr(eng));
+        //     if (new_alates > apterous.X.front()) new_alates = apterous.X.front();
+        // }
+
+        /*
+         All offspring from alates are assumed to be apterous,
          so the only way to get new alates is from apterous aphids.
          */
         apterous.X.front() -= new_alates;
@@ -403,8 +358,6 @@ double AphidPop::update(const OnePlant* plant,
 
     }
 
-
     return nm;
 }
-
 

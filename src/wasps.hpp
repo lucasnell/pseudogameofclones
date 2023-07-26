@@ -164,6 +164,7 @@ public:
     // for process error:
     std::normal_distribution<double> norm_distr;
     double sigma_y;
+    bool demog_error;       // whether to include demographic stochasticity
 
     // Changing through time
     double Y;               // Wasp density
@@ -173,7 +174,7 @@ public:
     // Constructors
     WaspPop()
         : attack(), Y_0(), delay(), sex_ratio(), s_y(), norm_distr(),
-          sigma_y(), Y(), x() {};
+          sigma_y(), demog_error(), Y(), x() {};
     WaspPop(const arma::vec& rel_attack_,
             const double& a_,
             const double& k_,
@@ -182,7 +183,8 @@ public:
             const uint32& delay_,
             const double& sex_ratio_,
             const double& s_y_,
-            const double& sigma_y_)
+            const double& sigma_y_,
+            const bool& demog_error_)
         : attack(rel_attack_, a_, k_, h_),
           Y_0(Y_0_),
           delay(delay_),
@@ -190,6 +192,7 @@ public:
           s_y(s_y_),
           norm_distr(0, 1),
           sigma_y(sigma_y_),
+          demog_error(demog_error_),
           Y((delay_ == 0) ? Y_0_ : 0.0),
           x(0) {};
     WaspPop(const WaspPop& other)
@@ -200,6 +203,7 @@ public:
           s_y(other.s_y),
           norm_distr(other.norm_distr),
           sigma_y(other.sigma_y),
+          demog_error(other.demog_error),
           Y(other.Y),
           x(other.x) {};
     WaspPop& operator=(const WaspPop& other) {
@@ -210,6 +214,7 @@ public:
         s_y = other.s_y;
         norm_distr = other.norm_distr;
         sigma_y = other.sigma_y;
+        demog_error = other.demog_error;
         Y = other.Y;
         x = other.x;
         return *this;
@@ -239,17 +244,20 @@ public:
         if (max_Y == 0) return;
         Y *= s_y;
         Y += (sex_ratio * old_mums);
-        Y *= std::exp(norm_distr(eng) * sigma_y);
+        if (!demog_error && sigma_y == 0) return;
+        double stdev = sigma_y;
+        if (demog_error) {
+            //' To add demographic error, convert to variances, combine,
+            //' then convert back to stdev:
+            stdev *= sigma_y;
+            stdev += std::min(0.5, 1 / (1 + Y));
+            stdev = std::sqrt(stdev);
+        }
+        Y *= std::exp(norm_distr(eng) * stdev);
         if (Y > max_Y) Y = max_Y; // make sure it doesn't exceed what's possible
         return;
     }
-    // Same as above, but with no stochasticity
-    void update(const double& old_mums) {
-        if (old_mums + Y == 0) return;
-        Y *= s_y;
-        Y += (sex_ratio * old_mums);
-        return;
-    }
+
 
 };
 
