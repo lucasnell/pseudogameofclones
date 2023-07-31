@@ -87,6 +87,100 @@ struct PlantClearingInfo {
 };
 
 
+
+
+
+
+
+
+/*
+ Stores information about one aphid line dispersing across plants
+ within a field.
+ For each OneField object, there will be two vectors of PlantDispersers objects,
+ one for emigrants and another for immigrants.
+ */
+struct AphidPlantDisps {
+
+    arma::mat apterous;
+    arma::mat alates;
+    arma::mat paras;
+
+    AphidPlantDisps(const uint32& n_stages,
+                    const uint32& n_plants,
+                    const uint32& living_days)
+        : apterous(n_stages, n_plants, arma::fill::zeros),
+          alates(n_stages, n_plants, arma::fill::zeros),
+          paras(living_days, n_plants, arma::fill::zeros) {}
+
+    AphidPlantDisps(const AphidPlantDisps& other)
+        : apterous(other.apterous),
+          alates(other.alates),
+          paras(other.paras) {}
+
+    AphidPlantDisps& operator=(const AphidPlantDisps& other) {
+        apterous = other.apterous;
+        alates = other.alates;
+        paras = other.paras;
+        return *this;
+    }
+
+    void reset() {
+        apterous.zeros();
+        alates.zeros();
+        paras.zeros();
+        return;
+    }
+};
+
+
+
+/*
+ Simple wrapper around std::vector<AphidPlantDisps> of one AphidPlantDisps
+ per aphid line.
+ */
+struct AllAphidPlantDisps {
+
+
+    std::vector<AphidPlantDisps> disps;
+
+    AllAphidPlantDisps() : disps() {}
+    AllAphidPlantDisps(const uint32& n_lines,
+                       const uint32& n_stages,
+                       const uint32& n_plants,
+                       const std::vector<uint32>& living_days) {
+        disps.reserve(n_lines);
+        for (uint32 i = 0; i < n_lines; i++) {
+            disps.push_back(AphidPlantDisps(n_stages, n_plants,
+                                            living_days[i]));
+        }
+    }
+
+    AllAphidPlantDisps(const AllAphidPlantDisps& other)
+        : disps(other.disps) {}
+
+    AllAphidPlantDisps& operator=(const AllAphidPlantDisps& other) {
+        disps = other.disps;
+        return *this;
+    }
+
+    AphidPlantDisps& operator[](const uint32& idx) {
+        return disps[idx];
+    }
+    const AphidPlantDisps& operator[](const uint32& idx) const {
+        return disps[idx];
+    }
+
+    void reset() {
+        for (AphidPlantDisps& apd : disps) apd.reset();
+        return;
+    }
+
+};
+
+
+
+
+
 /*
 One plant or a number of plants so close that aphids freely disperse
  across them.
@@ -121,7 +215,7 @@ public:
     uint32 n_plants;                // total # plants
     uint32 this_j;                  // index for this plant
     uint32 age = 0;                 // age of this plant
-    double wilted_prop;             // prop. of CC that kills plant
+    double wilted_N;                // total # aphids that kills plant
     double wilted_mort;             // growth-rate modifier due to wilting
     double extinct_N;               // threshold for calling something extinct
     double max_mum_density;         // maximum mummy density (ignored if zero)
@@ -131,7 +225,7 @@ public:
     OnePlant()
         : wilted_(false), aphids(), mummies(), empty(true), pred_rate(0),
           K(0), K_y(1), n_plants(1), this_j(0),
-          wilted_prop(1), wilted_mort(1), extinct_N() {};
+          wilted_N(0), wilted_mort(1), extinct_N() {};
 
     /*
      In `aphid_density_0` below, rows are aphid stages, columns are types
@@ -145,16 +239,17 @@ public:
              const arma::mat& attack_surv_,
              const double& K_,
              const double& K_y_,
-             const double& wilted_prop_,
+             const double& wilted_N_,
              const double& wilted_mort_,
              const std::vector<std::string>& aphid_name,
              const std::vector<arma::cube>& leslie_mat,
              const arma::cube& aphid_density_0,
              const std::vector<double>& alate_b0,
              const std::vector<double>& alate_b1,
-             const std::vector<double>& alate_plant_disp_p,
-             const std::vector<double>& disp_mort,
-             const std::vector<uint32>& disp_start,
+             const std::vector<double>& aphid_plant_disp_p,
+             const std::vector<double>& plant_disp_mort,
+             const std::vector<uint32>& field_disp_start,
+             const std::vector<uint32>& plant_disp_start,
              const std::vector<uint32>& living_days,
              const double& pred_rate_,
              const uint32& n_plants_,
@@ -172,7 +267,7 @@ public:
           K_y(K_y_),
           n_plants(n_plants_),
           this_j(this_j_),
-          wilted_prop(wilted_prop_),
+          wilted_N(wilted_N_),
           wilted_mort(wilted_mort_),
           extinct_N(extinct_N_),
           max_mum_density(max_mum_density_) {
@@ -185,8 +280,9 @@ public:
             AphidPop ap(aphid_name[i], sigma_x, rho, aphid_demog_error,
                         attack_surv_.col(i),
                         leslie_mat[i], aphid_density_0.slice(i),
-                        alate_b0[i], alate_b1[i], alate_plant_disp_p[i],
-                        disp_mort[i], disp_start[i], living_days[i]);
+                        alate_b0[i], alate_b1[i], aphid_plant_disp_p[i],
+                        plant_disp_mort[i], field_disp_start[i],
+                        plant_disp_start[i], living_days[i]);
             aphids.push_back(ap);
             double N = aphids.back().total_aphids();
             if (N < extinct_N) {
@@ -203,7 +299,7 @@ public:
           empty(other.empty), pred_rate(other.pred_rate),
           K(other.K), K_y(other.K_y), z(other.z),
           S(other.S), S_y(other.S_y), n_plants(other.n_plants),
-          this_j(other.this_j), age(other.age), wilted_prop(other.wilted_prop),
+          this_j(other.this_j), age(other.age), wilted_N(other.wilted_N),
           wilted_mort(other.wilted_mort), extinct_N(other.extinct_N),
           max_mum_density(other.max_mum_density) {};
 
@@ -221,7 +317,7 @@ public:
         n_plants = other.n_plants;
         this_j = other.this_j;
         age = other.age;
-        wilted_prop = other.wilted_prop;
+        wilted_N = other.wilted_N;
         wilted_mort = other.wilted_mort;
         extinct_N = other.extinct_N;
         max_mum_density = other.max_mum_density;
@@ -314,32 +410,22 @@ public:
      In these cubes, rows are aphid stages, columns are plants,
      and slices are aphid lines.
     */
-    void calc_dispersal(arma::cube& emigrants,
-                        arma::cube& immigrants,
-                        pcg32& eng) const {
+    void calc_plant_dispersal(AllAphidPlantDisps& emigrants,
+                              AllAphidPlantDisps& immigrants) const {
         for (uint32 i = 0; i < aphids.size(); i++) {
-            aphids[i].calc_dispersal(this, emigrants.slice(i),
-                                     immigrants.slice(i), eng);
+            aphids[i].calc_plant_dispersal(this, emigrants[i],
+                                           immigrants[i]);
         }
         return;
     }
 
-    // Same thing as above, but overloaded for not including dispersal stoch.
-    void calc_dispersal(arma::cube& emigrants,
-                        arma::cube& immigrants) const {
-        for (uint32 i = 0; i < aphids.size(); i++) {
-            aphids[i].calc_dispersal(this, emigrants.slice(i),
-                                     immigrants.slice(i));
-        }
-        return;
-    }
 
 
     /*
      Iterate one time step, after calculating dispersal numbers
      */
-    void update(const arma::cube& emigrants,
-                const arma::cube& immigrants,
+    void update(const AllAphidPlantDisps& emigrants,
+                const AllAphidPlantDisps& immigrants,
                 const WaspPop* wasps,
                 pcg32& eng);
 
@@ -429,8 +515,10 @@ public:
 
     std::vector<OnePlant> plants;
     WaspPop wasps;
-    arma::cube emigrants;
-    arma::cube immigrants;
+
+    // For dispersal among plants:
+    AllAphidPlantDisps emigrants;
+    AllAphidPlantDisps immigrants;
 
 
     OneField()
@@ -452,7 +540,7 @@ public:
                const double& mean_K,
                const double& sd_K,
                const double& K_y_mult_,
-               const double& wilted_prop,
+               const double& wilted_N,
                const double& shape1_wilted_mort,
                const double& shape2_wilted_mort,
                const arma::mat& attack_surv_,
@@ -461,9 +549,10 @@ public:
                const std::vector<arma::cube>& aphid_density_0,
                const std::vector<double>& alate_b0,
                const std::vector<double>& alate_b1,
-               const std::vector<double>& alate_plant_disp_p,
-               const std::vector<double>& disp_mort,
-               const std::vector<uint32>& disp_start,
+               const std::vector<double>& aphid_plant_disp_p,
+               const std::vector<double>& plant_disp_mort,
+               const std::vector<uint32>& field_disp_start,
+               const std::vector<uint32>& plant_disp_start,
                const std::vector<uint32>& living_days,
                const double& pred_rate,
                const double& extinct_N_,
@@ -492,8 +581,14 @@ public:
           plants(),
           wasps(rel_attack_, a_, k_, h_, wasp_density_0_, wasp_delay_,
                 sex_ratio_, s_y_, sigma_y, wasp_demog_error),
-          emigrants(),
-          immigrants() {
+          emigrants(aphid_name.size(),
+                    leslie_mat.front().n_rows,
+                    aphid_density_0.size(),
+                    living_days),
+          immigrants(aphid_name.size(),
+                     leslie_mat.front().n_rows,
+                     aphid_density_0.size(),
+                     living_days) {
 
 
         /*
@@ -517,27 +612,22 @@ public:
 
         uint32 n_plants = aphid_density_0.size();
 
-        uint32 n_lines = aphid_name.size();
-        uint32 n_stages = leslie_mat.front().n_rows;
-
         double K, K_y, wilted_mort;
         plants.reserve(n_plants);
         for (uint32 j = 0; j < n_plants; j++) {
             set_K(K, K_y, eng);
             set_wilted_mort(wilted_mort, eng);
             OnePlant ap(sigma_x, rho, aphid_demog_error, attack_surv_,
-                        K, K_y, wilted_prop, wilted_mort,
+                        K, K_y, wilted_N, wilted_mort,
                         aphid_name, leslie_mat,
                         aphid_density_0[j], alate_b0, alate_b1,
-                        alate_plant_disp_p, disp_mort,
-                        disp_start, living_days, pred_rate,
+                        aphid_plant_disp_p, plant_disp_mort,
+                        field_disp_start, plant_disp_start,
+                        living_days, pred_rate,
                         n_plants, j, extinct_N_,
                         mum_density_0.col(j), mum_smooth_, max_mum_density_);
             plants.push_back(ap);
         }
-
-        emigrants = arma::zeros<arma::cube>(n_stages, n_plants, n_lines);
-        immigrants = arma::zeros<arma::cube>(n_stages, n_plants, n_lines);
 
     }
 
@@ -586,7 +676,7 @@ public:
     }
 
     // Remove dispersers from this field:
-    arma::mat remove_dispersers(const double& disp_prop) {
+    arma::mat remove_field_dispersers(const double& disp_prop) {
 
         uint32 n_lines = plants[0].aphids.size();
         uint32 n_stages = plants[0].aphids[0].alates.X.n_elem;
@@ -596,7 +686,7 @@ public:
         arma::vec Di;
         for (OnePlant& p : plants) {
             for (uint32 i = 0; i < n_lines; i++) {
-                Di = p.aphids[i].remove_dispersers(disp_prop);
+                Di = p.aphids[i].remove_field_dispersers(disp_prop);
                 D.col(i) += Di;
             }
         }
@@ -606,7 +696,7 @@ public:
     }
 
     // Add dispersers from another field:
-    void add_dispersers(const arma::mat& D) {
+    void add_field_dispersers(const arma::mat& D) {
 
         uint32 n_lines = plants[0].aphids.size();
 
@@ -624,28 +714,22 @@ public:
     }
 
     // Calculate among-plant dispersal:
-    inline void calc_dispersal(pcg32& eng) {
+    inline void calc_plant_dispersal() {
 
         // Dispersal from previous generation
-        emigrants.fill(0);
-        immigrants.fill(0);
+        emigrants.reset();
+        immigrants.reset();
+
         for (const OnePlant& p : plants) {
-            p.calc_dispersal(emigrants, immigrants, eng);
+            p.calc_plant_dispersal(emigrants, immigrants);
         }
         return;
     }
-    inline void calc_dispersal() {
-        emigrants.fill(0);
-        immigrants.fill(0);
-        for (const OnePlant& p : plants) {
-            p.calc_dispersal(emigrants, immigrants);
-        }
-        return;
-    }
+
 
     inline void update(pcg32& eng) {
         /*
-         Once `calc_dispersal` has updated inside `emigrants` and `immigrants`,
+         Once `calc_plant_dispersal` has updated inside `emigrants` and `immigrants`,
          we can update the populations using those dispersal numbers.
          */
         // First update info for wasps before iterating:
@@ -662,15 +746,6 @@ public:
         }
         return;
     }
-
-
-    // Clear plants by either a maximum age or total abundance
-    void clear_plants(const uint32& max_age,
-                       const double& clear_surv,
-                       pcg32& eng);
-    void clear_plants(const double& max_N,
-                       const double& clear_surv,
-                       pcg32& eng);
 
 
     // Total (living) aphids in patch
@@ -721,7 +796,6 @@ public:
     double wasp_disp_m0;
     double wasp_disp_m1;
     std::vector<double> wasp_field_attract;
-    bool disp_error;
     double extinct_N;
 
     // Total stages for all wasps, mummies, and aphids. Used for output.
@@ -731,7 +805,7 @@ public:
         : eng(), max_age(), max_N(), fields(), clear_surv(),
           alate_field_disp_p(), wasp_disp_m0(), wasp_disp_m1(),
           wasp_field_attract(),
-          disp_error(), extinct_N(), total_stages() {};
+          extinct_N(), total_stages() {};
 
     AllFields(const AllFields& other)
         : eng(other.eng),
@@ -742,7 +816,6 @@ public:
           wasp_disp_m0(other.wasp_disp_m0),
           wasp_disp_m1(other.wasp_disp_m1),
           wasp_field_attract(other.wasp_field_attract),
-          disp_error(other.disp_error),
           extinct_N(other.extinct_N),
           total_stages(other.total_stages){};
 
@@ -756,7 +829,6 @@ public:
         wasp_disp_m0 = other.wasp_disp_m0;
         wasp_disp_m1 = other.wasp_disp_m1;
         wasp_field_attract = other.wasp_field_attract;
-        disp_error = other.disp_error;
         extinct_N = other.extinct_N;
         total_stages = other.total_stages;
         return *this;
@@ -775,7 +847,7 @@ public:
               const double& mean_K,
               const double& sd_K,
               const std::vector<double>& K_y_mult,
-              const double& wilted_prop,
+              const double& wilted_N,
               const double& shape1_wilted_mort,
               const double& shape2_wilted_mort,
               const arma::mat& attack_surv,
@@ -784,10 +856,10 @@ public:
               const std::vector<arma::cube>& aphid_density_0,
               const std::vector<double>& alate_b0,
               const std::vector<double>& alate_b1,
-              const std::vector<double>& alate_plant_disp_p,
-              const std::vector<double>& disp_mort,
-              const std::vector<uint32>& disp_start,
-              const bool& disp_error_,
+              const std::vector<double>& aphid_plant_disp_p,
+              const std::vector<double>& plant_disp_mort,
+              const std::vector<uint32>& field_disp_start,
+              const std::vector<uint32>& plant_disp_start,
               const std::vector<uint32>& living_days,
               const std::vector<double>& pred_rate,
               const double& extinct_N_,
@@ -815,7 +887,6 @@ public:
           wasp_disp_m0(wasp_disp_m0_),
           wasp_disp_m1(wasp_disp_m1_),
           wasp_field_attract(wasp_field_attract_),
-          disp_error(disp_error_),
           extinct_N(extinct_N_),
           total_stages(0) {
 
@@ -832,10 +903,11 @@ public:
             fields.push_back(
                 OneField(sigma_x, sigma_y, rho, aphid_demog_error, wasp_demog_error,
                          mean_K, sd_K, K_y_mult[i],
-                         wilted_prop, shape1_wilted_mort, shape2_wilted_mort,
+                         wilted_N, shape1_wilted_mort, shape2_wilted_mort,
                          attack_surv, aphid_name, leslie_mat, aphid_density_0,
-                         alate_b0, alate_b1, alate_plant_disp_p,
-                         disp_mort, disp_start, living_days, pred_rate[i],
+                         alate_b0, alate_b1, aphid_plant_disp_p,
+                         plant_disp_mort, field_disp_start, plant_disp_start,
+                         living_days, pred_rate[i],
                          extinct_N, mum_density_0, mum_smooth, max_mum_density,
                          rel_attack, a, k, h,
                          wasp_density_0[i], wasp_delay[i],
@@ -884,12 +956,12 @@ public:
     // Alate dispersal across fields:
     void across_field_disp_alates() {
         if (fields.size() > 1 && alate_field_disp_p > 0) {
-            arma::mat D = fields[0].remove_dispersers(alate_field_disp_p);
+            arma::mat D = fields[0].remove_field_dispersers(alate_field_disp_p);
             for (uint32 i = 1; i < fields.size(); i++) {
-                D += fields[i].remove_dispersers(alate_field_disp_p);
+                D += fields[i].remove_field_dispersers(alate_field_disp_p);
             }
             D /= static_cast<double>(fields.size());
-            for (OneField& c : fields) c.add_dispersers(D);
+            for (OneField& c : fields) c.add_field_dispersers(D);
         }
         return;
     }

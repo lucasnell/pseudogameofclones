@@ -528,7 +528,6 @@ void check_args(const uint32& n_reps,
                 const double& shape1_wilted_mort,
                 const double& shape2_wilted_mort,
                 const arma::mat& attack_surv,
-                const bool& disp_error,
                 const bool& aphid_demog_error,
                 const bool& wasp_demog_error,
                 const double& sigma_x,
@@ -540,9 +539,10 @@ void check_args(const uint32& n_reps,
                 const std::vector<arma::cube>& aphid_density_0,
                 const std::vector<double>& alate_b0,
                 const std::vector<double>& alate_b1,
-                const std::vector<double>& alate_plant_disp_p,
-                const std::vector<double>& disp_mort,
-                const std::vector<uint32>& disp_start,
+                const std::vector<double>& aphid_plant_disp_p,
+                const std::vector<double>& plant_disp_mort,
+                const std::vector<uint32>& field_disp_start,
+                const std::vector<uint32>& plant_disp_start,
                 const std::vector<uint32>& living_days,
                 const std::vector<double>& pred_rate,
                 const arma::mat& mum_density_0,
@@ -588,14 +588,17 @@ void check_args(const uint32& n_reps,
     if (alate_b1.size() != n_lines) {
         stop("\nERROR: alate_b1.size() != n_lines\n");
     }
-    if (alate_plant_disp_p.size() != n_lines) {
-        stop("\nERROR: alate_plant_disp_p.size() != n_lines\n");
+    if (aphid_plant_disp_p.size() != n_lines) {
+        stop("\nERROR: aphid_plant_disp_p.size() != n_lines\n");
     }
-    if (disp_mort.size() != n_lines) {
-        stop("\nERROR: disp_mort.size() != n_lines\n");
+    if (plant_disp_mort.size() != n_lines) {
+        stop("\nERROR: plant_disp_mort.size() != n_lines\n");
     }
-    if (disp_start.size() != n_lines) {
-        stop("\nERROR: disp_start.size() != n_lines\n");
+    if (field_disp_start.size() != n_lines) {
+        stop("\nERROR: field_disp_start.size() != n_lines\n");
+    }
+    if (plant_disp_start.size() != n_lines) {
+        stop("\nERROR: plant_disp_start.size() != n_lines\n");
     }
     if (living_days.size() != n_lines) {
         stop("\nERROR: living_days.size() != n_lines\n");
@@ -720,8 +723,8 @@ void check_args(const uint32& n_reps,
     for (uint32 i = 0; i < aphid_density_0.size(); i++) {
         negative_check<arma::cube>(aphid_density_0[i], "aphid_density_0");
     }
-    negative_check<std::vector<double>>(alate_plant_disp_p, "alate_plant_disp_p");
-    negative_check<std::vector<double>>(disp_mort, "disp_mort");
+    negative_check<std::vector<double>>(aphid_plant_disp_p, "aphid_plant_disp_p");
+    negative_check<std::vector<double>>(plant_disp_mort, "plant_disp_mort");
     negative_check<std::vector<double>>(pred_rate, "pred_rate");
     negative_check<arma::mat>(mum_density_0, "mum_density_0");
     negative_check<arma::vec>(rel_attack, "rel_attack");
@@ -781,7 +784,6 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                        const double& shape1_wilted_mort,
                        const double& shape2_wilted_mort,
                        const arma::mat& attack_surv,
-                       const bool& disp_error,
                        const bool& aphid_demog_error,
                        const bool& wasp_demog_error,
                        const double& sigma_x,
@@ -794,9 +796,10 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                        const std::vector<double>& alate_b0,
                        const std::vector<double>& alate_b1,
                        const double& alate_field_disp_p,
-                       const std::vector<double>& alate_plant_disp_p,
-                       const std::vector<double>& disp_mort,
-                       const std::vector<uint32>& disp_start,
+                       const std::vector<double>& aphid_plant_disp_p,
+                       const std::vector<double>& plant_disp_mort,
+                       const std::vector<uint32>& field_disp_start,
+                       const std::vector<uint32>& plant_disp_start,
                        const std::vector<uint32>& living_days,
                        const std::vector<double>& pred_rate,
                        const arma::mat& mum_density_0,
@@ -829,10 +832,11 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                max_t, save_every,
                mean_K, sd_K, K_y_mult, wilted_N,
                shape1_wilted_mort, shape2_wilted_mort,
-               attack_surv, disp_error, aphid_demog_error, wasp_demog_error,
+               attack_surv, aphid_demog_error, wasp_demog_error,
                sigma_x, sigma_y, rho, extinct_N, aphid_name,
                leslie_mat, aphid_density_0, alate_b0, alate_b1,
-               alate_plant_disp_p, disp_mort, disp_start, living_days,
+               aphid_plant_disp_p, plant_disp_mort, field_disp_start,
+               plant_disp_start, living_days,
                pred_rate, mum_density_0, mum_smooth, rel_attack, a, k, h,
                wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1,
                wasp_field_attract,
@@ -864,8 +868,9 @@ List sim_gameofclones_cpp(const uint32& n_reps,
         mean_K, sd_K, K_y_mult, wilted_N,
         shape1_wilted_mort, shape2_wilted_mort, attack_surv,
         aphid_name, leslie_mat, aphid_density_0,
-        alate_b0, alate_b1, alate_plant_disp_p, disp_mort,
-        disp_start, disp_error, living_days, pred_rate, extinct_N,
+        alate_b0, alate_b1, aphid_plant_disp_p, plant_disp_mort,
+        field_disp_start, plant_disp_start,
+        living_days, pred_rate, extinct_N,
         mum_density_0, mum_smooth, max_mum_density,
         rel_attack, a, k, h, wasp_density_0, sex_ratio,
         s_y, constant_wasps,
@@ -875,8 +880,6 @@ List sim_gameofclones_cpp(const uint32& n_reps,
         all_fields_vec[i] = all_fields_vec[0];
         all_fields_vec[i].reseed(seeds[i]);
     }
-
-
 
 #ifdef _OPENMP
 #pragma omp parallel default(shared) num_threads(n_threads) if (n_threads > 1)

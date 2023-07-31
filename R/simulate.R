@@ -508,8 +508,8 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #' @noRd
 #'
 # full fun code ----
-sim_gameofclones_full <- function(n_reps,
-                               clonal_lines,
+sim_gameofclones_full <- function(clonal_lines,
+                               n_reps = 1,
                                n_fields = 2,
                                n_plants = 1,
                                max_t = 250,
@@ -518,7 +518,6 @@ sim_gameofclones_full <- function(n_reps,
                                clear_surv = 0,
                                max_N = 0,
                                temp = "low",
-                               disp_error = FALSE,
                                environ_error = FALSE,
                                aphid_demog_error = FALSE,
                                wasp_demog_error = FALSE,
@@ -547,8 +546,8 @@ sim_gameofclones_full <- function(n_reps,
                                mum_smooth = 0.4,
                                max_mum_density = 0,
                                pred_rate = 0,
-                               alate_plant_disp_p = 0.1,
-                               disp_mort = 0,
+                               aphid_plant_disp_p = 0.1,
+                               plant_disp_mort = 0,
                                alate_b0 = logit(0.093),
                                alate_b1 = 0,
                                alate_field_disp_p = 0.1,
@@ -571,6 +570,7 @@ sim_gameofclones_full <- function(n_reps,
     }
 
     temp <- match.arg(temp, c("low", "high"))
+    temp <- paste0(temp, "T")
 
     n_lines <- length(clonal_lines)
 
@@ -594,9 +594,9 @@ sim_gameofclones_full <- function(n_reps,
     }
 
     if (length(pred_rate) == 1) pred_rate <- rep(pred_rate, n_fields)
-    if (length(alate_plant_disp_p) == 1) alate_plant_disp_p <-
-        rep(alate_plant_disp_p, n_lines)
-    if (length(disp_mort) == 1) disp_mort <- rep(disp_mort, n_lines)
+    if (length(aphid_plant_disp_p) == 1) aphid_plant_disp_p <-
+        rep(aphid_plant_disp_p, n_lines)
+    if (length(plant_disp_mort) == 1) plant_disp_mort <- rep(plant_disp_mort, n_lines)
     if (length(alate_b0) == 1) alate_b0 <- rep(alate_b0, n_lines)
     if (length(alate_b1) == 1) alate_b1 <- rep(alate_b1, n_lines)
     if (length(K_y_mult) == 1) K_y_mult <- rep(K_y_mult, n_fields)
@@ -619,9 +619,12 @@ sim_gameofclones_full <- function(n_reps,
 
 
     living_days <- rep(dev_times$mum_days[[1]], n_lines)
-    disp_start <- rep(sum(head(dev_times$instar_days[[paste0(temp, "T")]], -1)),
-                      n_lines)
-
+    # assume only adult alates can disperse across fields:
+    field_disp_start <- sum(head(dev_times$instar_days[[temp]], -1))
+    field_disp_start <- rep(field_disp_start, n_lines)
+    # assume only instars 3-5 disperse across plants:
+    plant_disp_start <- sum(head(dev_times$instar_days[[temp]], 2))
+    plant_disp_start <- rep(plant_disp_start, n_lines)
 
 
     # ---------------*
@@ -647,7 +650,7 @@ sim_gameofclones_full <- function(n_reps,
 
     if (length(rel_attack) == 5) {
         rel_attack <- rel_attack / sum(rel_attack)
-        dt <- dev_times$instar_days[[paste0(temp, "T")]]
+        dt <- dev_times$instar_days[[temp]]
         n_adult_days <- nrow(leslie_cubes[[1]]) - sum(head(dt, -1))
         stopifnot(n_adult_days >= 0)
         if (tail(dt, 1) != n_adult_days) dt[length(dt)] <- n_adult_days
@@ -678,7 +681,6 @@ sim_gameofclones_full <- function(n_reps,
     dbl_check(shape1_wilted_mort, "shape1_wilted_mort")
     dbl_check(shape2_wilted_mort, "shape2_wilted_mort")
     dbl_mat_check(attack_surv, "attack_surv")
-    stopifnot(inherits(disp_error, "logical") && length(disp_error) == 1)
     stopifnot(inherits(aphid_demog_error, "logical") && length(aphid_demog_error) == 1)
     stopifnot(inherits(wasp_demog_error, "logical") && length(wasp_demog_error) == 1)
     dbl_check(sigma_x, "sigma_x")
@@ -691,9 +693,10 @@ sim_gameofclones_full <- function(n_reps,
     stopifnot(inherits(alate_b0, "numeric"))
     stopifnot(inherits(alate_b1, "numeric"))
     dbl_check(alate_field_disp_p, "alate_field_disp_p", .min = 0, .max = 1)
-    stopifnot(inherits(alate_plant_disp_p, "numeric"))
-    stopifnot(inherits(disp_mort, "numeric"))
-    uint_vec_check(disp_start, "disp_start")
+    stopifnot(inherits(aphid_plant_disp_p, "numeric"))
+    stopifnot(inherits(plant_disp_mort, "numeric"))
+    uint_vec_check(field_disp_start, "field_disp_start")
+    uint_vec_check(plant_disp_start, "plant_disp_start")
     uint_vec_check(living_days, "living_days")
     stopifnot(inherits(pred_rate, "numeric"))
     dbl_mat_check(mum_density_0, "mum_density_0")
@@ -721,13 +724,14 @@ sim_gameofclones_full <- function(n_reps,
                               max_t, save_every, mean_K, sd_K, K_y_mult,
                               wilted_N, shape1_wilted_mort,
                               shape2_wilted_mort,
-                              attack_surv, disp_error,
+                              attack_surv,
                               aphid_demog_error, wasp_demog_error,
                               sigma_x, sigma_y, rho, extinct_N, aphid_names,
                               leslie_cubes,
                               aphid_density_0, alate_b0, alate_b1,
                               alate_field_disp_p,
-                              alate_plant_disp_p, disp_mort, disp_start,
+                              aphid_plant_disp_p, plant_disp_mort,
+                              field_disp_start, plant_disp_start,
                               living_days, pred_rate,
                               mum_density_0, mum_smooth, max_mum_density,
                               rel_attack, a, k, h,

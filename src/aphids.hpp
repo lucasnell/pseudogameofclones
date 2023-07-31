@@ -13,8 +13,10 @@
 using namespace Rcpp;
 
 
-// This is necessary for dispersal methods and ApterousPop::alate_prop
+// These necessary for dispersal methods and ApterousPop::alate_prop
 class OnePlant;
+struct AphidPlantDisps;
+struct AllAphidPlantDisps;
 // Necessary here to declare friendship
 class AphidPop;
 
@@ -133,34 +135,26 @@ class AlatePop : public AphidTypePop {
 
     friend class AphidPop;
 
-    MEMBER(double, alate_plant_disp_p) // proportion that leaves focal plant
-    MEMBER(double, disp_mort)      // mortality of dispersers
-    MEMBER(uint32, disp_start)     // index for stage in which dispersal starts
+    MEMBER(uint32, field_disp_start)    // index for stage in which across-field
+                                        // dispersal starts
+
 
 public:
 
-    AlatePop() : AphidTypePop(), alate_plant_disp_p_(0), disp_mort_(0), disp_start_(0) {};
+    AlatePop() : AphidTypePop(), field_disp_start_(0) {};
     AlatePop(const arma::mat& leslie_mat,
              const arma::vec& aphid_density_0,
-             const double& alate_plant_disp_p,
-             const double& disp_mort,
-             const uint32& disp_start)
+             const uint32& field_disp_start)
         : AphidTypePop(leslie_mat, aphid_density_0),
-          alate_plant_disp_p_(alate_plant_disp_p),
-          disp_mort_(disp_mort),
-          disp_start_(disp_start) {};
+          field_disp_start_(field_disp_start) {};
 
     AlatePop(const AlatePop& other)
         : AphidTypePop(other),
-          alate_plant_disp_p_(other.alate_plant_disp_p_),
-          disp_mort_(other.disp_mort_),
-          disp_start_(other.disp_start_) {};
+          field_disp_start_(other.field_disp_start_) {};
 
     AlatePop& operator=(const AlatePop& other) {
         AphidTypePop::operator=(other);
-        alate_plant_disp_p_ = other.alate_plant_disp_p_;
-        disp_mort_ = other.disp_mort_;
-        disp_start_ = other.disp_start_;
+        field_disp_start_ = other.field_disp_start_;
         return *this;
     }
 
@@ -203,12 +197,20 @@ public:
 
 
 
+
+
 // Aphid population: both alates and apterous for one clonal line on a plant
 class AphidPop {
 
     double sigma_x;          // environmental standard deviation for aphids
     double rho;              // environmental correlation among instars
     bool demog_error;        // whether to include demographic stochasticity
+
+    double aphid_plant_disp_p;  // proportion that leave focal plant
+    double plant_disp_mort;     // mortality of dispersers across plants
+    uint32 plant_disp_start;    // index for stage in which among-plant
+                                // dispersal starts
+
     /*
      Vector of length 2 with survival rates of singly & multiply attacked
      aphids, respectively:
@@ -229,8 +231,27 @@ class AphidPop {
     void process_error(const arma::vec& apterous_Xt,
                        const arma::vec& alates_Xt,
                        const arma::vec& paras_Xt,
-                       pcg32& eng);
+                       pcg32& eng) {
 
+        apterous.process_error(apterous_Xt, sigma_x, rho, demog_error,
+                               norm_distr, eng);
+        alates.process_error(alates_Xt, sigma_x, rho, demog_error,
+                             norm_distr, eng);
+        paras.process_error(paras_Xt, sigma_x, rho, demog_error,
+                            norm_distr, eng);
+
+        return;
+    }
+
+
+
+    /*
+     Calculate plant dispersal for one either apterous, alate, or parasitized
+     */
+    void one_calc_plant_dispersal__(const arma::vec& X_disp,
+                                    const OnePlant* plant,
+                                    arma::mat& emigrants,
+                                    arma::mat& immigrants) const;
 
 
 
@@ -245,7 +266,9 @@ public:
      Constructors.
      */
     AphidPop()
-        : sigma_x(0), rho(0), demog_error(false), attack_surv(2, arma::fill::zeros),
+        : sigma_x(0), rho(0), demog_error(false),
+          aphid_plant_disp_p(0), plant_disp_mort(0), plant_disp_start(0),
+          attack_surv(2, arma::fill::zeros),
           aphid_name(""), apterous(), alates(), paras(), extinct(false) {};
 
     // Make sure `leslie_mat` has 3 slices and `aphid_density_0` has two columns!
@@ -258,18 +281,21 @@ public:
              const arma::mat& aphid_density_0,
              const double& alate_b0,
              const double& alate_b1,
-             const double& alate_plant_disp_p,
-             const double& disp_mort,
-             const uint32& disp_start,
+             const double& aphid_plant_disp_p_,
+             const double& plant_disp_mort_,
+             const uint32& field_disp_start,
+             const uint32& plant_disp_start_,
              const uint32& living_days)
         : sigma_x(sigma_x_),
           rho(rho_),
           demog_error(demog_error_),
+          aphid_plant_disp_p(aphid_plant_disp_p_),
+          plant_disp_mort(plant_disp_mort_),
+          plant_disp_start(plant_disp_start_),
           attack_surv(attack_surv_),
           aphid_name(aphid_name_),
           apterous(leslie_mat.slice(0), aphid_density_0.col(0), alate_b0, alate_b1),
-          alates(leslie_mat.slice(1), aphid_density_0.col(1), alate_plant_disp_p, disp_mort,
-                 disp_start),
+          alates(leslie_mat.slice(1), aphid_density_0.col(1), field_disp_start),
           paras(leslie_mat.slice(2), living_days),
           extinct(false) {};
 
@@ -277,6 +303,9 @@ public:
         : sigma_x(other.sigma_x),
           rho(other.rho),
           demog_error(other.demog_error),
+          aphid_plant_disp_p(other.aphid_plant_disp_p),
+          plant_disp_mort(other.plant_disp_mort),
+          plant_disp_start(other.plant_disp_start),
           attack_surv(other.attack_surv),
           norm_distr(other.norm_distr),
           pois_distr(other.pois_distr),
@@ -292,6 +321,9 @@ public:
         sigma_x = other.sigma_x;
         rho = other.rho;
         demog_error = other.demog_error;
+        aphid_plant_disp_p = other.aphid_plant_disp_p;
+        plant_disp_mort = other.plant_disp_mort;
+        plant_disp_start = other.plant_disp_start;
         attack_surv = other.attack_surv;
         norm_distr = other.norm_distr;
         pois_distr = other.pois_distr;
@@ -321,9 +353,9 @@ public:
      given that `disp_prop` is the proportion of winged adults that will be
      moved.
      */
-    arma::vec remove_dispersers(const double& disp_prop) {
+    arma::vec remove_field_dispersers(const double& disp_prop) {
         arma::vec D = alates.X;
-        uint32 ds = alates.disp_start();
+        uint32 ds = alates.field_disp_start();
         D.head(ds).fill(0);
         /*
          Uncomment below if you want to assume that only young adult alates
@@ -358,21 +390,18 @@ public:
     /*
      Calculate dispersal of this line to all other plants.
      Emigration doesn't necessarily == immigration due to disperser mortality.
+     Note: keep the definition of this in the *.cpp file bc it won't
+     compile otherwise.
     */
-    void calc_dispersal(const OnePlant* plant,
-                        arma::mat& emigrants,
-                        arma::mat& immigrants,
-                        pcg32& eng) const;
-    // Same, but with no stochasticity
-    void calc_dispersal(const OnePlant* plant,
-                        arma::mat& emigrants,
-                        arma::mat& immigrants) const;
+    void calc_plant_dispersal(const OnePlant* plant,
+                              AphidPlantDisps& emigrants,
+                              AphidPlantDisps& immigrants) const;
 
     // Update new aphid abundances, return the # newly mummified aphids
     double update(const OnePlant* plant,
                   const WaspPop* wasps,
-                  const arma::vec& emigrants,
-                  const arma::vec& immigrants,
+                  const AphidPlantDisps& emigrants,
+                  const AphidPlantDisps& immigrants,
                   pcg32& eng);
 
 };

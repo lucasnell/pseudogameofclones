@@ -61,8 +61,8 @@ void OnePlant::update_z_wilted() {
 /*
  Iterate one time step, after calculating dispersal numbers
  */
-void OnePlant::update(const arma::cube& emigrants,
-                      const arma::cube& immigrants,
+void OnePlant::update(const AllAphidPlantDisps& emigrants,
+                      const AllAphidPlantDisps& immigrants,
                       const WaspPop* wasps,
                       pcg32& eng) {
 
@@ -82,8 +82,7 @@ void OnePlant::update(const arma::cube& emigrants,
          Update population, including dispersal and (optionally) process error.
          Also return # newly mummified from that line
          */
-        nm += aphids[i].update(this, wasps, emigrants.slice(i).col(this_j),
-                               immigrants.slice(i).col(this_j), eng);
+        nm += aphids[i].update(this, wasps, emigrants[i], immigrants[i], eng);
 
         if (wilted_) {
             aphids[i].apterous.X *= wilted_mort;
@@ -338,9 +337,7 @@ bool AllFields::update(const uint32& t,
 
         field.wasps.add_Y_0_check(t);
 
-        if (disp_error) {
-            field.calc_dispersal(eng);
-        } else field.calc_dispersal();
+        field.calc_plant_dispersal();
 
         field.update(eng);
 

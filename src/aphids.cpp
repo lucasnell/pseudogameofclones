@@ -92,35 +92,15 @@ void AphidTypePop::process_error(const arma::vec& Xt,
 
 }
 
-void AphidPop::process_error(const arma::vec& apterous_Xt,
-                             const arma::vec& alates_Xt,
-                             const arma::vec& paras_Xt,
-                             pcg32& eng) {
-
-    apterous.process_error(apterous_Xt, sigma_x, rho, demog_error, norm_distr, eng);
-    alates.process_error(alates_Xt, sigma_x, rho, demog_error, norm_distr, eng);
-    paras.process_error(paras_Xt, sigma_x, rho, demog_error, norm_distr, eng);
-
-    return;
-
-}
-
-
-
-
-
 
 
 // logit(Pr(alates)) ~ b0 + b1 * z, where `z` is # aphids (all lines)
 double ApterousPop::alate_prop(const OnePlant* plant) const {
-
     const double lap = alate_b0_ + alate_b1_ * plant->z;
     double ap;
     inv_logit__(lap, ap);
     return ap;
-
 }
-
 
 
 
@@ -128,6 +108,8 @@ double ApterousPop::alate_prop(const OnePlant* plant) const {
 
 /*
  Emigration and immigration of this line to all other plants.
+ This function is run individually on `apterous`, `alates`, and `paras` aphids
+ inside the `AphidPop::cal_plant_dispersal` function.
 
  (`this_j` is the index for the plant this line's population is on)
 
@@ -136,130 +118,64 @@ double ApterousPop::alate_prop(const OnePlant* plant) const {
  For both `emigrants` and `immigrants` matrices, rows are aphid stages and columns
  are plants.
  */
+void AphidPop::one_calc_plant_dispersal__(const arma::vec& Xt,
+                                          const OnePlant* plant,
+                                          arma::mat& emigrants,
+                                          arma::mat& immigrants) const {
 
-void AphidPop::calc_dispersal(const OnePlant* plant,
-                              arma::mat& emigrants,
-                              arma::mat& immigrants,
-                              pcg32& eng) const {
-
-    const uint32& this_j(plant->this_j);
-    const uint32& n_plants(plant->n_plants);
-
-    if (arma::accu(alates.X) == 0 || n_plants == 1 || alates.alate_plant_disp_p() <= 0) return;
-
-    // Abundance for alates. (Only adult alates can disperse.)
-    const arma::vec& X_disp(alates.X);
-
-    arma::rowvec n_leaving(n_plants);
-    arma::rowvec n_leaving_alive(n_plants);
-
-    // Sample dispersal for each dispersing stage:
-    for (uint32 i = alates.disp_start(); i < X_disp.n_elem; i++) {
-
-        if (X_disp(i) < 1) continue;
-
-        /*
-         Calculate emigration, or the # aphids that leave the plant:
-         */
-        // Calculate lambda. (We're splitting dispersers over # of other plants.)
-        double lambda_ = alates.alate_plant_disp_p() * X_disp(i) /
-            static_cast<double>(n_plants - 1);
-        pois_distr.param(std::poisson_distribution<uint32>::param_type(lambda_));
-        for (uint32 j = 0; j < n_plants; j++) {
-            if (j == this_j) {
-                n_leaving(j) = 0;
-            } else n_leaving(j) = pois_distr(eng);
-        }
-        // Making absolutely sure that dispersal never exceeds the number possible:
-        double total_emigrants = arma::accu(n_leaving);
-        if (total_emigrants > X_disp(i)) {
-            double extras = total_emigrants - X_disp(i);
-            std::vector<uint32> extra_inds;
-            extra_inds.reserve(n_plants);
-            for (uint32 j = 0; j < n_plants; j++) {
-                if (n_leaving(j) > 0) extra_inds.push_back(j);
-            }
-            while (extras > 0) {
-                uint32 rnd = runif_01(eng) * extra_inds.size();
-                n_leaving(extra_inds[rnd])--;
-                if (n_leaving(extra_inds[rnd]) == 0) {
-                    extra_inds.erase(extra_inds.begin() + rnd);
-                }
-                extras--;
-                total_emigrants--;
-            }
-        }
-
-        emigrants(i, this_j) = total_emigrants;
-
-        /*
-         Calculate immigration, or the number leaving that stay alive to get to
-         another plant.
-         For the focal line and plant, stage i, to plant j, the upper limit to this is
-         `emigrants(i,j)`.
-         */
-        if (alates.disp_mort() <= 0) {
-            // If mortality is zero, then all emigrants survive:
-            immigrants.row(i) += n_leaving;
-        } else if (alates.disp_mort() < 1) {
-            // If mortality is >0 and <1, then we have to sample for the # that survive:
-            for (uint32 j = 0; j < n_plants; j++) {
-                if (j == this_j || n_leaving(j) == 0) continue;
-                // Sample number leaving that stay alive to immigrate:
-                bino_distr.param(std::binomial_distribution<uint32>::param_type(
-                        n_leaving(j), 1 - alates.disp_mort()));
-                immigrants(i,j) += static_cast<double>(bino_distr(eng));
-            }
-        }
-
-    }
-
-
-    return;
-}
-
-
-
-
-// Same as above, but with no stochasticity
-void AphidPop::calc_dispersal(const OnePlant* plant,
-                              arma::mat& emigrants,
-                              arma::mat& immigrants) const {
+    if (total_aphids() == 0 || plant->n_plants == 1 ||
+        aphid_plant_disp_p <= 0) return;
 
     const uint32& this_j(plant->this_j);
     const uint32& n_plants(plant->n_plants);
+    double n_plants_dbl = static_cast<double>(n_plants);
 
-    if (arma::accu(alates.X) == 0 || n_plants == 1 || alates.alate_plant_disp_p() <= 0) return;
-
-
-    // Abundance for alates. (Only adult alates can disperse.)
-    const arma::vec& X_disp(alates.X);
-
-    arma::rowvec n_leaving(n_plants);
-    arma::rowvec n_leaving_alive(n_plants);
+    double n_leaving;
+    double n_arriving;
 
     // Dispersal for each dispersing stage:
-    for (uint32 i = alates.disp_start(); i < X_disp.n_elem; i++) {
+    for (uint32 i = plant_disp_start; i < Xt.n_elem; i++) {
 
-        if (X_disp(i) == 0) continue;
+        if (Xt(i) == 0) continue;
 
-        double lambda_ = alates.alate_plant_disp_p() * X_disp(i) /
-            static_cast<double>(n_plants - 1);
-        n_leaving.fill(lambda_);
-        n_leaving(this_j) = 0;
-        emigrants(i, this_j) = arma::accu(n_leaving);
+        n_leaving = aphid_plant_disp_p * Xt(i);
+        emigrants(i, this_j) = n_leaving;
 
-        if (alates.disp_mort() <= 0) {
-            immigrants.row(i) += n_leaving;
-        } else if (alates.disp_mort() < 1) {
-            immigrants.row(i) += n_leaving * (1 - alates.disp_mort());
-        }
+        n_arriving = (n_leaving / n_plants_dbl) * (1 - plant_disp_mort);
+        immigrants.row(i) += n_arriving;
 
     }
 
 
     return;
 }
+
+
+
+
+/*
+ Calculate dispersal of this line to all other plants.
+ Emigration doesn't necessarily == immigration due to disperser mortality.
+ Note: keep the definition of this in the *.cpp file bc it won't
+ compile otherwise.
+ */
+void AphidPop::calc_plant_dispersal(const OnePlant* plant,
+                                    AphidPlantDisps& emigrants,
+                                    AphidPlantDisps& immigrants) const {
+
+    one_calc_plant_dispersal__(apterous.X, plant, emigrants.apterous,
+                               immigrants.apterous);
+    one_calc_plant_dispersal__(alates.X, plant, emigrants.alates,
+                               immigrants.alates);
+    one_calc_plant_dispersal__(paras.X, plant, emigrants.paras,
+                               immigrants.paras);
+
+    return;
+
+}
+
+
+
 
 
 
@@ -272,14 +188,19 @@ void AphidPop::calc_dispersal(const OnePlant* plant,
 
 double AphidPop::update(const OnePlant* plant,
                         const WaspPop* wasps,
-                        const arma::vec& emigrants,
-                        const arma::vec& immigrants,
+                        const AphidPlantDisps& emigrants,
+                        const AphidPlantDisps& immigrants,
                         pcg32& eng) {
 
 
     // First subtract emigrants and add immigrants:
-    alates.X -= emigrants;
-    alates.X += immigrants;
+    const uint32& this_j(plant->this_j);
+    apterous.X -= emigrants.apterous.col(this_j);
+    apterous.X += immigrants.apterous.col(this_j);
+    alates.X -= emigrants.alates.col(this_j);
+    alates.X += immigrants.alates.col(this_j);
+    paras.X -= emigrants.paras.col(this_j);
+    paras.X += immigrants.paras.col(this_j);
 
     double nm = 0; // newly mummified
 
@@ -290,7 +211,7 @@ double AphidPop::update(const OnePlant* plant,
         arma::vec A_apt = wasps->A(attack_surv);
         // making adult alates not able to be parasitized:
         arma::vec A_ala = A_apt;
-        for (uint32 i = alates.disp_start_; i < alates.leslie_.n_cols; i++) {
+        for (uint32 i = alates.field_disp_start_; i < alates.leslie_.n_cols; i++) {
             A_ala[i] = 1;
         }
 
@@ -360,4 +281,6 @@ double AphidPop::update(const OnePlant* plant,
 
     return nm;
 }
+
+
 
