@@ -346,6 +346,7 @@ void one_rep__(RepSummary& summary,
 
     summary.push_back(0, fields);
 
+
     for (uint32 t = 1; t <= max_t; t++) {
 
         if (interrupt_check(iters, prog_bar)) {
@@ -359,6 +360,7 @@ void one_rep__(RepSummary& summary,
         bool all_empty = fields.update(t, perturbs, check_for_clear);
 
         if (t % save_every == 0 || t == max_t) summary.push_back(t, fields);
+
 
         // If all fields are empty, then stop this rep.
         if (all_empty) break;
@@ -522,7 +524,7 @@ void check_args(const uint32& n_reps,
                 const double& mean_K,
                 const double& sd_K,
                 const std::vector<double>& K_y_mult,
-                const double& wilted_prop,
+                const double& wilted_N,
                 const double& shape1_wilted_mort,
                 const double& shape2_wilted_mort,
                 const arma::mat& attack_surv,
@@ -707,9 +709,7 @@ void check_args(const uint32& n_reps,
     one_negative_check(a, "a");
     one_negative_check(k, "k");
     one_negative_check(h, "h");
-    // This is technically a proportion but I allow values > 1 to indicate
-    // that we want to ignore the wilting process:
-    one_negative_check(wilted_prop, "wilted_prop");
+    one_negative_check(wilted_N, "wilted_N");
 
     // objects containing doubles that must be >= 0
     negative_check<std::vector<double>>(K_y_mult, "K_y_mult");
@@ -777,7 +777,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                        const double& mean_K,
                        const double& sd_K,
                        const std::vector<double>& K_y_mult,
-                       const double& wilted_prop,
+                       const double& wilted_N,
                        const double& shape1_wilted_mort,
                        const double& shape2_wilted_mort,
                        const arma::mat& attack_surv,
@@ -827,7 +827,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
     check_args(n_reps, n_lines, n_fields, n_plants,
                max_plant_age, max_N, check_for_clear, clear_surv,
                max_t, save_every,
-               mean_K, sd_K, K_y_mult, wilted_prop,
+               mean_K, sd_K, K_y_mult, wilted_N,
                shape1_wilted_mort, shape2_wilted_mort,
                attack_surv, disp_error, aphid_demog_error, wasp_demog_error,
                sigma_x, sigma_y, rho, extinct_N, aphid_name,
@@ -861,7 +861,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
     all_fields_vec[0] = AllFields(
         n_fields, max_plant_age, max_N, wasp_delay,
         sigma_x, sigma_y, rho, aphid_demog_error, wasp_demog_error,
-        mean_K, sd_K, K_y_mult, wilted_prop,
+        mean_K, sd_K, K_y_mult, wilted_N,
         shape1_wilted_mort, shape2_wilted_mort, attack_surv,
         aphid_name, leslie_mat, aphid_density_0,
         alate_b0, alate_b1, alate_plant_disp_p, disp_mort,

@@ -443,9 +443,6 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #'     Defaults to `1 / 4.67e-4`, which is from Meisner et al. (2014).
 #' @param sd_K Mean of the distribution of `K` values (affecting aphid
 #'     density dependence) among plants. Defaults to `0`.
-#' @param wilted_prop Proportion of carrying capacity that causes the plant
-#'     to become wilted. Values > 1 cause this to be ignored.
-#'     Defaults to `1.1`.
 #' @param sex_ratio Sex ratio of adult wasps. Defaults to `0.5`.
 #' @param mum_density_0 Starting mummy density. Defaults to `0`.
 #' @param max_mum_density Maximum mummy density (ignored if zero).
@@ -532,7 +529,7 @@ sim_gameofclones_full <- function(n_reps,
                                mean_K = 1 / 4.67e-4,
                                sd_K = 0,
                                K_y_mult = 1 / 1.57,
-                               wilted_prop = 1.1,
+                               wilted_N = 0,
                                rho = environ$rho,
                                a = wasp_attack$a,
                                k = wasp_attack$k,
@@ -677,7 +674,7 @@ sim_gameofclones_full <- function(n_reps,
     dbl_check(mean_K, "mean_K")
     dbl_check(sd_K, "sd_K")
     dbl_vec_check(K_y_mult, "K_y_mult")
-    dbl_check(wilted_prop, "wilted_prop")
+    dbl_check(wilted_N, "wilted_N")
     dbl_check(shape1_wilted_mort, "shape1_wilted_mort")
     dbl_check(shape2_wilted_mort, "shape2_wilted_mort")
     dbl_mat_check(attack_surv, "attack_surv")
@@ -722,7 +719,7 @@ sim_gameofclones_full <- function(n_reps,
     sims <- sim_gameofclones_cpp(n_reps, n_fields, max_plant_age, max_N,
                               check_for_clear, clear_surv,
                               max_t, save_every, mean_K, sd_K, K_y_mult,
-                              wilted_prop, shape1_wilted_mort,
+                              wilted_N, shape1_wilted_mort,
                               shape2_wilted_mort,
                               attack_surv, disp_error,
                               aphid_demog_error, wasp_demog_error,

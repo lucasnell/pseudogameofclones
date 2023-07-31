@@ -6,7 +6,6 @@
 #include <pcg/pcg_random.hpp>   // pcg prng
 #include "gameofclones_types.hpp"  // integer types
 #include "patches.hpp"          // field and plant classes
-#include "math.hpp"             // combine_leslies fxn
 
 
 
@@ -40,51 +39,6 @@ void OnePlant::extinct_colonize(const uint32& i) {
 }
 
 
-/*
- Carrying capacity for plant.
- It depends on the Leslie matrix for each line's apterous and alates.
- (I'm not including parasitized aphids because they shouldn't be too numerous.)
- The overall carrying capacity is weighted based on each line's abundance.
- */
-double OnePlant::carrying_capacity() const {
-
-    arma::vec cc(aphids.size());
-    arma::vec Ns(aphids.size());
-    double total_N = 0;
-
-    arma::mat L;
-    arma::cx_vec eigval;
-    double ev;
-
-    for (uint32 i = 0; i < aphids.size(); i++) {
-
-        Ns[i] = aphids[i].total_aphids();
-
-        total_N += Ns[i];
-
-        combine_leslies(L,
-                        aphids[i].apterous.leslie(),
-                        aphids[i].alates.leslie(),
-                        aphids[i].apterous.alate_prop(this),
-                        aphids[i].alates.alate_plant_disp_p(),
-                        aphids[i].alates.disp_mort(),
-                        aphids[i].alates.disp_start());
-
-        eigval = arma::eig_gen( L );
-        ev = eigval.max().real();
-        cc[i] = (ev - 1) * K;
-    }
-
-    double avg_cc;
-
-    if (total_N > 0) {
-        avg_cc = arma::accu(cc % Ns / total_N);
-    } else avg_cc = arma::mean(cc);
-
-    return avg_cc;
-}
-
-
 
 
 
@@ -94,9 +48,9 @@ void OnePlant::update_z_wilted() {
 
     // Once it turns wilted, it stays that way until cleared
     if (wilted_) return;
-    // Wilting process is ignored if wilted_prop > 1
-    if (wilted_prop <= 1) {
-        wilted_ = carrying_capacity() >= (K * wilted_prop);
+    // Wilting process is ignored if wilted_N == 0
+    if (wilted_N > 0) {
+        wilted_ = z > wilted_N;
     }
 
     return;

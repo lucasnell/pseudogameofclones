@@ -48,23 +48,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// carrying_capacity
-double carrying_capacity(const arma::mat& apterous, const arma::mat& alates, const double& alate_prop, const double& disp_prop, const double& disp_mort, const uint32& disp_start, const double& K);
-RcppExport SEXP _gameofclones_carrying_capacity(SEXP apterousSEXP, SEXP alatesSEXP, SEXP alate_propSEXP, SEXP disp_propSEXP, SEXP disp_mortSEXP, SEXP disp_startSEXP, SEXP KSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type apterous(apterousSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type alates(alatesSEXP);
-    Rcpp::traits::input_parameter< const double& >::type alate_prop(alate_propSEXP);
-    Rcpp::traits::input_parameter< const double& >::type disp_prop(disp_propSEXP);
-    Rcpp::traits::input_parameter< const double& >::type disp_mort(disp_mortSEXP);
-    Rcpp::traits::input_parameter< const uint32& >::type disp_start(disp_startSEXP);
-    Rcpp::traits::input_parameter< const double& >::type K(KSEXP);
-    rcpp_result_gen = Rcpp::wrap(carrying_capacity(apterous, alates, alate_prop, disp_prop, disp_mort, disp_start, K));
-    return rcpp_result_gen;
-END_RCPP
-}
 // sad_leslie
 NumericVector sad_leslie(NumericMatrix leslie);
 RcppExport SEXP _gameofclones_sad_leslie(SEXP leslieSEXP) {
@@ -224,7 +207,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gameofclones_logit", (DL_FUNC) &_gameofclones_logit, 1},
     {"_gameofclones_inv_logit", (DL_FUNC) &_gameofclones_inv_logit, 1},
     {"_gameofclones_leslie_matrix", (DL_FUNC) &_gameofclones_leslie_matrix, 4},
-    {"_gameofclones_carrying_capacity", (DL_FUNC) &_gameofclones_carrying_capacity, 7},
     {"_gameofclones_sad_leslie", (DL_FUNC) &_gameofclones_sad_leslie, 1},
     {"_gameofclones_fields_to_list", (DL_FUNC) &_gameofclones_fields_to_list, 1},
     {"_gameofclones_fields_from_vectors", (DL_FUNC) &_gameofclones_fields_from_vectors, 2},

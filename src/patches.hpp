@@ -19,6 +19,7 @@ using namespace Rcpp;
 class AllFields;
 
 
+
 // Info for a single perturbation (it happens to all plants within a field)
 struct PerturbInfo {
 
@@ -86,22 +87,11 @@ struct PlantClearingInfo {
 };
 
 
-
-
-
 /*
 One plant or a number of plants so close that aphids freely disperse
  across them.
 */
 class OnePlant {
-
-
-    /*
-     Carrying capacity for plant.
-     It depends on the Leslie matrix for each line's apterous and alates.
-     I'm not including parasitized aphids because they shouldn't be numerous.
-     */
-    double carrying_capacity() const;
 
 
     /*

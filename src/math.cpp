@@ -75,45 +75,6 @@ NumericMatrix leslie_matrix(IntegerVector instar_days, const double& surv_juv,
 
 
 
-/*
- Carrying capacity for plant.
- It depends on the Leslie matrix for each line's apterous aphids.
- I'm assuming apterous ones drive the carrying capacity, rather than alates, because
- they should be much more numerous.
- */
-//' Calculate carrying capacity from aphid and plant info
-//'
-//' @param apterous Leslie matrix for apterous aphids of this line
-//' @param alates Leslie matrix for alates of this line
-//' @param alate_prop The proportion of new aphids that are alates
-//' @param disp_prop The proportion of alates that disperse away from the plant.
-//' @param disp_mort Mortality rate for dispersing alates.
-//' @param disp_start Index for the age at which alates disperse (0-indexed).
-//' @param K The "carrying capacity" for this plant.
-//'
-//'
-//' @noRd
-//[[Rcpp::export]]
-double carrying_capacity(const arma::mat& apterous,
-                         const arma::mat& alates,
-                         const double& alate_prop,
-                         const double& disp_prop,
-                         const double& disp_mort,
-                         const uint32& disp_start,
-                         const double& K) {
-
-    arma::mat L;
-
-    combine_leslies(L, apterous, alates, alate_prop, disp_prop,
-                    disp_mort, disp_start);
-
-    arma::cx_vec eigval = arma::eig_gen( L );
-    double ev = eigval.max().real();
-    double cc = (ev - 1) * K;
-
-    return cc;
-}
-
 
 
 
