@@ -54,34 +54,25 @@ struct PerturbInfo {
 
 
 
-// Info for clearing plants
-template <typename T>
-struct PlantClearingInfo {
+// Info for wilted plants to figure out which to clear
+struct WiltedPlantsInfo {
 
     uint32 ind;
     double N;
-    bool wilted;
-    T thresh_info; // age or # aphids
 
-    PlantClearingInfo(const uint32& ind_,
-                      const double& N_,
-                      const bool& wilted_,
-                      const T& thresh_info_)
-        : ind(ind_), N(N_), wilted(wilted_), thresh_info(thresh_info_) {}
-    PlantClearingInfo(const PlantClearingInfo<T>& other)
-        : ind(other.ind), N(other.N), thresh_info(other.thresh_info) {}
+    WiltedPlantsInfo(const uint32& ind_,
+                      const double& N_)
+        : ind(ind_), N(N_) {}
+    WiltedPlantsInfo(const WiltedPlantsInfo& other)
+        : ind(other.ind), N(other.N) {}
 
-    // This returns true when `other` should be cleared first
-    bool operator<(const PlantClearingInfo<T>& other) const {
-        if (other.wilted && !wilted) return true;
-        if (!other.wilted && wilted) return false;
-        return thresh_info < other.thresh_info;
-    }
     // This returns true when `this` should be cleared first
-    bool operator>(const PlantClearingInfo<T>& other) const {
-        if (other.wilted && !wilted) return false;
-        if (!other.wilted && wilted) return true;
-        return thresh_info > other.thresh_info;
+    bool operator<(const WiltedPlantsInfo& other) const {
+        return other.N > N;
+    }
+    // This returns true when `other` should be cleared first
+    bool operator>(const WiltedPlantsInfo& other) const {
+        return other.N < N;
     }
 
 };
@@ -343,8 +334,7 @@ public:
      Clear to no aphids or mummies
      */
     void clear(const double& K_,
-               const double& K_y_,
-               const double& wilted_mort_) {
+               const double& K_y_) {
         for (AphidPop& ap : aphids) ap.clear();
         mummies.clear();
         empty = true;
@@ -352,7 +342,6 @@ public:
         age = 0;
         K = K_;
         K_y = K_y_;
-        wilted_mort = wilted_mort_;
         return;
     }
     /*
@@ -360,7 +349,6 @@ public:
      */
     void clear(const double& K_,
                const double& K_y_,
-               const double& wilted_mort_,
                const double& surv) {
         empty = true;
         for (AphidPop& ap : aphids) {
@@ -379,7 +367,6 @@ public:
         age = 0;
         K = K_;
         K_y = K_y_;
-        wilted_mort = wilted_mort_;
         return;
     }
 
@@ -454,18 +441,12 @@ class OneField {
     // For new Ks if desired:
     trunc_normal_distribution tnorm_distr;
 
-    // For new wilted_morts if desired:
-    beta_distribution beta_distr;
-
     double mean_K_;                 // mean of distribution of `K` for plants
     double sd_K_;                   // sd of distribution of `K` for plants
 
     // Helps calculate carrying capacity for parasitized aphids
     // (`K_y = K * K_y_mult`):
     double K_y_mult;
-
-    double shape1_wilted_mort_;      // shape1 of distr of `wilted_mort`
-    double shape2_wilted_mort_;      // shape2 of distr of `wilted_mort`
 
     double extinct_N;               // used here for the wasps
     bool constant_wasps;            // keep wasp abundance constant?
@@ -481,15 +462,6 @@ class OneField {
         K_y = K * K_y_mult;
         return;
     }
-    // Set plant-wilted mortality parameter
-    void set_wilted_mort(double& wilted_mort, pcg32& eng) {
-        if (shape2_wilted_mort_ == 0) {
-            wilted_mort = shape1_wilted_mort_;
-        } else {
-            wilted_mort = beta_distr(eng);
-        }
-        return;
-    }
 
     inline void set_wasp_info(double& old_mums) {
         wasps.x = 0;
@@ -501,14 +473,6 @@ class OneField {
         return;
     }
 
-
-    // Do the actual clearing of plants while avoiding extinction
-    template <typename T>
-    void do_clearing(std::vector<PlantClearingInfo<T>>& clear_plants,
-                     double& remaining,
-                     std::vector<bool>& wilted,
-                     const double& clear_surv,
-                     pcg32& eng);
 
 
 public:
@@ -522,8 +486,8 @@ public:
 
 
     OneField()
-        : tnorm_distr(), beta_distr(), mean_K_(), sd_K_(), K_y_mult(),
-          shape1_wilted_mort_(), shape2_wilted_mort_(), extinct_N(),
+        : tnorm_distr(), mean_K_(), sd_K_(), K_y_mult(),
+          extinct_N(),
           constant_wasps(),
           plants(), wasps(), emigrants(), immigrants() {};
 
@@ -541,8 +505,7 @@ public:
                const double& sd_K,
                const double& K_y_mult_,
                const double& wilted_N,
-               const double& shape1_wilted_mort,
-               const double& shape2_wilted_mort,
+               const double& wilted_mort,
                const arma::mat& attack_surv_,
                const std::vector<std::string>& aphid_name,
                const std::vector<arma::cube>& leslie_mat,
@@ -570,12 +533,9 @@ public:
                const bool& constant_wasps_,
                pcg32& eng)
         : tnorm_distr(),
-          beta_distr(),
           mean_K_(mean_K),
           sd_K_(sd_K),
           K_y_mult(K_y_mult_),
-          shape1_wilted_mort_(shape1_wilted_mort),
-          shape2_wilted_mort_(shape2_wilted_mort),
           extinct_N(extinct_N_),
           constant_wasps(constant_wasps_),
           plants(),
@@ -603,20 +563,13 @@ public:
         } else {
             tnorm_distr = trunc_normal_distribution(mean_K_, sd_K_);
         }
-        if (shape2_wilted_mort_ <= 0) {
-            shape2_wilted_mort_ = 0;
-        } else {
-            beta_distr = beta_distribution(shape1_wilted_mort_,
-                                           shape2_wilted_mort_);
-        }
 
         uint32 n_plants = aphid_density_0.size();
 
-        double K, K_y, wilted_mort;
+        double K, K_y;
         plants.reserve(n_plants);
         for (uint32 j = 0; j < n_plants; j++) {
             set_K(K, K_y, eng);
-            set_wilted_mort(wilted_mort, eng);
             OnePlant ap(sigma_x, rho, aphid_demog_error, attack_surv_,
                         K, K_y, wilted_N, wilted_mort,
                         aphid_name, leslie_mat,
@@ -633,12 +586,9 @@ public:
 
     OneField(const OneField& other)
         : tnorm_distr(other.tnorm_distr),
-          beta_distr(other.beta_distr),
           mean_K_(other.mean_K_),
           sd_K_(other.sd_K_),
           K_y_mult(other.K_y_mult),
-          shape1_wilted_mort_(other.shape1_wilted_mort_),
-          shape2_wilted_mort_(other.shape2_wilted_mort_),
           extinct_N(other.extinct_N),
           constant_wasps(other.constant_wasps),
           plants(other.plants),
@@ -648,12 +598,9 @@ public:
 
     OneField& operator=(const OneField& other) {
         tnorm_distr = other.tnorm_distr;
-        beta_distr = other.beta_distr;
         mean_K_ = other.mean_K_;
         sd_K_ = other.sd_K_;
         K_y_mult = other.K_y_mult;
-        shape1_wilted_mort_ = other.shape1_wilted_mort_;
-        shape2_wilted_mort_ = other.shape2_wilted_mort_;
         extinct_N = other.extinct_N;
         constant_wasps = other.constant_wasps;
         plants = other.plants;
@@ -758,6 +705,11 @@ public:
     }
 
 
+    void clear_plants(const double& clear_surv,
+                      const uint32& min_rm,
+                      pcg32& eng);
+
+
 };
 
 
@@ -783,10 +735,6 @@ class AllFields {
 
     pcg32 eng;   // RNG
 
-    uint32 max_age;
-    double max_N;
-
-
 public:
 
     std::vector<OneField> fields;
@@ -802,14 +750,13 @@ public:
     uint32 total_stages;
 
     AllFields()
-        : eng(), max_age(), max_N(), fields(), clear_surv(),
+        : eng(), fields(), clear_surv(),
           alate_field_disp_p(), wasp_disp_m0(), wasp_disp_m1(),
           wasp_field_attract(),
           extinct_N(), total_stages() {};
 
     AllFields(const AllFields& other)
         : eng(other.eng),
-          max_age(other.max_age), max_N(other.max_N),
           fields(other.fields),
           clear_surv(other.clear_surv),
           alate_field_disp_p(other.alate_field_disp_p),
@@ -821,8 +768,6 @@ public:
 
     AllFields& operator=(const AllFields& other) {
         eng = other.eng;
-        max_age = other.max_age;
-        max_N = other.max_N;
         fields = other.fields;
         clear_surv = other.clear_surv;
         alate_field_disp_p = other.alate_field_disp_p;
@@ -836,8 +781,6 @@ public:
 
 
     AllFields(const uint32& n_fields,
-              const uint32& max_age_,
-              const double& max_N_,
               const std::vector<uint32>& wasp_delay,
               const double& sigma_x,
               const double& sigma_y,
@@ -848,8 +791,7 @@ public:
               const double& sd_K,
               const std::vector<double>& K_y_mult,
               const double& wilted_N,
-              const double& shape1_wilted_mort,
-              const double& shape2_wilted_mort,
+              const double& wilted_mort,
               const arma::mat& attack_surv,
               const std::vector<std::string>& aphid_name,
               const std::vector<arma::cube>& leslie_mat,
@@ -880,8 +822,7 @@ public:
               const double& wasp_disp_m1_,
               const std::vector<double>& wasp_field_attract_,
               const std::vector<uint64>& seeds)
-        : eng(), max_age(max_age_), max_N(max_N_),
-          fields(),
+        : eng(), fields(),
           clear_surv(clear_surv_),
           alate_field_disp_p(alate_field_disp_p_),
           wasp_disp_m0(wasp_disp_m0_),
@@ -903,7 +844,7 @@ public:
             fields.push_back(
                 OneField(sigma_x, sigma_y, rho, aphid_demog_error, wasp_demog_error,
                          mean_K, sd_K, K_y_mult[i],
-                         wilted_N, shape1_wilted_mort, shape2_wilted_mort,
+                         wilted_N, wilted_mort,
                          attack_surv, aphid_name, leslie_mat, aphid_density_0,
                          alate_b0, alate_b1, aphid_plant_disp_p,
                          plant_disp_mort, field_disp_start, plant_disp_start,
@@ -1002,9 +943,10 @@ public:
                 std::deque<uint32>& check_for_clear);
 
 
-    // Clear plants by age or total N thresholds (or neither)
+    // Clear plants that are withered (if any)
     void clear_plants(const uint32& t,
-                      std::deque<uint32>& check_for_clear);
+                      std::deque<uint32>& check_for_clear,
+                      std::deque<std::pair<uint32, uint32>>& extra_plant_removals);
 
     List to_list() const;
 
@@ -1027,7 +969,6 @@ public:
                       const std::vector<double>& wasp_field_attract_,
                       const double& mum_smooth_,
                       const std::vector<double>& pred_rate_,
-                      const uint32& max_plant_age_,
                       const double& clear_surv_);
 
 

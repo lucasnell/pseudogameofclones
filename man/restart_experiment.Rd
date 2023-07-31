@@ -68,7 +68,7 @@ Defaults to \code{-5}.}
 \item{alate_b1}{The proportion of offspring from apterous aphids is
 \code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
 aphids on that plant.
-Defaults to \code{K * 1.76e-07}, which makes alate production only mildly
+Defaults to \code{0.0022}, which makes alate production only mildly
 density dependent.}
 
 \item{K_y_mult}{The number multiplied by \code{K} to get density dependence for

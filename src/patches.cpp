@@ -85,9 +85,9 @@ void OnePlant::update(const AllAphidPlantDisps& emigrants,
         nm += aphids[i].update(this, wasps, emigrants[i], immigrants[i], eng);
 
         if (wilted_) {
-            aphids[i].apterous.X *= wilted_mort;
-            aphids[i].alates.X *= wilted_mort;
-            aphids[i].paras.X *= wilted_mort;
+            aphids[i].apterous.X *= (1 - wilted_mort);
+            aphids[i].alates.X *= (1 - wilted_mort);
+            aphids[i].paras.X *= (1 - wilted_mort);
         }
 
         // Adjust for potential extinction or re-colonization:
@@ -111,87 +111,80 @@ void OnePlant::update(const AllAphidPlantDisps& emigrants,
 
 
 
-// Do the actual clearing of plants while avoiding extinction
-template <typename T>
-inline void OneField::do_clearing(std::vector<PlantClearingInfo<T>>& clear_plants,
-                                    double& remaining,
-                                    std::vector<bool>& wilted,
-                                    const double& clear_surv,
-                                    pcg32& eng) {
 
-    int n_plants = plants.size();
-    int n_wilted = std::accumulate(wilted.begin(), wilted.end(), 0);
 
-    double K, K_y, wilted_mort;
 
-    if (clear_plants.size() == 0 && n_wilted < n_plants) return;
+void OneField::clear_plants(const double& clear_surv,
+                            const uint32& min_rm,
+                            pcg32& eng) {
+
+    std::vector<WiltedPlantsInfo> wilted_plants;
+
+    // We can remove at max half the plants:
+    uint32 max_rm = std::max(1U, static_cast<uint32>(plants.size() / 2));
+    if (min_rm > max_rm) max_rm = min_rm;
+
+    wilted_plants.reserve(max_rm);
+
+    for (const OnePlant& p : plants) {
+        if (p.wilted()) {
+            WiltedPlantsInfo tmp_wpi(p.this_j, p.total_aphids());
+            wilted_plants.push_back(tmp_wpi);
+        }
+    }
+
+    if (wilted_plants.size() == 0 && min_rm == 0) return;
 
     /*
-     This is to avoid removing no plants when they're all dying.
-     Clearing the least-populated plant here means that there's a healthy plant
-     for aphids to disperse to, which hopefully reduces the chance of extinction
-     before the next time plants get checked.
+     If we have greater wilted plants than the max, we need to remove
+     some from the `wilted_plants` vector.
      */
-    if (clear_plants.size() == 0 && n_wilted == n_plants) {
+    if (wilted_plants.size() > max_rm) {
+        /*
+         Sort by ascending `N` so that we clear the plants with the
+         fewest aphids:
+         */
+        std::sort(wilted_plants.begin(), wilted_plants.end());
+        while (wilted_plants.size() > max_rm) wilted_plants.pop_back();
+    }
+    /*
+     If requested to remove a minimum number of plants from each field on
+     this day but not enough are wilted, add non-wilted plants that have
+     the fewest aphids.
+     */
+    if (wilted_plants.size() < min_rm) {
+        // Pretend non-wilted plants are wilted to sort by `N` as I do when
+        // `wilted_plants.size() > max_rm` above:
+        std::deque<WiltedPlantsInfo> non_wilted;  // use deque for .pop_front()
         for (const OnePlant& p : plants) {
-            double N = p.total_aphids();
-            clear_plants.push_back(PlantClearingInfo<T>(p.this_j, N, true,
-                                                         static_cast<T>(N)));
+            if (!p.wilted()) {
+                WiltedPlantsInfo tmp_wpi(p.this_j, p.total_aphids());
+                non_wilted.push_back(tmp_wpi);
+            }
         }
-        // Sort ascending by `N`:
-        std::sort(clear_plants.begin(), clear_plants.end());
-
-        remaining = 0;
-
-        for (uint32 i = 1; i < n_plants; i++) {
-            remaining += clear_plants.back().N;
-            clear_plants.pop_back();
+        // Now sort by ascending `N`
+        std::sort(non_wilted.begin(), non_wilted.end());
+        // Add non-wilted to the end of `wilted_plants` until `min_rm`
+        // requirement is met
+        while (wilted_plants.size() < min_rm && ! non_wilted.empty()) {
+            wilted_plants.push_back(non_wilted.front());
+            non_wilted.pop_front();
         }
+    }
 
+    double K, K_y;
+
+    for (uint32 i = 0; i < wilted_plants.size(); i++) {
+
+        OnePlant& plant_i(plants[wilted_plants[i].ind]);
 
         set_K(K, K_y, eng);
-        set_wilted_mort(wilted_mort, eng);
 
         if (clear_surv > 0) {
-            plants[clear_plants.front().ind].clear(K, K_y, wilted_mort,
-                                        clear_surv);
-        } else plants[clear_plants.front().ind].clear(K, K_y, wilted_mort);
-
-        return;
+            plant_i.clear(K, K_y, clear_surv);
+        } else plant_i.clear(K, K_y);
 
     }
-
-    /*
-     If removing all these plants cause total extinction, we need to remove
-     some indices from `inds`.
-     We'll sort (high to low) the vector by the threshold variable (age or # aphids),
-     then remove the last item in the vector until we have aphids again.
-     */
-    if (remaining == 0) {
-
-        // Sort descending:
-        std::sort(clear_plants.begin(), clear_plants.end(),
-                  std::greater<PlantClearingInfo<T>>());
-
-        while (remaining == 0) {
-            remaining += clear_plants.back().N;
-            clear_plants.pop_back();
-        }
-
-    }
-
-    for (uint32 i = 0; i < clear_plants.size(); i++) {
-
-        set_K(K, K_y, eng);
-        set_wilted_mort(wilted_mort, eng);
-
-        if (clear_surv > 0) {
-            plants[clear_plants.front().ind].clear(K, K_y, wilted_mort,
-                                        clear_surv);
-        } else plants[clear_plants.front().ind].clear(K, K_y, wilted_mort);
-
-    }
-
 
     return;
 }
@@ -199,67 +192,8 @@ inline void OneField::do_clearing(std::vector<PlantClearingInfo<T>>& clear_plant
 
 
 
-// Clear plants by either a maximum age or total abundance
-void OneField::clear_plants(const uint32& max_age,
-                               const double& clear_surv,
-                               pcg32& eng) {
-
-    std::vector<PlantClearingInfo<uint32>> clear_plants;
-    clear_plants.reserve(plants.size());
-
-    // # remaining aphids for non-cleared plants
-    double remaining = 0;
-
-    // keeping track of dying plants:
-    std::vector<bool> wilted;
-    wilted.reserve(plants.size());
-
-    for (const OnePlant& p : plants) {
-        double N = p.total_aphids();
-        wilted.push_back(p.wilted());
-        if (p.age > max_age || p.wilted()) {
-            double surv_remaining = N * clear_surv;
-            if (surv_remaining < extinct_N) surv_remaining = 0;
-            remaining += surv_remaining;
-            clear_plants.push_back(PlantClearingInfo<uint32>(p.this_j, N, wilted.back(),
-                                                              p.age));
-        } else remaining += N;
-    }
-
-    do_clearing<uint32>(clear_plants, remaining, wilted, clear_surv, eng);
-
-    return;
-}
 
 
-void OneField::clear_plants(const double& max_N,
-                               const double& clear_surv,
-                               pcg32& eng) {
-
-    std::vector<PlantClearingInfo<double>> clear_plants;
-    clear_plants.reserve(plants.size());
-
-    double remaining = 0;
-
-    std::vector<bool> wilted;
-    wilted.reserve(plants.size());
-
-    for (const OnePlant& p : plants) {
-        double N = p.total_aphids();
-        wilted.push_back(p.wilted());
-        if (N > max_N || p.wilted()) {
-            double surv_remaining = N * clear_surv;
-            if (surv_remaining < extinct_N) surv_remaining = 0;
-            remaining += surv_remaining;
-            clear_plants.push_back(PlantClearingInfo<double>(p.this_j, N, wilted.back(),
-                                                              N));
-        } else remaining += N;
-    }
-
-    do_clearing<double>(clear_plants, remaining, wilted, clear_surv, eng);
-
-    return;
-}
 
 
 void AllFields::do_perturb(std::deque<PerturbInfo>& perturbs,
@@ -356,20 +290,20 @@ bool AllFields::update(const uint32& t,
 }
 
 
-// Clear plants by age or total N thresholds (or neither)
+// Clear plants
 void AllFields::clear_plants(const uint32& t,
-                             std::deque<uint32>& check_for_clear) {
+                             std::deque<uint32>& check_for_clear,
+                             std::deque<std::pair<uint32, uint32>>& extra_plant_removals) {
     if (check_for_clear.empty()) return;
     if (t != check_for_clear.front()) return;
     check_for_clear.pop_front();
-    if (max_N > 0) {
-        for (OneField& field : fields) {
-            field.clear_plants(max_N, clear_surv, eng);
-        }
-    } else if (max_age > 0) {
-        for (OneField& field : fields) {
-            field.clear_plants(max_age, clear_surv, eng);
-        }
+    uint32 min_rm = 0;
+    if (!extra_plant_removals.empty() && t >= extra_plant_removals.front().first) {
+        min_rm = extra_plant_removals.front().second;
+        extra_plant_removals.pop_front();
+    }
+    for (OneField& field : fields) {
+        field.clear_plants(clear_surv, min_rm, eng);
     }
     return;
 }
@@ -589,7 +523,6 @@ void AllFields::set_new_pars(const double& K_,
                              const std::vector<double>& wasp_field_attract_,
                              const double& mum_smooth_,
                              const std::vector<double>& pred_rate_,
-                             const uint32& max_plant_age_,
                              const double& clear_surv_) {
 
     this->alate_field_disp_p = alate_field_disp_p_;
@@ -601,7 +534,6 @@ void AllFields::set_new_pars(const double& K_,
     double wfa_sum = std::accumulate(wasp_field_attract.begin(),
                                      wasp_field_attract.end(), 0.0);
     for (double& x : wasp_field_attract) x /= wfa_sum;
-    this->max_age = max_plant_age_;
     this->clear_surv = clear_surv_;
 
     for (uint32 i = 0; i < fields.size(); i++) {

@@ -12,6 +12,7 @@
 #include <RcppArmadillo.h>      // arma namespace
 #include <vector>               // vector class
 #include <random>               // normal distribution
+#include <utility>              // std::pair, std::make_pair
 #include <deque>                // deque
 #include <pcg/pcg_random.hpp>   // pcg prng
 #include <progress.hpp>         // for the progress bar
@@ -327,6 +328,7 @@ void one_rep__(RepSummary& summary,
                const std::vector<uint32>& perturb_where,
                const std::vector<uint32>& perturb_who,
                const std::vector<double>& perturb_how,
+               std::deque<std::pair<uint32, uint32>> extra_plant_removals,
                Progress& prog_bar,
                int& status_code) {
 
@@ -365,7 +367,7 @@ void one_rep__(RepSummary& summary,
         // If all fields are empty, then stop this rep.
         if (all_empty) break;
 
-        fields.clear_plants(t, check_for_clear);
+        fields.clear_plants(t, check_for_clear, extra_plant_removals);
 
 
     }
@@ -388,6 +390,7 @@ void one_rep__(RepSummary& summary,
                const std::vector<uint32>& perturb_where,
                const std::vector<uint32>& perturb_who,
                const std::vector<double>& perturb_how,
+               std::deque<std::pair<uint32, uint32>> extra_plant_removals,
                Progress& prog_bar,
                int& status_code) {
 
@@ -424,7 +427,7 @@ void one_rep__(RepSummary& summary,
         // If all fields are empty, then stop this rep.
         if (all_empty) break;
 
-        fields.clear_plants(t, check_for_clear);
+        fields.clear_plants(t, check_for_clear, extra_plant_removals);
 
         stage_ts[std::to_string(t)] = fields.to_list();
 
@@ -515,8 +518,6 @@ void check_args(const uint32& n_reps,
                 const uint32& n_lines,
                 const uint32& n_fields,
                 const uint32& n_plants,
-                const uint32& max_plant_age,
-                const double& max_N,
                 const std::deque<uint32>& check_for_clear,
                 const double& clear_surv,
                 const uint32& max_t,
@@ -525,8 +526,7 @@ void check_args(const uint32& n_reps,
                 const double& sd_K,
                 const std::vector<double>& K_y_mult,
                 const double& wilted_N,
-                const double& shape1_wilted_mort,
-                const double& shape2_wilted_mort,
+                const double& wilted_mort,
                 const arma::mat& attack_surv,
                 const bool& aphid_demog_error,
                 const bool& wasp_demog_error,
@@ -563,6 +563,7 @@ void check_args(const uint32& n_reps,
                 const std::vector<uint32>& perturb_where,
                 const std::vector<uint32>& perturb_who,
                 const std::vector<double>& perturb_how,
+                const arma::umat& extra_plant_removals_mat,
                 uint32& n_threads) {
 
 
@@ -700,11 +701,8 @@ void check_args(const uint32& n_reps,
     thread_check(n_threads);
 
     // doubles that must be >= 0
-    one_negative_check(max_N, "max_N");
     one_negative_check(mean_K, "mean_K");
     one_negative_check(sd_K, "sd_K");
-    one_negative_check(shape1_wilted_mort, "shape1_wilted_mort");
-    one_negative_check(shape2_wilted_mort, "shape2_wilted_mort");
     one_negative_check(sigma_x, "sigma_x");
     one_negative_check(sigma_y, "sigma_y");
     one_negative_check(rho, "rho");
@@ -733,6 +731,7 @@ void check_args(const uint32& n_reps,
 
 
     // doubles / double vectors that must be >= 0 and <= 1
+    one_non_prop_check(wilted_mort, "wilted_mort");
     one_non_prop_check(mum_smooth, "mum_smooth");
     one_non_prop_check(clear_surv, "clear_surv");
     one_non_prop_check(sex_ratio, "sex_ratio");
@@ -761,6 +760,30 @@ void check_args(const uint32& n_reps,
         stop(msg.c_str());
     }
 
+    /*
+     This matrix must have a first column with sorted numbers (ascending with
+     no ties) from 1 to max_t,
+     and numbers from 1 to n_plants in the second column.
+     */
+    if (extra_plant_removals_mat.n_rows > 1) {
+        arma::uvec epm_col0 = extra_plant_removals_mat.col(0);
+        if (!epm_col0.is_sorted("strictascend")) {
+            stop("first col of extra_plant_removals_mat is not sorted");
+        }
+    }
+    if (arma::any(extra_plant_removals_mat.col(0) < 1)) {
+        stop("first col of extra_plant_removals_mat has item(s) < 1)");
+    }
+    if (arma::any(extra_plant_removals_mat.col(0) > max_t)) {
+        stop("first col of extra_plant_removals_mat has item(s) > max_t)");
+    }
+    if (arma::any(extra_plant_removals_mat.col(1) < 1)) {
+        stop("second col of extra_plant_removals_mat has item(s) < 1)");
+    }
+    if (arma::any(extra_plant_removals_mat.col(1) > n_plants)) {
+        stop("second col of extra_plant_removals_mat has item(s) > n_plants)");
+    }
+
     return;
 }
 
@@ -771,8 +794,6 @@ void check_args(const uint32& n_reps,
 //[[Rcpp::export]]
 List sim_gameofclones_cpp(const uint32& n_reps,
                        const uint32& n_fields,
-                       const uint32& max_plant_age,
-                       const double& max_N,
                        const std::deque<uint32>& check_for_clear,
                        const double& clear_surv,
                        const uint32& max_t,
@@ -781,8 +802,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                        const double& sd_K,
                        const std::vector<double>& K_y_mult,
                        const double& wilted_N,
-                       const double& shape1_wilted_mort,
-                       const double& shape2_wilted_mort,
+                       const double& wilted_mort,
                        const arma::mat& attack_surv,
                        const bool& aphid_demog_error,
                        const bool& wasp_demog_error,
@@ -821,6 +841,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                        const std::vector<uint32>& perturb_where,
                        const std::vector<uint32>& perturb_who,
                        const std::vector<double>& perturb_how,
+                       const arma::umat& extra_plant_removals_mat,
                        uint32 n_threads,
                        const bool& show_progress) {
 
@@ -828,10 +849,10 @@ List sim_gameofclones_cpp(const uint32& n_reps,
     uint32 n_plants = aphid_density_0.size();
 
     check_args(n_reps, n_lines, n_fields, n_plants,
-               max_plant_age, max_N, check_for_clear, clear_surv,
+               check_for_clear, clear_surv,
                max_t, save_every,
                mean_K, sd_K, K_y_mult, wilted_N,
-               shape1_wilted_mort, shape2_wilted_mort,
+               wilted_mort,
                attack_surv, aphid_demog_error, wasp_demog_error,
                sigma_x, sigma_y, rho, extinct_N, aphid_name,
                leslie_mat, aphid_density_0, alate_b0, alate_b1,
@@ -841,7 +862,8 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1,
                wasp_field_attract,
                sex_ratio, s_y, constant_wasps,
-               perturb_when, perturb_where, perturb_who, perturb_how, n_threads);
+               perturb_when, perturb_where, perturb_who, perturb_how,
+               extra_plant_removals_mat, n_threads);
 
     Progress prog_bar(max_t * n_reps, show_progress);
     std::vector<int> status_codes(n_threads, 0);
@@ -850,6 +872,13 @@ List sim_gameofclones_cpp(const uint32& n_reps,
     const std::vector<std::vector<uint64>> seeds = mt_seeds(n_reps);
 
     std::vector<RepSummary> summaries(n_reps);
+
+    std::deque<std::pair<uint32, uint32>> extra_plant_removals;
+    for (uint32 i = 0; i < extra_plant_removals_mat.n_rows; i++) {
+        std::pair<uint32, uint32> epm_tmp(extra_plant_removals_mat(i, 0),
+                                          extra_plant_removals_mat(i, 1));
+        extra_plant_removals.push_back(epm_tmp);
+    }
 
 
     /*
@@ -863,10 +892,10 @@ List sim_gameofclones_cpp(const uint32& n_reps,
     std::vector<AllFields>& all_fields_vec(*all_fields_vec_xptr);
     // Fill in first AllFields object, then copy that to the rest:
     all_fields_vec[0] = AllFields(
-        n_fields, max_plant_age, max_N, wasp_delay,
+        n_fields, wasp_delay,
         sigma_x, sigma_y, rho, aphid_demog_error, wasp_demog_error,
         mean_K, sd_K, K_y_mult, wilted_N,
-        shape1_wilted_mort, shape2_wilted_mort, attack_surv,
+        wilted_mort, attack_surv,
         aphid_name, leslie_mat, aphid_density_0,
         alate_b0, alate_b1, aphid_plant_disp_p, plant_disp_mort,
         field_disp_start, plant_disp_start,
@@ -903,6 +932,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
         one_rep__(summaries[i], all_fields_vec[i], i,
                   check_for_clear, max_t, save_every,
                   perturb_when, perturb_where, perturb_who, perturb_how,
+                  extra_plant_removals,
                   prog_bar, status_code);
     }
 
@@ -969,7 +999,6 @@ SEXP restart_fill_other_pars(SEXP all_fields_in_ptr,
                              const std::vector<double>& wasp_field_attract,
                              const double& mum_smooth,
                              const std::vector<double>& pred_rate,
-                             const uint32& max_plant_age,
                              const double& clear_surv) {
 
     XPtr<std::vector<AllFields>> all_fields_vec_in_xptr(all_fields_in_ptr);
@@ -1023,7 +1052,7 @@ SEXP restart_fill_other_pars(SEXP all_fields_in_ptr,
         fields.set_new_pars(K, alate_b0, alate_b1, alate_field_disp_p,
                             K_y_mult, s_y, a, k, h, wasp_disp_m0, wasp_disp_m1,
                             wasp_field_attract,
-                            mum_smooth, pred_rate, max_plant_age, clear_surv);
+                            mum_smooth, pred_rate, clear_surv);
 
     }
 
@@ -1060,6 +1089,9 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
 
     std::vector<RepSummary> summaries(n_reps);
 
+    // Empty version of this for `one_rep__`
+    std::deque<std::pair<uint32, uint32>> extra_plant_removals;
+
     List stage_ts;
 
     if (stage_ts_out) {
@@ -1068,6 +1100,7 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
             one_rep__(summaries[i], stage_ts, all_fields_vec[i], i,
                       check_for_clear, max_t, save_every,
                       perturb_when, perturb_where, perturb_who, perturb_how,
+                      extra_plant_removals,
                       prog_bar, status_code);
         }
     } else {
@@ -1076,6 +1109,7 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
             one_rep__(summaries[i], all_fields_vec[i], i,
                       check_for_clear, max_t, save_every,
                       perturb_when, perturb_where, perturb_who, perturb_how,
+                      extra_plant_removals,
                       prog_bar, status_code);
         }
     }

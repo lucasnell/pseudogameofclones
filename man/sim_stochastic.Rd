@@ -10,11 +10,15 @@ sim_stochastic(
   max_t = 250,
   n_plants = 16,
   K = 1800,
+  alate_b0 = -5,
+  alate_b1 = 0.0088,
   pred_rate = 0,
   alate_field_disp_p = 0.35,
   aphid_plant_disp_p = 0.1,
   plant_check_gaps = c(3, 4),
+  extra_plant_removals = cbind(10, 4),
   wilted_N = 500,
+  wilted_mort = 0.39,
   aphid_demog_error = FALSE,
   wasp_demog_error = FALSE,
   environ_error = FALSE,
@@ -58,6 +62,19 @@ Defaults to \code{1800} because this caused simulations to
 approximately match growth of aphid populations on individual fava
 bean plants.}
 
+\item{alate_b0}{The proportion of offspring from apterous aphids is
+\code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
+aphids on that plant.
+Defaults to \code{-5}.}
+
+\item{alate_b1}{The proportion of offspring from apterous aphids is
+\code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
+aphids on that plant.
+Defaults to \code{0.0088}, which makes alate production only mildly
+density dependent. This default differs from that in \code{sim_experiments}
+because \code{N} is calculated per plant, so this number must be higher
+to match alate production from \code{sim_experiments.}}
+
 \item{pred_rate}{Daily predation rate on aphids and mummies.
 Defaults to \code{0} because we're simulating an experiment with no predators
 and, in contrast to the \code{sim_experiments} function, we're
@@ -96,9 +113,24 @@ anything significantly.
 It didn't, which is why \code{sim_experiments} has checks every day.
 Defaults to \code{c(3, 4)}.}
 
+\item{extra_plant_removals}{Two-column, numeric matrix indicating additional
+plant replacement events. The first column indicates the time at which
+they occur, and the second column indicates the minimum number of plants
+to replace at that time.
+If the times don't coincide with a plant check (indicated by
+\code{plant_check_gaps}), then these replacements will occur on the plant
+check immediately following the designated time.
+A value of \code{NA} results in no extra checks.
+This argument is useful to prevent all plants from dying at the same
+time in the beginning of an experiment when \code{n_plants > 1}.
+The default is \code{cbind(10, 4)}.}
+
 \item{wilted_N}{Total number of aphids that causes the plant
 to become wilted. Values <= 0 cause this to be ignored.
 Defaults to \code{500}.}
+
+\item{wilted_mort}{Mortality for aphid populations living on a wilted plant.
+Defaults to \code{0.3}, which is based on previous work in the lab.}
 
 \item{aphid_demog_error}{Logical for whether to have demographic
 stochasticity for aphids. Defaults to \code{FALSE}.}
