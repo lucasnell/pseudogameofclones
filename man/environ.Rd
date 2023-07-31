@@ -24,7 +24,7 @@ Numeric vector of length 1 for predation rate for aphids and non-adult wasps.
 \item{cycle_length}{
 Numeric vector of length 1 for time between harvests (typical for alfalfa).
 }
-\item{disp_start}{
+\item{field_disp_start}{
 List of length 2, each item of which contains a 1-length numeric vector
 indicating the day at which aphids begin dispersing for 20ºC  (\code{lowT})
 and 27ºC (\code{highT}).

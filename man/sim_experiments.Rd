@@ -29,15 +29,6 @@ sim_experiments(
   extinct_N = 1,
   save_every = 1,
   perturb = NULL,
-  plant_check_gaps = 1,
-  max_plant_age = 0,
-  clear_surv = 0,
-  aphid_demog_error = FALSE,
-  wasp_demog_error = FALSE,
-  environ_error = FALSE,
-  sigma_x = environ$sigma_x,
-  sigma_y = environ$sigma_y,
-  rho = environ$rho,
   show_progress = FALSE
 )
 }
@@ -65,7 +56,7 @@ approximately match experiments.}
 \item{alate_b0}{The proportion of offspring from apterous aphids is
 \code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
 aphids on that plant.
-Defaults to \code{-5} because we're making this weakly density dependent.}
+Defaults to \code{-5}.}
 
 \item{alate_b1}{The proportion of offspring from apterous aphids is
 \code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
@@ -170,25 +161,6 @@ Note that perturbing the mummy population also perturbs the
 still-living but parasitized aphids, too.
 * \code{how}: Numbers \verb{>= 0} that are multiplied by the desired population
 to cause the perturbation.}
-
-\item{plant_check_gaps}{Gap(s) between when plants are check on.
-This is used if you want to see what will happen if you can't check
-on things every day in an experiment.
-You could use \code{c(3, 4)} for checking twice per week, for example.
-Note that this argument determines how often
-(1) wasps and alates disperse across fields and
-(2) plants are checked for exceeding \code{max_plant_age} or \code{max_N}.
-So using this argument to simulate harvesting fields will also cause
-wasp and alate dispersal to not occur daily.
-Defaults to \code{1}.}
-
-\item{max_plant_age}{Age at which plants are cleared.
-This can be useful to simulate harvesting fields.
-Defaults to \code{0} which effectively turns this off.}
-
-\item{clear_surv}{Survival of aphids and mummies when a harvest occurs
-(if harvesting is done via \code{plant_check_gaps}).
-Defaults to \code{0}.}
 
 \item{show_progress}{Boolean for whether to show progress bar.
 Defaults to \code{FALSE}.}

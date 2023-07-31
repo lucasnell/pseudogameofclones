@@ -23,7 +23,9 @@ clonal_line(
 \item{name}{String for clonal line name.}
 
 \item{density_0}{A single number or 2-column matrix indicating starting
-aphid densities.
+aphid densities for each field.
+Aphids are equally distributed among plants if simulating
+multiple plants per field.
 If a number, there will be no starting alates and a total apterous
 density equal to the number provided.
 Stages will be calculated based on the stable age distribution.

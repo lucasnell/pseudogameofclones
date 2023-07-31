@@ -24,9 +24,6 @@ restart_experiment(
   wasp_field_attract = NULL,
   mum_smooth = NULL,
   pred_rate = NULL,
-  plant_check_gaps = NULL,
-  max_plant_age = NULL,
-  clear_surv = NULL,
   show_progress = NULL,
   perturb = NULL,
   no_warns = FALSE
@@ -66,7 +63,7 @@ approximately match experiments.}
 \item{alate_b0}{The proportion of offspring from apterous aphids is
 \code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
 aphids on that plant.
-Defaults to \code{-5} because we're making this weakly density dependent.}
+Defaults to \code{-5}.}
 
 \item{alate_b1}{The proportion of offspring from apterous aphids is
 \code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
@@ -122,25 +119,6 @@ Defaults to \code{0.4}.}
 
 \item{pred_rate}{Daily predation rate on aphids and mummies.
 Defaults to \code{0.1} to compensate for losses from plants dying.}
-
-\item{plant_check_gaps}{Gap(s) between when plants are check on.
-This is used if you want to see what will happen if you can't check
-on things every day in an experiment.
-You could use \code{c(3, 4)} for checking twice per week, for example.
-Note that this argument determines how often
-(1) wasps and alates disperse across fields and
-(2) plants are checked for exceeding \code{max_plant_age} or \code{max_N}.
-So using this argument to simulate harvesting fields will also cause
-wasp and alate dispersal to not occur daily.
-Defaults to \code{1}.}
-
-\item{max_plant_age}{Age at which plants are cleared.
-This can be useful to simulate harvesting fields.
-Defaults to \code{0} which effectively turns this off.}
-
-\item{clear_surv}{Survival of aphids and mummies when a harvest occurs
-(if harvesting is done via \code{plant_check_gaps}).
-Defaults to \code{0}.}
 
 \item{show_progress}{Boolean for whether to show progress bar.
 Defaults to \code{FALSE}.}

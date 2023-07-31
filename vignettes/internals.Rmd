@@ -171,7 +171,7 @@ how quickly the aphids are developing.
 * `disp_wasp`: dispersal rates between fields for aphids, adult wasps
 * `pred_rate`: predation rate for aphids and non-adult wasps
 * `cycle_length`: time between harvests (typical for alfalfa)
-* `disp_start`: when aphids disperse by flying, for low (20º C; `lowT`) and 
+* `field_disp_start`: when aphids disperse by flying, for low (20º C; `lowT`) and 
   high (27º C; `highT`) temperatures
 
 
@@ -182,7 +182,7 @@ environ <- list(
     disp_wasp = 1,
     pred_rate = 0.8,
     cycle_length = 30,
-    disp_start = list(
+    field_disp_start = list(
         lowT = sum(dev_times$instar_days$lowT[1:4]) + 1, 
         highT = sum(dev_times$instar_days$highT[1:4]) + 1)
 )
