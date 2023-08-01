@@ -968,8 +968,7 @@ public:
                       const double& wasp_disp_m1_,
                       const std::vector<double>& wasp_field_attract_,
                       const double& mum_smooth_,
-                      const std::vector<double>& pred_rate_,
-                      const double& clear_surv_);
+                      const std::vector<double>& pred_rate_);
 
 
 

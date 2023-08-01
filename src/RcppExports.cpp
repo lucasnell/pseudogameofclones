@@ -154,8 +154,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // restart_fill_other_pars
-SEXP restart_fill_other_pars(SEXP all_fields_in_ptr, const double& K, const std::vector<double>& alate_b0, const std::vector<double>& alate_b1, const double& alate_field_disp_p, const std::vector<double>& K_y_mult, const std::vector<double>& s_y, const double& a, const double& k, const double& h, const double& wasp_disp_m0, const double& wasp_disp_m1, const std::vector<double>& wasp_field_attract, const double& mum_smooth, const std::vector<double>& pred_rate, const double& clear_surv);
-RcppExport SEXP _gameofclones_restart_fill_other_pars(SEXP all_fields_in_ptrSEXP, SEXP KSEXP, SEXP alate_b0SEXP, SEXP alate_b1SEXP, SEXP alate_field_disp_pSEXP, SEXP K_y_multSEXP, SEXP s_ySEXP, SEXP aSEXP, SEXP kSEXP, SEXP hSEXP, SEXP wasp_disp_m0SEXP, SEXP wasp_disp_m1SEXP, SEXP wasp_field_attractSEXP, SEXP mum_smoothSEXP, SEXP pred_rateSEXP, SEXP clear_survSEXP) {
+SEXP restart_fill_other_pars(SEXP all_fields_in_ptr, const double& K, const std::vector<double>& alate_b0, const std::vector<double>& alate_b1, const double& alate_field_disp_p, const std::vector<double>& K_y_mult, const std::vector<double>& s_y, const double& a, const double& k, const double& h, const double& wasp_disp_m0, const double& wasp_disp_m1, const std::vector<double>& wasp_field_attract, const double& mum_smooth, const std::vector<double>& pred_rate);
+RcppExport SEXP _gameofclones_restart_fill_other_pars(SEXP all_fields_in_ptrSEXP, SEXP KSEXP, SEXP alate_b0SEXP, SEXP alate_b1SEXP, SEXP alate_field_disp_pSEXP, SEXP K_y_multSEXP, SEXP s_ySEXP, SEXP aSEXP, SEXP kSEXP, SEXP hSEXP, SEXP wasp_disp_m0SEXP, SEXP wasp_disp_m1SEXP, SEXP wasp_field_attractSEXP, SEXP mum_smoothSEXP, SEXP pred_rateSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -174,8 +174,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const std::vector<double>& >::type wasp_field_attract(wasp_field_attractSEXP);
     Rcpp::traits::input_parameter< const double& >::type mum_smooth(mum_smoothSEXP);
     Rcpp::traits::input_parameter< const std::vector<double>& >::type pred_rate(pred_rateSEXP);
-    Rcpp::traits::input_parameter< const double& >::type clear_surv(clear_survSEXP);
-    rcpp_result_gen = Rcpp::wrap(restart_fill_other_pars(all_fields_in_ptr, K, alate_b0, alate_b1, alate_field_disp_p, K_y_mult, s_y, a, k, h, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, mum_smooth, pred_rate, clear_surv));
+    rcpp_result_gen = Rcpp::wrap(restart_fill_other_pars(all_fields_in_ptr, K, alate_b0, alate_b1, alate_field_disp_p, K_y_mult, s_y, a, k, h, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, mum_smooth, pred_rate));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -209,7 +208,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gameofclones_fields_from_vectors", (DL_FUNC) &_gameofclones_fields_from_vectors, 2},
     {"_gameofclones_using_openmp", (DL_FUNC) &_gameofclones_using_openmp, 0},
     {"_gameofclones_sim_gameofclones_cpp", (DL_FUNC) &_gameofclones_sim_gameofclones_cpp, 52},
-    {"_gameofclones_restart_fill_other_pars", (DL_FUNC) &_gameofclones_restart_fill_other_pars, 16},
+    {"_gameofclones_restart_fill_other_pars", (DL_FUNC) &_gameofclones_restart_fill_other_pars, 15},
     {"_gameofclones_restart_experiments_cpp", (DL_FUNC) &_gameofclones_restart_experiments_cpp, 10},
     {NULL, NULL, 0}
 };

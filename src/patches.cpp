@@ -522,8 +522,7 @@ void AllFields::set_new_pars(const double& K_,
                              const double& wasp_disp_m1_,
                              const std::vector<double>& wasp_field_attract_,
                              const double& mum_smooth_,
-                             const std::vector<double>& pred_rate_,
-                             const double& clear_surv_) {
+                             const std::vector<double>& pred_rate_) {
 
     this->alate_field_disp_p = alate_field_disp_p_;
     this->wasp_disp_m0 = wasp_disp_m0_;
@@ -534,7 +533,6 @@ void AllFields::set_new_pars(const double& K_,
     double wfa_sum = std::accumulate(wasp_field_attract.begin(),
                                      wasp_field_attract.end(), 0.0);
     for (double& x : wasp_field_attract) x /= wfa_sum;
-    this->clear_surv = clear_surv_;
 
     for (uint32 i = 0; i < fields.size(); i++) {
 

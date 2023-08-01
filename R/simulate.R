@@ -1142,7 +1142,6 @@ restart_experiment <- function(sims_obj,
     dbl_vec_check(pred_rate, "pred_rate", .min = 0, .max = 1)
     uint_vec_check(check_for_clear, "check_for_clear")
     stopifnot(all(!duplicated(check_for_clear)))
-    dbl_check(clear_surv, "clear_surv", .min = 0, .max = 1)
     stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
     stopifnot(inherits(stage_ts_out, "logical") && length(stage_ts_out) == 1)
 
@@ -1154,8 +1153,7 @@ restart_experiment <- function(sims_obj,
                                                  s_y, a, k, h,
                                                  wasp_disp_m0, wasp_disp_m1,
                                                  wasp_field_attract,
-                                                 mum_smooth, pred_rate,
-                                                 clear_surv)
+                                                 mum_smooth, pred_rate)
     # Now fill in abundances if they were input:
     if (length(N_vecs) > 0) {
         fields_from_vectors(new_all_info_xptr, N_vecs)

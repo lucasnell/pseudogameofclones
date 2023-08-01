@@ -998,8 +998,7 @@ SEXP restart_fill_other_pars(SEXP all_fields_in_ptr,
                              const double& wasp_disp_m1,
                              const std::vector<double>& wasp_field_attract,
                              const double& mum_smooth,
-                             const std::vector<double>& pred_rate,
-                             const double& clear_surv) {
+                             const std::vector<double>& pred_rate) {
 
     XPtr<std::vector<AllFields>> all_fields_vec_in_xptr(all_fields_in_ptr);
     std::vector<AllFields>& all_fields_vec_in(*all_fields_vec_in_xptr);
@@ -1052,7 +1051,7 @@ SEXP restart_fill_other_pars(SEXP all_fields_in_ptr,
         fields.set_new_pars(K, alate_b0, alate_b1, alate_field_disp_p,
                             K_y_mult, s_y, a, k, h, wasp_disp_m0, wasp_disp_m1,
                             wasp_field_attract,
-                            mum_smooth, pred_rate, clear_surv);
+                            mum_smooth, pred_rate);
 
     }
 
