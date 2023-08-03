@@ -164,6 +164,8 @@ public:
     // for process error:
     std::normal_distribution<double> norm_distr;
     double sigma_y;
+    // for demographic error:
+    std::binomial_distribution<uint32> binom_distr;
     bool demog_error;       // whether to include demographic stochasticity
 
     // Changing through time
@@ -174,7 +176,7 @@ public:
     // Constructors
     WaspPop()
         : attack(), Y_0(), delay(), sex_ratio(), s_y(), norm_distr(),
-          sigma_y(), demog_error(), Y(), x() {};
+          sigma_y(), binom_distr(), demog_error(), Y(), x() {};
     WaspPop(const arma::vec& rel_attack_,
             const double& a_,
             const double& k_,
@@ -192,6 +194,7 @@ public:
           s_y(s_y_),
           norm_distr(0, 1),
           sigma_y(sigma_y_),
+          binom_distr(),
           demog_error(demog_error_),
           Y((delay_ == 0) ? Y_0_ : 0.0),
           x(0) {};
@@ -203,6 +206,7 @@ public:
           s_y(other.s_y),
           norm_distr(other.norm_distr),
           sigma_y(other.sigma_y),
+          binom_distr(other.binom_distr),
           demog_error(other.demog_error),
           Y(other.Y),
           x(other.x) {};
@@ -214,6 +218,7 @@ public:
         s_y = other.s_y;
         norm_distr = other.norm_distr;
         sigma_y = other.sigma_y;
+        binom_distr = other.binom_distr;
         demog_error = other.demog_error;
         Y = other.Y;
         x = other.x;
@@ -242,19 +247,28 @@ public:
                 pcg32& eng) {
         double max_Y = old_mums + Y;
         if (max_Y == 0) return;
-        Y *= s_y;
-        Y += (sex_ratio * old_mums);
-        if (!demog_error && sigma_y == 0) return;
-        double stdev = sigma_y;
         if (demog_error) {
-            //' To add demographic error, convert to variances, combine,
-            //' then convert back to stdev:
-            stdev *= sigma_y;
-            stdev += std::min(0.5, 1 / (1 + Y));
-            stdev = std::sqrt(stdev);
+            // Number of adult females that survives is binomial with `s_y`
+            // as probability and number of adult females as number of trials.
+            uint32 n = static_cast<uint32>(std::round(Y));
+            std::binomial_distribution<uint32>::param_type prms(n, s_y);
+            binom_distr.param(prms);
+            Y = static_cast<double>(binom_distr(eng));
+            // Number of mummies that are female is binomial with `sex_ratio`
+            // as probability and number of old mummies as number of trials.
+            n = static_cast<uint32>(std::round(old_mums));
+            prms = std::binomial_distribution<uint32>::param_type(n, sex_ratio);
+            binom_distr.param(prms);
+            Y += static_cast<double>(binom_distr(eng));
+        } else {
+            Y *= s_y;
+            Y += (sex_ratio * old_mums);
         }
-        Y *= std::exp(norm_distr(eng) * stdev);
-        if (Y > max_Y) Y = max_Y; // make sure it doesn't exceed what's possible
+        if (sigma_y > 0) {
+            Y *= std::exp(norm_distr(eng) * sigma_y);
+            // make sure it doesn't exceed what's possible:
+            if (Y > max_Y) Y = max_Y;
+        }
         return;
     }
 
