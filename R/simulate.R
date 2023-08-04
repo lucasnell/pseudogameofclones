@@ -485,6 +485,7 @@ sim_gameofclones_full <- function(clonal_lines,
                                s_y = populations$s_y,
                                constant_wasps = FALSE,
                                rel_attack = wasp_attack$rel_attack,
+                               wasp_badger_n = 0,
                                mum_density_0 = 0,
                                mum_smooth = 0.4,
                                max_mum_density = 0,
@@ -651,6 +652,7 @@ sim_gameofclones_full <- function(clonal_lines,
     dbl_check(mum_smooth, "mum_smooth", .min = 0, .max = 1)
     dbl_check(max_mum_density, "max_mum_density", .min = 0)
     stopifnot(inherits(rel_attack, "numeric"))
+    dbl_check(wasp_badger_n, "wasp_badger_n", .min = 0)
     dbl_check(a, "a")
     dbl_check(k, "k")
     dbl_check(h, "h")
@@ -681,7 +683,7 @@ sim_gameofclones_full <- function(clonal_lines,
                               field_disp_start, plant_disp_start,
                               living_days, pred_rate,
                               mum_density_0, mum_smooth, max_mum_density,
-                              rel_attack, a, k, h,
+                              rel_attack, a, k, h, wasp_badger_n,
                               wasp_density_0, wasp_delay,
                               wasp_disp_m0, wasp_disp_m1, wasp_field_attract,
                               sex_ratio, s_y, constant_wasps,
@@ -1252,6 +1254,8 @@ print.cloneSimsRestart <- function(x, ...) {
 #'
 #' @inheritParams sim_experiments
 #'
+#' @param wasp_badger_n The number of aphids each adult wasp badgers and kills
+#'     per time step. Defaults to `0`.
 #' @param n_plants The number of plants per field.
 #'     This argument is only useful if you want to simulate the process
 #'     of plants or groups of plants dying.
@@ -1350,17 +1354,7 @@ print.cloneSimsRestart <- function(x, ...) {
 sim_stochastic <- function(clonal_lines,
                            n_fields = 2,
                            max_t = 250,
-                           n_plants = 16,
-                           K = 1800,
-                           alate_b0 = -5,
-                           alate_b1 = 0.0088,
-                           pred_rate = 0,
-                           alate_field_disp_p = 0.35,
-                           aphid_plant_disp_p = 0.2,
-                           plant_check_gaps = c(3, 4),
-                           extra_plant_removals = cbind(10, 4),
-                           wilted_N = 600,
-                           wilted_mort = 0.39,
+                           wasp_badger_n = 0.5,
                            aphid_demog_error = TRUE,
                            wasp_demog_error = TRUE,
                            environ_error = FALSE,
@@ -1370,6 +1364,19 @@ sim_stochastic <- function(clonal_lines,
                            n_reps = 1,
                            n_threads = 1,
                            ...) {
+
+    # n_plants = 16
+    # K = 1800
+    # alate_b0 = -5
+    # alate_b1 = 0.0088
+    # pred_rate = 0
+    # alate_field_disp_p = 0.35
+    # aphid_plant_disp_p = 0.2
+    # plant_check_gaps = c(3, 4)
+    # extra_plant_removals = cbind(10, 4)
+    # wilted_N = 600
+    # wilted_mort = 0.39
+
 
     # All arguments from this function except `...`
     this_args <- mget(names(formals())[-which(names(formals()) == "...")],

@@ -551,6 +551,7 @@ void check_args(const uint32& n_reps,
                 const double& a,
                 const double& k,
                 const double& h,
+                const double& wasp_badger_n,
                 const std::vector<double>& wasp_density_0,
                 const std::vector<uint32>& wasp_delay,
                 const double& wasp_disp_m0,
@@ -710,6 +711,7 @@ void check_args(const uint32& n_reps,
     one_negative_check(a, "a");
     one_negative_check(k, "k");
     one_negative_check(h, "h");
+    one_negative_check(wasp_badger_n, "wasp_badger_n");
     one_negative_check(wilted_N, "wilted_N");
 
     // objects containing doubles that must be >= 0
@@ -829,6 +831,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                        const double& a,
                        const double& k,
                        const double& h,
+                       const double& wasp_badger_n,
                        const std::vector<double>& wasp_density_0,
                        const std::vector<uint32>& wasp_delay,
                        const double& wasp_disp_m0,
@@ -858,7 +861,8 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                leslie_mat, aphid_density_0, alate_b0, alate_b1,
                aphid_plant_disp_p, plant_disp_mort, field_disp_start,
                plant_disp_start, living_days,
-               pred_rate, mum_density_0, mum_smooth, rel_attack, a, k, h,
+               pred_rate, mum_density_0, mum_smooth,
+               rel_attack, a, k, h, wasp_badger_n,
                wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1,
                wasp_field_attract,
                sex_ratio, s_y, constant_wasps,
@@ -901,7 +905,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
         field_disp_start, plant_disp_start,
         living_days, pred_rate, extinct_N,
         mum_density_0, mum_smooth, max_mum_density,
-        rel_attack, a, k, h, wasp_density_0, sex_ratio,
+        rel_attack, a, k, h, wasp_badger_n, wasp_density_0, sex_ratio,
         s_y, constant_wasps,
         clear_surv, alate_field_disp_p, wasp_disp_m0, wasp_disp_m1,
         wasp_field_attract, seeds[0]);

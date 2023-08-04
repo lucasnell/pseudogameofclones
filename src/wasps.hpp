@@ -156,6 +156,7 @@ class WaspPop {
 public:
 
     WaspAttack attack;      // info for attack rates
+    double wasp_badger_n;   // # aphids wasps badger & kill per time step
     double Y_0;             // initial adult wasp density
     uint32 delay;           // when to add initial wasps
     double sex_ratio;       // proportion of female wasps
@@ -181,6 +182,7 @@ public:
             const double& a_,
             const double& k_,
             const double& h_,
+            const double& wasp_badger_n_,
             const double& Y_0_,
             const uint32& delay_,
             const double& sex_ratio_,
@@ -188,6 +190,7 @@ public:
             const double& sigma_y_,
             const bool& demog_error_)
         : attack(rel_attack_, a_, k_, h_),
+          wasp_badger_n(wasp_badger_n_),
           Y_0(Y_0_),
           delay(delay_),
           sex_ratio(sex_ratio_),
@@ -200,6 +203,7 @@ public:
           x(0) {};
     WaspPop(const WaspPop& other)
         : attack(other.attack),
+          wasp_badger_n(other.wasp_badger_n),
           Y_0(other.Y_0),
           delay(other.delay),
           sex_ratio(other.sex_ratio),
@@ -212,6 +216,7 @@ public:
           x(other.x) {};
     WaspPop& operator=(const WaspPop& other) {
         attack = other.attack;
+        wasp_badger_n = other.wasp_badger_n;
         Y_0 = other.Y_0;
         delay = other.delay;
         sex_ratio = other.sex_ratio;

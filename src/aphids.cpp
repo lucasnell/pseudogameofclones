@@ -193,14 +193,16 @@ double AphidPop::update(const OnePlant* plant,
                         pcg32& eng) {
 
 
-    // First subtract emigrants and add immigrants:
-    const uint32& this_j(plant->this_j);
-    apterous.X -= emigrants.apterous.col(this_j);
-    apterous.X += immigrants.apterous.col(this_j);
-    alates.X -= emigrants.alates.col(this_j);
-    alates.X += immigrants.alates.col(this_j);
-    paras.X -= emigrants.paras.col(this_j);
-    paras.X += immigrants.paras.col(this_j);
+    // First subtract emigrants and add immigrants from other plants:
+    if ((plant->n_plants) > 1) {
+        const uint32& this_j(plant->this_j);
+        apterous.X -= emigrants.apterous.col(this_j);
+        apterous.X += immigrants.apterous.col(this_j);
+        alates.X -= emigrants.alates.col(this_j);
+        alates.X += immigrants.alates.col(this_j);
+        paras.X -= emigrants.paras.col(this_j);
+        paras.X += immigrants.paras.col(this_j);
+    }
 
     double nm = 0; // newly mummified
 
@@ -276,6 +278,30 @@ double AphidPop::update(const OnePlant* plant,
         apterous.X.front() -= new_alates;
         apterous.X.front() += alates.X.front(); // <-- we assume alates make apterous
         alates.X.front() = new_alates;
+
+        // Include effect of wasps badgering adult aphids
+        if (wasps->wasp_badger_n > 0 && wasps->Y > 0) {
+            // Badgered adult aphids are split among stages (both alates and
+            // apterous) proportional to the relative abundance of that stage
+            uint32 adult_start = alates.field_disp_start();
+            uint32 n_adult_stages = alates.X.n_elem - adult_start;
+            double total_badgered = wasps->Y * wasps->wasp_badger_n;
+            arma::vec badgered_apt = apterous.X.tail(n_adult_stages);
+            arma::vec badgered_ala = alates.X.tail(n_adult_stages);
+            double total_adults = arma::accu(badgered_apt) +
+                arma::accu(badgered_ala);
+            if (total_adults > 0) {
+                if (total_badgered > total_adults) total_badgered = total_adults;
+                badgered_apt /= total_adults;
+                badgered_ala /= total_adults;
+                badgered_apt *= total_badgered;
+                badgered_ala *= total_badgered;
+                for (uint32 i = 0; i < n_adult_stages; i++) {
+                    apterous.X(i + adult_start) -= badgered_apt(i);
+                    alates.X(i + adult_start) -= badgered_ala(i);
+                }
+            }
+        }
 
     }
 
