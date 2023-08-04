@@ -908,8 +908,7 @@ make_all_info <- function(sims_obj) {
         stop("\nSomething has happened to the \"all_info_xptr\" field ",
              "in this `cloneSims` object. Please re-run simulation.")
     }
-    all_info <- lapply(fields_to_list(sims_obj$all_info_xptr),
-                                as.data.frame)
+    all_info <- fields_to_data_frames(sims_obj$all_info_xptr)
     for (i in 1:length(all_info)) {
         is_wasp <- all_info[[i]][["type"]] == "wasp"
         is_mummy <- all_info[[i]][["type"]] == "mummy"

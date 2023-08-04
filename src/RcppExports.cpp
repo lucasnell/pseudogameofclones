@@ -59,14 +59,14 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// fields_to_list
-List fields_to_list(SEXP all_fields_ptr);
-RcppExport SEXP _gameofclones_fields_to_list(SEXP all_fields_ptrSEXP) {
+// fields_to_data_frames
+List fields_to_data_frames(SEXP all_fields_ptr);
+RcppExport SEXP _gameofclones_fields_to_data_frames(SEXP all_fields_ptrSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type all_fields_ptr(all_fields_ptrSEXP);
-    rcpp_result_gen = Rcpp::wrap(fields_to_list(all_fields_ptr));
+    rcpp_result_gen = Rcpp::wrap(fields_to_data_frames(all_fields_ptr));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -205,7 +205,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gameofclones_inv_logit", (DL_FUNC) &_gameofclones_inv_logit, 1},
     {"_gameofclones_leslie_matrix", (DL_FUNC) &_gameofclones_leslie_matrix, 4},
     {"_gameofclones_sad_leslie", (DL_FUNC) &_gameofclones_sad_leslie, 1},
-    {"_gameofclones_fields_to_list", (DL_FUNC) &_gameofclones_fields_to_list, 1},
+    {"_gameofclones_fields_to_data_frames", (DL_FUNC) &_gameofclones_fields_to_data_frames, 1},
     {"_gameofclones_fields_from_vectors", (DL_FUNC) &_gameofclones_fields_from_vectors, 2},
     {"_gameofclones_using_openmp", (DL_FUNC) &_gameofclones_using_openmp, 0},
     {"_gameofclones_sim_gameofclones_cpp", (DL_FUNC) &_gameofclones_sim_gameofclones_cpp, 53},

@@ -380,7 +380,7 @@ void one_rep__(RepSummary& summary,
 
 
 void one_rep__(RepSummary& summary,
-               List& stage_ts,
+               std::vector<AllStageInfo>& stage_ts,
                AllFields& fields,
                const uint32& rep,
                std::deque<uint32> check_for_clear,
@@ -399,6 +399,8 @@ void one_rep__(RepSummary& summary,
     uint32 n_fields = fields.size();
 
     summary.reserve(rep, max_t, save_every, n_lines, n_fields, n_plants);
+
+    stage_ts.reserve(max_t);
 
     uint32 iters = 0;
 
@@ -429,7 +431,7 @@ void one_rep__(RepSummary& summary,
 
         fields.clear_plants(t, check_for_clear, extra_plant_removals);
 
-        stage_ts[std::to_string(t)] = fields.to_list();
+        stage_ts.push_back(fields.out_all_info());
 
 
     }
@@ -1095,12 +1097,12 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
     // Empty version of this for `one_rep__`
     std::deque<std::pair<uint32, uint32>> extra_plant_removals;
 
-    List stage_ts;
+    std::vector<std::vector<AllStageInfo>> stage_ts(n_reps);
 
     if (stage_ts_out) {
         for (uint32 i = 0; i < n_reps; i++) {
             if (status_code != 0) break;
-            one_rep__(summaries[i], stage_ts, all_fields_vec[i], i,
+            one_rep__(summaries[i], stage_ts[i], all_fields_vec[i], i,
                       check_for_clear, max_t, save_every,
                       perturb_when, perturb_where, perturb_who, perturb_how,
                       extra_plant_removals,
@@ -1147,7 +1149,27 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
                                 _["field"] = summ.wasp_field,
                                 _["wasps"] = summ.wasp_N),
                             _["all_info_xptr"] = all_fields_vec_xptr);
-    if (stage_ts_out) out["stage_ts"] = stage_ts;
+    if (stage_ts_out) {
+        List stage_ts_list;
+        if (n_reps > 1) {
+            stage_ts_list = List(n_reps);
+            for (uint32 i = 0; i < n_reps; i++) {
+                const std::vector<AllStageInfo>& stage_ts_i(stage_ts[i]);
+                List stage_ts_list_i = List(stage_ts_i.size());
+                for (uint32 j = 0; j < stage_ts_i.size(); j++) {
+                    stage_ts_list_i(j) = stage_ts_i[j].to_data_frame();
+                }
+                stage_ts_list(i) = stage_ts_list_i;
+            }
+        } else {
+            const std::vector<AllStageInfo>& stage_ts_i(stage_ts[0]);
+            stage_ts_list = List(stage_ts_i.size());
+            for (uint32 j = 0; j < stage_ts_i.size(); j++) {
+                stage_ts_list(j) = stage_ts_i[j].to_data_frame();
+            }
+        }
+        out["stage_ts"] = stage_ts_list;
+    }
 
     return out;
 

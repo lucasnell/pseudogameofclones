@@ -730,6 +730,52 @@ public:
 
 
 
+struct AllStageInfo {
+
+    std::vector<uint32> field;
+    std::vector<uint32> plant;
+    std::vector<std::string> line;
+    std::vector<std::string> type;
+    std::vector<uint32> stage;
+    std::vector<double> N;
+
+    void reserve(const uint32& total_stages) {
+        field.reserve(total_stages);
+        plant.reserve(total_stages);
+        line.reserve(total_stages);
+        type.reserve(total_stages);
+        stage.reserve(total_stages);
+        N.reserve(total_stages);
+        return;
+    }
+
+    void push_back(const uint32& field_,
+                   const uint32& plant_,
+                   const std::string& line_,
+                   const std::string& type_,
+                   const uint32& stage_,
+                   const double& N_) {
+        field.push_back(field_);
+        plant.push_back(plant_);
+        line.push_back(line_);
+        type.push_back(type_);
+        stage.push_back(stage_);
+        N.push_back(N_);
+        return;
+    }
+
+    DataFrame to_data_frame() const {
+        DataFrame out = DataFrame::create(
+            _["field"] = field,
+            _["plant"] = plant,
+            _["line"] = line,
+            _["type"] = type,
+            _["stage"] = stage,
+            _["N"] = N);
+        return out;
+    }
+};
+
 
 
 
@@ -951,7 +997,7 @@ public:
                       std::deque<uint32>& check_for_clear,
                       std::deque<std::pair<uint32, uint32>>& extra_plant_removals);
 
-    List to_list() const;
+    AllStageInfo out_all_info() const;
 
     // It's assumed this vector is in the same order as the outputs are above!
     // Make sure this happens from the R side.

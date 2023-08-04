@@ -313,34 +313,18 @@ void AllFields::clear_plants(const uint32& t,
 
 
 
-List AllFields::to_list() const {
+AllStageInfo AllFields::out_all_info() const {
 
-    std::vector<uint32> field_out;
-    std::vector<uint32> plant_out;
-    std::vector<std::string> line_out;
-    std::vector<std::string> type_out;
-    std::vector<uint32> stage_out;
-    std::vector<double> N_out;
-
-    field_out.reserve(total_stages);
-    plant_out.reserve(total_stages);
-    line_out.reserve(total_stages);
-    type_out.reserve(total_stages);
-    stage_out.reserve(total_stages);
-    N_out.reserve(total_stages);
-
+    AllStageInfo out;
+    out.reserve(total_stages);
 
     for (uint32 k = 0; k < fields.size(); k++) {
 
         const OneField& field(fields[k]);
 
         // Adult wasps:
-        field_out.push_back(k+1);
-        plant_out.push_back(0);
-        line_out.push_back("");
-        type_out.push_back("wasp");
-        stage_out.push_back(1);
-        N_out.push_back(field.wasps.Y);
+        out.push_back(k+1, 0, "", "wasp", 1, field.wasps.Y);
+
 
         // Everything but adult wasps:
         for (uint32 j = 0; j < field.size(); j++) {
@@ -349,12 +333,7 @@ List AllFields::to_list() const {
 
             // Mummies:
             for (uint32 ii = 0; ii < plant.mummies.Y.n_elem; ii++) {
-                field_out.push_back(k+1);
-                plant_out.push_back(j+1);
-                line_out.push_back("");
-                type_out.push_back("mummy");
-                stage_out.push_back(ii+1);
-                N_out.push_back(plant.mummies.Y[ii]);
+                out.push_back(k+1, j+1, "", "mummy", ii+1, plant.mummies.Y[ii]);
             }
 
             // Everything but mummies:
@@ -362,30 +341,17 @@ List AllFields::to_list() const {
 
                 const AphidPop& aphid(plant[i]);
 
-                uint32 n_stages = aphid.apterous.X.n_elem +
-                    aphid.alates.X.n_elem +
-                    aphid.paras.X.n_elem;
-
-                for (uint32 ii = 0; ii < n_stages; ii++) {
-                    field_out.push_back(k+1);
-                    plant_out.push_back(j+1);
-                    line_out.push_back(aphid.aphid_name);
-                }
-
                 for (uint32 ii = 0; ii < aphid.apterous.X.n_elem; ii++) {
-                    type_out.push_back("apterous");
-                    stage_out.push_back(ii+1);
-                    N_out.push_back(aphid.apterous.X[ii]);
+                    out.push_back(k+1, j+1, aphid.aphid_name, "apterous",
+                                  ii+1, aphid.apterous.X[ii]);
                 }
                 for (uint32 ii = 0; ii < aphid.alates.X.n_elem; ii++) {
-                    type_out.push_back("alate");
-                    stage_out.push_back(ii+1);
-                    N_out.push_back(aphid.alates.X[ii]);
+                    out.push_back(k+1, j+1, aphid.aphid_name, "alate",
+                                  ii+1, aphid.alates.X[ii]);
                 }
                 for (uint32 ii = 0; ii < aphid.paras.X.n_elem; ii++) {
-                    type_out.push_back("parasitized");
-                    stage_out.push_back(ii+1);
-                    N_out.push_back(aphid.paras.X[ii]);
+                    out.push_back(k+1, j+1, aphid.aphid_name, "parasitized",
+                                  ii+1, aphid.paras.X[ii]);
                 }
 
             }
@@ -393,14 +359,6 @@ List AllFields::to_list() const {
         }
 
     }
-
-    List out = List::create(
-        _["field"] = field_out,
-        _["plant"] = plant_out,
-        _["line"] = line_out,
-        _["type"] = type_out,
-        _["stage"] = stage_out,
-        _["N"] = N_out);
 
     return out;
 }
@@ -465,7 +423,7 @@ void AllFields::from_vector(std::vector<double>& N) {
 
 
 //[[Rcpp::export]]
-List fields_to_list(SEXP all_fields_ptr) {
+List fields_to_data_frames(SEXP all_fields_ptr) {
 
     XPtr<std::vector<AllFields>> all_fields_vec_xptr(all_fields_ptr);
     const std::vector<AllFields>& all_fields_vec(*all_fields_vec_xptr);
@@ -476,7 +434,8 @@ List fields_to_list(SEXP all_fields_ptr) {
 
     for (uint32 i = 0; i < n_reps; i++) {
         const AllFields& all_fields(all_fields_vec[i]);
-        out[i] = all_fields.to_list();
+        AllStageInfo all_info = all_fields.out_all_info();
+        out[i] = all_info.to_data_frame();
     }
 
     return out;

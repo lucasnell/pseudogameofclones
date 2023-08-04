@@ -43,8 +43,8 @@ sad_leslie <- function(leslie) {
     .Call(`_gameofclones_sad_leslie`, leslie)
 }
 
-fields_to_list <- function(all_fields_ptr) {
-    .Call(`_gameofclones_fields_to_list`, all_fields_ptr)
+fields_to_data_frames <- function(all_fields_ptr) {
+    .Call(`_gameofclones_fields_to_data_frames`, all_fields_ptr)
 }
 
 fields_from_vectors <- function(all_fields_ptr, N_vecs) {
