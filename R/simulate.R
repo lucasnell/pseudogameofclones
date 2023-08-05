@@ -497,6 +497,7 @@ sim_gameofclones_full <- function(clonal_lines,
                                alate_field_disp_p = 0.1,
                                wilted_mort = 0,
                                extinct_N = 1,
+                               sep_adults = FALSE,
                                save_every = 1,
                                n_threads = 1,
                                show_progress = FALSE,
@@ -665,6 +666,7 @@ sim_gameofclones_full <- function(clonal_lines,
     dbl_vec_check(wasp_field_attract, "wasp_field_attract", .min = 0)
     stopifnot(sum(wasp_field_attract) > 0)
     stopifnot(inherits(constant_wasps, "logical"))
+    stopifnot(inherits(sep_adults, "logical") && length(sep_adults) == 1)
     uint_check(n_threads, "n_threads", .min = 1)
     stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
 
@@ -689,7 +691,7 @@ sim_gameofclones_full <- function(clonal_lines,
                               sex_ratio, s_y, constant_wasps,
                               perturb_list$when, perturb_list$where,
                               perturb_list$who, perturb_list$how,
-                              extra_plant_removals,
+                              extra_plant_removals, sep_adults,
                               n_threads, show_progress)
 
     sims[["aphids"]] <- mutate(sims[["aphids"]],
@@ -859,6 +861,7 @@ sim_experiments <- function(clonal_lines,
                             mum_smooth = 0.4,
                             pred_rate = 0.1,
                             extinct_N = 1,
+                            sep_adults = FALSE,
                             save_every = 1,
                             perturb = NULL,
                             show_progress = FALSE) {
@@ -885,6 +888,7 @@ sim_experiments <- function(clonal_lines,
                                alate_b0 = alate_b0,
                                alate_b1 = alate_b1,
                                alate_field_disp_p = alate_field_disp_p,
+                               sep_adults = sep_adults,
                                extinct_N = extinct_N,
                                save_every = save_every,
                                perturb = perturb,
@@ -1162,7 +1166,7 @@ restart_experiment <- function(sims_obj,
 
     sims <- restart_experiments_cpp(new_all_info_xptr, max_t, save_every,
                                     check_for_clear, stage_ts_out,
-                                    show_progress,
+                                    sims_obj$call[["sep_adults"]], show_progress,
                                     perturb_list$when, perturb_list$where,
                                     perturb_list$who, perturb_list$how)
 

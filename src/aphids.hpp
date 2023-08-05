@@ -169,7 +169,7 @@ class ParasitizedPop : public AphidTypePop {
 
 protected:
 
-     arma::vec s;    // vector of survival rates of parasitized aphids by day
+    arma::vec s;        // vector of survival rates of parasitized aphids by day
 
 public:
 
@@ -206,6 +206,8 @@ class AphidPop {
     double rho;              // environmental correlation among instars
     bool demog_error;        // whether to include demographic stochasticity
 
+    uint32 adult_age;           // age at which aphids are adults
+                                // (assumed == `field_disp_start`)
     double aphid_plant_disp_p;  // proportion that leave focal plant
     double plant_disp_mort;     // mortality of dispersers across plants
     uint32 plant_disp_start;    // index for stage in which among-plant
@@ -266,7 +268,7 @@ public:
      Constructors.
      */
     AphidPop()
-        : sigma_x(0), rho(0), demog_error(false),
+        : sigma_x(0), rho(0), demog_error(false), adult_age(0),
           aphid_plant_disp_p(0), plant_disp_mort(0), plant_disp_start(0),
           attack_surv(2, arma::fill::zeros),
           aphid_name(""), apterous(), alates(), paras(), extinct(false) {};
@@ -289,6 +291,7 @@ public:
         : sigma_x(sigma_x_),
           rho(rho_),
           demog_error(demog_error_),
+          adult_age(field_disp_start),
           aphid_plant_disp_p(aphid_plant_disp_p_),
           plant_disp_mort(plant_disp_mort_),
           plant_disp_start(plant_disp_start_),
@@ -303,6 +306,7 @@ public:
         : sigma_x(other.sigma_x),
           rho(other.rho),
           demog_error(other.demog_error),
+          adult_age(other.adult_age),
           aphid_plant_disp_p(other.aphid_plant_disp_p),
           plant_disp_mort(other.plant_disp_mort),
           plant_disp_start(other.plant_disp_start),
@@ -321,6 +325,7 @@ public:
         sigma_x = other.sigma_x;
         rho = other.rho;
         demog_error = other.demog_error;
+        adult_age = other.adult_age;
         aphid_plant_disp_p = other.aphid_plant_disp_p;
         plant_disp_mort = other.plant_disp_mort;
         plant_disp_start = other.plant_disp_start;
@@ -403,6 +408,22 @@ public:
                   const AphidPlantDisps& emigrants,
                   const AphidPlantDisps& immigrants,
                   pcg32& eng);
+
+    /*
+     Adult and juvenile numbers for alates and apterous:
+     */
+    double total_adult_apterous() const {
+        return arma::accu(apterous.X.tail(apterous.X.n_elem - adult_age));
+    }
+    double total_juven_apterous() const {
+        return arma::accu(apterous.X.head(adult_age));
+    }
+    double total_adult_alates() const {
+        return arma::accu(alates.X.tail(alates.X.n_elem - adult_age));
+    }
+    double total_juven_alates() const {
+        return arma::accu(alates.X.head(adult_age));
+    }
 
 };
 

@@ -90,15 +90,25 @@ void calc_rep_rows(uint32& n_rows,
                    const uint32& save_every,
                    const uint32& n_lines,
                    const uint32& n_fields,
-                   const uint32& n_plants) {
+                   const uint32& n_plants,
+                   const bool& sep_adults) {
 
-    // # time points you'll save:
+    // Rows for wasps is just the number of time points * number of fields:
     n_rows_wasps = (max_t / save_every) + 1;
     if (max_t % save_every > 0) n_rows_wasps++;
     n_rows_wasps *= n_fields;
 
+    // For aphids, you also include plants, lines, and type (alate, apterous,
+    // parasitized). If `sep_adults == TRUE`, then you have separate
+    // rows for adult vs juvenile apterous and adult vs juvenile alates.
     n_rows = n_plants * n_lines * n_rows_wasps;
-    n_rows *= 3;  // `*3` for separate alate vs apterous vs parasitized
+    if (sep_adults) {
+        /*
+         for (1) juvenile alate vs (2) adult alate vs
+         (3) juvenile apterous vs (4) adult apterous vs (5) parasitized
+         */
+        n_rows *= 5;
+    } else n_rows *= 3;  // for (1) alate vs (2) apterous vs (3) parasitized
     n_rows += n_plants * n_rows_wasps;  // for mummies
 
     return;
@@ -108,6 +118,8 @@ void calc_rep_rows(uint32& n_rows,
 
 
 struct RepSummary {
+
+    bool sep_adults;
 
     std::vector<uint32> rep;
     std::vector<uint32> time;
@@ -121,8 +133,12 @@ struct RepSummary {
     std::vector<uint32> wasp_field;
     std::vector<double> wasp_N;
 
-    RepSummary()
-        : rep(), time(), field(), plant(), line(), type(), N(),
+    // Don't allow default constructor
+    RepSummary() = delete; // will never be generated
+
+    RepSummary(const bool& sep_adults_)
+        : sep_adults(sep_adults_),
+          rep(), time(), field(), plant(), line(), type(), N(),
           wasp_rep(), wasp_time(), wasp_field(), wasp_N(), r() {};
 
     void reserve(const uint32& rep_,
@@ -133,7 +149,7 @@ struct RepSummary {
                  const uint32& n_plants) {
         uint32 n_rows, n_rows_wasps;
         calc_rep_rows(n_rows, n_rows_wasps, max_t, save_every,
-                      n_lines, n_fields, n_plants);
+                      n_lines, n_fields, n_plants, sep_adults);
         rep.reserve(n_rows);
         time.reserve(n_rows);
         field.reserve(n_rows);
@@ -177,10 +193,19 @@ struct RepSummary {
                 const OnePlant& plant(field[j]);
                 for (uint32 i = 0; i < plant.size(); i++) {
                     const AphidPop& aphid(plant[i]);
-                    append_living_aphids__(t, k, j, aphid.aphid_name,
-                                           aphid.alates.total_aphids(),
-                                           aphid.apterous.total_aphids(),
-                                           aphid.paras.total_aphids());
+                    if (sep_adults) {
+                        append_living_aphids__(t, k, j, aphid.aphid_name,
+                                               aphid.total_adult_alates(),
+                                               aphid.total_juven_alates(),
+                                               aphid.total_adult_apterous(),
+                                               aphid.total_juven_apterous(),
+                                               aphid.paras.total_aphids());
+                    } else {
+                        append_living_aphids__(t, k, j, aphid.aphid_name,
+                                               aphid.alates.total_aphids(),
+                                               aphid.apterous.total_aphids(),
+                                               aphid.paras.total_aphids());
+                    }
                 }
                 append_mummies__(t, k, j, plant.total_mummies());
             }
@@ -264,25 +289,13 @@ private:
                                        const double& N_apt,
                                        const double& N_par) {
 
-        rep.push_back(r);
-        rep.push_back(r);
-        rep.push_back(r);
-
-        time.push_back(t);
-        time.push_back(t);
-        time.push_back(t);
-
-        field.push_back(c);
-        field.push_back(c);
-        field.push_back(c);
-
-        plant.push_back(p);
-        plant.push_back(p);
-        plant.push_back(p);
-
-        line.push_back(l);
-        line.push_back(l);
-        line.push_back(l);
+        for (uint32 i = 0; i < 3; i++) {
+            rep.push_back(r);
+            time.push_back(t);
+            field.push_back(c);
+            plant.push_back(p);
+            line.push_back(l);
+        }
 
         type.push_back("alate");
         type.push_back("apterous");
@@ -290,6 +303,41 @@ private:
 
         N.push_back(N_ala);
         N.push_back(N_apt);
+        N.push_back(N_par);
+
+        return;
+    }
+
+
+
+    inline void append_living_aphids__(const uint32& t,
+                                       const uint32& c,
+                                       const uint32& p,
+                                       const std::string& l,
+                                       const double& N_adult_ala,
+                                       const double& N_juven_ala,
+                                       const double& N_adult_apt,
+                                       const double& N_juven_apt,
+                                       const double& N_par) {
+
+        for (uint32 i = 0; i < 5; i++) {
+            rep.push_back(r);
+            time.push_back(t);
+            field.push_back(c);
+            plant.push_back(p);
+            line.push_back(l);
+        }
+
+        type.push_back("adult alate");
+        type.push_back("juvenile alate");
+        type.push_back("adult apterous");
+        type.push_back("juvenile apterous");
+        type.push_back("parasitized");
+
+        N.push_back(N_adult_ala);
+        N.push_back(N_juven_ala);
+        N.push_back(N_adult_apt);
+        N.push_back(N_juven_apt);
         N.push_back(N_par);
 
         return;
@@ -847,6 +895,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                        const std::vector<uint32>& perturb_who,
                        const std::vector<double>& perturb_how,
                        const arma::umat& extra_plant_removals_mat,
+                       const bool& sep_adults,
                        uint32 n_threads,
                        const bool& show_progress) {
 
@@ -877,7 +926,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
     // Generate seeds for random number generators (1 set of seeds per rep)
     const std::vector<std::vector<uint64>> seeds = mt_seeds(n_reps);
 
-    std::vector<RepSummary> summaries(n_reps);
+    std::vector<RepSummary> summaries(n_reps, RepSummary(sep_adults));
 
     std::deque<std::pair<uint32, uint32>> extra_plant_removals;
     for (uint32 i = 0; i < extra_plant_removals_mat.n_rows; i++) {
@@ -1076,6 +1125,7 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
                              const uint32& save_every,
                              const std::deque<uint32>& check_for_clear,
                              const bool& stage_ts_out,
+                             const bool& sep_adults,
                              const bool& show_progress,
                              const std::vector<uint32>& perturb_when,
                              const std::vector<uint32>& perturb_where,
@@ -1092,7 +1142,7 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
     Progress prog_bar(max_t * n_reps, show_progress);
     int status_code = 0;
 
-    std::vector<RepSummary> summaries(n_reps);
+    std::vector<RepSummary> summaries(n_reps, RepSummary(sep_adults));
 
     // Empty version of this for `one_rep__`
     std::deque<std::pair<uint32, uint32>> extra_plant_removals;
