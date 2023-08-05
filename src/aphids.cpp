@@ -281,26 +281,10 @@ double AphidPop::update(const OnePlant* plant,
 
         // Include effect of wasps badgering adult aphids
         if (wasps->wasp_badger_n > 0 && wasps->Y > 0) {
-            // Badgered adult aphids are split among stages (both alates and
-            // apterous) proportional to the relative abundance of that stage
-            uint32 adult_start = alates.field_disp_start();
-            uint32 n_adult_stages = alates.X.n_elem - adult_start;
-            double total_badgered = wasps->Y * wasps->wasp_badger_n;
-            arma::vec badgered_apt = apterous.X.tail(n_adult_stages);
-            arma::vec badgered_ala = alates.X.tail(n_adult_stages);
-            double total_adults = arma::accu(badgered_apt) +
-                arma::accu(badgered_ala);
-            if (total_adults > 0) {
-                if (total_badgered > total_adults) total_badgered = total_adults;
-                badgered_apt /= total_adults;
-                badgered_ala /= total_adults;
-                badgered_apt *= total_badgered;
-                badgered_ala *= total_badgered;
-                for (uint32 i = 0; i < n_adult_stages; i++) {
-                    apterous.X(i + adult_start) -= badgered_apt(i);
-                    alates.X(i + adult_start) -= badgered_ala(i);
-                }
-            }
+
+            badgering_n(wasps);
+            // badgering_exp(wasps);
+
         }
 
     }

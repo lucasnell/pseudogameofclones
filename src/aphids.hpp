@@ -425,6 +425,51 @@ public:
         return arma::accu(alates.X.head(adult_age));
     }
 
+    /*
+     Aphids being badgered by wasps:
+     */
+
+    // Using total # badgered to death = wasp_badger_n * Y
+    void badgering_n(const WaspPop* wasps) {
+
+        uint32 adult_start = alates.field_disp_start();
+
+        // Badgered adult aphids are split among stages (both alates and
+        // apterous) proportional to the relative abundance of that stage
+        uint32 n_adult_stages = alates.X.n_elem - adult_start;
+        double total_badgered = wasps->Y * wasps->wasp_badger_n;
+        arma::vec badgered_apt = apterous.X.tail(n_adult_stages);
+        arma::vec badgered_ala = alates.X.tail(n_adult_stages);
+        double total_adults = arma::accu(badgered_apt) +
+            arma::accu(badgered_ala);
+        if (total_adults > 0) {
+            if (total_badgered > total_adults) total_badgered = total_adults;
+            badgered_apt /= total_adults;
+            badgered_ala /= total_adults;
+            badgered_apt *= total_badgered;
+            badgered_ala *= total_badgered;
+            for (uint32 i = 0; i < n_adult_stages; i++) {
+                apterous.X(i + adult_start) -= badgered_apt(i);
+                alates.X(i + adult_start) -= badgered_ala(i);
+            }
+        }
+    }
+
+
+    // Using survival = exp(- wasp_badger_n * Y / z)
+    void badgering_exp(const WaspPop* wasps) {
+        uint32 adult_start = alates.field_disp_start();
+        double total_adults = total_adult_apterous() + total_adult_alates();
+        if (total_adults > 0) {
+            double badger_surv = std::exp(- wasps->wasp_badger_n *
+                                          wasps->Y / total_adults);
+            for (uint32 i = adult_start; i < alates.X.n_elem; i++) {
+                apterous.X(i) *= badger_surv;
+                alates.X(i) *= badger_surv;
+            }
+        }
+    }
+
 };
 
 
