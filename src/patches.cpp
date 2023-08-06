@@ -77,7 +77,6 @@ void OnePlant::update(const AllAphidPlantDisps& emigrants,
 
     for (uint32 i = 0; i < aphids.size(); i++) {
 
-
         /*
          Update population, including dispersal and (optionally) process error.
          Also return # newly mummified from that line
@@ -92,7 +91,6 @@ void OnePlant::update(const AllAphidPlantDisps& emigrants,
 
         // Adjust for potential extinction or re-colonization:
         extinct_colonize(i);
-
     }
 
     mummies.update(pred_rate, nm);

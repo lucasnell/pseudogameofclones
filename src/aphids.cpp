@@ -279,14 +279,6 @@ double AphidPop::update(const OnePlant* plant,
         apterous.X.front() += alates.X.front(); // <-- we assume alates make apterous
         alates.X.front() = new_alates;
 
-        // Include effect of wasps badgering adult aphids
-        if (wasps->wasp_badger_n > 0 && wasps->Y > 0) {
-
-            badgering_n(wasps);
-            // badgering_exp(wasps);
-
-        }
-
     }
 
     return nm;

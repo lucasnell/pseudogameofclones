@@ -393,6 +393,39 @@ public:
     }
 
     /*
+     Adult and juvenile numbers for alates and apterous:
+     */
+    inline double total_adult_apterous() const {
+        double ta = 0;
+        for (const AphidPop& ap : aphids) {
+            ta += ap.total_adult_apterous();
+        }
+        return ta;
+    }
+    inline double total_juven_apterous() const {
+        double ta = 0;
+        for (const AphidPop& ap : aphids) {
+            ta += ap.total_juven_apterous();
+        }
+        return ta;
+    }
+    inline double total_adult_alates() const {
+        double ta = 0;
+        for (const AphidPop& ap : aphids) {
+            ta += ap.total_adult_alates();
+        }
+        return ta;
+    }
+    inline double total_juven_alates() const {
+        double ta = 0;
+        for (const AphidPop& ap : aphids) {
+            ta += ap.total_juven_alates();
+        }
+        return ta;
+    }
+
+
+    /*
      Add dispersal info to `emigrants` and `immigrants` cubes.
      In these cubes, rows are aphid stages, columns are plants,
      and slices are aphid lines.
@@ -403,6 +436,17 @@ public:
             aphids[i].calc_plant_dispersal(this, emigrants[i],
                                            immigrants[i]);
         }
+        return;
+    }
+
+    inline void do_badgering_n(const arma::vec& adults_badgered) {
+        for (uint32 i = 0; i < aphids.size(); i++) {
+            aphids[i].do_badgering_n(adults_badgered(i));
+        }
+        return;
+    }
+    inline void do_badgering_exp(const double& badgering_surv) {
+        for (AphidPop& a : aphids) a.do_badgering_exp(badgering_surv);
         return;
     }
 
@@ -466,10 +510,70 @@ class OneField {
     inline void set_wasp_info(double& old_mums) {
         wasps.x = 0;
         old_mums = 0;
-        for (OnePlant& p : plants) {
+        for (uint32 i = 0; i < plants.size(); i++) {
+            const OnePlant& p(plants[i]);
             wasps.x += p.total_unpar_aphids();
             old_mums += p.mummies.Y.back();
         }
+        return;
+    }
+
+    // Do wasp badgering of adult aphids to death:
+
+    // By having wasps badger a set number of aphids per day:
+    inline void do_badgering_n() {
+        // total badgered to death across all plants and lines:
+        double total_badgered = wasps.Y * wasps.wasp_badger_n;
+        if (total_badgered == 0) return;
+        arma::mat badgerables(plants[0].size(), plants.size(),
+                              arma::fill::zeros);
+        double total_badgerable = 0; // total across all plants and lines
+        for (uint32 i = 0; i < plants.size(); i++) {
+            const OnePlant& p(plants[i]);
+            for (uint32 j = 0; j < p.size(); j++) {
+                const AphidPop& a(p[j]);
+                badgerables(j,i) = a.total_adult_apterous() +
+                    a.total_adult_alates();
+                total_badgerable += badgerables(j,i);
+            }
+        }
+
+        if (total_badgerable == 0) return;
+
+        // make matrix sum to min(total_badgered, total_badgerable) [no action
+        // necessary for the latter]
+        if (total_badgered < total_badgerable) {
+            badgerables *= (total_badgered / total_badgerable);
+        }
+
+        // Now do the badgering:
+        for (uint32 i = 0; i < plants.size(); i++) {
+            OnePlant& p(plants[i]);
+            p.do_badgering_n(badgerables.col(i));
+        }
+
+        return;
+    }
+
+    // By having proportion of wasps to adult aphids affect badgering survival:
+    inline void do_badgering_exp() {
+
+        double total_adults = 0; // total across all plants and lines
+        for (const OnePlant& p : plants) {
+            for (const AphidPop& a : p.aphids) {
+                total_adults += a.total_adult_apterous() +
+                    a.total_adult_alates();
+            }
+        }
+
+        if (total_adults == 0) return;
+
+        double badgering_surv = std::exp(- wasps.wasp_badger_n *
+                                         wasps.Y / total_adults);
+
+        // Now do the badgering:
+        for (OnePlant& p : plants) p.do_badgering_exp(badgering_surv);
+
         return;
     }
 
@@ -681,18 +785,25 @@ public:
          Once `calc_plant_dispersal` has updated inside `emigrants` and `immigrants`,
          we can update the populations using those dispersal numbers.
          */
-        // First update info for wasps before iterating:
+        // update info for wasps before iterating:
         double old_mums;
         set_wasp_info(old_mums);
-        // Then we can update aphids and mummies:
-        for (OnePlant& p : plants) {
-            p.update(emigrants, immigrants, &wasps, eng);
+
+        // update aphids and mummies
+        for (uint32 i = 0; i < plants.size(); i++) {
+            plants[i].update(emigrants, immigrants, &wasps, eng);
         }
+
         // Lastly update adult wasps (if constant_wasps = false):
         if (!constant_wasps) {
             wasps.update(old_mums, eng);
             if (wasps.Y < extinct_N) wasps.Y = 0;
         }
+
+        // Lastly do badgering of aphids by wasps
+        do_badgering_n();
+        // do_badgering_exp();
+
         return;
     }
 
