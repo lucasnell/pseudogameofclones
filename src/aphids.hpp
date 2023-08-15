@@ -214,10 +214,15 @@ class AphidPop {
                                 // dispersal starts
 
     /*
-     Vector of length 2 with survival rates of singly & multiply attacked
-     aphids, respectively:
+     Vector of length >=2 with survival probabilities of singly & multiply
+     attacked aphids:
      */
     arma::vec attack_surv;
+    /*
+     Vector of length >=2 with probabilities of singly & multiply attacked
+     being successfully parasitized:
+     */
+    arma::vec attack_mumm;
     // for process error:
     mutable std::normal_distribution<double> norm_distr =
         std::normal_distribution<double>(0, 1);
@@ -271,6 +276,7 @@ public:
         : sigma_x(0), rho(0), demog_error(false), adult_age(0),
           aphid_plant_disp_p(0), plant_disp_mort(0), plant_disp_start(0),
           attack_surv(2, arma::fill::zeros),
+          attack_mumm(2, arma::fill::ones),
           aphid_name(""), apterous(), alates(), paras(), extinct(false) {};
 
     // Make sure `leslie_mat` has 3 slices and `aphid_density_0` has two columns!
@@ -279,6 +285,7 @@ public:
              const double& rho_,
              const bool& demog_error_,
              const arma::vec& attack_surv_,
+             const arma::vec& attack_mumm_,
              const arma::cube& leslie_mat,
              const arma::mat& aphid_density_0,
              const double& alate_b0,
@@ -296,6 +303,7 @@ public:
           plant_disp_mort(plant_disp_mort_),
           plant_disp_start(plant_disp_start_),
           attack_surv(attack_surv_),
+          attack_mumm(attack_mumm_),
           aphid_name(aphid_name_),
           apterous(leslie_mat.slice(0), aphid_density_0.col(0), alate_b0, alate_b1),
           alates(leslie_mat.slice(1), aphid_density_0.col(1), field_disp_start),
@@ -311,6 +319,7 @@ public:
           plant_disp_mort(other.plant_disp_mort),
           plant_disp_start(other.plant_disp_start),
           attack_surv(other.attack_surv),
+          attack_mumm(other.attack_mumm),
           norm_distr(other.norm_distr),
           pois_distr(other.pois_distr),
           bino_distr(other.bino_distr),
@@ -330,6 +339,7 @@ public:
         plant_disp_mort = other.plant_disp_mort;
         plant_disp_start = other.plant_disp_start;
         attack_surv = other.attack_surv;
+        attack_mumm = other.attack_mumm;
         norm_distr = other.norm_distr;
         pois_distr = other.pois_distr;
         bino_distr = other.bino_distr;

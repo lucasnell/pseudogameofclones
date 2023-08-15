@@ -578,6 +578,7 @@ void check_args(const uint32& n_reps,
                 const double& wilted_N,
                 const double& wilted_mort,
                 const arma::mat& attack_surv,
+                const arma::mat& attack_mumm,
                 const bool& aphid_demog_error,
                 const bool& wasp_demog_error,
                 const double& sigma_x,
@@ -655,9 +656,13 @@ void check_args(const uint32& n_reps,
     if (living_days.size() != n_lines) {
         stop("\nERROR: living_days.size() != n_lines\n");
     }
-    if (attack_surv.n_cols != n_lines || attack_surv.n_rows != 2) {
+    if (attack_surv.n_cols != n_lines || attack_surv.n_rows < 2) {
         stop(std::string("\nERROR: attack_surv.n_cols != n_lines || ") +
-            std::string("attack_surv.n_rows != 2\n"));
+            std::string("attack_surv.n_rows < 2\n"));
+    }
+    if (attack_mumm.n_cols != n_lines || attack_mumm.n_rows < 2) {
+        stop(std::string("\nERROR: attack_mumm.n_cols != n_lines || ") +
+            std::string("attack_mumm.n_rows < 2\n"));
     }
     if (leslie_mat.size() != n_lines) {
         stop("\nERROR: leslie_mat.size() != n_lines\n");
@@ -767,6 +772,7 @@ void check_args(const uint32& n_reps,
     // objects containing doubles that must be >= 0
     negative_check<std::vector<double>>(K_y_mult, "K_y_mult");
     negative_check<arma::mat>(attack_surv, "attack_surv");
+    negative_check<arma::mat>(attack_mumm, "attack_mumm");
     for (uint32 i = 0; i < leslie_mat.size(); i++) {
         negative_check<arma::cube>(leslie_mat[i], "leslie_mat");
     }
@@ -856,6 +862,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                        const double& wilted_N,
                        const double& wilted_mort,
                        const arma::mat& attack_surv,
+                       const arma::mat& attack_mumm,
                        const bool& aphid_demog_error,
                        const bool& wasp_demog_error,
                        const double& sigma_x,
@@ -907,7 +914,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
                max_t, save_every,
                mean_K, sd_K, K_y_mult, wilted_N,
                wilted_mort,
-               attack_surv, aphid_demog_error, wasp_demog_error,
+               attack_surv, attack_mumm, aphid_demog_error, wasp_demog_error,
                sigma_x, sigma_y, rho, extinct_N, aphid_name,
                leslie_mat, aphid_density_0, alate_b0, alate_b1,
                aphid_plant_disp_p, plant_disp_mort, field_disp_start,
@@ -950,7 +957,7 @@ List sim_gameofclones_cpp(const uint32& n_reps,
         n_fields, wasp_delay,
         sigma_x, sigma_y, rho, aphid_demog_error, wasp_demog_error,
         mean_K, sd_K, K_y_mult, wilted_N,
-        wilted_mort, attack_surv,
+        wilted_mort, attack_surv, attack_mumm,
         aphid_name, leslie_mat, aphid_density_0,
         alate_b0, alate_b1, aphid_plant_disp_p, plant_disp_mort,
         field_disp_start, plant_disp_start,

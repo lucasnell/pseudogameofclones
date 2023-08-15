@@ -228,6 +228,7 @@ public:
              const double& rho,
              const bool& aphid_demog_error,
              const arma::mat& attack_surv_,
+             const arma::mat& attack_mumm_,
              const double& K_,
              const double& K_y_,
              const double& wilted_N_,
@@ -269,7 +270,7 @@ public:
 
         for (uint32 i = 0; i < n_lines; i++) {
             AphidPop ap(aphid_name[i], sigma_x, rho, aphid_demog_error,
-                        attack_surv_.col(i),
+                        attack_surv_.col(i), attack_mumm_.col(i),
                         leslie_mat[i], aphid_density_0.slice(i),
                         alate_b0[i], alate_b1[i], aphid_plant_disp_p[i],
                         plant_disp_mort[i], field_disp_start[i],
@@ -611,6 +612,7 @@ public:
                const double& wilted_N,
                const double& wilted_mort,
                const arma::mat& attack_surv_,
+               const arma::mat& attack_mumm_,
                const std::vector<std::string>& aphid_name,
                const std::vector<arma::cube>& leslie_mat,
                const std::vector<arma::cube>& aphid_density_0,
@@ -676,7 +678,8 @@ public:
         plants.reserve(n_plants);
         for (uint32 j = 0; j < n_plants; j++) {
             set_K(K, K_y, eng);
-            OnePlant ap(sigma_x, rho, aphid_demog_error, attack_surv_,
+            OnePlant ap(sigma_x, rho, aphid_demog_error,
+                        attack_surv_, attack_mumm_,
                         K, K_y, wilted_N, wilted_mort,
                         aphid_name, leslie_mat,
                         aphid_density_0[j], alate_b0, alate_b1,
@@ -952,6 +955,7 @@ public:
               const double& wilted_N,
               const double& wilted_mort,
               const arma::mat& attack_surv,
+              const arma::mat& attack_mumm,
               const std::vector<std::string>& aphid_name,
               const std::vector<arma::cube>& leslie_mat,
               const std::vector<arma::cube>& aphid_density_0,
@@ -1005,7 +1009,8 @@ public:
                 OneField(sigma_x, sigma_y, rho, aphid_demog_error, wasp_demog_error,
                          mean_K, sd_K, K_y_mult[i],
                          wilted_N, wilted_mort,
-                         attack_surv, aphid_name, leslie_mat, aphid_density_0,
+                         attack_surv, attack_mumm,
+                         aphid_name, leslie_mat, aphid_density_0,
                          alate_b0, alate_b1, aphid_plant_disp_p,
                          plant_disp_mort, field_disp_start, plant_disp_start,
                          living_days, pred_rate[i],

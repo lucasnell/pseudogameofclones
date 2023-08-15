@@ -20,13 +20,17 @@
 #'     If a matrix, it must have 5 rows (rows indicate instar)
 #'     or a row per aphid age (rows indicate age in days).
 #'     Matrix column indicates apterous vs alate.
-#' @param resistant Logical or length-2 vector of survivals of
+#' @param resistant Logical or vector of survivals of
 #'     singly attacked and multiply attacked aphids.
 #'     If a logical, `FALSE` is equivalent to `c(0,0)` and results in no
 #'     resistance.
 #'     `TRUE` results in the resistance values for a resistance line
 #'     from unpublished work by Anthony Ives.
 #'     Defaults to `FALSE`.
+#' @param mumm_prop Vector of probabilities of
+#'     singly attacked and multiply attacked aphids being successfully
+#'     parasitized.
+#'     Defaults to `NULL`, which results in being equal to `1 - resistant`.
 #' @param surv_juv_apterous A single number for the juvenile survival rate for
 #'     apterous aphids. Defaults to `NULL`, which results in estimates
 #'     from a medium-reproduction line.
@@ -69,6 +73,7 @@
 clonal_line <- function(name,
                         density_0,
                         resistant = FALSE,
+                        mumm_prop = NULL,
                         surv_juv_apterous = NULL,
                         surv_adult_apterous = NULL,
                         repro_apterous = NULL,
@@ -175,8 +180,31 @@ clonal_line <- function(name,
     # --------------*
 
     attack_surv <- c(0, 0)
+    if (!(is.logical(resistant) && length(resistant) == 1) &&
+        !(is.numeric(resistant) && all(resistant >= 0 & resistant <= 1))) {
+        stop("`resistant` must be a single logical or a numeric vector with ",
+             "all elements >= 0 and <= 1.")
+    }
     if (is.logical(resistant) && resistant) attack_surv <- wasp_attack$attack_surv
-    if (is.numeric(resistant) && length(resistant) == 2) attack_surv <- resistant
+    if (is.numeric(resistant)) attack_surv <- resistant
+
+    if (!is.null(mumm_prop) &&
+        !(is.numeric(mumm_prop) && all(mumm_prop >= 0 & mumm_prop <= 1))) {
+        stop("`mumm_prop` must be `NULL` or a numeric vector with ",
+             "all elements >= 0 and <= 1.")
+    }
+    if (is.null(mumm_prop)) {
+        attack_mumm <- 1 - attack_surv
+    } else attack_mumm <- mumm_prop
+    if (length(attack_surv) != length(attack_mumm)) {
+        stop("the two vectors for the probabilities that wasp attacks result ",
+             "in survival or in mummies are not the same length; check ",
+             "defaults and try again")
+    }
+    if (any((attack_surv + attack_mumm) > 1)) {
+        stop("the probabilities that wasp attacks result in survival or ",
+             "in mummies is too high; they must sum to <= 1")
+    }
 
 
     d0_dbl <- is.numeric(density_0) && length(density_0) == 1
@@ -220,6 +248,7 @@ clonal_line <- function(name,
     output <- list(name = name,
                    density_0 = density_0,
                    attack_surv = attack_surv,
+                   attack_mumm = attack_mumm,
                    leslie = leslie_array)
     class(output) <- "aphid"
 
@@ -240,6 +269,7 @@ print.aphid <- function(x, ...) {
     cat("  * name <string>\n")
     cat("  * density_0 <matrix>\n")
     cat("  * attack_surv <vector>\n")
+    cat("  * attack_mumm <vector>\n")
     cat("  * leslie <3D array>\n")
 
     invisible(x)
@@ -253,6 +283,29 @@ print.aphid <- function(x, ...) {
 c.aphid <- function(...) {
     z <- list(...)
     names(z) <- sapply(z, function(x) x$name)
+    # combine survival and mummy probabilities so they're the same length:
+    last_val <- list(attack_surv = 0, attack_mumm = 1)
+    for (n in c("attack_surv", "attack_mumm")) {
+        if (length(unique(sapply(z, function(x) length(x[[n]])))) > 1) {
+            max_len <- max(sapply(z, function(x) length(x[[n]])))
+            for (i in 1:length(z)) {
+                if (length(z[[i]][[n]]) < max_len) {
+                    if (tail(z[[i]][[n]], 1) != last_val[[n]]) {
+                        err_msg <- paste("Error combining aphid lines: cannot",
+                                         "combine values from field %s when",
+                                         "one aphid line has fewer provided",
+                                         "values than another and when the",
+                                         "line having fewer values doesn't",
+                                         "have a last value of %.0f") |>
+                            sprintf(n, last_val[[n]])
+                        stop(err_msg)
+                    }
+                    n_more <- max_len - length(z[[i]][[n]])
+                    z[[i]][[n]] <- c(z[[i]][[n]], rep(last_val[[n]], n_more))
+                }
+            }
+        }
+    }
     class(z) <- "multiAphid"
     return(z)
 }
@@ -589,6 +642,7 @@ sim_gameofclones_full <- function(clonal_lines,
     aphid_density_0 <- replicate(n_plants, aphid_density_0, simplify = FALSE)
 
     attack_surv <- do.call(cbind, lapply(clonal_lines, `[[`, i = "attack_surv"))
+    attack_mumm <- do.call(cbind, lapply(clonal_lines, `[[`, i = "attack_mumm"))
 
     leslie_cubes <- lapply(clonal_lines, function(x) x$leslie)
 
@@ -631,6 +685,7 @@ sim_gameofclones_full <- function(clonal_lines,
     dbl_check(wilted_N, "wilted_N")
     dbl_check(wilted_mort, "wilted_mort", .min = 0, .max = 1)
     dbl_mat_check(attack_surv, "attack_surv")
+    dbl_mat_check(attack_mumm, "attack_mumm")
     stopifnot(inherits(aphid_demog_error, "logical") && length(aphid_demog_error) == 1)
     stopifnot(inherits(wasp_demog_error, "logical") && length(wasp_demog_error) == 1)
     dbl_check(sigma_x, "sigma_x")
@@ -675,7 +730,7 @@ sim_gameofclones_full <- function(clonal_lines,
                               check_for_clear, clear_surv,
                               max_t, save_every, mean_K, sd_K, K_y_mult,
                               wilted_N, wilted_mort,
-                              attack_surv,
+                              attack_surv, attack_mumm,
                               aphid_demog_error, wasp_demog_error,
                               sigma_x, sigma_y, rho, extinct_N, aphid_names,
                               leslie_cubes,

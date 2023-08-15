@@ -210,11 +210,16 @@ double AphidPop::update(const OnePlant* plant,
 
         const double& S(plant->S);
         const double& S_y(plant->S_y);
-        arma::vec A_apt = wasps->A(attack_surv);
+
+        arma::vec A_surv, A_mumm;
+        wasps->A_mats(A_surv, A_mumm, attack_surv, attack_mumm);
+
         // making adult alates not able to be parasitized:
-        arma::vec A_ala = A_apt;
+        arma::vec A_surv_ala = A_surv;
+        arma::vec A_mumm_ala = A_mumm;
         for (uint32 i = alates.field_disp_start_; i < alates.leslie_.n_cols; i++) {
-            A_ala[i] = 1;
+            A_surv_ala[i] = 1;
+            A_mumm_ala[i] = 0;
         }
 
         double pred_surv = 1 - plant->pred_rate;
@@ -224,16 +229,15 @@ double AphidPop::update(const OnePlant* plant,
         arma::vec alates_Xt = alates.X;
         arma::vec paras_Xt = paras.X;
 
-
         // Basic updates for non-parasitized aphids:
         arma::mat LX_apt = apterous.leslie_ * apterous.X;
         arma::mat LX_ala = alates.leslie_ * alates.X;
-        apterous.X = (pred_surv * S * A_apt) % LX_apt;
-        alates.X = (pred_surv * S * A_ala) % LX_ala;
+        apterous.X = (pred_surv * S * A_surv) % LX_apt;
+        alates.X = (pred_surv * S * A_surv_ala) % LX_ala;
 
         double np = 0; // newly parasitized
-        np += pred_surv * S_y * arma::as_scalar((1 - A_apt).t() * LX_apt);
-        np += pred_surv * S_y * arma::as_scalar((1 - A_ala).t() * LX_ala);
+        np += pred_surv * S_y * arma::as_scalar(A_mumm.t() * LX_apt);
+        np += pred_surv * S_y * arma::as_scalar(A_mumm_ala.t() * LX_ala);
 
         nm += pred_surv * paras.X.back();  // newly mummified
 
