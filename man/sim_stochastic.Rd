@@ -8,19 +8,9 @@ sim_stochastic(
   clonal_lines,
   n_fields = 2,
   max_t = 250,
-  n_plants = 16,
-  K = 1800,
-  alate_b0 = -5,
-  alate_b1 = 0.0088,
-  pred_rate = 0,
-  alate_field_disp_p = 0.35,
-  aphid_plant_disp_p = 0.1,
-  plant_check_gaps = c(3, 4),
-  extra_plant_removals = cbind(10, 4),
-  wilted_N = 500,
-  wilted_mort = 0.39,
-  aphid_demog_error = FALSE,
-  wasp_demog_error = FALSE,
+  wasp_badger_n = 0.5,
+  aphid_demog_error = TRUE,
+  wasp_demog_error = TRUE,
   environ_error = FALSE,
   sigma_x = environ$sigma_x,
   sigma_y = environ$sigma_y,
@@ -47,6 +37,36 @@ Defaults to \code{2}.}
 
 \item{max_t}{How many days to simulate. Defaults to \code{250}.}
 
+\item{wasp_badger_n}{The number of aphids each adult wasp badgers and kills
+per time step. Defaults to \code{0}.}
+
+\item{aphid_demog_error}{Logical for whether to have demographic
+stochasticity for aphids. Defaults to \code{FALSE}.}
+
+\item{wasp_demog_error}{Logical for whether to have demographic
+stochasticity for wasps. Defaults to \code{FALSE}.}
+
+\item{environ_error}{Logical for whether to have environmental stochasticity.
+Defaults to \code{FALSE}.}
+
+\item{sigma_x}{Standard deviation of environmental stochasticity for aphids.
+Defaults to the internal object \code{environ$sigma_x},
+which is from Meisner et al. (2014).}
+
+\item{sigma_y}{Standard deviation of environmental stochasticity for wasps.
+Defaults to the internal object \code{environ$sigma_y},
+which is from Meisner et al. (2014).}
+
+\item{rho}{Environmental correlation among instars.
+Defaults to \code{environ$rho}.}
+
+\item{n_reps}{Number of reps to simulate. Defaults to \code{1}.}
+
+\item{n_threads}{Number of threads to use if OpenMP is enabled
+(ignored otherwise).
+Find out whether it's enabled using \code{gameofclones:::using_openmp()}.
+Defaults to \code{1}.}
+
 \item{n_plants}{The number of plants per field.
 This argument is only useful if you want to simulate the process
 of plants or groups of plants dying.
@@ -61,11 +81,6 @@ Defaults to \code{16}.}
 Defaults to \code{1800} because this caused simulations to
 approximately match growth of aphid populations on individual fava
 bean plants.}
-
-\item{alate_b0}{The proportion of offspring from apterous aphids is
-\code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
-aphids on that plant.
-Defaults to \code{-5}.}
 
 \item{alate_b1}{The proportion of offspring from apterous aphids is
 \code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
@@ -131,33 +146,6 @@ Defaults to \code{500}.}
 
 \item{wilted_mort}{Mortality for aphid populations living on a wilted plant.
 Defaults to \code{0.3}, which is based on previous work in the lab.}
-
-\item{aphid_demog_error}{Logical for whether to have demographic
-stochasticity for aphids. Defaults to \code{FALSE}.}
-
-\item{wasp_demog_error}{Logical for whether to have demographic
-stochasticity for wasps. Defaults to \code{FALSE}.}
-
-\item{environ_error}{Logical for whether to have environmental stochasticity.
-Defaults to \code{FALSE}.}
-
-\item{sigma_x}{Standard deviation of environmental stochasticity for aphids.
-Defaults to the internal object \code{environ$sigma_x},
-which is from Meisner et al. (2014).}
-
-\item{sigma_y}{Standard deviation of environmental stochasticity for wasps.
-Defaults to the internal object \code{environ$sigma_y},
-which is from Meisner et al. (2014).}
-
-\item{rho}{Environmental correlation among instars.
-Defaults to \code{environ$rho}.}
-
-\item{n_reps}{Number of reps to simulate. Defaults to \code{1}.}
-
-\item{n_threads}{Number of threads to use if OpenMP is enabled
-(ignored otherwise).
-Find out whether it's enabled using \code{gameofclones:::using_openmp()}.
-Defaults to \code{1}.}
 }
 \description{
 Stochastic simulations of multiple fields of aphids and wasps.

@@ -27,6 +27,7 @@ sim_experiments(
   mum_smooth = 0.4,
   pred_rate = 0.1,
   extinct_N = 1,
+  sep_adults = FALSE,
   save_every = 1,
   perturb = NULL,
   show_progress = FALSE

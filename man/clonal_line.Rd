@@ -8,6 +8,7 @@ clonal_line(
   name,
   density_0,
   resistant = FALSE,
+  mumm_prop = NULL,
   surv_juv_apterous = NULL,
   surv_adult_apterous = NULL,
   repro_apterous = NULL,
@@ -33,13 +34,18 @@ If a matrix, it must have 5 rows (rows indicate instar)
 or a row per aphid age (rows indicate age in days).
 Matrix column indicates apterous vs alate.}
 
-\item{resistant}{Logical or length-2 vector of survivals of
+\item{resistant}{Logical or vector of survivals of
 singly attacked and multiply attacked aphids.
 If a logical, \code{FALSE} is equivalent to \code{c(0,0)} and results in no
 resistance.
 \code{TRUE} results in the resistance values for a resistance line
 from unpublished work by Anthony Ives.
 Defaults to \code{FALSE}.}
+
+\item{mumm_prop}{Vector of probabilities of
+singly attacked and multiply attacked aphids being successfully
+parasitized.
+Defaults to \code{NULL}, which results in being equal to \code{1 - resistant}.}
 
 \item{surv_juv_apterous}{A single number for the juvenile survival rate for
 apterous aphids. Defaults to \code{NULL}, which results in estimates
