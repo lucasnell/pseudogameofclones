@@ -465,7 +465,76 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #' stochastic simulations.
 #' So use this at your own risk.
 #'
-#'
+#' @param n_plants The number of plants per field.
+#'     This argument is only useful if you want to simulate the process
+#'     of plants or groups of plants dying.
+#'     Wasps operate at the field level, whereas aphids operate at the
+#'     plant level.
+#'     "Plant" can indicate a group of plants where the aphids can freely
+#'     disperse across them.
+#'     Aphids can disperse across plants via the `aphid_plant_disp_p` argument.
+#'     Defaults to `16`.
+#' @param K Aphid density dependence.
+#'     Defaults to `1800` because this caused simulations to
+#'     approximately match growth of aphid populations on individual fava
+#'     bean plants.
+#' @param alate_b1 The proportion of offspring from apterous aphids is
+#'     `inv_logit(alate_b0 + alate_b1 * N)` where `N` is the total number of
+#'     aphids on that plant.
+#'     Defaults to `0.0088`, which makes alate production only mildly
+#'     density dependent. This default differs from that in `sim_experiments`
+#'     because `N` is calculated per plant, so this number must be higher
+#'     to match alate production from `sim_experiments.`
+#' @param pred_rate Daily predation rate on aphids and mummies.
+#'     Defaults to `0` because we're simulating an experiment with no predators
+#'     and, in contrast to the `sim_experiments` function, we're
+#'     explicitly simulating the process of plants dying and being replaced.
+#' @param alate_field_disp_p Proportion of alates from each field that
+#'     are added to the dispersal pool.
+#'     After adding alates to the pool, they are then evenly distributed
+#'     to all fields.
+#'     This happens only on days indicated by `plant_check_gaps`.
+#'     The default here is greater than that in `sim_experiments` because
+#'     these simulations only exchange alates twice per week instead of
+#'     every day.
+#'     Defaults to `0.35`.
+#' @param aphid_plant_disp_p Proportion of aphids added to the between-plant
+#'     dispersal pool every day. Note that this does not depend on
+#'     `plant_check_gaps` like among-field alate dispersal does.
+#'     This can be a single number or a vector with the same length as the
+#'     number of aphid lines.
+#'     Defaults to `0.1`.
+#' @param plant_check_gaps Gap(s) between when plants are check on.
+#'     This is used if you want to see what will happen if you can't check
+#'     on things every day in an experiment.
+#'     You could use `c(3, 4)` for checking twice per week, for example.
+#'     Note that this argument determines how often
+#'     (1) wasps and alates disperse across fields and
+#'     (2) plants are checked for being wilted and potentially replaced.
+#'     So using this argument to simulate harvesting fields will also cause
+#'     wasp and alate dispersal to not occur daily.
+#'     We included this argument because we would have to replicate
+#'     among-field dispersal by hand in the experiments we were planning,
+#'     and we wanted to be sure that not checking daily wouldn't affect
+#'     anything significantly.
+#'     It didn't, which is why `sim_experiments` has checks every day.
+#'     Defaults to `c(3, 4)`.
+#' @param extra_plant_removals Two-column, numeric matrix indicating additional
+#'     plant replacement events. The first column indicates the time at which
+#'     they occur, and the second column indicates the minimum number of plants
+#'     to replace at that time.
+#'     If the times don't coincide with a plant check (indicated by
+#'     `plant_check_gaps`), then these replacements will occur on the plant
+#'     check immediately following the designated time.
+#'     A value of `NA` results in no extra checks.
+#'     This argument is useful to prevent all plants from dying at the same
+#'     time in the beginning of an experiment when `n_plants > 1`.
+#'     The default is `cbind(10, 4)`.
+#' @param wilted_N Total number of aphids that causes the plant
+#'     to become wilted. Values <= 0 cause this to be ignored.
+#'     Defaults to `500`.
+#' @param wilted_mort Mortality for aphid populations living on a wilted plant.
+#'     Defaults to `0.3`, which is based on previous work in the lab.
 #' @param clear_surv Survival of aphids and mummies when a harvest occurs
 #'     (if harvesting is done via `plant_check_gaps`).
 #'     Defaults to `0`.
@@ -1314,76 +1383,6 @@ print.cloneSimsRestart <- function(x, ...) {
 #'
 #' @param wasp_badger_n The number of aphids each adult wasp badgers and kills
 #'     per time step. Defaults to `0`.
-#' @param n_plants The number of plants per field.
-#'     This argument is only useful if you want to simulate the process
-#'     of plants or groups of plants dying.
-#'     Wasps operate at the field level, whereas aphids operate at the
-#'     plant level.
-#'     "Plant" can indicate a group of plants where the aphids can freely
-#'     disperse across them.
-#'     Aphids can disperse across plants via the `aphid_plant_disp_p` argument.
-#'     Defaults to `16`.
-#' @param K Aphid density dependence.
-#'     Defaults to `1800` because this caused simulations to
-#'     approximately match growth of aphid populations on individual fava
-#'     bean plants.
-#' @param alate_b1 The proportion of offspring from apterous aphids is
-#'     `inv_logit(alate_b0 + alate_b1 * N)` where `N` is the total number of
-#'     aphids on that plant.
-#'     Defaults to `0.0088`, which makes alate production only mildly
-#'     density dependent. This default differs from that in `sim_experiments`
-#'     because `N` is calculated per plant, so this number must be higher
-#'     to match alate production from `sim_experiments.`
-#' @param pred_rate Daily predation rate on aphids and mummies.
-#'     Defaults to `0` because we're simulating an experiment with no predators
-#'     and, in contrast to the `sim_experiments` function, we're
-#'     explicitly simulating the process of plants dying and being replaced.
-#' @param alate_field_disp_p Proportion of alates from each field that
-#'     are added to the dispersal pool.
-#'     After adding alates to the pool, they are then evenly distributed
-#'     to all fields.
-#'     This happens only on days indicated by `plant_check_gaps`.
-#'     The default here is greater than that in `sim_experiments` because
-#'     these simulations only exchange alates twice per week instead of
-#'     every day.
-#'     Defaults to `0.35`.
-#' @param aphid_plant_disp_p Proportion of aphids added to the between-plant
-#'     dispersal pool every day. Note that this does not depend on
-#'     `plant_check_gaps` like among-field alate dispersal does.
-#'     This can be a single number or a vector with the same length as the
-#'     number of aphid lines.
-#'     Defaults to `0.1`.
-#' @param plant_check_gaps Gap(s) between when plants are check on.
-#'     This is used if you want to see what will happen if you can't check
-#'     on things every day in an experiment.
-#'     You could use `c(3, 4)` for checking twice per week, for example.
-#'     Note that this argument determines how often
-#'     (1) wasps and alates disperse across fields and
-#'     (2) plants are checked for being wilted and potentially replaced.
-#'     So using this argument to simulate harvesting fields will also cause
-#'     wasp and alate dispersal to not occur daily.
-#'     We included this argument because we would have to replicate
-#'     among-field dispersal by hand in the experiments we were planning,
-#'     and we wanted to be sure that not checking daily wouldn't affect
-#'     anything significantly.
-#'     It didn't, which is why `sim_experiments` has checks every day.
-#'     Defaults to `c(3, 4)`.
-#' @param extra_plant_removals Two-column, numeric matrix indicating additional
-#'     plant replacement events. The first column indicates the time at which
-#'     they occur, and the second column indicates the minimum number of plants
-#'     to replace at that time.
-#'     If the times don't coincide with a plant check (indicated by
-#'     `plant_check_gaps`), then these replacements will occur on the plant
-#'     check immediately following the designated time.
-#'     A value of `NA` results in no extra checks.
-#'     This argument is useful to prevent all plants from dying at the same
-#'     time in the beginning of an experiment when `n_plants > 1`.
-#'     The default is `cbind(10, 4)`.
-#' @param wilted_N Total number of aphids that causes the plant
-#'     to become wilted. Values <= 0 cause this to be ignored.
-#'     Defaults to `500`.
-#' @param wilted_mort Mortality for aphid populations living on a wilted plant.
-#'     Defaults to `0.3`, which is based on previous work in the lab.
 #' @param aphid_demog_error Logical for whether to have demographic
 #'     stochasticity for aphids. Defaults to `FALSE`.
 #' @param wasp_demog_error Logical for whether to have demographic
@@ -1412,7 +1411,7 @@ print.cloneSimsRestart <- function(x, ...) {
 sim_stochastic <- function(clonal_lines,
                            n_fields = 2,
                            max_t = 250,
-                           wasp_badger_n = 0.5,
+                           wasp_badger_n = 0,
                            aphid_demog_error = TRUE,
                            wasp_demog_error = TRUE,
                            environ_error = FALSE,
