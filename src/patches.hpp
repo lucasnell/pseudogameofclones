@@ -5,6 +5,7 @@
 #include <RcppArmadillo.h>      // arma namespace
 #include <vector>               // vector class
 #include <random>               // normal distribution
+#include <cmath>                // std::exp, std::log
 #include <pcg/pcg_random.hpp>   // pcg prng
 #include "gameofclones_types.hpp"  // integer types
 #include "math.hpp"             // distributions
@@ -1077,10 +1078,10 @@ public:
         if (fields.size() > 1 && wasp_disp_m0 > 0) {
             double from_wasp_pool = 0;
             if (wasp_disp_m1 != 0) {
-                double p_out, z;
+                double p_out, lz;
                 for (OneField& field : fields) {
-                    z = field.total_aphids();
-                    p_out = wasp_disp_m0 * std::exp(-wasp_disp_m1 * z);
+                    lz = std::log(field.total_aphids());
+                    p_out = wasp_disp_m0 * std::exp(-wasp_disp_m1 * lz);
                     from_wasp_pool += (field.wasps.Y * p_out);
                     field.wasps.Y *= (1 - p_out);
                 }

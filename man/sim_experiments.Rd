@@ -110,7 +110,7 @@ This happens only on days indicated by \code{plant_check_gaps}.
 Defaults to \code{0}.}
 
 \item{wasp_disp_m1}{Effect of aphid density on wasp emigration from a patch.
-Emigration is \code{wasp_disp_m0 * exp(-wasp_disp_m1 * z)}, where \code{z} is
+Emigration is \code{wasp_disp_m0 * exp(-wasp_disp_m1 * log(z))}, where \code{z} is
 the total number of living aphids in the patch.
 Defaults to \code{0}.}
 

@@ -842,7 +842,7 @@ sim_gameofclones_full <- function(clonal_lines,
 #'     This happens only on days indicated by `plant_check_gaps`.
 #'     Defaults to `0`.
 #' @param wasp_disp_m1 Effect of aphid density on wasp emigration from a patch.
-#'     Emigration is `wasp_disp_m0 * exp(-wasp_disp_m1 * z)`, where `z` is
+#'     Emigration is `wasp_disp_m0 * exp(-wasp_disp_m1 * log(z))`, where `z` is
 #'     the total number of living aphids in the patch.
 #'     Defaults to `0`.
 #' @param wasp_field_attract Relatively attractiveness of fields to wasps.
