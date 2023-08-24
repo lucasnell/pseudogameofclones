@@ -1105,6 +1105,7 @@ restart_experiment <- function(sims_obj,
                                wasp_field_attract = NULL,
                                mum_smooth = NULL,
                                pred_rate = NULL,
+                               sep_adults = NULL,
                                show_progress = NULL,
                                perturb = NULL,
                                no_warns = FALSE) {
@@ -1196,6 +1197,7 @@ restart_experiment <- function(sims_obj,
     }
     if (is.null(mum_smooth)) mum_smooth <- sims_obj$call[["mum_smooth"]]
     if (is.null(pred_rate)) pred_rate <- sims_obj$call[["pred_rate"]]
+    if (is.null(sep_adults)) sep_adults <- sims_obj$call[["sep_adults"]]
     if (is.null(show_progress)) show_progress <-
             sims_obj$call[["show_progress"]]
 
@@ -1215,6 +1217,7 @@ restart_experiment <- function(sims_obj,
     stopifnot(!is.null(wasp_field_attract))
     stopifnot(!is.null(mum_smooth))
     stopifnot(!is.null(pred_rate))
+    stopifnot(!is.null(sep_adults))
     stopifnot(!is.null(show_progress))
 
     # Create / edit some items:
@@ -1269,6 +1272,7 @@ restart_experiment <- function(sims_obj,
     stopifnot(sum(wasp_field_attract) > 0)
     dbl_check(mum_smooth, "mum_smooth", .min = 0, .max = 1)
     dbl_vec_check(pred_rate, "pred_rate", .min = 0, .max = 1)
+    stopifnot(inherits(sep_adults, "logical") && length(sep_adults) == 1)
     uint_vec_check(check_for_clear, "check_for_clear")
     stopifnot(all(!duplicated(check_for_clear)))
     stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
@@ -1290,7 +1294,7 @@ restart_experiment <- function(sims_obj,
 
     sims <- restart_experiments_cpp(new_all_info_xptr, max_t, save_every,
                                     check_for_clear, stage_ts_out,
-                                    sims_obj$call[["sep_adults"]], show_progress,
+                                    sep_adults, show_progress,
                                     perturb_list$when, perturb_list$where,
                                     perturb_list$who, perturb_list$how)
 

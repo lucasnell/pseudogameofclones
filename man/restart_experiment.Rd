@@ -24,6 +24,7 @@ restart_experiment(
   wasp_field_attract = NULL,
   mum_smooth = NULL,
   pred_rate = NULL,
+  sep_adults = NULL,
   show_progress = NULL,
   perturb = NULL,
   no_warns = FALSE
