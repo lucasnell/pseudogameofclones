@@ -1392,11 +1392,16 @@ print.cloneSimsRestart <- function(x, ...) {
 #' @param wasp_demog_error Logical for whether to have demographic
 #'     stochasticity for wasps. Defaults to `FALSE`.
 #' @param environ_error Logical for whether to have environmental stochasticity.
+#'     This argument applies to both aphids and wasps, but if you want to
+#'     have just one species experience environmental stochasticity,
+#'     then you can set their associated `sigma_*` argument to zero.
 #'     Defaults to `FALSE`.
 #' @param sigma_x Standard deviation of environmental stochasticity for aphids.
+#'     This argument has no effect if `environ_error = FALSE`.
 #'     Defaults to the internal object `environ$sigma_x`,
 #'     which is from Meisner et al. (2014).
 #' @param sigma_y Standard deviation of environmental stochasticity for wasps.
+#'     This argument has no effect if `environ_error = FALSE`.
 #'     Defaults to the internal object `environ$sigma_y`,
 #'     which is from Meisner et al. (2014).
 #' @param rho Environmental correlation among instars.

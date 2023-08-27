@@ -47,13 +47,18 @@ stochasticity for aphids. Defaults to \code{FALSE}.}
 stochasticity for wasps. Defaults to \code{FALSE}.}
 
 \item{environ_error}{Logical for whether to have environmental stochasticity.
+This argument applies to both aphids and wasps, but if you want to
+have just one species experience environmental stochasticity,
+then you can set their associated \verb{sigma_*} argument to zero.
 Defaults to \code{FALSE}.}
 
 \item{sigma_x}{Standard deviation of environmental stochasticity for aphids.
+This argument has no effect if \code{environ_error = FALSE}.
 Defaults to the internal object \code{environ$sigma_x},
 which is from Meisner et al. (2014).}
 
 \item{sigma_y}{Standard deviation of environmental stochasticity for wasps.
+This argument has no effect if \code{environ_error = FALSE}.
 Defaults to the internal object \code{environ$sigma_y},
 which is from Meisner et al. (2014).}
 

@@ -23,6 +23,7 @@ void AphidTypePop::process_error(const arma::vec& Xt,
                                  const double& sigma_x,
                                  const double& rho,
                                  const bool& demog_error,
+                                 const double& aphids_sum,
                                  std::normal_distribution<double>& norm_distr,
                                  pcg32& eng) {
 
@@ -30,27 +31,13 @@ void AphidTypePop::process_error(const arma::vec& Xt,
 
     uint32 n_stages = X.n_elem;
 
-    // Standard deviations by stage (all the same if no demographic error):
-    arma::vec stdevs(n_stages, arma::fill::value(sigma_x));
-    if (demog_error) {
-        //' To add demographic error, convert to variances, combine,
-        //' then convert back to stdev:
-        stdevs *= sigma_x;
-        for (uint32 i = 0; i < n_stages; i++) {
-            stdevs(i) += std::min(0.5, 1 / (1 + Xt(i)));
-            stdevs(i) = std::sqrt(stdevs(i));
-        }
-    }
+    // Variance for all process error:
+    double sigma2 = sigma_x * sigma_x;
+    if (demog_error) sigma2 += std::min(0.5, 1 / (1 + aphids_sum));
 
-    arma::mat Se = (rho * arma::mat(n_stages, n_stages, arma::fill::ones) +
+    arma::mat Se = sigma2 *
+        (rho * arma::mat(n_stages, n_stages, arma::fill::ones) +
         (1 - rho) * arma::mat(n_stages, n_stages, arma::fill::eye));
-    // Convert from matrix of correlations to variances and covariances:
-    for (uint32 i = 0; i < n_stages; i++) {
-        for (uint32 j = 0; j < n_stages; j++) {
-            Se(i,j) *= stdevs(i);
-            Se(i,j) *= stdevs(j);
-        }
-    }
 
     // chol doesn't work with zeros on diagonal
     arma::uvec non_zero = arma::find(Se.diag() > 0);

@@ -81,6 +81,7 @@ public:
                        const double& sigma_x,
                        const double& rho,
                        const bool& demog_error,
+                       const double& aphids_sum,
                        std::normal_distribution<double>& norm_distr,
                        pcg32& eng);
 
@@ -240,11 +241,15 @@ class AphidPop {
                        const arma::vec& paras_Xt,
                        pcg32& eng) {
 
-        apterous.process_error(apterous_Xt, sigma_x, rho, demog_error,
+        // Total aphids for this line:
+        double aphids_sum = arma::accu(apterous_Xt) + arma::accu(alates_Xt) +
+            arma::accu(paras_Xt);
+
+        apterous.process_error(apterous_Xt, sigma_x, rho, demog_error, aphids_sum,
                                norm_distr, eng);
-        alates.process_error(alates_Xt, sigma_x, rho, demog_error,
+        alates.process_error(alates_Xt, sigma_x, rho, demog_error, aphids_sum,
                              norm_distr, eng);
-        paras.process_error(paras_Xt, sigma_x, rho, demog_error,
+        paras.process_error(paras_Xt, sigma_x, rho, demog_error, aphids_sum,
                             norm_distr, eng);
 
         return;
