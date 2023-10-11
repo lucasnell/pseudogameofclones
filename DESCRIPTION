@@ -1,5 +1,5 @@
 Package: gameofclones
-Version: 1.0.1.9007
+Version: 1.0.2
 Title: Clonal Evolution in Aphid Metapopulations
 Description: Simulate pea aphid clonal evolution and parasitoids through time and space.
 Authors@R: person(c("Lucas", "A."), "Nell", email = "lucnell@gmail.com",
