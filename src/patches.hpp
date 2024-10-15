@@ -1,5 +1,5 @@
-# ifndef __GAMEOFCLONES_PATCHES_H
-# define __GAMEOFCLONES_PATCHES_H
+# ifndef __PSEUDOGAMEOFCLONES_PATCHES_H
+# define __PSEUDOGAMEOFCLONES_PATCHES_H
 
 
 #include <RcppArmadillo.h>      // arma namespace

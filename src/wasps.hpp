@@ -1,5 +1,5 @@
-# ifndef __GAMEOFCLONES_WASPS_H
-# define __GAMEOFCLONES_WASPS_H
+# ifndef __PSEUDOGAMEOFCLONES_WASPS_H
+# define __PSEUDOGAMEOFCLONES_WASPS_H
 
 
 #include <RcppArmadillo.h>      // arma namespace

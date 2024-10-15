@@ -1,5 +1,5 @@
-#ifndef __GAMEOFCLONES_PCG_H
-#define __GAMEOFCLONES_PCG_H
+#ifndef __PSEUDOGAMEOFCLONES_PCG_H
+#define __PSEUDOGAMEOFCLONES_PCG_H
 
 #include <RcppArmadillo.h>
 #include <vector>

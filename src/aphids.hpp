@@ -1,5 +1,5 @@
-# ifndef __GAMEOFCLONES_APHIDS_H
-# define __GAMEOFCLONES_APHIDS_H
+# ifndef __PSEUDOGAMEOFCLONES_APHIDS_H
+# define __PSEUDOGAMEOFCLONES_APHIDS_H
 
 #include <RcppArmadillo.h>      // arma namespace
 #include <vector>               // vector class

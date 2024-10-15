@@ -1,5 +1,5 @@
-# ifndef __GAMEOFCLONES_MATH_H
-# define __GAMEOFCLONES_MATH_H
+# ifndef __PSEUDOGAMEOFCLONES_MATH_H
+# define __PSEUDOGAMEOFCLONES_MATH_H
 
 
 #include <RcppArmadillo.h>
