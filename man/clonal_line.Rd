@@ -91,7 +91,7 @@ adulthood instead.
 Defaults to \code{0.5}.}
 }
 \value{
-A list with the necessary info to pass onto sim_gameofclones.
+A list with the necessary info to pass onto sim_pseudogameofclones.
 }
 \description{
 To smooth stage structure out over time,

@@ -7,7 +7,7 @@
 #include <random>
 
 #include <pcg/pcg_random.hpp>   // pcg prng
-#include "gameofclones_types.hpp"
+#include "pseudogameofclones_types.hpp"
 #include "pcg.hpp"              // runif_ab fxn
 
 

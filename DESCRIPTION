@@ -1,4 +1,4 @@
-Package: gameofclones
+Package: pseudogameofclones
 Version: 1.0.2
 Title: Clonal Evolution in Aphid Metapopulations
 Description: Simulate pea aphid clonal evolution and parasitoids through time and space.
@@ -25,13 +25,13 @@ LinkingTo:
 SystemRequirements: GNU make, C++11
 NeedsCompilation: yes
 RoxygenNote: 7.2.3
-URL: https://github.com/lucasnell/gameofclones
-BugReports: https://github.com/lucasnell/gameofclones/issues
+URL: https://github.com/lucasnell/pseudogameofclones
+BugReports: https://github.com/lucasnell/pseudogameofclones/issues
 RemoteType: github
 RemoteHost: api.github.com
-RemoteRepo: gameofclones
+RemoteRepo: pseudogameofclones
 RemoteUsername: lucasnell
-GithubRepo: gameofclones
+GithubRepo: pseudogameofclones
 GithubUsername: lucasnell
 Suggests:
     knitr,

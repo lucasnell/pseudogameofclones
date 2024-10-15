@@ -5,7 +5,7 @@
 #include <vector>               // vector class
 #include <random>               // normal distribution
 #include <pcg/pcg_random.hpp>   // pcg prng
-#include "gameofclones_types.hpp"  // integer types
+#include "pseudogameofclones_types.hpp"  // integer types
 #include "wasps.hpp"            // wasp classes
 
 

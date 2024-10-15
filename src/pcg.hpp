@@ -7,7 +7,7 @@
 #include <pcg/pcg_extras.hpp>  // pcg 128-bit integer type
 #include <pcg/pcg_random.hpp> // pcg prng
 
-#include "gameofclones_types.hpp"
+#include "pseudogameofclones_types.hpp"
 
 using namespace Rcpp;
 

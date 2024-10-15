@@ -21,7 +21,7 @@
 #endif
 
 
-#include "gameofclones_types.hpp"  // integer types
+#include "pseudogameofclones_types.hpp"  // integer types
 #include "aphids.hpp"           // aphid classes
 #include "patches.hpp"          // field and plant classes
 #include "pcg.hpp"              // mt_seeds seed_pcg fxns
@@ -850,7 +850,7 @@ void check_args(const uint32& n_reps,
 
 
 //[[Rcpp::export]]
-List sim_gameofclones_cpp(const uint32& n_reps,
+List sim_pseudogameofclones_cpp(const uint32& n_reps,
                        const uint32& n_fields,
                        const std::deque<uint32>& check_for_clear,
                        const double& clear_surv,

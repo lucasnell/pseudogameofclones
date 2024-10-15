@@ -2,7 +2,7 @@
 #include <cmath>
 
 #include "math.hpp"
-#include "gameofclones_types.hpp"
+#include "pseudogameofclones_types.hpp"
 
 using namespace Rcpp;
 

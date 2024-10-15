@@ -1,10 +1,10 @@
 ---
-title: "gameofclones internals"
+title: "pseudogameofclones internals"
 author: "Lucas A. Nell"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{gameofclones internals}
+  %\VignetteIndexEntry{pseudogameofclones internals}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
@@ -16,7 +16,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
 
-This vignette outlines the internal data present in `gameofclones`. 
+This vignette outlines the internal data present in `pseudogameofclones`. 
 These data inform some of the default parameters in
 `sim_experiments` but are not always identical because `sim_experiments` was
 designed to simulate the experimental cages that differed in size
@@ -218,7 +218,7 @@ environ[["rho"]] <- signif(2/(1+exp(-environ[["sigma_y"]]))-1, 2)
 
 # Saving data
 
-Saving the created objects as internal data for `gameofclones`.
+Saving the created objects as internal data for `pseudogameofclones`.
 
 ```{r save_data, eval = FALSE}
 usethis::use_data(dev_times, populations, wasp_attack, environ)

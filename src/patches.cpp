@@ -4,7 +4,7 @@
 #include <functional>           // std::greater
 #include <random>               // normal distribution
 #include <pcg/pcg_random.hpp>   // pcg prng
-#include "gameofclones_types.hpp"  // integer types
+#include "pseudogameofclones_types.hpp"  // integer types
 #include "patches.hpp"          // field and plant classes
 
 
@@ -486,7 +486,7 @@ void AllFields::set_new_pars(const double& K_,
     this->wasp_disp_m1 = wasp_disp_m1_;
     this->wasp_field_attract = wasp_field_attract_;
     //' Make sure `wasp_field_attract` sums to 1 (negative values
-    //' and a sum <= 0 are already checked for in sim_gameofclones_cpp):
+    //' and a sum <= 0 are already checked for in sim_pseudogameofclones_cpp):
     double wfa_sum = std::accumulate(wasp_field_attract.begin(),
                                      wasp_field_attract.end(), 0.0);
     for (double& x : wasp_field_attract) x /= wfa_sum;

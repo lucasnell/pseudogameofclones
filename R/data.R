@@ -3,7 +3,7 @@
 
 #' Development times for aphids and wasps.
 #'
-#' See `vignette("internals", "gameofclones")` for the exact values here.
+#' See `vignette("internals", "pseudogameofclones")` for the exact values here.
 #'
 #'
 #' @format A list with two items:
@@ -21,7 +21,7 @@
 
 #' Population rates and starting values for aphids and wasps.
 #'
-#' See `vignette("internals", "gameofclones")` for more information and
+#' See `vignette("internals", "pseudogameofclones")` for more information and
 #' for the exact values used.
 #'
 #'
@@ -74,7 +74,7 @@
 
 #' Wasp attack rate parameters.
 #'
-#' See `vignette("internals", "gameofclones")` for more information and
+#' See `vignette("internals", "pseudogameofclones")` for more information and
 #' for the exact values used.
 #'
 #'
@@ -109,7 +109,7 @@
 
 #' Parameters associated with environmental effects and stochasticity.
 #'
-#' See `vignette("internals", "gameofclones")` for more information and
+#' See `vignette("internals", "pseudogameofclones")` for more information and
 #' for the exact values used.
 #'
 #'

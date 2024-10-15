@@ -69,7 +69,7 @@ Defaults to \code{environ$rho}.}
 
 \item{n_threads}{Number of threads to use if OpenMP is enabled
 (ignored otherwise).
-Find out whether it's enabled using \code{gameofclones:::using_openmp()}.
+Find out whether it's enabled using \code{pseudogameofclones:::using_openmp()}.
 Defaults to \code{1}.}
 }
 \description{

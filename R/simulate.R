@@ -66,7 +66,7 @@
 #'     adulthood instead.
 #'     Defaults to `0.5`.
 #'
-#' @return A list with the necessary info to pass onto sim_gameofclones.
+#' @return A list with the necessary info to pass onto sim_pseudogameofclones.
 #'
 #' @export
 #'
@@ -455,7 +455,7 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 # full fun docs ----
 #' Simulate multiple reps and simplify output - all options.
 #'
-#' This mainly differs from `sim_gameofclones` in that it allows for
+#' This mainly differs from `sim_pseudogameofclones` in that it allows for
 #' stochasticity and for simulating the process of plants dying and
 #' being replaced.
 #' The latter process doesn't appear important except for very small scales
@@ -575,7 +575,7 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #' @noRd
 #'
 # full fun code ----
-sim_gameofclones_full <- function(clonal_lines,
+sim_pseudogameofclones_full <- function(clonal_lines,
                                n_reps = 1,
                                n_fields = 2,
                                n_plants = 1,
@@ -795,7 +795,7 @@ sim_gameofclones_full <- function(clonal_lines,
     stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
 
 
-    sims <- sim_gameofclones_cpp(n_reps, n_fields,
+    sims <- sim_pseudogameofclones_cpp(n_reps, n_fields,
                               check_for_clear, clear_surv,
                               max_t, save_every, mean_K, sd_K, K_y_mult,
                               wilted_N, wilted_mort,
@@ -991,7 +991,7 @@ sim_experiments <- function(clonal_lines,
                             show_progress = FALSE) {
 
 
-    sims <- sim_gameofclones_full(clonal_lines = clonal_lines,
+    sims <- sim_pseudogameofclones_full(clonal_lines = clonal_lines,
                                n_fields = n_fields,
                                max_t = max_t,
                                mean_K = K,
@@ -1018,7 +1018,7 @@ sim_experiments <- function(clonal_lines,
                                perturb = perturb,
                                show_progress = show_progress)
 
-    # Adjusting for different name from `sim_gameofclones_full`:
+    # Adjusting for different name from `sim_pseudogameofclones_full`:
     sims$call[["K"]] <- sims$call[["mean_K"]]
     sims$call[["mean_K"]] <- NULL
 
@@ -1142,7 +1142,7 @@ restart_experiment <- function(sims_obj,
             stop("\nPlease do not directly edit `sims_obj$all_info`. ",
                  "You can try to fix this problem by running ",
                  "`sims_obj$all_info <- ",
-                 "gameofclones:::make_all_info(sims_obj)`")
+                 "pseudogameofclones:::make_all_info(sims_obj)`")
         }
         if (is.data.frame(new_starts)) {
             new_starts <- rep(list(new_starts), n_reps)
@@ -1170,7 +1170,7 @@ restart_experiment <- function(sims_obj,
                 stop("\nPlease do not directly edit `sims_obj$all_info`. ",
                      "You can try to fix this problem by running ",
                      "`sims_obj$all_info <- ",
-                     "gameofclones:::make_all_info(sims_obj)`")
+                     "pseudogameofclones:::make_all_info(sims_obj)`")
             }
         }
         N_vecs <- lapply(new_starts, function(x) x[["N"]])
@@ -1409,7 +1409,7 @@ print.cloneSimsRestart <- function(x, ...) {
 #' @param n_reps Number of reps to simulate. Defaults to `1`.
 #' @param n_threads Number of threads to use if OpenMP is enabled
 #'     (ignored otherwise).
-#'     Find out whether it's enabled using `gameofclones:::using_openmp()`.
+#'     Find out whether it's enabled using `pseudogameofclones:::using_openmp()`.
 #'     Defaults to `1`.
 #'
 #'
@@ -1472,13 +1472,13 @@ sim_stochastic <- function(clonal_lines,
 
     all_args <- c(this_args, other_args)
 
-    # Adjusting for different name from `sim_gameofclones_full`:
+    # Adjusting for different name from `sim_pseudogameofclones_full`:
     all_args[["mean_K"]] <- other_args[["K"]]
     all_args[["K"]] <- NULL
 
-    sims <- do.call(sim_gameofclones_full, all_args)
+    sims <- do.call(sim_pseudogameofclones_full, all_args)
 
-    # Adjusting for different name from `sim_gameofclones_full`:
+    # Adjusting for different name from `sim_pseudogameofclones_full`:
     sims$call[["K"]] <- sims$call[["mean_K"]]
     sims$call[["mean_K"]] <- NULL
 

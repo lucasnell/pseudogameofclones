@@ -3,7 +3,7 @@
 [![DOI](https://zenodo.org/badge/134013089.svg)](https://zenodo.org/badge/latestdoi/134013089)
 
 
-# gameofclones <img src="logo.svg" align="right" height="150" />
+# pseudogameofclones <img src="logo.svg" align="right" height="150" />
 
 
 This R package simulates aphid–parasitoid eco-evolutionary dynamics.
@@ -14,7 +14,7 @@ This R package simulates aphid–parasitoid eco-evolutionary dynamics.
 To install this package:
 
 ```r
-remotes::install_github("lucasnell/gameofclones")
+remotes::install_github("lucasnell/pseudogameofclones")
 ```
 
 

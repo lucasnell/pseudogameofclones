@@ -49,7 +49,7 @@ Numeric vector of length 1, indicating environmental correlation among instars.
 environ
 }
 \description{
-See \code{vignette("internals", "gameofclones")} for more information and
+See \code{vignette("internals", "pseudogameofclones")} for more information and
 for the exact values used.
 }
 \keyword{datasets}

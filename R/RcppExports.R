@@ -7,7 +7,7 @@
 #' @export
 #'
 logit <- function(p) {
-    .Call(`_gameofclones_logit`, p)
+    .Call(`_pseudogameofclones_logit`, p)
 }
 
 #' @describeIn logit
@@ -15,7 +15,7 @@ logit <- function(p) {
 #' @export
 #'
 inv_logit <- function(a) {
-    .Call(`_gameofclones_inv_logit`, a)
+    .Call(`_pseudogameofclones_inv_logit`, a)
 }
 
 #' Create Leslie matrix from aphid info
@@ -28,7 +28,7 @@ inv_logit <- function(a) {
 #'
 #' @noRd
 leslie_matrix <- function(instar_days, surv_juv, surv_adult, repro) {
-    .Call(`_gameofclones_leslie_matrix`, instar_days, surv_juv, surv_adult, repro)
+    .Call(`_pseudogameofclones_leslie_matrix`, instar_days, surv_juv, surv_adult, repro)
 }
 
 #' Compute the "stable age distribution" from a Leslie matrix
@@ -40,15 +40,15 @@ leslie_matrix <- function(instar_days, surv_juv, surv_adult, repro) {
 #' @return Vector with the stable age distribution given the Leslie matrix.
 #'
 sad_leslie <- function(leslie) {
-    .Call(`_gameofclones_sad_leslie`, leslie)
+    .Call(`_pseudogameofclones_sad_leslie`, leslie)
 }
 
 fields_to_data_frames <- function(all_fields_ptr) {
-    .Call(`_gameofclones_fields_to_data_frames`, all_fields_ptr)
+    .Call(`_pseudogameofclones_fields_to_data_frames`, all_fields_ptr)
 }
 
 fields_from_vectors <- function(all_fields_ptr, N_vecs) {
-    invisible(.Call(`_gameofclones_fields_from_vectors`, all_fields_ptr, N_vecs))
+    invisible(.Call(`_pseudogameofclones_fields_from_vectors`, all_fields_ptr, N_vecs))
 }
 
 #' Check that the number of threads doesn't exceed the number available, and change
@@ -59,18 +59,18 @@ fields_from_vectors <- function(all_fields_ptr, N_vecs) {
 NULL
 
 using_openmp <- function() {
-    .Call(`_gameofclones_using_openmp`)
+    .Call(`_pseudogameofclones_using_openmp`)
 }
 
-sim_gameofclones_cpp <- function(n_reps, n_fields, check_for_clear, clear_surv, max_t, save_every, mean_K, sd_K, K_y_mult, wilted_N, wilted_mort, attack_surv, attack_mumm, aphid_demog_error, wasp_demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, aphid_plant_disp_p, plant_disp_mort, field_disp_start, plant_disp_start, living_days, pred_rate, mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h, wasp_badger_n, wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, extra_plant_removals_mat, sep_adults, n_threads, show_progress) {
-    .Call(`_gameofclones_sim_gameofclones_cpp`, n_reps, n_fields, check_for_clear, clear_surv, max_t, save_every, mean_K, sd_K, K_y_mult, wilted_N, wilted_mort, attack_surv, attack_mumm, aphid_demog_error, wasp_demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, aphid_plant_disp_p, plant_disp_mort, field_disp_start, plant_disp_start, living_days, pred_rate, mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h, wasp_badger_n, wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, extra_plant_removals_mat, sep_adults, n_threads, show_progress)
+sim_pseudogameofclones_cpp <- function(n_reps, n_fields, check_for_clear, clear_surv, max_t, save_every, mean_K, sd_K, K_y_mult, wilted_N, wilted_mort, attack_surv, attack_mumm, aphid_demog_error, wasp_demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, aphid_plant_disp_p, plant_disp_mort, field_disp_start, plant_disp_start, living_days, pred_rate, mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h, wasp_badger_n, wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, extra_plant_removals_mat, sep_adults, n_threads, show_progress) {
+    .Call(`_pseudogameofclones_sim_pseudogameofclones_cpp`, n_reps, n_fields, check_for_clear, clear_surv, max_t, save_every, mean_K, sd_K, K_y_mult, wilted_N, wilted_mort, attack_surv, attack_mumm, aphid_demog_error, wasp_demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, aphid_plant_disp_p, plant_disp_mort, field_disp_start, plant_disp_start, living_days, pred_rate, mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h, wasp_badger_n, wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, extra_plant_removals_mat, sep_adults, n_threads, show_progress)
 }
 
 restart_fill_other_pars <- function(all_fields_in_ptr, K, alate_b0, alate_b1, alate_field_disp_p, K_y_mult, s_y, a, k, h, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, mum_smooth, pred_rate) {
-    .Call(`_gameofclones_restart_fill_other_pars`, all_fields_in_ptr, K, alate_b0, alate_b1, alate_field_disp_p, K_y_mult, s_y, a, k, h, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, mum_smooth, pred_rate)
+    .Call(`_pseudogameofclones_restart_fill_other_pars`, all_fields_in_ptr, K, alate_b0, alate_b1, alate_field_disp_p, K_y_mult, s_y, a, k, h, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, mum_smooth, pred_rate)
 }
 
 restart_experiments_cpp <- function(all_fields_ptr, max_t, save_every, check_for_clear, stage_ts_out, sep_adults, show_progress, perturb_when, perturb_where, perturb_who, perturb_how) {
-    .Call(`_gameofclones_restart_experiments_cpp`, all_fields_ptr, max_t, save_every, check_for_clear, stage_ts_out, sep_adults, show_progress, perturb_when, perturb_where, perturb_who, perturb_how)
+    .Call(`_pseudogameofclones_restart_experiments_cpp`, all_fields_ptr, max_t, save_every, check_for_clear, stage_ts_out, sep_adults, show_progress, perturb_when, perturb_where, perturb_who, perturb_how)
 }
 

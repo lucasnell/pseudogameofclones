@@ -7,7 +7,7 @@
 #include <random>               // normal distribution
 #include <cmath>                // std::exp, std::log
 #include <pcg/pcg_random.hpp>   // pcg prng
-#include "gameofclones_types.hpp"  // integer types
+#include "pseudogameofclones_types.hpp"  // integer types
 #include "math.hpp"             // distributions
 #include "aphids.hpp"           // aphid classes
 #include "wasps.hpp"            // wasp classes
@@ -999,7 +999,7 @@ public:
         seed_pcg(eng, seeds);
 
         //' Make sure `wasp_field_attract` sums to 1 (negative values
-        //' and a sum <= 0 are already checked for in sim_gameofclones_cpp):
+        //' and a sum <= 0 are already checked for in sim_pseudogameofclones_cpp):
         double wfa_sum = std::accumulate(wasp_field_attract.begin(),
                                          wasp_field_attract.end(), 0.0);
         for (double& x : wasp_field_attract) x /= wfa_sum;
