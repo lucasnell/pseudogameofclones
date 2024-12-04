@@ -13,10 +13,8 @@
 using namespace Rcpp;
 
 
-// These necessary for dispersal methods and ApterousPop::alate_prop
-class OnePlant;
-struct AphidPlantDisps;
-struct AllAphidPlantDisps;
+// Necessary for ApterousPop::alate_prop
+class OneField;
 // Necessary here to declare friendship
 class AphidPop;
 
@@ -136,8 +134,8 @@ class AlatePop : public AphidTypePop {
 
     friend class AphidPop;
 
-    MEMBER(uint32, field_disp_start)    // index for stage in which across-field
-                                        // dispersal starts
+    // index for stage in which across-field dispersal starts
+    uint32 field_disp_start_;
 
 
 public:
@@ -159,6 +157,7 @@ public:
         return *this;
     }
 
+    uint32 const& field_disp_start() const { return field_disp_start_; }
 
 
 };
@@ -209,30 +208,16 @@ class AphidPop {
 
     uint32 adult_age;           // age at which aphids are adults
                                 // (assumed == `field_disp_start`)
-    double aphid_plant_disp_p;  // proportion that leave focal plant
-    double plant_disp_mort;     // mortality of dispersers across plants
-    uint32 plant_disp_start;    // index for stage in which among-plant
-                                // dispersal starts
 
     /*
      Vector of length >=2 with survival probabilities of singly & multiply
      attacked aphids:
      */
     arma::vec attack_surv;
-    /*
-     Vector of length >=2 with probabilities of singly & multiply attacked
-     being successfully parasitized:
-     */
-    arma::vec attack_mumm;
+
     // for process error:
     mutable std::normal_distribution<double> norm_distr =
         std::normal_distribution<double>(0, 1);
-    // samples total dispersers:
-    mutable std::poisson_distribution<uint32> pois_distr =
-        std::poisson_distribution<uint32>(1);
-    // samples dead dispersers and alates:
-    mutable std::binomial_distribution<uint32> bino_distr =
-        std::binomial_distribution<uint32>(1, 0.1);
 
     // Process error for all stages, plus checks so that they don't exceed
     // what's possible
@@ -257,14 +242,6 @@ class AphidPop {
 
 
 
-    /*
-     Calculate plant dispersal for one either apterous, alate, or parasitized
-     */
-    void one_calc_plant_dispersal__(const arma::vec& X_disp,
-                                    const OnePlant* plant,
-                                    arma::mat& emigrants,
-                                    arma::mat& immigrants) const;
-
 
 
 public:
@@ -279,9 +256,7 @@ public:
      */
     AphidPop()
         : sigma_x(0), rho(0), demog_error(false), adult_age(0),
-          aphid_plant_disp_p(0), plant_disp_mort(0), plant_disp_start(0),
           attack_surv(2, arma::fill::zeros),
-          attack_mumm(2, arma::fill::ones),
           aphid_name(""), apterous(), alates(), paras(), extinct(false) {};
 
     // Make sure `leslie_mat` has 3 slices and `aphid_density_0` has two columns!
@@ -290,25 +265,17 @@ public:
              const double& rho_,
              const bool& demog_error_,
              const arma::vec& attack_surv_,
-             const arma::vec& attack_mumm_,
              const arma::cube& leslie_mat,
              const arma::mat& aphid_density_0,
              const double& alate_b0,
              const double& alate_b1,
-             const double& aphid_plant_disp_p_,
-             const double& plant_disp_mort_,
              const uint32& field_disp_start,
-             const uint32& plant_disp_start_,
              const uint32& living_days)
         : sigma_x(sigma_x_),
           rho(rho_),
           demog_error(demog_error_),
           adult_age(field_disp_start),
-          aphid_plant_disp_p(aphid_plant_disp_p_),
-          plant_disp_mort(plant_disp_mort_),
-          plant_disp_start(plant_disp_start_),
           attack_surv(attack_surv_),
-          attack_mumm(attack_mumm_),
           aphid_name(aphid_name_),
           apterous(leslie_mat.slice(0), aphid_density_0.col(0), alate_b0, alate_b1),
           alates(leslie_mat.slice(1), aphid_density_0.col(1), field_disp_start),
@@ -320,14 +287,8 @@ public:
           rho(other.rho),
           demog_error(other.demog_error),
           adult_age(other.adult_age),
-          aphid_plant_disp_p(other.aphid_plant_disp_p),
-          plant_disp_mort(other.plant_disp_mort),
-          plant_disp_start(other.plant_disp_start),
           attack_surv(other.attack_surv),
-          attack_mumm(other.attack_mumm),
           norm_distr(other.norm_distr),
-          pois_distr(other.pois_distr),
-          bino_distr(other.bino_distr),
           aphid_name(other.aphid_name),
           apterous(other.apterous),
           alates(other.alates),
@@ -340,14 +301,8 @@ public:
         rho = other.rho;
         demog_error = other.demog_error;
         adult_age = other.adult_age;
-        aphid_plant_disp_p = other.aphid_plant_disp_p;
-        plant_disp_mort = other.plant_disp_mort;
-        plant_disp_start = other.plant_disp_start;
         attack_surv = other.attack_surv;
-        attack_mumm = other.attack_mumm;
         norm_distr = other.norm_distr;
-        pois_distr = other.pois_distr;
-        bino_distr = other.bino_distr;
         aphid_name = other.aphid_name;
         apterous = other.apterous;
         alates = other.alates;
@@ -407,21 +362,9 @@ public:
     }
 
 
-    /*
-     Calculate dispersal of this line to all other plants.
-     Emigration doesn't necessarily == immigration due to disperser mortality.
-     Note: keep the definition of this in the *.cpp file bc it won't
-     compile otherwise.
-    */
-    void calc_plant_dispersal(const OnePlant* plant,
-                              AphidPlantDisps& emigrants,
-                              AphidPlantDisps& immigrants) const;
-
     // Update new aphid abundances, return the # newly mummified aphids
     double update(const OnePlant* plant,
                   const WaspPop* wasps,
-                  const AphidPlantDisps& emigrants,
-                  const AphidPlantDisps& immigrants,
                   pcg32& eng);
 
     /*
@@ -440,46 +383,6 @@ public:
         return arma::accu(alates.X.head(adult_age));
     }
 
-    /*
-     Aphids being badgered by wasps:
-     */
-
-    // Doing it by having wasps badger a set number of adults
-    inline void do_badgering_n(const double& adults_badgered) {
-        if (adults_badgered == 0) return;
-        uint32 adult_start = alates.field_disp_start();
-        uint32 n_stages = alates.X.n_elem;
-        // Badgered adult aphids are split among stages (both alates and
-        // apterous) proportional to the relative abundance of that stage
-        double total_adults = total_adult_apterous() + total_adult_alates();
-        if (total_adults == 0) return;
-        if (adults_badgered >= total_adults) {
-            for (uint32 i = adult_start; i < n_stages; i++) {
-                apterous.X(i) = 0;
-                alates.X(i) = 0;
-            }
-        } else {
-            double mult = adults_badgered / total_adults;
-            for (uint32 i = adult_start; i < n_stages; i++) {
-                apterous.X(i) -= (apterous.X(i) * mult);
-                alates.X(i) -= (alates.X(i) * mult);
-            }
-        }
-        return;
-    }
-
-
-    // Using survival = exp(- wasp_badger_n * Y / z)
-    void do_badgering_exp(const double& badgering_surv) {
-        uint32 adult_start = alates.field_disp_start();
-        double total_adults = total_adult_apterous() + total_adult_alates();
-        if (total_adults > 0 && badgering_surv < 1) {
-            for (uint32 i = adult_start; i < alates.X.n_elem; i++) {
-                apterous.X(i) *= badgering_surv;
-                alates.X(i) *= badgering_surv;
-            }
-        }
-    }
 
 };
 

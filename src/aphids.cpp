@@ -93,76 +93,6 @@ double ApterousPop::alate_prop(const OnePlant* plant) const {
 
 
 
-/*
- Emigration and immigration of this line to all other plants.
- This function is run individually on `apterous`, `alates`, and `paras` aphids
- inside the `AphidPop::cal_plant_dispersal` function.
-
- (`this_j` is the index for the plant this line's population is on)
-
- These do not necessarily match up due to mortality of dispersers.
-
- For both `emigrants` and `immigrants` matrices, rows are aphid stages and columns
- are plants.
- */
-void AphidPop::one_calc_plant_dispersal__(const arma::vec& Xt,
-                                          const OnePlant* plant,
-                                          arma::mat& emigrants,
-                                          arma::mat& immigrants) const {
-
-    if (total_aphids() == 0 || plant->n_plants == 1 ||
-        aphid_plant_disp_p <= 0) return;
-
-    const uint32& this_j(plant->this_j);
-    const uint32& n_plants(plant->n_plants);
-    double n_plants_dbl = static_cast<double>(n_plants);
-
-    double n_leaving;
-    double n_arriving;
-
-    // Dispersal for each dispersing stage:
-    for (uint32 i = plant_disp_start; i < Xt.n_elem; i++) {
-
-        if (Xt(i) == 0) continue;
-
-        n_leaving = aphid_plant_disp_p * Xt(i);
-        emigrants(i, this_j) = n_leaving;
-
-        n_arriving = (n_leaving / n_plants_dbl) * (1 - plant_disp_mort);
-        immigrants.row(i) += n_arriving;
-
-    }
-
-
-    return;
-}
-
-
-
-
-/*
- Calculate dispersal of this line to all other plants.
- Emigration doesn't necessarily == immigration due to disperser mortality.
- Note: keep the definition of this in the *.cpp file bc it won't
- compile otherwise.
- */
-void AphidPop::calc_plant_dispersal(const OnePlant* plant,
-                                    AphidPlantDisps& emigrants,
-                                    AphidPlantDisps& immigrants) const {
-
-    one_calc_plant_dispersal__(apterous.X, plant, emigrants.apterous,
-                               immigrants.apterous);
-    one_calc_plant_dispersal__(alates.X, plant, emigrants.alates,
-                               immigrants.alates);
-    one_calc_plant_dispersal__(paras.X, plant, emigrants.paras,
-                               immigrants.paras);
-
-    return;
-
-}
-
-
-
 
 
 
@@ -175,21 +105,7 @@ void AphidPop::calc_plant_dispersal(const OnePlant* plant,
 
 double AphidPop::update(const OnePlant* plant,
                         const WaspPop* wasps,
-                        const AphidPlantDisps& emigrants,
-                        const AphidPlantDisps& immigrants,
                         pcg32& eng) {
-
-
-    // First subtract emigrants and add immigrants from other plants:
-    if ((plant->n_plants) > 1) {
-        const uint32& this_j(plant->this_j);
-        apterous.X -= emigrants.apterous.col(this_j);
-        apterous.X += immigrants.apterous.col(this_j);
-        alates.X -= emigrants.alates.col(this_j);
-        alates.X += immigrants.alates.col(this_j);
-        paras.X -= emigrants.paras.col(this_j);
-        paras.X += immigrants.paras.col(this_j);
-    }
 
     double nm = 0; // newly mummified
 
@@ -198,8 +114,9 @@ double AphidPop::update(const OnePlant* plant,
         const double& S(plant->S);
         const double& S_y(plant->S_y);
 
-        arma::vec A_surv, A_mumm;
-        wasps->A_mats(A_surv, A_mumm, attack_surv, attack_mumm);
+        arma::vec A_surv;
+        wasps->A_mats(A_surv, attack_surv);
+        arma::vec A_mumm = 1 - A_surv;
 
         // making adult alates not able to be parasitized:
         arma::vec A_surv_ala = A_surv;
@@ -245,22 +162,6 @@ double AphidPop::update(const OnePlant* plant,
         // # offspring from apterous aphids that are alates:
         double alate_prop = apterous.alate_prop(plant);
         double new_alates = apterous.X.front() * alate_prop;
-
-        /*
-         I previously sampled for alate vs apterous offspring, but this
-         isn't necessary with proper demographic stochasticity, plus
-         the implementation below would work strangely with the continuous
-         densities we use.
-         */
-        // // Sample for # offspring from apterous aphids that are alates:
-        // double new_alates = 0;
-        // double alate_prop = apterous.alate_prop(plant);
-        // if (alate_prop > 0 && apterous.X.front() > 0) {
-        //     double lambda_ = alate_prop * apterous.X.front();
-        //     pois_distr.param(std::poisson_distribution<uint32>::param_type(lambda_));
-        //     new_alates = static_cast<double>(pois_distr(eng));
-        //     if (new_alates > apterous.X.front()) new_alates = apterous.X.front();
-        // }
 
         /*
          All offspring from alates are assumed to be apterous,

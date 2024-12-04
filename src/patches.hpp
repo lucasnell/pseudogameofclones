@@ -55,119 +55,8 @@ struct PerturbInfo {
 
 
 
-// Info for wilted plants to figure out which to clear
-struct WiltedPlantsInfo {
-
-    uint32 ind;
-    double N;
-
-    WiltedPlantsInfo(const uint32& ind_,
-                      const double& N_)
-        : ind(ind_), N(N_) {}
-    WiltedPlantsInfo(const WiltedPlantsInfo& other)
-        : ind(other.ind), N(other.N) {}
-
-    // This returns true when `this` should be cleared first
-    bool operator<(const WiltedPlantsInfo& other) const {
-        return other.N > N;
-    }
-    // This returns true when `other` should be cleared first
-    bool operator>(const WiltedPlantsInfo& other) const {
-        return other.N < N;
-    }
-
-};
 
 
-
-
-
-
-
-
-/*
- Stores information about one aphid line dispersing across plants
- within a field.
- For each OneField object, there will be two vectors of PlantDispersers objects,
- one for emigrants and another for immigrants.
- */
-struct AphidPlantDisps {
-
-    arma::mat apterous;
-    arma::mat alates;
-    arma::mat paras;
-
-    AphidPlantDisps(const uint32& n_stages,
-                    const uint32& n_plants,
-                    const uint32& living_days)
-        : apterous(n_stages, n_plants, arma::fill::zeros),
-          alates(n_stages, n_plants, arma::fill::zeros),
-          paras(living_days, n_plants, arma::fill::zeros) {}
-
-    AphidPlantDisps(const AphidPlantDisps& other)
-        : apterous(other.apterous),
-          alates(other.alates),
-          paras(other.paras) {}
-
-    AphidPlantDisps& operator=(const AphidPlantDisps& other) {
-        apterous = other.apterous;
-        alates = other.alates;
-        paras = other.paras;
-        return *this;
-    }
-
-    void reset() {
-        apterous.zeros();
-        alates.zeros();
-        paras.zeros();
-        return;
-    }
-};
-
-
-
-/*
- Simple wrapper around std::vector<AphidPlantDisps> of one AphidPlantDisps
- per aphid line.
- */
-struct AllAphidPlantDisps {
-
-
-    std::vector<AphidPlantDisps> disps;
-
-    AllAphidPlantDisps() : disps() {}
-    AllAphidPlantDisps(const uint32& n_lines,
-                       const uint32& n_stages,
-                       const uint32& n_plants,
-                       const std::vector<uint32>& living_days) {
-        disps.reserve(n_lines);
-        for (uint32 i = 0; i < n_lines; i++) {
-            disps.push_back(AphidPlantDisps(n_stages, n_plants,
-                                            living_days[i]));
-        }
-    }
-
-    AllAphidPlantDisps(const AllAphidPlantDisps& other)
-        : disps(other.disps) {}
-
-    AllAphidPlantDisps& operator=(const AllAphidPlantDisps& other) {
-        disps = other.disps;
-        return *this;
-    }
-
-    AphidPlantDisps& operator[](const uint32& idx) {
-        return disps[idx];
-    }
-    const AphidPlantDisps& operator[](const uint32& idx) const {
-        return disps[idx];
-    }
-
-    void reset() {
-        for (AphidPlantDisps& apd : disps) apd.reset();
-        return;
-    }
-
-};
 
 
 
@@ -186,12 +75,6 @@ class OnePlant {
     void extinct_colonize(const uint32& i);
 
 
-    // Updates total # living aphids in this plant (`z`), and
-    // checks to see if plant should be wilted.
-    void update_z_wilted();
-
-    MEMBER(bool,wilted)
-
 
 public:
 
@@ -206,18 +89,14 @@ public:
     double S_y = 0;                 // effect of dd on parasitized aphids
     uint32 n_plants;                // total # plants
     uint32 this_j;                  // index for this plant
-    uint32 age = 0;                 // age of this plant
-    double wilted_N;                // total # aphids that kills plant
-    double wilted_mort;             // growth-rate modifier due to wilting
     double extinct_N;               // threshold for calling something extinct
-    double max_mum_density;         // maximum mummy density (ignored if zero)
 
 
 
     OnePlant()
-        : wilted_(false), aphids(), mummies(), empty(true), pred_rate(0),
+        : aphids(), mummies(), empty(true), pred_rate(0),
           K(0), K_y(1), n_plants(1), this_j(0),
-          wilted_N(0), wilted_mort(1), extinct_N() {};
+          extinct_N() {};
 
     /*
      In `aphid_density_0` below, rows are aphid stages, columns are types
@@ -229,30 +108,22 @@ public:
              const double& rho,
              const bool& aphid_demog_error,
              const arma::mat& attack_surv_,
-             const arma::mat& attack_mumm_,
              const double& K_,
              const double& K_y_,
-             const double& wilted_N_,
-             const double& wilted_mort_,
              const std::vector<std::string>& aphid_name,
              const std::vector<arma::cube>& leslie_mat,
              const arma::cube& aphid_density_0,
              const std::vector<double>& alate_b0,
              const std::vector<double>& alate_b1,
-             const std::vector<double>& aphid_plant_disp_p,
-             const std::vector<double>& plant_disp_mort,
              const std::vector<uint32>& field_disp_start,
-             const std::vector<uint32>& plant_disp_start,
              const std::vector<uint32>& living_days,
              const double& pred_rate_,
              const uint32& n_plants_,
              const uint32& this_j_,
              const double& extinct_N_,
              const arma::vec& mum_density_0,
-             const double& mum_smooth,
-             const double& max_mum_density_)
-        : wilted_(false),
-          aphids(),
+             const double& mum_smooth)
+        : aphids(),
           mummies(mum_density_0, mum_smooth),
           empty(true),
           pred_rate(pred_rate_),
@@ -260,10 +131,7 @@ public:
           K_y(K_y_),
           n_plants(n_plants_),
           this_j(this_j_),
-          wilted_N(wilted_N_),
-          wilted_mort(wilted_mort_),
-          extinct_N(extinct_N_),
-          max_mum_density(max_mum_density_) {
+          extinct_N(extinct_N_) {
 
         uint32 n_lines = aphid_name.size();
 
@@ -271,11 +139,10 @@ public:
 
         for (uint32 i = 0; i < n_lines; i++) {
             AphidPop ap(aphid_name[i], sigma_x, rho, aphid_demog_error,
-                        attack_surv_.col(i), attack_mumm_.col(i),
+                        attack_surv_.col(i),
                         leslie_mat[i], aphid_density_0.slice(i),
-                        alate_b0[i], alate_b1[i], aphid_plant_disp_p[i],
-                        plant_disp_mort[i], field_disp_start[i],
-                        plant_disp_start[i], living_days[i]);
+                        alate_b0[i], alate_b1[i], field_disp_start[i],
+                        living_days[i]);
             aphids.push_back(ap);
             double N = aphids.back().total_aphids();
             if (N < extinct_N) {
@@ -288,16 +155,14 @@ public:
 
 
     OnePlant(const OnePlant& other)
-        : wilted_(false), aphids(other.aphids), mummies(other.mummies),
+        : aphids(other.aphids), mummies(other.mummies),
           empty(other.empty), pred_rate(other.pred_rate),
           K(other.K), K_y(other.K_y), z(other.z),
           S(other.S), S_y(other.S_y), n_plants(other.n_plants),
-          this_j(other.this_j), age(other.age), wilted_N(other.wilted_N),
-          wilted_mort(other.wilted_mort), extinct_N(other.extinct_N),
-          max_mum_density(other.max_mum_density) {};
+          this_j(other.this_j),
+          extinct_N(other.extinct_N) {};
 
     OnePlant& operator=(const OnePlant& other) {
-        wilted_ = other.wilted_;
         aphids = other.aphids;
         mummies = other.mummies;
         empty = other.empty;
@@ -309,14 +174,9 @@ public:
         S_y = other.S_y;
         n_plants = other.n_plants;
         this_j = other.this_j;
-        age = other.age;
-        wilted_N = other.wilted_N;
-        wilted_mort = other.wilted_mort;
         extinct_N = other.extinct_N;
-        max_mum_density = other.max_mum_density;
         return *this;
     }
-
 
     inline uint32 size() const noexcept {
         return aphids.size();
@@ -335,23 +195,16 @@ public:
     /*
      Clear to no aphids or mummies
      */
-    void clear(const double& K_,
-               const double& K_y_) {
+    void clear() {
         for (AphidPop& ap : aphids) ap.clear();
         mummies.clear();
         empty = true;
-        wilted_ = false;
-        age = 0;
-        K = K_;
-        K_y = K_y_;
         return;
     }
     /*
      Clear some of the aphids and mummies
      */
-    void clear(const double& K_,
-               const double& K_y_,
-               const double& surv) {
+    void clear(const double& surv) {
         empty = true;
         for (AphidPop& ap : aphids) {
             ap.clear(surv);
@@ -365,10 +218,6 @@ public:
         }
         mummies.clear(surv);
         if (arma::accu(mummies.Y) < extinct_N) mummies.Y.fill(0);
-        wilted_ = false;
-        age = 0;
-        K = K_;
-        K_y = K_y_;
         return;
     }
 
@@ -427,39 +276,13 @@ public:
     }
 
 
-    /*
-     Add dispersal info to `emigrants` and `immigrants` cubes.
-     In these cubes, rows are aphid stages, columns are plants,
-     and slices are aphid lines.
-    */
-    void calc_plant_dispersal(AllAphidPlantDisps& emigrants,
-                              AllAphidPlantDisps& immigrants) const {
-        for (uint32 i = 0; i < aphids.size(); i++) {
-            aphids[i].calc_plant_dispersal(this, emigrants[i],
-                                           immigrants[i]);
-        }
-        return;
-    }
-
-    inline void do_badgering_n(const arma::vec& adults_badgered) {
-        for (uint32 i = 0; i < aphids.size(); i++) {
-            aphids[i].do_badgering_n(adults_badgered(i));
-        }
-        return;
-    }
-    inline void do_badgering_exp(const double& badgering_surv) {
-        for (AphidPop& a : aphids) a.do_badgering_exp(badgering_surv);
-        return;
-    }
 
 
 
     /*
      Iterate one time step, after calculating dispersal numbers
      */
-    void update(const AllAphidPlantDisps& emigrants,
-                const AllAphidPlantDisps& immigrants,
-                const WaspPop* wasps,
+    void update(const WaspPop* wasps,
                 pcg32& eng);
 
 
@@ -484,30 +307,14 @@ class OneField {
 
     friend class AllFields;
 
-    // For new Ks if desired:
-    trunc_normal_distribution tnorm_distr;
-
-    double mean_K_;                 // mean of distribution of `K` for plants
-    double sd_K_;                   // sd of distribution of `K` for plants
-
-    // Helps calculate carrying capacity for parasitized aphids
-    // (`K_y = K * K_y_mult`):
-    double K_y_mult;
+    // Carrying capacity for unparasitized aphids
+    double K_;
+    // carrying capacity for parasitized aphids:
+    double K_y_;
 
     double extinct_N;               // used here for the wasps
     bool constant_wasps;            // keep wasp abundance constant?
 
-
-    // Set K and K_y
-    void set_K(double& K, double& K_y, pcg32& eng) {
-        if (sd_K_ == 0) {
-            K = mean_K_;
-        } else {
-            K = tnorm_distr(eng);
-        }
-        K_y = K * K_y_mult;
-        return;
-    }
 
     inline void set_wasp_info(double& old_mums) {
         wasps.x = 0;
@@ -520,65 +327,6 @@ class OneField {
         return;
     }
 
-    // Do wasp badgering of adult aphids to death:
-
-    // By having wasps badger a set number of aphids per day:
-    inline void do_badgering_n() {
-        // total badgered to death across all plants and lines:
-        double total_badgered = wasps.Y * wasps.wasp_badger_n;
-        if (total_badgered == 0) return;
-        arma::mat badgerables(plants[0].size(), plants.size(),
-                              arma::fill::zeros);
-        double total_badgerable = 0; // total across all plants and lines
-        for (uint32 i = 0; i < plants.size(); i++) {
-            const OnePlant& p(plants[i]);
-            for (uint32 j = 0; j < p.size(); j++) {
-                const AphidPop& a(p[j]);
-                badgerables(j,i) = a.total_adult_apterous() +
-                    a.total_adult_alates();
-                total_badgerable += badgerables(j,i);
-            }
-        }
-
-        if (total_badgerable == 0) return;
-
-        // make matrix sum to min(total_badgered, total_badgerable) [no action
-        // necessary for the latter]
-        if (total_badgered < total_badgerable) {
-            badgerables *= (total_badgered / total_badgerable);
-        }
-
-        // Now do the badgering:
-        for (uint32 i = 0; i < plants.size(); i++) {
-            OnePlant& p(plants[i]);
-            p.do_badgering_n(badgerables.col(i));
-        }
-
-        return;
-    }
-
-    // By having proportion of wasps to adult aphids affect badgering survival:
-    inline void do_badgering_exp() {
-
-        double total_adults = 0; // total across all plants and lines
-        for (const OnePlant& p : plants) {
-            for (const AphidPop& a : p.aphids) {
-                total_adults += a.total_adult_apterous() +
-                    a.total_adult_alates();
-            }
-        }
-
-        if (total_adults == 0) return;
-
-        double badgering_surv = std::exp(- wasps.wasp_badger_n *
-                                         wasps.Y / total_adults);
-
-        // Now do the badgering:
-        for (OnePlant& p : plants) p.do_badgering_exp(badgering_surv);
-
-        return;
-    }
-
 
 
 public:
@@ -586,13 +334,9 @@ public:
     std::vector<OnePlant> plants;
     WaspPop wasps;
 
-    // For dispersal among plants:
-    AllAphidPlantDisps emigrants;
-    AllAphidPlantDisps immigrants;
-
 
     OneField()
-        : tnorm_distr(), mean_K_(), sd_K_(), K_y_mult(),
+        : tnorm_distr(), K_(), K_y(),
           extinct_N(),
           constant_wasps(),
           plants(), wasps(), emigrants(), immigrants() {};
@@ -607,33 +351,24 @@ public:
                const double& rho,
                const bool& aphid_demog_error,
                const bool& wasp_demog_error,
-               const double& mean_K,
-               const double& sd_K,
-               const double& K_y_mult_,
-               const double& wilted_N,
-               const double& wilted_mort,
+               const double& K,
+               const double& K_y,
                const arma::mat& attack_surv_,
-               const arma::mat& attack_mumm_,
                const std::vector<std::string>& aphid_name,
                const std::vector<arma::cube>& leslie_mat,
                const std::vector<arma::cube>& aphid_density_0,
                const std::vector<double>& alate_b0,
                const std::vector<double>& alate_b1,
-               const std::vector<double>& aphid_plant_disp_p,
-               const std::vector<double>& plant_disp_mort,
                const std::vector<uint32>& field_disp_start,
-               const std::vector<uint32>& plant_disp_start,
                const std::vector<uint32>& living_days,
                const double& pred_rate,
                const double& extinct_N_,
                const arma::mat& mum_density_0,
                const double& mum_smooth_,
-               const double& max_mum_density_,
                const arma::vec& rel_attack_,
                const double& a_,
                const double& k_,
                const double& h_,
-               const double& wasp_badger_n,
                const double& wasp_density_0_,
                const uint32& wasp_delay_,
                const double& sex_ratio_,
@@ -641,13 +376,12 @@ public:
                const bool& constant_wasps_,
                pcg32& eng)
         : tnorm_distr(),
-          mean_K_(mean_K),
-          sd_K_(sd_K),
-          K_y_mult(K_y_mult_),
+          K_(K),
+          K_y_(K_y),
           extinct_N(extinct_N_),
           constant_wasps(constant_wasps_),
           plants(),
-          wasps(rel_attack_, a_, k_, h_, wasp_badger_n,
+          wasps(rel_attack_, a_, k_, h_,
                 wasp_density_0_, wasp_delay_,
                 sex_ratio_, s_y_, sigma_y, wasp_demog_error),
           emigrants(aphid_name.size(),
@@ -660,19 +394,6 @@ public:
                      living_days) {
 
 
-        /*
-         None of these hyperparameters can be <= 0, so if they're <= then
-         that makes the associated parameter whose distribution it describes
-         (e.g., K for `sd_K_`) not have stochasticity.
-         This means that the first hyperparameter provided will be the value
-         used for ALL of that parameter WITHOUT BEING TRANSFORMED.
-         */
-        if (sd_K_ <= 0) {
-            sd_K_ = 0;
-        } else {
-            tnorm_distr = trunc_normal_distribution(mean_K_, sd_K_);
-        }
-
         uint32 n_plants = aphid_density_0.size();
 
         double K, K_y;
@@ -680,15 +401,14 @@ public:
         for (uint32 j = 0; j < n_plants; j++) {
             set_K(K, K_y, eng);
             OnePlant ap(sigma_x, rho, aphid_demog_error,
-                        attack_surv_, attack_mumm_,
-                        K, K_y, wilted_N, wilted_mort,
+                        attack_surv_,
+                        K, K_y,
                         aphid_name, leslie_mat,
                         aphid_density_0[j], alate_b0, alate_b1,
-                        aphid_plant_disp_p, plant_disp_mort,
-                        field_disp_start, plant_disp_start,
+                        field_disp_start,
                         living_days, pred_rate,
                         n_plants, j, extinct_N_,
-                        mum_density_0.col(j), mum_smooth_, max_mum_density_);
+                        mum_density_0.col(j), mum_smooth_);
             plants.push_back(ap);
         }
 
@@ -696,9 +416,8 @@ public:
 
     OneField(const OneField& other)
         : tnorm_distr(other.tnorm_distr),
-          mean_K_(other.mean_K_),
-          sd_K_(other.sd_K_),
-          K_y_mult(other.K_y_mult),
+          K_(other.K_),
+          K_y(other.K_y),
           extinct_N(other.extinct_N),
           constant_wasps(other.constant_wasps),
           plants(other.plants),
@@ -708,9 +427,8 @@ public:
 
     OneField& operator=(const OneField& other) {
         tnorm_distr = other.tnorm_distr;
-        mean_K_ = other.mean_K_;
-        sd_K_ = other.sd_K_;
-        K_y_mult = other.K_y_mult;
+        K_ = other.K_;
+        K_y = other.K_y;
         extinct_N = other.extinct_N;
         constant_wasps = other.constant_wasps;
         plants = other.plants;
@@ -770,25 +488,9 @@ public:
 
     }
 
-    // Calculate among-plant dispersal:
-    inline void calc_plant_dispersal() {
-
-        // Dispersal from previous generation
-        emigrants.reset();
-        immigrants.reset();
-
-        for (const OnePlant& p : plants) {
-            p.calc_plant_dispersal(emigrants, immigrants);
-        }
-        return;
-    }
-
 
     inline void update(pcg32& eng) {
-        /*
-         Once `calc_plant_dispersal` has updated inside `emigrants` and `immigrants`,
-         we can update the populations using those dispersal numbers.
-         */
+
         // update info for wasps before iterating:
         double old_mums;
         set_wasp_info(old_mums);
@@ -804,10 +506,6 @@ public:
             if (wasps.Y < extinct_N) wasps.Y = 0;
         }
 
-        // Lastly do badgering of aphids by wasps
-        do_badgering_n();
-        // do_badgering_exp();
-
         return;
     }
 
@@ -821,10 +519,6 @@ public:
         return ta;
     }
 
-
-    void clear_plants(const double& clear_surv,
-                      const uint32& min_rm,
-                      pcg32& eng);
 
 
 };
@@ -902,7 +596,6 @@ public:
 
     std::vector<OneField> fields;
 
-    double clear_surv;
     double alate_field_disp_p;
     double wasp_disp_m0;
     double wasp_disp_m1;
@@ -913,7 +606,7 @@ public:
     uint32 total_stages;
 
     AllFields()
-        : eng(), fields(), clear_surv(),
+        : eng(), fields(),
           alate_field_disp_p(), wasp_disp_m0(), wasp_disp_m1(),
           wasp_field_attract(),
           extinct_N(), total_stages() {};
@@ -921,7 +614,6 @@ public:
     AllFields(const AllFields& other)
         : eng(other.eng),
           fields(other.fields),
-          clear_surv(other.clear_surv),
           alate_field_disp_p(other.alate_field_disp_p),
           wasp_disp_m0(other.wasp_disp_m0),
           wasp_disp_m1(other.wasp_disp_m1),
@@ -932,7 +624,6 @@ public:
     AllFields& operator=(const AllFields& other) {
         eng = other.eng;
         fields = other.fields;
-        clear_surv = other.clear_surv;
         alate_field_disp_p = other.alate_field_disp_p;
         wasp_disp_m0 = other.wasp_disp_m0;
         wasp_disp_m1 = other.wasp_disp_m1;
@@ -950,45 +641,34 @@ public:
               const double& rho,
               const bool& aphid_demog_error,
               const bool& wasp_demog_error,
-              const double& mean_K,
-              const double& sd_K,
-              const std::vector<double>& K_y_mult,
-              const double& wilted_N,
-              const double& wilted_mort,
+              const std::vector<double>& K,
+              const std::vector<double>& K_y,
               const arma::mat& attack_surv,
-              const arma::mat& attack_mumm,
               const std::vector<std::string>& aphid_name,
               const std::vector<arma::cube>& leslie_mat,
               const std::vector<arma::cube>& aphid_density_0,
               const std::vector<double>& alate_b0,
               const std::vector<double>& alate_b1,
-              const std::vector<double>& aphid_plant_disp_p,
-              const std::vector<double>& plant_disp_mort,
               const std::vector<uint32>& field_disp_start,
-              const std::vector<uint32>& plant_disp_start,
               const std::vector<uint32>& living_days,
               const std::vector<double>& pred_rate,
               const double& extinct_N_,
               const arma::mat& mum_density_0,
               const double& mum_smooth,
-              const double& max_mum_density,
               const arma::vec& rel_attack,
               const double& a,
               const double& k,
               const double& h,
-              const double& wasp_badger_n,
               const std::vector<double>& wasp_density_0,
               const double& sex_ratio,
               const std::vector<double>& s_y,
               const std::vector<bool>& constant_wasps,
-              const double& clear_surv_,
               const double& alate_field_disp_p_,
               const double& wasp_disp_m0_,
               const double& wasp_disp_m1_,
               const std::vector<double>& wasp_field_attract_,
               const std::vector<uint64>& seeds)
         : eng(), fields(),
-          clear_surv(clear_surv_),
           alate_field_disp_p(alate_field_disp_p_),
           wasp_disp_m0(wasp_disp_m0_),
           wasp_disp_m1(wasp_disp_m1_),
@@ -1008,15 +688,14 @@ public:
         for (uint32 i = 0; i < n_fields; i++) {
             fields.push_back(
                 OneField(sigma_x, sigma_y, rho, aphid_demog_error, wasp_demog_error,
-                         mean_K, sd_K, K_y_mult[i],
-                         wilted_N, wilted_mort,
-                         attack_surv, attack_mumm,
+                         K[i], K_y[i],
+                         attack_surv,
                          aphid_name, leslie_mat, aphid_density_0,
-                         alate_b0, alate_b1, aphid_plant_disp_p,
-                         plant_disp_mort, field_disp_start, plant_disp_start,
+                         alate_b0, alate_b1,
+                         field_disp_start,
                          living_days, pred_rate[i],
-                         extinct_N, mum_density_0, mum_smooth, max_mum_density,
-                         rel_attack, a, k, h, wasp_badger_n,
+                         extinct_N, mum_density_0, mum_smooth,
+                         rel_attack, a, k, h,
                          wasp_density_0[i], wasp_delay[i],
                          sex_ratio,
                          s_y[i], constant_wasps[i], eng));
@@ -1105,14 +784,8 @@ public:
     // Update for one time step.
     // Returns true if all fields/plants are empty
     bool update(const uint32& t,
-                std::deque<PerturbInfo>& perturbs,
-                std::deque<uint32>& check_for_clear);
+                std::deque<PerturbInfo>& perturbs);
 
-
-    // Clear plants that are withered (if any)
-    void clear_plants(const uint32& t,
-                      std::deque<uint32>& check_for_clear,
-                      std::deque<std::pair<uint32, uint32>>& extra_plant_removals);
 
     AllStageInfo out_all_info() const;
 
@@ -1121,11 +794,11 @@ public:
     void from_vector(std::vector<double>& N);
 
     // Set new parameters
-    void set_new_pars(const double& K_,
+    void set_new_pars(const std::vector<double>& K_,
                       const std::vector<double>& alate_b0_,
                       const std::vector<double>& alate_b1_,
                       const double& alate_field_disp_p_,
-                      const std::vector<double>& K_y_mult_,
+                      const std::vector<double>& K_y_,
                       const std::vector<double>& s_y_,
                       const double& a_,
                       const double& k_,

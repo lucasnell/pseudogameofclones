@@ -5,7 +5,6 @@
 ^_pkgdown\.yml$
 ^README\.
 ^.*\.svg$
-^_results$
 ^doc$
 ^Meta$
 ^LICENSE\.md$

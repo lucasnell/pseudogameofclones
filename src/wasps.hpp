@@ -65,19 +65,15 @@ public:
     void A_mats(const double& Y_m,
                 const double& x,
                 arma::vec& A_surv,
-                arma::vec& A_mumm,
-                const arma::vec& attack_surv,
-                const arma::vec& attack_mumm) const {
+                const arma::vec& attack_surv) const {
 
-        uint32 n_max_attacks = std::min(attack_surv.n_elem, attack_mumm.n_elem);
+        uint32 n_max_attacks = attack_surv.n_elem;
         uint32 n_stages = rel_attack.n_elem;
 
         if (A_surv.n_elem != n_stages) A_surv.set_size(n_stages);
-        if (A_mumm.n_elem != n_stages) A_mumm.set_size(n_stages);
 
         if (Y_m == 0) {
             A_surv.ones();
-            A_mumm.zeros();
             return;
         }
 
@@ -123,10 +119,8 @@ public:
          */
         for (uint32 j = 0; j < n_stages; j++) {
             A_surv(j) = attack_probs(j, 0);
-            A_mumm(j) = 0;
             for (uint32 i = 0; i < n_max_attacks; i++) {
                 A_surv(j) += attack_probs(j, i+1) * attack_surv(i);
-                A_mumm(j) += attack_probs(j, i+1) * attack_mumm(i);
             }
         }
 
@@ -216,7 +210,6 @@ class WaspPop {
 public:
 
     WaspAttack attack;      // info for attack rates
-    double wasp_badger_n;   // # aphids wasps badger & kill per time step
     double Y_0;             // initial adult wasp density
     uint32 delay;           // when to add initial wasps
     double sex_ratio;       // proportion of female wasps
@@ -242,7 +235,6 @@ public:
             const double& a_,
             const double& k_,
             const double& h_,
-            const double& wasp_badger_n_,
             const double& Y_0_,
             const uint32& delay_,
             const double& sex_ratio_,
@@ -250,7 +242,6 @@ public:
             const double& sigma_y_,
             const bool& demog_error_)
         : attack(rel_attack_, a_, k_, h_),
-          wasp_badger_n(wasp_badger_n_),
           Y_0(Y_0_),
           delay(delay_),
           sex_ratio(sex_ratio_),
@@ -263,7 +254,6 @@ public:
           x(0) {};
     WaspPop(const WaspPop& other)
         : attack(other.attack),
-          wasp_badger_n(other.wasp_badger_n),
           Y_0(other.Y_0),
           delay(other.delay),
           sex_ratio(other.sex_ratio),
@@ -276,7 +266,6 @@ public:
           x(other.x) {};
     WaspPop& operator=(const WaspPop& other) {
         attack = other.attack;
-        wasp_badger_n = other.wasp_badger_n;
         Y_0 = other.Y_0;
         delay = other.delay;
         sex_ratio = other.sex_ratio;
@@ -291,12 +280,10 @@ public:
     }
 
 
-    // Fills matrices for Pr(aphids survive) and Pr(successful parasitism)
+    // Fills matrix for Pr(aphids survive)
     void A_mats(arma::vec& A_surv,
-                arma::vec& A_mumm,
-                const arma::vec& attack_surv,
-                const arma::vec& attack_mumm) const {
-        attack.A_mats(Y, x, A_surv, A_mumm, attack_surv, attack_mumm);
+                const arma::vec& attack_surv) const {
+        attack.A_mats(Y, x, A_surv, attack_surv);
         return;
     }
 
