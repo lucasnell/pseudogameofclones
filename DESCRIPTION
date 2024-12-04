@@ -16,11 +16,10 @@ Depends:
     R (>= 4.1.0),
     Rcpp (>= 1.0.0),
     tidyr
-Imports:
-    RcppThread
 LinkingTo:
     Rcpp (>= 1.0.0),
-    RcppArmadillo
+    RcppArmadillo,
+    RcppThread
 SystemRequirements: GNU make, C++11
 NeedsCompilation: yes
 RoxygenNote: 7.3.2

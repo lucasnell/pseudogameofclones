@@ -51,16 +51,11 @@ fields_from_vectors <- function(all_fields_ptr, N_vecs) {
     invisible(.Call(`_pseudogameofclones_fields_from_vectors`, all_fields_ptr, N_vecs))
 }
 
-#' Check that the number of threads doesn't exceed the number available, and change
-#' to 1 if OpenMP isn't enabled.
+#' Check that the number of threads doesn't exceed the number available.
 #'
 #' @noRd
 #'
 NULL
-
-using_openmp <- function() {
-    .Call(`_pseudogameofclones_using_openmp`)
-}
 
 sim_pseudogameofclones_cpp <- function(n_reps, n_fields, max_t, save_every, K, K_y, attack_surv, aphid_demog_error, wasp_demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, field_disp_start, living_days, pred_rate, mum_density_0, mum_smooth, rel_attack, a, k, h, wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, sep_adults, n_threads, show_progress) {
     .Call(`_pseudogameofclones_sim_pseudogameofclones_cpp`, n_reps, n_fields, max_t, save_every, K, K_y, attack_surv, aphid_demog_error, wasp_demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, field_disp_start, living_days, pred_rate, mum_density_0, mum_smooth, rel_attack, a, k, h, wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, sep_adults, n_threads, show_progress)

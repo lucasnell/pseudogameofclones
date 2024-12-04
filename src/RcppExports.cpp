@@ -3,6 +3,7 @@
 
 #include "pseudogameofclones_types.hpp"
 #include <RcppArmadillo.h>
+#include <RcppThread.h>
 #include <Rcpp.h>
 
 using namespace Rcpp;
@@ -79,16 +80,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::vector<std::vector<double>>& >::type N_vecs(N_vecsSEXP);
     fields_from_vectors(all_fields_ptr, N_vecs);
     return R_NilValue;
-END_RCPP
-}
-// using_openmp
-bool using_openmp();
-RcppExport SEXP _pseudogameofclones_using_openmp() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(using_openmp());
-    return rcpp_result_gen;
 END_RCPP
 }
 // sim_pseudogameofclones_cpp
@@ -197,7 +188,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_pseudogameofclones_sad_leslie", (DL_FUNC) &_pseudogameofclones_sad_leslie, 1},
     {"_pseudogameofclones_fields_to_data_frames", (DL_FUNC) &_pseudogameofclones_fields_to_data_frames, 1},
     {"_pseudogameofclones_fields_from_vectors", (DL_FUNC) &_pseudogameofclones_fields_from_vectors, 2},
-    {"_pseudogameofclones_using_openmp", (DL_FUNC) &_pseudogameofclones_using_openmp, 0},
     {"_pseudogameofclones_sim_pseudogameofclones_cpp", (DL_FUNC) &_pseudogameofclones_sim_pseudogameofclones_cpp, 43},
     {"_pseudogameofclones_restart_fill_other_pars", (DL_FUNC) &_pseudogameofclones_restart_fill_other_pars, 15},
     {"_pseudogameofclones_restart_experiments_cpp", (DL_FUNC) &_pseudogameofclones_restart_experiments_cpp, 10},

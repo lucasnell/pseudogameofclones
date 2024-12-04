@@ -16,9 +16,9 @@
 #include <deque>                // deque
 #include <pcg/pcg_random.hpp>   // pcg prng
 
-#define RCPPTHREAD_OVERRIDE_COUT 1    // std::cout override
-#define RCPPTHREAD_OVERRIDE_CERR 1    // std::cerr override
-#define RCPPTHREAD_OVERRIDE_THREAD 1  // std::thread override
+// #define RCPPTHREAD_OVERRIDE_COUT 1    // std::cout override
+// #define RCPPTHREAD_OVERRIDE_CERR 1    // std::cerr override
+// #define RCPPTHREAD_OVERRIDE_THREAD 1  // std::thread override
 #include <RcppThread.h>         // multithreading
 
 
