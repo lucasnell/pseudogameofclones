@@ -8,7 +8,6 @@ clonal_line(
   name,
   density_0,
   resistant = FALSE,
-  mumm_prop = NULL,
   surv_juv_apterous = NULL,
   surv_adult_apterous = NULL,
   repro_apterous = NULL,
@@ -25,8 +24,6 @@ clonal_line(
 
 \item{density_0}{A single number or 2-column matrix indicating starting
 aphid densities for each field.
-Aphids are equally distributed among plants if simulating
-multiple plants per field.
 If a number, there will be no starting alates and a total apterous
 density equal to the number provided.
 Stages will be calculated based on the stable age distribution.
@@ -41,11 +38,6 @@ resistance.
 \code{TRUE} results in the resistance values for a resistance line
 from unpublished work by Anthony Ives.
 Defaults to \code{FALSE}.}
-
-\item{mumm_prop}{Vector of probabilities of
-singly attacked and multiply attacked aphids being successfully
-parasitized.
-Defaults to \code{NULL}, which results in being equal to \code{1 - resistant}.}
 
 \item{surv_juv_apterous}{A single number for the juvenile survival rate for
 apterous aphids. Defaults to \code{NULL}, which results in estimates

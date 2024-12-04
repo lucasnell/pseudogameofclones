@@ -103,7 +103,6 @@ public:
     double S = 0;                   // effect of density dependence on aphids
     double S_y = 0;                 // effect of dd on parasitized aphids
     uint32 n_fields;                // total # fields
-    uint32 this_j;                  // index for this field
     double extinct_N;               // threshold for calling something extinct
     bool constant_wasps;            // keep wasp abundance constant?
 
@@ -111,7 +110,7 @@ public:
 
     OneField()
         : aphids(), mummies(), wasps(), empty(true), pred_rate(0),
-          K(0), K_y(1), this_j(0), extinct_N() {};
+          K(0), K_y(1), extinct_N() {};
 
     /*
      In `aphid_density_0` below, rows are aphid stages, columns are types
@@ -124,9 +123,9 @@ public:
              const double& rho,
              const bool& aphid_demog_error,
              const bool& wasp_demog_error,
-             const arma::mat& attack_surv_,
              const double& K_,
              const double& K_y_,
+             const arma::mat& attack_surv_,
              const std::vector<std::string>& aphid_name,
              const std::vector<arma::cube>& leslie_mat,
              const arma::cube& aphid_density_0,
@@ -135,7 +134,6 @@ public:
              const std::vector<uint32>& field_disp_start,
              const std::vector<uint32>& living_days,
              const double& pred_rate_,
-             const uint32& this_j_,
              const double& extinct_N_,
              const arma::vec& mum_density_0,
              const double& mum_smooth,
@@ -157,7 +155,6 @@ public:
           pred_rate(pred_rate_),
           K(K_),
           K_y(K_y_),
-          this_j(this_j_),
           extinct_N(extinct_N_),
           constant_wasps(constant_wasps_) {
 
@@ -187,7 +184,6 @@ public:
           empty(other.empty), pred_rate(other.pred_rate),
           K(other.K), K_y(other.K_y), z(other.z),
           S(other.S), S_y(other.S_y),
-          this_j(other.this_j),
           extinct_N(other.extinct_N),
           constant_wasps(other.constant_wasps){};
 
@@ -202,7 +198,6 @@ public:
         z = other.z;
         S = other.S;
         S_y = other.S_y;
-        this_j = other.this_j;
         extinct_N = other.extinct_N;
         constant_wasps = other.constant_wasps;
         return *this;
@@ -481,7 +476,7 @@ public:
         for (uint32 i = 0; i < n_fields; i++) {
             fields.push_back(
                 OneField(sigma_x, sigma_y, rho,
-                            aphid_demog_error, wasp_demog_error,
+                         aphid_demog_error, wasp_demog_error,
                          K[i], K_y[i],
                          attack_surv,
                          aphid_name, leslie_mat, aphid_density_0[i],
@@ -491,8 +486,7 @@ public:
                          extinct_N, mum_density_0, mum_smooth,
                          rel_attack, a, k, h,
                          wasp_density_0[i], wasp_delay[i],
-                         sex_ratio,
-                         s_y[i], constant_wasps[i], eng));
+                         sex_ratio, s_y[i], constant_wasps[i]));
             total_stages += 1;
             const OneField& field(fields[i]);
             total_stages += field.mummies.Y.n_elem;

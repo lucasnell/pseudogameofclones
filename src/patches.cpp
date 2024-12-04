@@ -39,7 +39,7 @@ void OneField::update(pcg32& eng) {
          Update population, including dispersal and (optionally) process error.
          Also return # newly mummified from that line
          */
-        nm += aphids[i].update(this, wasps, eng);
+        nm += aphids[i].update(this, &wasps, eng);
 
         // Adjust for potential extinction or re-colonization:
         extinct_colonize(i);

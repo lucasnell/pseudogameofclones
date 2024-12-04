@@ -62,15 +62,15 @@ using_openmp <- function() {
     .Call(`_pseudogameofclones_using_openmp`)
 }
 
-sim_pseudogameofclones_cpp <- function(n_reps, n_fields, check_for_clear, clear_surv, max_t, save_every, mean_K, sd_K, K_y_mult, wilted_N, wilted_mort, attack_surv, attack_mumm, aphid_demog_error, wasp_demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, aphid_plant_disp_p, plant_disp_mort, field_disp_start, plant_disp_start, living_days, pred_rate, mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h, wasp_badger_n, wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, extra_plant_removals_mat, sep_adults, n_threads, show_progress) {
-    .Call(`_pseudogameofclones_sim_pseudogameofclones_cpp`, n_reps, n_fields, check_for_clear, clear_surv, max_t, save_every, mean_K, sd_K, K_y_mult, wilted_N, wilted_mort, attack_surv, attack_mumm, aphid_demog_error, wasp_demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, aphid_plant_disp_p, plant_disp_mort, field_disp_start, plant_disp_start, living_days, pred_rate, mum_density_0, mum_smooth, max_mum_density, rel_attack, a, k, h, wasp_badger_n, wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, extra_plant_removals_mat, sep_adults, n_threads, show_progress)
+sim_pseudogameofclones_cpp <- function(n_reps, n_fields, max_t, save_every, K, K_y, attack_surv, aphid_demog_error, wasp_demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, field_disp_start, living_days, pred_rate, mum_density_0, mum_smooth, rel_attack, a, k, h, wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, sep_adults, n_threads, show_progress) {
+    .Call(`_pseudogameofclones_sim_pseudogameofclones_cpp`, n_reps, n_fields, max_t, save_every, K, K_y, attack_surv, aphid_demog_error, wasp_demog_error, sigma_x, sigma_y, rho, extinct_N, aphid_name, leslie_mat, aphid_density_0, alate_b0, alate_b1, alate_field_disp_p, field_disp_start, living_days, pred_rate, mum_density_0, mum_smooth, rel_attack, a, k, h, wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, sex_ratio, s_y, constant_wasps, perturb_when, perturb_where, perturb_who, perturb_how, sep_adults, n_threads, show_progress)
 }
 
-restart_fill_other_pars <- function(all_fields_in_ptr, K, alate_b0, alate_b1, alate_field_disp_p, K_y_mult, s_y, a, k, h, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, mum_smooth, pred_rate) {
-    .Call(`_pseudogameofclones_restart_fill_other_pars`, all_fields_in_ptr, K, alate_b0, alate_b1, alate_field_disp_p, K_y_mult, s_y, a, k, h, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, mum_smooth, pred_rate)
+restart_fill_other_pars <- function(all_fields_in_ptr, K, alate_b0, alate_b1, alate_field_disp_p, K_y, s_y, a, k, h, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, mum_smooth, pred_rate) {
+    .Call(`_pseudogameofclones_restart_fill_other_pars`, all_fields_in_ptr, K, alate_b0, alate_b1, alate_field_disp_p, K_y, s_y, a, k, h, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, mum_smooth, pred_rate)
 }
 
-restart_experiments_cpp <- function(all_fields_ptr, max_t, save_every, check_for_clear, stage_ts_out, sep_adults, show_progress, perturb_when, perturb_where, perturb_who, perturb_how) {
-    .Call(`_pseudogameofclones_restart_experiments_cpp`, all_fields_ptr, max_t, save_every, check_for_clear, stage_ts_out, sep_adults, show_progress, perturb_when, perturb_where, perturb_who, perturb_how)
+restart_experiments_cpp <- function(all_fields_ptr, max_t, save_every, stage_ts_out, sep_adults, show_progress, perturb_when, perturb_where, perturb_who, perturb_how) {
+    .Call(`_pseudogameofclones_restart_experiments_cpp`, all_fields_ptr, max_t, save_every, stage_ts_out, sep_adults, show_progress, perturb_when, perturb_where, perturb_who, perturb_how)
 }
 

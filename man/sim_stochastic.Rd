@@ -8,7 +8,6 @@ sim_stochastic(
   clonal_lines,
   n_fields = 2,
   max_t = 250,
-  wasp_badger_n = 0,
   aphid_demog_error = TRUE,
   wasp_demog_error = TRUE,
   environ_error = FALSE,
@@ -28,17 +27,12 @@ the \code{clonal_line} function.
 Combine them using \code{c(aphid_obj1, aphid_obj2)}.}
 
 \item{n_fields}{The number of fields to simulate.
-Wasps operate at the field level, whereas aphids operate at the
-plant level.
 Both wasps and aphids operate separately across fields but can be
 connected via dispersal (see arguments \code{wasp_disp_m0}, \code{wasp_disp_m1},
 and \code{alate_field_disp_p}).
 Defaults to \code{2}.}
 
 \item{max_t}{How many days to simulate. Defaults to \code{250}.}
-
-\item{wasp_badger_n}{The number of aphids each adult wasp badgers and kills
-per time step. Defaults to \code{0}.}
 
 \item{aphid_demog_error}{Logical for whether to have demographic
 stochasticity for aphids. Defaults to \code{FALSE}.}

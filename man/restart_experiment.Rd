@@ -54,7 +54,6 @@ Defaults to \code{1}.}
 are added to the dispersal pool.
 After adding alates to the pool, they are then evenly distributed
 to all fields.
-This happens only on days indicated by \code{plant_check_gaps}.
 Defaults to \code{0.1}.}
 
 \item{K}{Aphid density dependence.
@@ -63,12 +62,12 @@ approximately match experiments.}
 
 \item{alate_b0}{The proportion of offspring from apterous aphids is
 \code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
-aphids on that plant.
+aphids in that field.
 Defaults to \code{-5}.}
 
 \item{alate_b1}{The proportion of offspring from apterous aphids is
 \code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
-aphids on that plant.
+aphids in that field.
 Defaults to \code{0.0022}, which makes alate production only mildly
 density dependent.}
 
@@ -92,16 +91,17 @@ which is from Meisner et al. (2014).}
 \item{wasp_disp_m0}{Proportion of adult wasps from each field that
 are added to the dispersal pool when there are no aphids present.
 After adding wasps to the pool, they are then evenly distributed
-to all fields.
-This happens only on days indicated by \code{plant_check_gaps}.
+to all fields unless values for \code{wasp_field_attract} are provided.
 Defaults to \code{0}.}
 
 \item{wasp_disp_m1}{Effect of aphid density on wasp emigration from a patch.
 Emigration is \code{wasp_disp_m0 * exp(-wasp_disp_m1 * log(z))}, where \code{z} is
 the total number of living aphids in the patch.
+Note that if \code{wasp_disp_m0 = 0}, then this parameter doesn't change
+anything.
 Defaults to \code{0}.}
 
-\item{wasp_field_attract}{Relatively attractiveness of fields to wasps.
+\item{wasp_field_attract}{Relative attractiveness of fields to wasps.
 This affects the proportion of wasps that immigrate from the dispersal
 pool to each field.
 It doesn't change the number of wasps that leave fields.
@@ -111,6 +111,8 @@ to wasps.
 If a vector is provided, then the vector is divided by its sum
 (to make it sum to 1), then those values are used as the proportion of
 wasps from the dispersal pool that immigrate to each field.
+Note that if \code{wasp_disp_m0 = 0}, then this parameter doesn't change
+anything.
 Defaults to \code{1}.}
 
 \item{mum_smooth}{Proportion of mummies that will NOT take exactly 3 days
@@ -119,7 +121,7 @@ smoothing of wasp numbers through time.
 Defaults to \code{0.4}.}
 
 \item{pred_rate}{Daily predation rate on aphids and mummies.
-Defaults to \code{0.1} to compensate for losses from plants dying.}
+Defaults to \code{0.1}.}
 
 \item{show_progress}{Boolean for whether to show progress bar.
 Defaults to \code{FALSE}.}

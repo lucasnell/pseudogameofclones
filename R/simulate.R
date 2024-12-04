@@ -222,7 +222,8 @@ clonal_line <- function(name,
     output <- list(name = name,
                    density_0 = density_0,
                    attack_surv = attack_surv,
-                   leslie = leslie_array)
+                   leslie = leslie_array,
+                   temp = temp)
     class(output) <- "aphid"
 
     return(output)
@@ -243,6 +244,7 @@ print.aphid <- function(x, ...) {
     cat("  * density_0 <matrix>\n")
     cat("  * attack_surv <vector>\n")
     cat("  * leslie <3D array>\n")
+    cat("  * temp <string>\n")
 
     invisible(x)
 
@@ -472,7 +474,6 @@ sim_pseudogameofclones_full <- function(clonal_lines,
                                n_reps = 1,
                                n_fields = 2,
                                max_t = 250,
-                               temp = "low",
                                environ_error = FALSE,
                                aphid_demog_error = FALSE,
                                wasp_demog_error = FALSE,
@@ -516,11 +517,16 @@ sim_pseudogameofclones_full <- function(clonal_lines,
         } else stop("\n`clonal_lines` must be a multiAphid object.\n")
     }
 
-    temp <- match.arg(temp, c("low", "high"))
-    temp <- paste0(temp, "T")
-
     n_lines <- length(clonal_lines)
 
+    temp <- clonal_lines[[1]][["temp"]]
+    if (n_lines > 1) {
+        for (i in 2:n_lines) {
+            if (clonal_lines[[i]][["temp"]] != temp) {
+                stop("\n`temp` fields in `clonal_lines` objects must match")
+            }
+        }
+    }
 
     if (!environ_error) {
         sigma_x <- 0
@@ -834,7 +840,7 @@ sim_experiments <- function(clonal_lines,
                                n_fields = n_fields,
                                max_t = max_t,
                                K = K,
-                               K_y = K * K_y_mult,
+                               K_y_mult = K_y_mult,
                                a = a,
                                k = k,
                                h = h,

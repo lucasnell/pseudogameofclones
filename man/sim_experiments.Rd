@@ -41,8 +41,6 @@ the \code{clonal_line} function.
 Combine them using \code{c(aphid_obj1, aphid_obj2)}.}
 
 \item{n_fields}{The number of fields to simulate.
-Wasps operate at the field level, whereas aphids operate at the
-plant level.
 Both wasps and aphids operate separately across fields but can be
 connected via dispersal (see arguments \code{wasp_disp_m0}, \code{wasp_disp_m1},
 and \code{alate_field_disp_p}).
@@ -56,12 +54,12 @@ approximately match experiments.}
 
 \item{alate_b0}{The proportion of offspring from apterous aphids is
 \code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
-aphids on that plant.
+aphids in that field.
 Defaults to \code{-5}.}
 
 \item{alate_b1}{The proportion of offspring from apterous aphids is
 \code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
-aphids on that plant.
+aphids in that field.
 Defaults to \code{0.0022}, which makes alate production only mildly
 density dependent.}
 
@@ -69,7 +67,6 @@ density dependent.}
 are added to the dispersal pool.
 After adding alates to the pool, they are then evenly distributed
 to all fields.
-This happens only on days indicated by \code{plant_check_gaps}.
 Defaults to \code{0.1}.}
 
 \item{K_y_mult}{The number multiplied by \code{K} to get density dependence for
@@ -105,16 +102,17 @@ Defaults to \code{8}.}
 \item{wasp_disp_m0}{Proportion of adult wasps from each field that
 are added to the dispersal pool when there are no aphids present.
 After adding wasps to the pool, they are then evenly distributed
-to all fields.
-This happens only on days indicated by \code{plant_check_gaps}.
+to all fields unless values for \code{wasp_field_attract} are provided.
 Defaults to \code{0}.}
 
 \item{wasp_disp_m1}{Effect of aphid density on wasp emigration from a patch.
 Emigration is \code{wasp_disp_m0 * exp(-wasp_disp_m1 * log(z))}, where \code{z} is
 the total number of living aphids in the patch.
+Note that if \code{wasp_disp_m0 = 0}, then this parameter doesn't change
+anything.
 Defaults to \code{0}.}
 
-\item{wasp_field_attract}{Relatively attractiveness of fields to wasps.
+\item{wasp_field_attract}{Relative attractiveness of fields to wasps.
 This affects the proportion of wasps that immigrate from the dispersal
 pool to each field.
 It doesn't change the number of wasps that leave fields.
@@ -124,6 +122,8 @@ to wasps.
 If a vector is provided, then the vector is divided by its sum
 (to make it sum to 1), then those values are used as the proportion of
 wasps from the dispersal pool that immigrate to each field.
+Note that if \code{wasp_disp_m0 = 0}, then this parameter doesn't change
+anything.
 Defaults to \code{1}.}
 
 \item{constant_wasps}{Logical for whether to keep adult wasps at the same
@@ -137,7 +137,7 @@ smoothing of wasp numbers through time.
 Defaults to \code{0.4}.}
 
 \item{pred_rate}{Daily predation rate on aphids and mummies.
-Defaults to \code{0.1} to compensate for losses from plants dying.}
+Defaults to \code{0.1}.}
 
 \item{extinct_N}{Threshold below which a line is considered extinct.
 Defaults to \code{1}.}

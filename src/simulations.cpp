@@ -186,20 +186,20 @@ struct RepSummary {
             for (uint32 i = 0; i < field.size(); i++) {
                 const AphidPop& aphid(field[i]);
                 if (sep_adults) {
-                    append_living_aphids__(t, k, j, aphid.aphid_name,
+                    append_living_aphids__(t, k, aphid.aphid_name,
                                            aphid.total_adult_alates(),
                                            aphid.total_juven_alates(),
                                            aphid.total_adult_apterous(),
                                            aphid.total_juven_apterous(),
                                            aphid.paras.total_aphids());
                 } else {
-                    append_living_aphids__(t, k, j, aphid.aphid_name,
+                    append_living_aphids__(t, k, aphid.aphid_name,
                                            aphid.alates.total_aphids(),
                                            aphid.apterous.total_aphids(),
                                            aphid.paras.total_aphids());
                 }
             }
-            append_mummies__(t, k, j, field.total_mummies());
+            append_mummies__(t, k, field.total_mummies());
 
             wasp_rep.push_back(r);
             wasp_time.push_back(t);
@@ -271,7 +271,6 @@ private:
 
     inline void append_living_aphids__(const uint32& t,
                                        const uint32& c,
-                                       const uint32& p,
                                        const std::string& l,
                                        const double& N_ala,
                                        const double& N_apt,
@@ -299,7 +298,6 @@ private:
 
     inline void append_living_aphids__(const uint32& t,
                                        const uint32& c,
-                                       const uint32& p,
                                        const std::string& l,
                                        const double& N_adult_ala,
                                        const double& N_juven_ala,
@@ -331,7 +329,6 @@ private:
 
     inline void append_mummies__(const uint32& t,
                                  const uint32& c,
-                                 const uint32& p,
                                  const double& N_mum) {
         rep.push_back(r);
         time.push_back(t);
