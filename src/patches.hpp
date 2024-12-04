@@ -21,7 +21,7 @@ class AllFields;
 
 
 
-// Info for a single perturbation (it happens to all plants within a field)
+// Info for a single perturbation for a field
 struct PerturbInfo {
 
     // When to perturb.
@@ -63,40 +63,55 @@ struct PerturbInfo {
 
 
 /*
-One plant or a number of plants so close that aphids freely disperse
- across them.
-*/
-class OnePlant {
+ One field.
 
+ For the constructors below, all vector arguments should have a length equal
+ to the number of aphid lines.
+*/
+class NewOneField {
+
+    friend class AllFields;
 
     /*
      Adjust for potential extinction or re-colonization:
      */
-    void extinct_colonize(const uint32& i);
+    void extinct_colonize(const uint32& i) {
+        AphidPop& ap(aphids[i]);
+        double N = ap.total_aphids();
+        if (N < extinct_N) {
+            ap.clear();
+        } else {
+            empty = false;
+            ap.extinct = false;
+        }
+        return;
+    }
+
 
 
 
 public:
 
-    std::vector<AphidPop> aphids;   // aphids on this plant
-    MummyPop mummies;               // mummies on this plant
-    bool empty;                     // whether no aphids are on this plant
+    std::vector<AphidPop> aphids;   // aphids in this field
+    MummyPop mummies;               // mummies in this field
+    WaspPop wasps;                  // wasps in this field
+    bool empty;                     // whether no aphids are in this field
     double pred_rate;               // predation on aphids and mummies
     double K;                       // unparasitized aphid carrying capacity
     double K_y;                     // parasitized aphid carrying capacity
     double z = 0;                   // sum of all living aphids at time t
     double S = 0;                   // effect of density dependence on aphids
     double S_y = 0;                 // effect of dd on parasitized aphids
-    uint32 n_plants;                // total # plants
-    uint32 this_j;                  // index for this plant
+    uint32 n_fields;                // total # fields
+    uint32 this_j;                  // index for this field
     double extinct_N;               // threshold for calling something extinct
+    bool constant_wasps;            // keep wasp abundance constant?
 
 
 
-    OnePlant()
-        : aphids(), mummies(), empty(true), pred_rate(0),
-          K(0), K_y(1), n_plants(1), this_j(0),
-          extinct_N() {};
+    NewOneField()
+        : aphids(), mummies(), wasps(), empty(true), pred_rate(0),
+          K(0), K_y(1), this_j(0), extinct_N() {};
 
     /*
      In `aphid_density_0` below, rows are aphid stages, columns are types
@@ -104,9 +119,11 @@ public:
      In `leslie_mat` below, items in vector are aphid lines, slices are
      alate/apterous/parasitized.
      */
-    OnePlant(const double& sigma_x,
+    NewOneField(const double& sigma_x,
+             const double& sigma_y,
              const double& rho,
              const bool& aphid_demog_error,
+             const bool& wasp_demog_error,
              const arma::mat& attack_surv_,
              const double& K_,
              const double& K_y_,
@@ -118,20 +135,31 @@ public:
              const std::vector<uint32>& field_disp_start,
              const std::vector<uint32>& living_days,
              const double& pred_rate_,
-             const uint32& n_plants_,
              const uint32& this_j_,
              const double& extinct_N_,
              const arma::vec& mum_density_0,
-             const double& mum_smooth)
+             const double& mum_smooth,
+             const arma::vec& rel_attack_,
+             const double& a_,
+             const double& k_,
+             const double& h_,
+             const double& wasp_density_0_,
+             const uint32& wasp_delay_,
+             const double& sex_ratio_,
+             const double& s_y_,
+             const bool& constant_wasps_)
         : aphids(),
           mummies(mum_density_0, mum_smooth),
+          wasps(rel_attack_, a_, k_, h_,
+                wasp_density_0_, wasp_delay_,
+                sex_ratio_, s_y_, sigma_y, wasp_demog_error),
           empty(true),
           pred_rate(pred_rate_),
           K(K_),
           K_y(K_y_),
-          n_plants(n_plants_),
           this_j(this_j_),
-          extinct_N(extinct_N_) {
+          extinct_N(extinct_N_),
+          constant_wasps(constant_wasps_) {
 
         uint32 n_lines = aphid_name.size();
 
@@ -154,17 +182,19 @@ public:
 
 
 
-    OnePlant(const OnePlant& other)
-        : aphids(other.aphids), mummies(other.mummies),
+    NewOneField(const NewOneField& other)
+        : aphids(other.aphids), mummies(other.mummies), wasps(other.wasps),
           empty(other.empty), pred_rate(other.pred_rate),
           K(other.K), K_y(other.K_y), z(other.z),
-          S(other.S), S_y(other.S_y), n_plants(other.n_plants),
+          S(other.S), S_y(other.S_y),
           this_j(other.this_j),
-          extinct_N(other.extinct_N) {};
+          extinct_N(other.extinct_N),
+          constant_wasps(other.constant_wasps){};
 
-    OnePlant& operator=(const OnePlant& other) {
+    NewOneField& operator=(const NewOneField& other) {
         aphids = other.aphids;
         mummies = other.mummies;
+        wasps = other.wasps;
         empty = other.empty;
         pred_rate = other.pred_rate;
         K = other.K;
@@ -172,9 +202,9 @@ public:
         z = other.z;
         S = other.S;
         S_y = other.S_y;
-        n_plants = other.n_plants;
         this_j = other.this_j;
         extinct_N = other.extinct_N;
+        constant_wasps = other.constant_wasps;
         return *this;
     }
 
@@ -221,7 +251,7 @@ public:
         return;
     }
 
-    // Total (living) aphids on plant
+    // Total (living) aphids in field
     inline double total_aphids() const {
         double ta = 0;
         for (const AphidPop& ap : aphids) {
@@ -229,7 +259,7 @@ public:
         }
         return ta;
     }
-    // Total UNparasitized aphids on plant
+    // Total UNparasitized aphids in field
     inline double total_unpar_aphids() const {
         double ta = 0;
         for (const AphidPop& ap : aphids) {
@@ -237,7 +267,7 @@ public:
         }
         return ta;
     }
-    // Total mummies on plant
+    // Total mummies in field
     inline double total_mummies() const {
         double tm = arma::accu(mummies.Y);
         return tm;
@@ -282,246 +312,14 @@ public:
     /*
      Iterate one time step, after calculating dispersal numbers
      */
-    void update(const WaspPop* wasps,
-                pcg32& eng);
+    void update(pcg32& eng);
+
+    arma::mat remove_field_dispersers(const double& disp_prop);
+    void add_field_dispersers(const arma::mat& D);
 
 
 };
 
-
-
-
-/*
- One field of plants.
-
- For the constructors below, all vector arguments should have a length equal
- to the number of aphid lines, except for `K`, `aphid_density_0`, and
- `pred_rate_`;
- these should have a length equal to the number of plants.
- Each item in `aphid_density_0` should have a length equal to the number of
- aphid lines.
-
- */
-
-class OneField {
-
-    friend class AllFields;
-
-    // Carrying capacity for unparasitized aphids
-    double K_;
-    // carrying capacity for parasitized aphids:
-    double K_y_;
-
-    double extinct_N;               // used here for the wasps
-    bool constant_wasps;            // keep wasp abundance constant?
-
-
-    inline void set_wasp_info(double& old_mums) {
-        wasps.x = 0;
-        old_mums = 0;
-        for (uint32 i = 0; i < plants.size(); i++) {
-            const OnePlant& p(plants[i]);
-            wasps.x += p.total_unpar_aphids();
-            old_mums += p.mummies.Y.back();
-        }
-        return;
-    }
-
-
-
-public:
-
-    std::vector<OnePlant> plants;
-    WaspPop wasps;
-
-
-    OneField()
-        : tnorm_distr(), K_(), K_y(),
-          extinct_N(),
-          constant_wasps(),
-          plants(), wasps(), emigrants(), immigrants() {};
-
-    /*
-     In `aphid_density_0` below, rows are aphid stages, columns are types
-     (alate vs apterous), and slices are aphid lines.
-     In `leslie_mat` below, slices are aphid lines.
-     */
-    OneField(const double& sigma_x,
-               const double& sigma_y,
-               const double& rho,
-               const bool& aphid_demog_error,
-               const bool& wasp_demog_error,
-               const double& K,
-               const double& K_y,
-               const arma::mat& attack_surv_,
-               const std::vector<std::string>& aphid_name,
-               const std::vector<arma::cube>& leslie_mat,
-               const std::vector<arma::cube>& aphid_density_0,
-               const std::vector<double>& alate_b0,
-               const std::vector<double>& alate_b1,
-               const std::vector<uint32>& field_disp_start,
-               const std::vector<uint32>& living_days,
-               const double& pred_rate,
-               const double& extinct_N_,
-               const arma::mat& mum_density_0,
-               const double& mum_smooth_,
-               const arma::vec& rel_attack_,
-               const double& a_,
-               const double& k_,
-               const double& h_,
-               const double& wasp_density_0_,
-               const uint32& wasp_delay_,
-               const double& sex_ratio_,
-               const double& s_y_,
-               const bool& constant_wasps_,
-               pcg32& eng)
-        : tnorm_distr(),
-          K_(K),
-          K_y_(K_y),
-          extinct_N(extinct_N_),
-          constant_wasps(constant_wasps_),
-          plants(),
-          wasps(rel_attack_, a_, k_, h_,
-                wasp_density_0_, wasp_delay_,
-                sex_ratio_, s_y_, sigma_y, wasp_demog_error),
-          emigrants(aphid_name.size(),
-                    leslie_mat.front().n_rows,
-                    aphid_density_0.size(),
-                    living_days),
-          immigrants(aphid_name.size(),
-                     leslie_mat.front().n_rows,
-                     aphid_density_0.size(),
-                     living_days) {
-
-
-        uint32 n_plants = aphid_density_0.size();
-
-        double K, K_y;
-        plants.reserve(n_plants);
-        for (uint32 j = 0; j < n_plants; j++) {
-            set_K(K, K_y, eng);
-            OnePlant ap(sigma_x, rho, aphid_demog_error,
-                        attack_surv_,
-                        K, K_y,
-                        aphid_name, leslie_mat,
-                        aphid_density_0[j], alate_b0, alate_b1,
-                        field_disp_start,
-                        living_days, pred_rate,
-                        n_plants, j, extinct_N_,
-                        mum_density_0.col(j), mum_smooth_);
-            plants.push_back(ap);
-        }
-
-    }
-
-    OneField(const OneField& other)
-        : tnorm_distr(other.tnorm_distr),
-          K_(other.K_),
-          K_y(other.K_y),
-          extinct_N(other.extinct_N),
-          constant_wasps(other.constant_wasps),
-          plants(other.plants),
-          wasps(other.wasps),
-          emigrants(other.emigrants),
-          immigrants(other.immigrants) {};
-
-    OneField& operator=(const OneField& other) {
-        tnorm_distr = other.tnorm_distr;
-        K_ = other.K_;
-        K_y = other.K_y;
-        extinct_N = other.extinct_N;
-        constant_wasps = other.constant_wasps;
-        plants = other.plants;
-        wasps = other.wasps;
-        emigrants = other.emigrants;
-        immigrants = other.immigrants;
-        return *this;
-    };
-
-
-    inline uint32 size() const noexcept {
-        return plants.size();
-    }
-
-    OnePlant& operator[](const uint32& idx) {
-        return plants[idx];
-    }
-    const OnePlant& operator[](const uint32& idx) const {
-        return plants[idx];
-    }
-
-    // Remove dispersers from this field:
-    arma::mat remove_field_dispersers(const double& disp_prop) {
-
-        uint32 n_lines = plants[0].aphids.size();
-        uint32 n_stages = plants[0].aphids[0].alates.X.n_elem;
-
-        arma::mat D = arma::zeros<arma::mat>(n_stages, n_lines);
-
-        arma::vec Di;
-        for (OnePlant& p : plants) {
-            for (uint32 i = 0; i < n_lines; i++) {
-                Di = p.aphids[i].remove_field_dispersers(disp_prop);
-                D.col(i) += Di;
-            }
-        }
-
-        return D;
-
-    }
-
-    // Add dispersers from another field:
-    void add_field_dispersers(const arma::mat& D) {
-
-        uint32 n_lines = plants[0].aphids.size();
-
-        double n_plants = static_cast<double>(plants.size());
-
-        for (uint32 i = 0; i < n_lines; i++) {
-            arma::vec DD = D.col(i) / n_plants;
-            for (OnePlant& p : plants) {
-                p.aphids[i].alates.X += DD;
-            }
-        }
-
-        return;
-
-    }
-
-
-    inline void update(pcg32& eng) {
-
-        // update info for wasps before iterating:
-        double old_mums;
-        set_wasp_info(old_mums);
-
-        // update aphids and mummies
-        for (uint32 i = 0; i < plants.size(); i++) {
-            plants[i].update(emigrants, immigrants, &wasps, eng);
-        }
-
-        // Lastly update adult wasps (if constant_wasps = false):
-        if (!constant_wasps) {
-            wasps.update(old_mums, eng);
-            if (wasps.Y < extinct_N) wasps.Y = 0;
-        }
-
-        return;
-    }
-
-
-    // Total (living) aphids in patch
-    inline double total_aphids() const {
-        double ta = 0;
-        for (const OnePlant& op : plants) {
-            ta += op.total_aphids();
-        }
-        return ta;
-    }
-
-
-
-};
 
 
 
@@ -542,7 +340,6 @@ public:
 struct AllStageInfo {
 
     std::vector<uint32> field;
-    std::vector<uint32> plant;
     std::vector<std::string> line;
     std::vector<std::string> type;
     std::vector<uint32> stage;
@@ -550,7 +347,6 @@ struct AllStageInfo {
 
     void reserve(const uint32& total_stages) {
         field.reserve(total_stages);
-        plant.reserve(total_stages);
         line.reserve(total_stages);
         type.reserve(total_stages);
         stage.reserve(total_stages);
@@ -559,13 +355,11 @@ struct AllStageInfo {
     }
 
     void push_back(const uint32& field_,
-                   const uint32& plant_,
                    const std::string& line_,
                    const std::string& type_,
                    const uint32& stage_,
                    const double& N_) {
         field.push_back(field_);
-        plant.push_back(plant_);
         line.push_back(line_);
         type.push_back(type_);
         stage.push_back(stage_);
@@ -576,7 +370,6 @@ struct AllStageInfo {
     DataFrame to_data_frame() const {
         DataFrame out = DataFrame::create(
             _["field"] = field,
-            _["plant"] = plant,
             _["line"] = line,
             _["type"] = type,
             _["stage"] = stage,
@@ -594,7 +387,7 @@ class AllFields {
 
 public:
 
-    std::vector<OneField> fields;
+    std::vector<NewOneField> fields;
 
     double alate_field_disp_p;
     double wasp_disp_m0;
@@ -687,10 +480,11 @@ public:
         fields.reserve(n_fields);
         for (uint32 i = 0; i < n_fields; i++) {
             fields.push_back(
-                OneField(sigma_x, sigma_y, rho, aphid_demog_error, wasp_demog_error,
+                NewOneField(sigma_x, sigma_y, rho,
+                            aphid_demog_error, wasp_demog_error,
                          K[i], K_y[i],
                          attack_surv,
-                         aphid_name, leslie_mat, aphid_density_0,
+                         aphid_name, leslie_mat, aphid_density_0[i],
                          alate_b0, alate_b1,
                          field_disp_start,
                          living_days, pred_rate[i],
@@ -700,14 +494,12 @@ public:
                          sex_ratio,
                          s_y[i], constant_wasps[i], eng));
             total_stages += 1;
-            const OneField& field(fields[i]);
-            for (const OnePlant& plant : field.plants) {
-                total_stages += plant.mummies.Y.n_elem;
-                for (const AphidPop& aphid : plant.aphids) {
-                    total_stages += aphid.apterous.X.n_elem;
-                    total_stages += aphid.alates.X.n_elem;
-                    total_stages += aphid.paras.X.n_elem;
-                }
+            const NewOneField& field(fields[i]);
+            total_stages += field.mummies.Y.n_elem;
+            for (const AphidPop& aphid : field.aphids) {
+                total_stages += aphid.apterous.X.n_elem;
+                total_stages += aphid.alates.X.n_elem;
+                total_stages += aphid.paras.X.n_elem;
             }
         }
 
@@ -717,20 +509,15 @@ public:
         return fields.size();
     }
 
-    OneField& operator[](const uint32& idx) {
+    NewOneField& operator[](const uint32& idx) {
         return fields[idx];
     }
-    const OneField& operator[](const uint32& idx) const {
+    const NewOneField& operator[](const uint32& idx) const {
         return fields[idx];
     }
 
-    uint32 n_plants() const {
-        if (fields.size() == 0) return 0;
-        return fields[0].plants.size();
-    }
     uint32 n_lines() const {
-        if (n_plants() == 0) return 0;
-        return fields[0].plants[0].aphids.size();
+        return fields[0].aphids.size();
     }
 
     void reseed(const std::vector<uint64>& seeds) {
@@ -747,7 +534,7 @@ public:
                 D += fields[i].remove_field_dispersers(alate_field_disp_p);
             }
             D /= static_cast<double>(fields.size());
-            for (OneField& c : fields) c.add_field_dispersers(D);
+            for (NewOneField& field : fields) field.add_field_dispersers(D);
         }
         return;
     }
@@ -758,20 +545,20 @@ public:
             double from_wasp_pool = 0;
             if (wasp_disp_m1 != 0) {
                 double p_out, lz;
-                for (OneField& field : fields) {
+                for (NewOneField& field : fields) {
                     lz = std::log(field.total_aphids());
                     p_out = wasp_disp_m0 * std::exp(-wasp_disp_m1 * lz);
                     from_wasp_pool += (field.wasps.Y * p_out);
                     field.wasps.Y *= (1 - p_out);
                 }
             } else {
-                for (OneField& field : fields) {
+                for (NewOneField& field : fields) {
                     from_wasp_pool += (field.wasps.Y * wasp_disp_m0);
                     field.wasps.Y *= (1 - wasp_disp_m0);
                 }
             }
             for (uint32 i = 0; i < fields.size(); i++) {
-                OneField& field(fields[i]);
+                NewOneField& field(fields[i]);
                 field.wasps.Y += (from_wasp_pool * wasp_field_attract[i]);
             }
         }
@@ -782,7 +569,7 @@ public:
 
 
     // Update for one time step.
-    // Returns true if all fields/plants are empty
+    // Returns true if all fields are empty
     bool update(const uint32& t,
                 std::deque<PerturbInfo>& perturbs);
 

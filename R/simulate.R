@@ -12,8 +12,6 @@
 #' @param name String for clonal line name.
 #' @param density_0 A single number or 2-column matrix indicating starting
 #'     aphid densities for each field.
-#'     Aphids are equally distributed among plants if simulating
-#'     multiple plants per field.
 #'     If a number, there will be no starting alates and a total apterous
 #'     density equal to the number provided.
 #'     Stages will be calculated based on the stable age distribution.
@@ -429,26 +427,15 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 # full fun docs ----
 #' Simulate multiple reps and simplify output - all options.
 #'
-#' This mainly differs from `sim_pseudogameofclones` in that it allows for
-#' stochasticity and for simulating the process of plants dying and
-#' being replaced.
-#' The latter process doesn't appear important except for very small scales
-#' and for defenseless plants (like fava bean).
-#' Stochasticity isn't necessarily important, either, and the code has
-#' change in other ways such that I have largely abandoned the
-#' stochastic simulations.
-#' So use this at your own risk.
 #'
 #' @param K Aphid density dependence.
-#'     Defaults to `1800` because this caused simulations to
-#'     approximately match growth of aphid populations on individual fava
-#'     bean plants.
+#'     Defaults to `1 / 4.67e-4`, which is from Meisner et al. (2014).
 #' @param alate_b1 The proportion of offspring from apterous aphids is
 #'     `inv_logit(alate_b0 + alate_b1 * N)` where `N` is the total number of
-#'     aphids on that plant.
+#'     aphids in that field.
 #'     Defaults to `0.0088`, which makes alate production only mildly
 #'     density dependent. This default differs from that in `sim_experiments`
-#'     because `N` is calculated per plant, so this number must be higher
+#'     because `N` is calculated per field, so this number must be higher
 #'     to match alate production from `sim_experiments.`
 #' @param pred_rate Daily predation rate on aphids and mummies.
 #'     Defaults to `0` because we're simulating an experiment with no predators.
@@ -465,11 +452,11 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 #' @param pred_rate Daily predation rate on aphids and mummies. Defaults to `0`.
 #' @param alate_b0 The proportion of offspring from apterous aphids is
 #'     `inv_logit(alate_b0 + alate_b1 * N)` where `N` is the total number of
-#'     aphids on that plant.
+#'     aphids in that field.
 #'     Defaults to `logit(0.3)`.
 #' @param alate_b1 The proportion of offspring from apterous aphids is
 #'     `inv_logit(alate_b0 + alate_b1 * N)` where `N` is the total number of
-#'     aphids on that plant.
+#'     aphids in that field.
 #'     Defaults to `0`, which makes alate production not density dependent.
 #'
 #' @importFrom purrr map_dfr
@@ -484,7 +471,6 @@ make_perturb_list <- function(perturb, n_fields, aphid_names) {
 sim_pseudogameofclones_full <- function(clonal_lines,
                                n_reps = 1,
                                n_fields = 2,
-                               n_plants = 1,
                                max_t = 250,
                                temp = "low",
                                environ_error = FALSE,
@@ -561,14 +547,8 @@ sim_pseudogameofclones_full <- function(clonal_lines,
     stopifnot(length(rel_attack) == 5)
 
     if (length(mum_density_0) == 1) {
-        mum_density_0 <- matrix(mum_density_0, dev_times$mum_days[2], n_plants)
-    }
-
-    # Adjust starting abundances of aphids for multiple plants per field
-    if (n_plants >= 2) {
-        for (i in 1:length(clonal_lines)) {
-            clonal_lines[[i]]$density_0 <- clonal_lines[[i]]$density_0 / n_plants
-        }
+        mum_density_0 <- matrix(mum_density_0 / dev_times$mum_days[2],
+                                dev_times$mum_days[2], n_fields)
     }
 
     living_days <- rep(dev_times$mum_days[[1]], n_lines)
@@ -588,7 +568,7 @@ sim_pseudogameofclones_full <- function(clonal_lines,
     }
     aphid_density_0 <- array(do.call(c, densities_0),
                              dim = c(dim(densities_0[[1]]), n_lines))
-    aphid_density_0 <- replicate(n_plants, aphid_density_0, simplify = FALSE)
+    aphid_density_0 <- replicate(n_fields, aphid_density_0, simplify = FALSE)
 
     attack_surv <- do.call(cbind, lapply(clonal_lines, `[[`, i = "attack_surv"))
 
@@ -679,10 +659,9 @@ sim_pseudogameofclones_full <- function(clonal_lines,
                               n_threads, show_progress)
 
     sims[["aphids"]] <- mutate(sims[["aphids"]],
-                               across(c("rep", "time", "field", "plant"),
-                                      as.integer))
+                               across(c("rep", "time", "field"), as.integer))
     sims[["aphids"]] <- mutate(sims[["aphids"]],
-                               across(c("rep", "field", "plant"), ~ .x + 1L))
+                               across(c("rep", "field"), ~ .x + 1L))
     sims[["aphids"]] <- mutate(sims[["aphids"]],
                                line = ifelse(type == "mummy", NA, line))
     sims[["aphids"]] <- as_tibble(sims[["aphids"]])
@@ -717,8 +696,6 @@ sim_pseudogameofclones_full <- function(clonal_lines,
 #'     the `clonal_line` function.
 #'     Combine them using `c(aphid_obj1, aphid_obj2)`.
 #' @param n_fields The number of fields to simulate.
-#'     Wasps operate at the field level, whereas aphids operate at the
-#'     plant level.
 #'     Both wasps and aphids operate separately across fields but can be
 #'     connected via dispersal (see arguments `wasp_disp_m0`, `wasp_disp_m1`,
 #'     and `alate_field_disp_p`).
@@ -729,11 +706,11 @@ sim_pseudogameofclones_full <- function(clonal_lines,
 #'     approximately match experiments.
 #' @param alate_b0 The proportion of offspring from apterous aphids is
 #'     `inv_logit(alate_b0 + alate_b1 * N)` where `N` is the total number of
-#'     aphids on that plant.
+#'     aphids in that field.
 #'     Defaults to `-5`.
 #' @param alate_b1 The proportion of offspring from apterous aphids is
 #'     `inv_logit(alate_b0 + alate_b1 * N)` where `N` is the total number of
-#'     aphids on that plant.
+#'     aphids in that field.
 #'     Defaults to `0.0022`, which makes alate production only mildly
 #'     density dependent.
 #' @param alate_field_disp_p Proportion of alates from each field that
@@ -766,13 +743,15 @@ sim_pseudogameofclones_full <- function(clonal_lines,
 #' @param wasp_disp_m0 Proportion of adult wasps from each field that
 #'     are added to the dispersal pool when there are no aphids present.
 #'     After adding wasps to the pool, they are then evenly distributed
-#'     to all fields.
+#'     to all fields unless values for `wasp_field_attract` are provided.
 #'     Defaults to `0`.
 #' @param wasp_disp_m1 Effect of aphid density on wasp emigration from a patch.
 #'     Emigration is `wasp_disp_m0 * exp(-wasp_disp_m1 * log(z))`, where `z` is
 #'     the total number of living aphids in the patch.
+#'     Note that if `wasp_disp_m0 = 0`, then this parameter doesn't change
+#'     anything.
 #'     Defaults to `0`.
-#' @param wasp_field_attract Relatively attractiveness of fields to wasps.
+#' @param wasp_field_attract Relative attractiveness of fields to wasps.
 #'     This affects the proportion of wasps that immigrate from the dispersal
 #'     pool to each field.
 #'     It doesn't change the number of wasps that leave fields.
@@ -782,6 +761,8 @@ sim_pseudogameofclones_full <- function(clonal_lines,
 #'     If a vector is provided, then the vector is divided by its sum
 #'     (to make it sum to 1), then those values are used as the proportion of
 #'     wasps from the dispersal pool that immigrate to each field.
+#'     Note that if `wasp_disp_m0 = 0`, then this parameter doesn't change
+#'     anything.
 #'     Defaults to `1`.
 #' @param constant_wasps Logical for whether to keep adult wasps at the same
 #'     density throughout simulations.
@@ -792,7 +773,7 @@ sim_pseudogameofclones_full <- function(clonal_lines,
 #'     smoothing of wasp numbers through time.
 #'     Defaults to `0.4`.
 #' @param pred_rate Daily predation rate on aphids and mummies.
-#'     Defaults to `0.1` to compensate for losses from plants dying.
+#'     Defaults to `0.1`.
 #' @param extinct_N Threshold below which a line is considered extinct.
 #'     Defaults to `1`.
 #' @param save_every Abundances will be stored every `save_every` time points.
@@ -894,7 +875,6 @@ make_all_info <- function(sims_obj) {
     for (i in 1:length(all_info)) {
         is_wasp <- all_info[[i]][["type"]] == "wasp"
         is_mummy <- all_info[[i]][["type"]] == "mummy"
-        all_info[[i]][["plant"]][is_wasp] <- NA
         all_info[[i]][["line"]][is_wasp | is_mummy] <- NA
     }
     return(all_info)
@@ -1001,7 +981,7 @@ restart_experiment <- function(sims_obj,
         if (is.data.frame(new_starts)) {
             new_starts <- rep(list(new_starts), n_reps)
         }
-        needed_cols <- c("field", "plant", "line", "type", "stage", "N")
+        needed_cols <- c("field", "line", "type", "stage", "N")
         for (i in 1:n_reps) {
             not_present_cols <- needed_cols[!needed_cols %in%
                                                 colnames(new_starts[[i]])]
@@ -1152,10 +1132,9 @@ restart_experiment <- function(sims_obj,
                                     perturb_list$who, perturb_list$how)
 
     sims[["aphids"]] <- mutate(sims[["aphids"]],
-                               across(c("rep", "time", "field", "plant"),
-                                      as.integer))
+                               across(c("rep", "time", "field"), as.integer))
     sims[["aphids"]] <- mutate(sims[["aphids"]],
-                               across(c("rep", "field", "plant"), ~ .x + 1L))
+                               across(c("rep", "field"), ~ .x + 1L))
     sims[["aphids"]] <- mutate(sims[["aphids"]],
                                line = ifelse(type == "mummy", NA, line))
     sims[["aphids"]] <- as_tibble(sims[["aphids"]])

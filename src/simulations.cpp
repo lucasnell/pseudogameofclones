@@ -23,7 +23,7 @@
 
 #include "pseudogameofclones_types.hpp"  // integer types
 #include "aphids.hpp"           // aphid classes
-#include "patches.hpp"          // field and plant classes
+#include "patches.hpp"          // field classes
 #include "pcg.hpp"              // mt_seeds seed_pcg fxns
 
 
@@ -90,7 +90,6 @@ void calc_rep_rows(uint32& n_rows,
                    const uint32& save_every,
                    const uint32& n_lines,
                    const uint32& n_fields,
-                   const uint32& n_plants,
                    const bool& sep_adults) {
 
     // Rows for wasps is just the number of time points * number of fields:
@@ -98,10 +97,10 @@ void calc_rep_rows(uint32& n_rows,
     if (max_t % save_every > 0) n_rows_wasps++;
     n_rows_wasps *= n_fields;
 
-    // For aphids, you also include plants, lines, and type (alate, apterous,
+    // For aphids, you also include lines, and type (alate, apterous,
     // parasitized). If `sep_adults == TRUE`, then you have separate
     // rows for adult vs juvenile apterous and adult vs juvenile alates.
-    n_rows = n_plants * n_lines * n_rows_wasps;
+    n_rows = n_lines * n_rows_wasps;
     if (sep_adults) {
         /*
          for (1) juvenile alate vs (2) adult alate vs
@@ -109,7 +108,7 @@ void calc_rep_rows(uint32& n_rows,
          */
         n_rows *= 5;
     } else n_rows *= 3;  // for (1) alate vs (2) apterous vs (3) parasitized
-    n_rows += n_plants * n_rows_wasps;  // for mummies
+    n_rows += n_rows_wasps;  // for mummies
 
     return;
 }
@@ -124,7 +123,6 @@ struct RepSummary {
     std::vector<uint32> rep;
     std::vector<uint32> time;
     std::vector<uint32> field;
-    std::vector<uint32> plant;
     std::vector<std::string> line;
     std::vector<std::string> type;
     std::vector<double> N;
@@ -138,22 +136,20 @@ struct RepSummary {
 
     RepSummary(const bool& sep_adults_)
         : sep_adults(sep_adults_),
-          rep(), time(), field(), plant(), line(), type(), N(),
+          rep(), time(), field(), line(), type(), N(),
           wasp_rep(), wasp_time(), wasp_field(), wasp_N(), r() {};
 
     void reserve(const uint32& rep_,
                  const uint32& max_t,
                  const uint32& save_every,
                  const uint32& n_lines,
-                 const uint32& n_fields,
-                 const uint32& n_plants) {
+                 const uint32& n_fields) {
         uint32 n_rows, n_rows_wasps;
         calc_rep_rows(n_rows, n_rows_wasps, max_t, save_every,
-                      n_lines, n_fields, n_plants, sep_adults);
+                      n_lines, n_fields, sep_adults);
         rep.reserve(n_rows);
         time.reserve(n_rows);
         field.reserve(n_rows);
-        plant.reserve(n_rows);
         line.reserve(n_rows);
         type.reserve(n_rows);
         N.reserve(n_rows);
@@ -169,7 +165,6 @@ struct RepSummary {
         rep.reserve(n);
         time.reserve(n);
         field.reserve(n);
-        plant.reserve(n);
         line.reserve(n);
         type.reserve(n);
         N.reserve(n);
@@ -186,29 +181,25 @@ struct RepSummary {
 
         for (uint32 k = 0; k < fields.size(); k++) {
 
-            const OneField& field(fields[k]);
+            const NewOneField& field(fields[k]);
 
-            // Everything but wasps:
-            for (uint32 j = 0; j < field.size(); j++) {
-                const OnePlant& plant(field[j]);
-                for (uint32 i = 0; i < plant.size(); i++) {
-                    const AphidPop& aphid(plant[i]);
-                    if (sep_adults) {
-                        append_living_aphids__(t, k, j, aphid.aphid_name,
-                                               aphid.total_adult_alates(),
-                                               aphid.total_juven_alates(),
-                                               aphid.total_adult_apterous(),
-                                               aphid.total_juven_apterous(),
-                                               aphid.paras.total_aphids());
-                    } else {
-                        append_living_aphids__(t, k, j, aphid.aphid_name,
-                                               aphid.alates.total_aphids(),
-                                               aphid.apterous.total_aphids(),
-                                               aphid.paras.total_aphids());
-                    }
+            for (uint32 i = 0; i < field.size(); i++) {
+                const AphidPop& aphid(field[i]);
+                if (sep_adults) {
+                    append_living_aphids__(t, k, j, aphid.aphid_name,
+                                           aphid.total_adult_alates(),
+                                           aphid.total_juven_alates(),
+                                           aphid.total_adult_apterous(),
+                                           aphid.total_juven_apterous(),
+                                           aphid.paras.total_aphids());
+                } else {
+                    append_living_aphids__(t, k, j, aphid.aphid_name,
+                                           aphid.alates.total_aphids(),
+                                           aphid.apterous.total_aphids(),
+                                           aphid.paras.total_aphids());
                 }
-                append_mummies__(t, k, j, plant.total_mummies());
             }
+            append_mummies__(t, k, j, field.total_mummies());
 
             wasp_rep.push_back(r);
             wasp_time.push_back(t);
@@ -224,7 +215,6 @@ struct RepSummary {
 
         time.clear();
         field.clear();
-        plant.clear();
         line.clear();
         type.clear();
         N.clear();
@@ -236,7 +226,6 @@ struct RepSummary {
         // to clear memory:
         time.shrink_to_fit();
         field.shrink_to_fit();
-        plant.shrink_to_fit();
         line.shrink_to_fit();
         type.shrink_to_fit();
         N.shrink_to_fit();
@@ -254,7 +243,6 @@ struct RepSummary {
             rep.push_back(other.rep[i]);
             time.push_back(other.time[i]);
             field.push_back(other.field[i]);
-            plant.push_back(other.plant[i]);
             line.push_back(other.line[i]);
             type.push_back(other.type[i]);
             N.push_back(other.N[i]);
@@ -293,7 +281,6 @@ private:
             rep.push_back(r);
             time.push_back(t);
             field.push_back(c);
-            plant.push_back(p);
             line.push_back(l);
         }
 
@@ -324,7 +311,6 @@ private:
             rep.push_back(r);
             time.push_back(t);
             field.push_back(c);
-            plant.push_back(p);
             line.push_back(l);
         }
 
@@ -350,7 +336,6 @@ private:
         rep.push_back(r);
         time.push_back(t);
         field.push_back(c);
-        plant.push_back(p);
         line.push_back("");
         type.push_back("mummy");
         N.push_back(N_mum);
@@ -379,10 +364,9 @@ void one_rep__(RepSummary& summary,
                int& status_code) {
 
     uint32 n_lines = fields.n_lines();
-    uint32 n_plants = fields.n_plants();
     uint32 n_fields = fields.size();
 
-    summary.reserve(rep, max_t, save_every, n_lines, n_fields, n_plants);
+    summary.reserve(rep, max_t, save_every, n_lines, n_fields);
 
     uint32 iters = 0;
 
@@ -403,8 +387,7 @@ void one_rep__(RepSummary& summary,
         }
 
         // Basic updates for perturbations, dispersal, and population dynamics.
-        // Returns true if all plants/fields are empty.
-        // It's important to do this (& to save output) before clearing plants.
+        // Returns true if all fields are empty.
         bool all_empty = fields.update(t, perturbs);
 
         if (t % save_every == 0 || t == max_t) summary.push_back(t, fields);
@@ -436,10 +419,9 @@ void one_rep__(RepSummary& summary,
                int& status_code) {
 
     uint32 n_lines = fields.n_lines();
-    uint32 n_plants = fields.n_plants();
     uint32 n_fields = fields.size();
 
-    summary.reserve(rep, max_t, save_every, n_lines, n_fields, n_plants);
+    summary.reserve(rep, max_t, save_every, n_lines, n_fields);
 
     stage_ts.reserve(max_t);
 
@@ -461,8 +443,7 @@ void one_rep__(RepSummary& summary,
         }
 
         // Basic updates for perturbations, dispersal, and population dynamics.
-        // Returns true if all plants/fields are empty.
-        // It's important to do this (& to save output) before clearing plants.
+        // Returns true if all fields are empty.
         bool all_empty = fields.update(t, perturbs);
 
         if (t % save_every == 0 || t == max_t) summary.push_back(t, fields);
@@ -558,7 +539,6 @@ void one_positive_check(const uint32& input, const std::string& name) {
 void check_args(const uint32& n_reps,
                 const uint32& n_lines,
                 const uint32& n_fields,
-                const uint32& n_plants,
                 const uint32& max_t,
                 const uint32& save_every,
                 const std::vector<double>& K,
@@ -609,7 +589,6 @@ void check_args(const uint32& n_reps,
     if (n_reps == 0) stop("\nERROR: n_reps == 0\n");
     if (n_lines == 0) stop("\nERROR: n_lines == 0\n");
     if (n_fields == 0) stop("\nERROR: n_fields == 0\n");
-    if (n_plants == 0) stop("\nERROR: n_plants == 0\n");
     if (n_stages == 0) stop("\nERROR: n_stages == 0\n");
 
     if (leslie_mat.size() != n_lines) {
@@ -639,10 +618,10 @@ void check_args(const uint32& n_reps,
 
     // In `aphid_density_0`, rows are aphid stages, columns are types (alate vs
     // apterous), and slices are aphid lines.
-    if (aphid_density_0.size() != n_plants) {
-        stop("\nERROR: aphid_density_0.size() != n_plants\n");
+    if (aphid_density_0.size() != n_fields) {
+        stop("\nERROR: aphid_density_0.size() != n_fields\n");
     }
-    for (uint32 i = 0; i < n_plants; i++) {
+    for (uint32 i = 0; i < n_fields; i++) {
         if (aphid_density_0[i].n_rows != n_stages) {
             stop("\nERROR: aphid_density_0[i].n_rows != n_stages\n");
         }
@@ -699,8 +678,8 @@ void check_args(const uint32& n_reps,
     if (pred_rate.size() != n_fields) {
         stop("\nERROR: pred_rate.size() != n_fields\n");
     }
-    if (mum_density_0.n_cols != n_plants) {
-        stop("\nERROR: mum_density_0.n_cols != n_plants\n");
+    if (mum_density_0.n_cols != n_fields) {
+        stop("\nERROR: mum_density_0.n_cols != n_fields\n");
     }
     if (mum_density_0.n_rows == 0) {
         stop("\nERROR: mum_density_0.n_rows == 0\n");
@@ -831,9 +810,8 @@ List sim_pseudogameofclones_cpp(const uint32& n_reps,
                        const bool& show_progress) {
 
     uint32 n_lines = aphid_name.size();
-    uint32 n_plants = aphid_density_0.size();
 
-    check_args(n_reps, n_lines, n_fields, n_plants,
+    check_args(n_reps, n_lines, n_fields,
                max_t, save_every,
                K, K_y,
                attack_surv, aphid_demog_error, wasp_demog_error,
@@ -933,7 +911,6 @@ List sim_pseudogameofclones_cpp(const uint32& n_reps,
                                 _["rep"] = summ.rep,
                                 _["time"] = summ.time,
                                 _["field"] = summ.field,
-                                _["plant"] = summ.plant,
                                 _["line"] = summ.line,
                                 _["type"] = summ.type,
                                 _["N"] = summ.N),
@@ -991,10 +968,8 @@ SEXP restart_fill_other_pars(SEXP all_fields_in_ptr,
     // Checking dimensions of vectors
     uint32 n_lines = all_fields_vec[0].n_lines();
     uint32 n_fields = all_fields_vec[0].size();
-    uint32 n_plants = all_fields_vec[0].n_plants();
     if (n_lines == 0) stop("\nERROR: n_lines == 0\n");
     if (n_fields == 0) stop("\nERROR: n_fields == 0\n");
-    if (n_plants == 0) stop("\nERROR: n_plants == 0\n");
     if (alate_b0.size() != n_lines) {
         stop("\nERROR: alate_b0.size() != n_lines\n");
     }
@@ -1106,7 +1081,6 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
                                 _["rep"] = summ.rep,
                                 _["time"] = summ.time,
                                 _["field"] = summ.field,
-                                _["plant"] = summ.plant,
                                 _["line"] = summ.line,
                                 _["type"] = summ.type,
                                 _["N"] = summ.N),

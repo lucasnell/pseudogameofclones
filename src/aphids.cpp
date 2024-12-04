@@ -6,7 +6,7 @@
 #include "pseudogameofclones_types.hpp"  // integer types
 #include "aphids.hpp"           // aphid classes
 #include "wasps.hpp"            // wasp classes
-#include "patches.hpp"          // field and plant classes
+#include "patches.hpp"          // field classes
 #include "pcg.hpp"              // runif_01 fxn
 #include "math.hpp"             // inv_logit__ fxn
 
@@ -82,8 +82,8 @@ void AphidTypePop::process_error(const arma::vec& Xt,
 
 
 // logit(Pr(alates)) ~ b0 + b1 * z, where `z` is # aphids (all lines)
-double ApterousPop::alate_prop(const OnePlant* plant) const {
-    const double lap = alate_b0_ + alate_b1_ * plant->z;
+double ApterousPop::alate_prop(const NewOneField* field) const {
+    const double lap = alate_b0_ + alate_b1_ * field->z;
     double ap;
     inv_logit__(lap, ap);
     return ap;
@@ -103,7 +103,7 @@ double ApterousPop::alate_prop(const OnePlant* plant) const {
  to be added to the wasps.
  */
 
-double AphidPop::update(const OnePlant* plant,
+double AphidPop::update(const NewOneField* field,
                         const WaspPop* wasps,
                         pcg32& eng) {
 
@@ -111,8 +111,8 @@ double AphidPop::update(const OnePlant* plant,
 
     if (total_aphids() > 0) {
 
-        const double& S(plant->S);
-        const double& S_y(plant->S_y);
+        const double& S(field->S);
+        const double& S_y(field->S_y);
 
         arma::vec A_surv;
         wasps->A_mats(A_surv, attack_surv);
@@ -126,7 +126,7 @@ double AphidPop::update(const OnePlant* plant,
             A_mumm_ala[i] = 0;
         }
 
-        double pred_surv = 1 - plant->pred_rate;
+        double pred_surv = 1 - field->pred_rate;
 
         // Starting abundances (used in `process_error`):
         arma::vec apterous_Xt = apterous.X;
@@ -160,7 +160,7 @@ double AphidPop::update(const OnePlant* plant,
         }
 
         // # offspring from apterous aphids that are alates:
-        double alate_prop = apterous.alate_prop(plant);
+        double alate_prop = apterous.alate_prop(field);
         double new_alates = apterous.X.front() * alate_prop;
 
         /*

@@ -190,11 +190,11 @@ public:
 
     }
 
-    // Clearing a plant kills all mummies
+    // Clearing a field kills all mummies
     inline void clear() {
         Y.fill(0);
     }
-    // Clearing part of plant
+    // Clearing part of field
     inline void clear(const double& surv) {
         Y *= surv;
     }

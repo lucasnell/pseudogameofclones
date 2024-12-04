@@ -5,7 +5,7 @@
 #include <random>               // normal distribution
 #include <pcg/pcg_random.hpp>   // pcg prng
 #include "pseudogameofclones_types.hpp"  // integer types
-#include "patches.hpp"          // field and plant classes
+#include "patches.hpp"          // field classes
 
 
 
@@ -16,36 +16,13 @@ using namespace Rcpp;
 
 
 
-
-
-
 /*
- Adjust for potential extinction or re-colonization:
+ Iterate one time step, not including alate and adult-wasp dispersal.
  */
-void OnePlant::extinct_colonize(const uint32& i) {
+void NewOneField::update(pcg32& eng) {
 
-    AphidPop& ap(aphids[i]);
-
-    double N = ap.total_aphids();
-
-    if (N < extinct_N) {
-        ap.clear();
-    } else {
-        empty = false;
-        ap.extinct = false;
-    }
-
-    return;
-}
-
-
-
-
-/*
- Iterate one time step.
- */
-void OnePlant::update(const WaspPop* wasps,
-                      pcg32& eng) {
+    wasps.x = total_unpar_aphids();
+    double old_mums = mummies.Y.back();
 
     z = total_aphids();
 
@@ -72,12 +49,48 @@ void OnePlant::update(const WaspPop* wasps,
     double mums = arma::accu(mummies.Y);
     if (mums < extinct_N) mummies.Y.fill(0);
 
+    // Lastly update adult wasps (if constant_wasps = false):
+    if (!constant_wasps) {
+        wasps.update(old_mums, eng);
+        if (wasps.Y < extinct_N) wasps.Y = 0;
+    }
+
     return;
 
 }
 
 
 
+// Remove aphid dispersers from this field:
+arma::mat NewOneField::remove_field_dispersers(const double& disp_prop) {
+
+    uint32 n_lines = aphids.size();
+    uint32 n_stages = aphids[0].alates.X.n_elem;
+
+    arma::mat D = arma::zeros<arma::mat>(n_stages, n_lines);
+
+    arma::vec Di;
+    for (uint32 i = 0; i < n_lines; i++) {
+        Di = aphids[i].remove_field_dispersers(disp_prop);
+        D.col(i) += Di;
+    }
+
+    return D;
+
+}
+
+// Add aphid dispersers from another field:
+void NewOneField::add_field_dispersers(const arma::mat& D) {
+
+    uint32 n_lines = aphids.size();
+
+    for (uint32 i = 0; i < n_lines; i++) {
+        aphids[i].alates.X += D.col(i);
+    }
+
+    return;
+
+}
 
 
 
@@ -98,28 +111,24 @@ void AllFields::do_perturb(std::deque<PerturbInfo>& perturbs,
         const PerturbInfo& pert(perturbs[i]);
         if (pert.time != t) break;
         double mult = pert.multiplier;
-        OneField& field(fields[pert.field]);
+        NewOneField& field(fields[pert.field]);
         if (pert.index < nl) { // aphids (non-parasitized)
-            for (OnePlant& p : field.plants) {
-                AphidPop& aphids(p.aphids[pert.index]);
-                aphids.apterous.clear(mult);
-                aphids.alates.clear(mult);
-                if (aphids.total_aphids() < extinct_N) aphids.clear();
-                if ((p.total_aphids() + p.total_mummies()) == 0) {
-                    p.empty = true;
-                }
+            AphidPop& aphids(field.aphids[pert.index]);
+            aphids.apterous.clear(mult);
+            aphids.alates.clear(mult);
+            if (aphids.total_aphids() < extinct_N) aphids.clear();
+            if ((field.total_aphids() + field.total_mummies()) == 0) {
+                field.empty = true;
             }
         } else if (pert.index == nl) { // mummies + parasitized aphids
-            for (OnePlant& p : field.plants) {
-                p.mummies.clear(mult);
-                if (arma::accu(p.mummies.Y) < extinct_N) p.mummies.Y.fill(0);
-                for (AphidPop& aphids : p.aphids) {
-                    aphids.paras.clear(mult);
-                    if (aphids.total_aphids() < extinct_N) aphids.clear();
-                }
-                if ((p.total_aphids() + p.total_mummies()) == 0) {
-                    p.empty = true;
-                }
+            field.mummies.clear(mult);
+            if (arma::accu(field.mummies.Y) < extinct_N) field.mummies.Y.fill(0);
+            for (AphidPop& aphids : field.aphids) {
+                aphids.paras.clear(mult);
+                if (aphids.total_aphids() < extinct_N) aphids.clear();
+            }
+            if ((field.total_aphids() + field.total_mummies()) == 0) {
+                field.empty = true;
             }
         } else { // adult wasps
             field.wasps.Y *= mult;
@@ -142,7 +151,7 @@ void AllFields::do_perturb(std::deque<PerturbInfo>& perturbs,
 
 
 // Update for one time step.
-// Returns true if all fields/plants are empty
+// Returns true if all fields are empty
 bool AllFields::update(const uint32& t,
                        std::deque<PerturbInfo>& perturbs) {
 
@@ -154,18 +163,16 @@ bool AllFields::update(const uint32& t,
 
     bool all_empty = true;
 
-    for (OneField& field : fields) {
+    for (NewOneField& field : fields) {
 
         field.wasps.add_Y_0_check(t);
 
         field.update(eng);
 
         if (all_empty) {
-            for (const OnePlant& p : field.plants) {
-                if (!p.empty) {
-                    all_empty = false;
-                    break;
-                }
+            if (!field.empty) {
+                all_empty = false;
+                break;
             }
         }
 
@@ -188,40 +195,32 @@ AllStageInfo AllFields::out_all_info() const {
 
     for (uint32 k = 0; k < fields.size(); k++) {
 
-        const OneField& field(fields[k]);
+        const NewOneField& field(fields[k]);
 
         // Adult wasps:
-        out.push_back(k+1, 0, "", "wasp", 1, field.wasps.Y);
+        out.push_back(k+1, "", "wasp", 1, field.wasps.Y);
 
+        // Mummies:
+        for (uint32 i = 0; i < field.mummies.Y.n_elem; i++) {
+            out.push_back(k+1, "", "mummy", i+1, field.mummies.Y[i]);
+        }
 
-        // Everything but adult wasps:
-        for (uint32 j = 0; j < field.size(); j++) {
+        // Everything else:
+        for (uint32 i = 0; i < field.size(); i++) {
 
-            const OnePlant& plant(field[j]);
+            const AphidPop& aphid(field[i]);
 
-            // Mummies:
-            for (uint32 ii = 0; ii < plant.mummies.Y.n_elem; ii++) {
-                out.push_back(k+1, j+1, "", "mummy", ii+1, plant.mummies.Y[ii]);
+            for (uint32 j = 0; j < aphid.apterous.X.n_elem; j++) {
+                out.push_back(k+1, aphid.aphid_name, "apterous",
+                              j+1, aphid.apterous.X[j]);
             }
-
-            // Everything but mummies:
-            for (uint32 i = 0; i < plant.size(); i++) {
-
-                const AphidPop& aphid(plant[i]);
-
-                for (uint32 ii = 0; ii < aphid.apterous.X.n_elem; ii++) {
-                    out.push_back(k+1, j+1, aphid.aphid_name, "apterous",
-                                  ii+1, aphid.apterous.X[ii]);
-                }
-                for (uint32 ii = 0; ii < aphid.alates.X.n_elem; ii++) {
-                    out.push_back(k+1, j+1, aphid.aphid_name, "alate",
-                                  ii+1, aphid.alates.X[ii]);
-                }
-                for (uint32 ii = 0; ii < aphid.paras.X.n_elem; ii++) {
-                    out.push_back(k+1, j+1, aphid.aphid_name, "parasitized",
-                                  ii+1, aphid.paras.X[ii]);
-                }
-
+            for (uint32 j = 0; j < aphid.alates.X.n_elem; j++) {
+                out.push_back(k+1, aphid.aphid_name, "alate",
+                              j+1, aphid.alates.X[j]);
+            }
+            for (uint32 j = 0; j < aphid.paras.X.n_elem; j++) {
+                out.push_back(k+1, aphid.aphid_name, "parasitized",
+                              j+1, aphid.paras.X[j]);
             }
 
         }
@@ -249,27 +248,25 @@ void AllFields::from_vector(std::vector<double>& N) {
 
 
     uint32 i = 0;
-    for (OneField& field : fields) {
+    for (NewOneField& field : fields) {
         field.wasps.Y = N[i];
         i++;
-        for (OnePlant& plant : field.plants) {
-            for (double& y : plant.mummies.Y) {
-                y = N[i];
+        for (double& y : field.mummies.Y) {
+            y = N[i];
+            i++;
+        }
+        for (AphidPop& aphid : field.aphids) {
+            for (double& x : aphid.apterous.X) {
+                x = N[i];
                 i++;
             }
-            for (AphidPop& aphid : plant.aphids) {
-                for (double& x : aphid.apterous.X) {
-                    x = N[i];
-                    i++;
-                }
-                for (double& x : aphid.alates.X) {
-                    x = N[i];
-                    i++;
-                }
-                for (double& x : aphid.paras.X) {
-                    x = N[i];
-                    i++;
-                }
+            for (double& x : aphid.alates.X) {
+                x = N[i];
+                i++;
+            }
+            for (double& x : aphid.paras.X) {
+                x = N[i];
+                i++;
             }
         }
     }
@@ -363,9 +360,9 @@ void AllFields::set_new_pars(const std::vector<double>& K_,
 
     for (uint32 i = 0; i < fields.size(); i++) {
 
-        OneField& field(fields[i]);
+        NewOneField& field(fields[i]);
 
-        field.K_ = K_[i];
+        field.K = K_[i];
         field.K_y = K_y_[i];
         field.wasps.s_y = s_y_[i];
         field.wasps.attack.a = a_;
@@ -378,22 +375,14 @@ void AllFields::set_new_pars(const std::vector<double>& K_,
          */
         field.wasps.Y_0 = 0;
 
-        for (uint32 j = 0; j < field.plants.size(); j++) {
+        field.mummies.smooth = mum_smooth_;
+        field.pred_rate = pred_rate_[i];
 
-            OnePlant& plant(field.plants[j]);
+        for (uint32 k = 0; k < field.aphids.size(); k++) {
 
-            plant.K = K_[i];
-            plant.K_y = K_y_[i];
-            plant.mummies.smooth = mum_smooth_;
-            plant.pred_rate = pred_rate_[i];
-
-            for (uint32 k = 0; k < plant.aphids.size(); k++) {
-
-                AphidPop& aphid(plant.aphids[k]);
-                aphid.apterous.alate_b0_ = alate_b0_[k];
-                aphid.apterous.alate_b1_ = alate_b1_[k];
-
-            }
+            AphidPop& aphid(field.aphids[k]);
+            aphid.apterous.alate_b0_ = alate_b0_[k];
+            aphid.apterous.alate_b1_ = alate_b1_[k];
 
         }
 

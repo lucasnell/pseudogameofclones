@@ -14,7 +14,7 @@ using namespace Rcpp;
 
 
 // Necessary for ApterousPop::alate_prop
-class OneField;
+class NewOneField;
 // Necessary here to declare friendship
 class AphidPop;
 
@@ -126,7 +126,7 @@ public:
 
 
     // logit(Pr(alates)) ~ b0 + b1 * z, where `z` is # aphids (all lines)
-    double alate_prop(const OnePlant* plant) const;
+    double alate_prop(const NewOneField* field) const;
 
 };
 // Aphid "type" population for alates of a particular clonal line
@@ -199,7 +199,7 @@ public:
 
 
 
-// Aphid population: both alates and apterous for one clonal line on a plant
+// Aphid population: both alates and apterous for one clonal line in a field
 class AphidPop {
 
     double sigma_x;          // environmental standard deviation for aphids
@@ -363,7 +363,7 @@ public:
 
 
     // Update new aphid abundances, return the # newly mummified aphids
-    double update(const OnePlant* plant,
+    double update(const NewOneField* field,
                   const WaspPop* wasps,
                   pcg32& eng);
 
