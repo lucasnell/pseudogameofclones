@@ -19,7 +19,7 @@ using namespace Rcpp;
 /*
  Iterate one time step, not including alate and adult-wasp dispersal.
  */
-void NewOneField::update(pcg32& eng) {
+void OneField::update(pcg32& eng) {
 
     wasps.x = total_unpar_aphids();
     double old_mums = mummies.Y.back();
@@ -62,7 +62,7 @@ void NewOneField::update(pcg32& eng) {
 
 
 // Remove aphid dispersers from this field:
-arma::mat NewOneField::remove_field_dispersers(const double& disp_prop) {
+arma::mat OneField::remove_field_dispersers(const double& disp_prop) {
 
     uint32 n_lines = aphids.size();
     uint32 n_stages = aphids[0].alates.X.n_elem;
@@ -80,7 +80,7 @@ arma::mat NewOneField::remove_field_dispersers(const double& disp_prop) {
 }
 
 // Add aphid dispersers from another field:
-void NewOneField::add_field_dispersers(const arma::mat& D) {
+void OneField::add_field_dispersers(const arma::mat& D) {
 
     uint32 n_lines = aphids.size();
 
@@ -111,7 +111,7 @@ void AllFields::do_perturb(std::deque<PerturbInfo>& perturbs,
         const PerturbInfo& pert(perturbs[i]);
         if (pert.time != t) break;
         double mult = pert.multiplier;
-        NewOneField& field(fields[pert.field]);
+        OneField& field(fields[pert.field]);
         if (pert.index < nl) { // aphids (non-parasitized)
             AphidPop& aphids(field.aphids[pert.index]);
             aphids.apterous.clear(mult);
@@ -163,7 +163,7 @@ bool AllFields::update(const uint32& t,
 
     bool all_empty = true;
 
-    for (NewOneField& field : fields) {
+    for (OneField& field : fields) {
 
         field.wasps.add_Y_0_check(t);
 
@@ -195,7 +195,7 @@ AllStageInfo AllFields::out_all_info() const {
 
     for (uint32 k = 0; k < fields.size(); k++) {
 
-        const NewOneField& field(fields[k]);
+        const OneField& field(fields[k]);
 
         // Adult wasps:
         out.push_back(k+1, "", "wasp", 1, field.wasps.Y);
@@ -248,7 +248,7 @@ void AllFields::from_vector(std::vector<double>& N) {
 
 
     uint32 i = 0;
-    for (NewOneField& field : fields) {
+    for (OneField& field : fields) {
         field.wasps.Y = N[i];
         i++;
         for (double& y : field.mummies.Y) {
@@ -360,7 +360,7 @@ void AllFields::set_new_pars(const std::vector<double>& K_,
 
     for (uint32 i = 0; i < fields.size(); i++) {
 
-        NewOneField& field(fields[i]);
+        OneField& field(fields[i]);
 
         field.K = K_[i];
         field.K_y = K_y_[i];

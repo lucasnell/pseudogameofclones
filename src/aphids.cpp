@@ -82,7 +82,7 @@ void AphidTypePop::process_error(const arma::vec& Xt,
 
 
 // logit(Pr(alates)) ~ b0 + b1 * z, where `z` is # aphids (all lines)
-double ApterousPop::alate_prop(const NewOneField* field) const {
+double ApterousPop::alate_prop(const OneField* field) const {
     const double lap = alate_b0_ + alate_b1_ * field->z;
     double ap;
     inv_logit__(lap, ap);
@@ -103,7 +103,7 @@ double ApterousPop::alate_prop(const NewOneField* field) const {
  to be added to the wasps.
  */
 
-double AphidPop::update(const NewOneField* field,
+double AphidPop::update(const OneField* field,
                         const WaspPop* wasps,
                         pcg32& eng) {
 

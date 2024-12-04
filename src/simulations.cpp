@@ -181,7 +181,7 @@ struct RepSummary {
 
         for (uint32 k = 0; k < fields.size(); k++) {
 
-            const NewOneField& field(fields[k]);
+            const OneField& field(fields[k]);
 
             for (uint32 i = 0; i < field.size(); i++) {
                 const AphidPop& aphid(field[i]);

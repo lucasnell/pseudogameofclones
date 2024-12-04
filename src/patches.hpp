@@ -68,7 +68,7 @@ struct PerturbInfo {
  For the constructors below, all vector arguments should have a length equal
  to the number of aphid lines.
 */
-class NewOneField {
+class OneField {
 
     friend class AllFields;
 
@@ -109,7 +109,7 @@ public:
 
 
 
-    NewOneField()
+    OneField()
         : aphids(), mummies(), wasps(), empty(true), pred_rate(0),
           K(0), K_y(1), this_j(0), extinct_N() {};
 
@@ -119,7 +119,7 @@ public:
      In `leslie_mat` below, items in vector are aphid lines, slices are
      alate/apterous/parasitized.
      */
-    NewOneField(const double& sigma_x,
+    OneField(const double& sigma_x,
              const double& sigma_y,
              const double& rho,
              const bool& aphid_demog_error,
@@ -182,7 +182,7 @@ public:
 
 
 
-    NewOneField(const NewOneField& other)
+    OneField(const OneField& other)
         : aphids(other.aphids), mummies(other.mummies), wasps(other.wasps),
           empty(other.empty), pred_rate(other.pred_rate),
           K(other.K), K_y(other.K_y), z(other.z),
@@ -191,7 +191,7 @@ public:
           extinct_N(other.extinct_N),
           constant_wasps(other.constant_wasps){};
 
-    NewOneField& operator=(const NewOneField& other) {
+    OneField& operator=(const OneField& other) {
         aphids = other.aphids;
         mummies = other.mummies;
         wasps = other.wasps;
@@ -387,7 +387,7 @@ class AllFields {
 
 public:
 
-    std::vector<NewOneField> fields;
+    std::vector<OneField> fields;
 
     double alate_field_disp_p;
     double wasp_disp_m0;
@@ -480,7 +480,7 @@ public:
         fields.reserve(n_fields);
         for (uint32 i = 0; i < n_fields; i++) {
             fields.push_back(
-                NewOneField(sigma_x, sigma_y, rho,
+                OneField(sigma_x, sigma_y, rho,
                             aphid_demog_error, wasp_demog_error,
                          K[i], K_y[i],
                          attack_surv,
@@ -494,7 +494,7 @@ public:
                          sex_ratio,
                          s_y[i], constant_wasps[i], eng));
             total_stages += 1;
-            const NewOneField& field(fields[i]);
+            const OneField& field(fields[i]);
             total_stages += field.mummies.Y.n_elem;
             for (const AphidPop& aphid : field.aphids) {
                 total_stages += aphid.apterous.X.n_elem;
@@ -509,10 +509,10 @@ public:
         return fields.size();
     }
 
-    NewOneField& operator[](const uint32& idx) {
+    OneField& operator[](const uint32& idx) {
         return fields[idx];
     }
-    const NewOneField& operator[](const uint32& idx) const {
+    const OneField& operator[](const uint32& idx) const {
         return fields[idx];
     }
 
@@ -534,7 +534,7 @@ public:
                 D += fields[i].remove_field_dispersers(alate_field_disp_p);
             }
             D /= static_cast<double>(fields.size());
-            for (NewOneField& field : fields) field.add_field_dispersers(D);
+            for (OneField& field : fields) field.add_field_dispersers(D);
         }
         return;
     }
@@ -545,20 +545,20 @@ public:
             double from_wasp_pool = 0;
             if (wasp_disp_m1 != 0) {
                 double p_out, lz;
-                for (NewOneField& field : fields) {
+                for (OneField& field : fields) {
                     lz = std::log(field.total_aphids());
                     p_out = wasp_disp_m0 * std::exp(-wasp_disp_m1 * lz);
                     from_wasp_pool += (field.wasps.Y * p_out);
                     field.wasps.Y *= (1 - p_out);
                 }
             } else {
-                for (NewOneField& field : fields) {
+                for (OneField& field : fields) {
                     from_wasp_pool += (field.wasps.Y * wasp_disp_m0);
                     field.wasps.Y *= (1 - wasp_disp_m0);
                 }
             }
             for (uint32 i = 0; i < fields.size(); i++) {
-                NewOneField& field(fields[i]);
+                OneField& field(fields[i]);
                 field.wasps.Y += (from_wasp_pool * wasp_field_attract[i]);
             }
         }
