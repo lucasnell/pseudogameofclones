@@ -15,10 +15,12 @@
 #include <utility>              // std::pair, std::make_pair
 #include <deque>                // deque
 #include <pcg/pcg_random.hpp>   // pcg prng
-#include <progress.hpp>         // for the progress bar
-#ifdef _OPENMP
-#include <omp.h>                // OpenMP
-#endif
+
+#define RCPPTHREAD_OVERRIDE_COUT 1    // std::cout override
+#define RCPPTHREAD_OVERRIDE_CERR 1    // std::cerr override
+#define RCPPTHREAD_OVERRIDE_THREAD 1  // std::thread override
+#include <RcppThread.h>         // multithreading
+
 
 
 #include "pseudogameofclones_types.hpp"  // integer types
@@ -28,56 +30,31 @@
 
 
 
-/*
- Allows you to verify that you're able to use multiple threads.
- */
-//[[Rcpp::export]]
-bool using_openmp() {
-    bool out = false;
-#ifdef _OPENMP
-    out = true;
-#endif
-    return out;
-}
 
 
 
 
-//' Check that the number of threads doesn't exceed the number available, and change
-//' to 1 if OpenMP isn't enabled.
+//' Check that the number of threads doesn't exceed the number available.
 //'
 //' @noRd
 //'
 inline void thread_check(uint32& n_threads) {
 
-#ifdef _OPENMP
     if (n_threads == 0) n_threads = 1;
-    if (n_threads > omp_get_max_threads()) {
-        std::string max_threads = std::to_string(omp_get_max_threads());
+
+    uint32 max_threads = std::thread::hardware_concurrency();
+
+    if (n_threads > max_threads) {
+        std::string mt_str = std::to_string(max_threads);
         std::string err_msg = "\nThe number of requested threads (" +
             std::to_string(n_threads) + ") exceeds the max available on the system (" +
-            max_threads + ").";
+            mt_str + ").";
         stop(err_msg.c_str());
     }
-#else
-    n_threads = 1;
-#endif
 
     return;
 }
 
-// For checking for user interrupts every N iterations:
-inline bool interrupt_check(uint32& iters,
-                            Progress& prog_bar,
-                            const uint32& N = 100) {
-    ++iters;
-    if (iters > N) {
-        if (prog_bar.is_aborted() || prog_bar.check_abort()) return true;
-        prog_bar.increment(iters);
-        iters = 0;
-    }
-    return false;
-}
 
 
 
@@ -357,15 +334,14 @@ void one_rep__(RepSummary& summary,
                const std::vector<uint32>& perturb_where,
                const std::vector<uint32>& perturb_who,
                const std::vector<double>& perturb_how,
-               Progress& prog_bar,
-               int& status_code) {
+               RcppThread::ProgressBar& prog_bar,
+               const bool& show_progress) {
 
     uint32 n_lines = fields.n_lines();
     uint32 n_fields = fields.size();
 
     summary.reserve(rep, max_t, save_every, n_lines, n_fields);
 
-    uint32 iters = 0;
 
     std::deque<PerturbInfo> perturbs(perturb_when.size());
     for (uint32 i = 0; i < perturb_when.size(); i++) {
@@ -378,20 +354,18 @@ void one_rep__(RepSummary& summary,
 
     for (uint32 t = 1; t <= max_t; t++) {
 
-        if (interrupt_check(iters, prog_bar)) {
-            status_code = -1;
-            return;
-        }
-
         // Basic updates for perturbations, dispersal, and population dynamics.
         // Returns true if all fields are empty.
         bool all_empty = fields.update(t, perturbs);
 
         if (t % save_every == 0 || t == max_t) summary.push_back(t, fields);
 
-
         // If all fields are empty, then stop this rep.
         if (all_empty) break;
+
+        if (show_progress) prog_bar++;
+
+        if (t % 10 == 0) RcppThread::checkUserInterrupt();
 
     }
 
@@ -412,8 +386,8 @@ void one_rep__(RepSummary& summary,
                const std::vector<uint32>& perturb_where,
                const std::vector<uint32>& perturb_who,
                const std::vector<double>& perturb_how,
-               Progress& prog_bar,
-               int& status_code) {
+               RcppThread::ProgressBar& prog_bar,
+               const bool& show_progress) {
 
     uint32 n_lines = fields.n_lines();
     uint32 n_fields = fields.size();
@@ -421,8 +395,6 @@ void one_rep__(RepSummary& summary,
     summary.reserve(rep, max_t, save_every, n_lines, n_fields);
 
     stage_ts.reserve(max_t);
-
-    uint32 iters = 0;
 
     std::deque<PerturbInfo> perturbs(perturb_when.size());
     for (uint32 i = 0; i < perturb_when.size(); i++) {
@@ -433,11 +405,6 @@ void one_rep__(RepSummary& summary,
     summary.push_back(0, fields);
 
     for (uint32 t = 1; t <= max_t; t++) {
-
-        if (interrupt_check(iters, prog_bar)) {
-            status_code = -1;
-            return;
-        }
 
         // Basic updates for perturbations, dispersal, and population dynamics.
         // Returns true if all fields are empty.
@@ -450,6 +417,9 @@ void one_rep__(RepSummary& summary,
 
         stage_ts.push_back(fields.out_all_info());
 
+        if (show_progress) prog_bar++;
+
+        if (t % 10 == 0) RcppThread::checkUserInterrupt();
 
     }
 
@@ -696,7 +666,7 @@ void check_args(const uint32& n_reps,
      ===============================================================
      */
 
-    // Check that # threads isn't too high and change to 1 if not using OpenMP:
+    // Check that # threads isn't too high:
     thread_check(n_threads);
 
     // doubles that must be >= 0
@@ -824,8 +794,7 @@ List sim_pseudogameofclones_cpp(const uint32& n_reps,
                perturb_when, perturb_where, perturb_who, perturb_how,
                n_threads);
 
-    Progress prog_bar(max_t * n_reps, show_progress);
-    std::vector<int> status_codes(n_threads, 0);
+    RcppThread::ProgressBar prog_bar(n_reps * max_t, 1);
 
     // Generate seeds for random number generators (1 set of seeds per rep)
     const std::vector<std::vector<uint64>> seeds = mt_seeds(n_reps);
@@ -861,34 +830,13 @@ List sim_pseudogameofclones_cpp(const uint32& n_reps,
         all_fields_vec[i].reseed(seeds[i]);
     }
 
-#ifdef _OPENMP
-#pragma omp parallel default(shared) num_threads(n_threads) if (n_threads > 1)
-{
-#endif
-
-    // Write the active seed per thread or just write one of the seeds.
-#ifdef _OPENMP
-    uint32 active_thread = omp_get_thread_num();
-#else
-    uint32 active_thread = 0;
-#endif
-    int& status_code(status_codes[active_thread]);
-
-    // Parallelize the Loop
-#ifdef _OPENMP
-#pragma omp for schedule(static)
-#endif
-    for (uint32 i = 0; i < n_reps; i++) {
-        if (status_code != 0) continue;
+    // Parallelized loop
+    RcppThread::parallelFor(0, n_reps, [&] (uint32 i) {
         one_rep__(summaries[i], all_fields_vec[i], i,
                   max_t, save_every,
                   perturb_when, perturb_where, perturb_who, perturb_how,
-                  prog_bar, status_code);
-    }
-
-#ifdef _OPENMP
-}
-#endif
+                  prog_bar, show_progress);
+    }, n_threads);
 
 
     /*
@@ -1033,8 +981,7 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
     uint32 n_reps = all_fields_vec.size();
 
     // No perturbations allowed here:
-    Progress prog_bar(max_t * n_reps, show_progress);
-    int status_code = 0;
+    RcppThread::ProgressBar prog_bar(max_t * n_reps, 1);
 
     std::vector<RepSummary> summaries(n_reps, RepSummary(sep_adults));
 
@@ -1042,23 +989,19 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
 
     if (stage_ts_out) {
         for (uint32 i = 0; i < n_reps; i++) {
-            if (status_code != 0) break;
             one_rep__(summaries[i], stage_ts[i], all_fields_vec[i], i,
                       max_t, save_every,
                       perturb_when, perturb_where, perturb_who, perturb_how,
-                      prog_bar, status_code);
+                      prog_bar, show_progress);
         }
     } else {
         for (uint32 i = 0; i < n_reps; i++) {
-            if (status_code != 0) break;
             one_rep__(summaries[i], all_fields_vec[i], i,
                       max_t, save_every,
                       perturb_when, perturb_where, perturb_who, perturb_how,
-                      prog_bar, status_code);
+                      prog_bar, show_progress);
         }
     }
-
-    if (status_code != 0) stop("User interruption.");
 
 
     /*

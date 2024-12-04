@@ -17,11 +17,10 @@ Depends:
     Rcpp (>= 1.0.0),
     tidyr
 Imports:
-    RcppProgress (>= 0.1)
+    RcppThread
 LinkingTo:
     Rcpp (>= 1.0.0),
-    RcppArmadillo,
-    RcppProgress
+    RcppArmadillo
 SystemRequirements: GNU make, C++11
 NeedsCompilation: yes
 RoxygenNote: 7.3.2

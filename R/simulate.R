@@ -1243,9 +1243,8 @@ print.cloneSimsRestart <- function(x, ...) {
 #' @param rho Environmental correlation among instars.
 #'     Defaults to `environ$rho`.
 #' @param n_reps Number of reps to simulate. Defaults to `1`.
-#' @param n_threads Number of threads to use if OpenMP is enabled
+#' @param n_threads Number of threads to use if `n_reps > 1`
 #'     (ignored otherwise).
-#'     Find out whether it's enabled using `pseudogameofclones:::using_openmp()`.
 #'     Defaults to `1`.
 #'
 #'
