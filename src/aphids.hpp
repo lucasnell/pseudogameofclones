@@ -7,6 +7,7 @@
 #include <pcg/pcg_random.hpp>   // pcg prng
 #include "pseudogameofclones_types.hpp"  // integer types
 #include "wasps.hpp"            // wasp classes
+#include "math.hpp"            // inv_logit function
 
 
 
@@ -126,7 +127,12 @@ public:
 
 
     // logit(Pr(alates)) ~ b0 + b1 * z, where `z` is # aphids (all lines)
-    double alate_prop(const OneField* field) const;
+    double alate_prop(const double& z) const {
+        const double lap = alate_b0_ + alate_b1_ * z;
+        double ap;
+        inv_logit__(lap, ap);
+        return ap;
+    }
 
 };
 // Aphid "type" population for alates of a particular clonal line

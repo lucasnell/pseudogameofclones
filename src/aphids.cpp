@@ -8,7 +8,6 @@
 #include "wasps.hpp"            // wasp classes
 #include "patches.hpp"          // field classes
 #include "pcg.hpp"              // runif_01 fxn
-#include "math.hpp"             // inv_logit__ fxn
 
 
 
@@ -81,17 +80,6 @@ void AphidTypePop::process_error(const arma::vec& Xt,
 
 
 
-// logit(Pr(alates)) ~ b0 + b1 * z, where `z` is # aphids (all lines)
-double ApterousPop::alate_prop(const OneField* field) const {
-    const double lap = alate_b0_ + alate_b1_ * field->z;
-    double ap;
-    inv_logit__(lap, ap);
-    return ap;
-}
-
-
-
-
 
 
 
@@ -160,7 +148,7 @@ double AphidPop::update(const OneField* field,
         }
 
         // # offspring from apterous aphids that are alates:
-        double alate_prop = apterous.alate_prop(field);
+        double alate_prop = apterous.alate_prop(field->z);
         double new_alates = apterous.X.front() * alate_prop;
 
         /*

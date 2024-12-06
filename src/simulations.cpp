@@ -47,8 +47,8 @@ inline void thread_check(uint32& n_threads) {
     if (n_threads > max_threads) {
         std::string mt_str = std::to_string(max_threads);
         std::string err_msg = "\nThe number of requested threads (" +
-            std::to_string(n_threads) + ") exceeds the max available on the system (" +
-            mt_str + ").";
+            std::to_string(n_threads) +
+            ") exceeds the max available on the system (" + mt_str + ").";
         stop(err_msg.c_str());
     }
 
@@ -325,56 +325,6 @@ private:
 
 
 
-void one_rep__(RepSummary& summary,
-               AllFields& fields,
-               const uint32& rep,
-               const uint32& max_t,
-               const uint32& save_every,
-               const std::vector<uint32>& perturb_when,
-               const std::vector<uint32>& perturb_where,
-               const std::vector<uint32>& perturb_who,
-               const std::vector<double>& perturb_how,
-               RcppThread::ProgressBar& prog_bar,
-               const bool& show_progress) {
-
-    uint32 n_lines = fields.n_lines();
-    uint32 n_fields = fields.size();
-
-    summary.reserve(rep, max_t, save_every, n_lines, n_fields);
-
-
-    std::deque<PerturbInfo> perturbs(perturb_when.size());
-    for (uint32 i = 0; i < perturb_when.size(); i++) {
-        perturbs[i] = PerturbInfo(perturb_when[i], perturb_where[i],
-                                  perturb_who[i], perturb_how[i]);
-    }
-
-    summary.push_back(0, fields);
-
-
-    for (uint32 t = 1; t <= max_t; t++) {
-
-        // Basic updates for perturbations, dispersal, and population dynamics.
-        // Returns true if all fields are empty.
-        bool all_empty = fields.update(t, perturbs);
-
-        if (t % save_every == 0 || t == max_t) summary.push_back(t, fields);
-
-        // If all fields are empty, then stop this rep.
-        if (all_empty) break;
-
-        if (show_progress) prog_bar++;
-
-        if (t % 10 == 0) RcppThread::checkUserInterrupt();
-
-    }
-
-
-    return;
-
-}
-
-
 
 void one_rep__(RepSummary& summary,
                std::vector<AllStageInfo>& stage_ts,
@@ -387,14 +337,15 @@ void one_rep__(RepSummary& summary,
                const std::vector<uint32>& perturb_who,
                const std::vector<double>& perturb_how,
                RcppThread::ProgressBar& prog_bar,
-               const bool& show_progress) {
+               const bool& show_progress,
+               const bool& stage_ts_out) {
 
     uint32 n_lines = fields.n_lines();
     uint32 n_fields = fields.size();
 
     summary.reserve(rep, max_t, save_every, n_lines, n_fields);
 
-    stage_ts.reserve(max_t);
+    if (stage_ts_out) stage_ts.reserve(max_t);
 
     std::deque<PerturbInfo> perturbs(perturb_when.size());
     for (uint32 i = 0; i < perturb_when.size(); i++) {
@@ -415,7 +366,7 @@ void one_rep__(RepSummary& summary,
         // If all fields are empty, then stop this rep.
         if (all_empty) break;
 
-        stage_ts.push_back(fields.out_all_info());
+        if (stage_ts_out) stage_ts.push_back(fields.out_all_info());
 
         if (show_progress) prog_bar++;
 
@@ -830,12 +781,15 @@ List sim_pseudogameofclones_cpp(const uint32& n_reps,
         all_fields_vec[i].reseed(seeds[i]);
     }
 
+    // Have to create this to make one_rep__ compatible with `restart_experiments`
+    std::vector<std::vector<AllStageInfo>> stage_ts(n_reps);
+
     // Parallelized loop
     RcppThread::parallelFor(0, n_reps, [&] (uint32 i) {
-        one_rep__(summaries[i], all_fields_vec[i], i,
+        one_rep__(summaries[i], stage_ts[i], all_fields_vec[i], i,
                   max_t, save_every,
                   perturb_when, perturb_where, perturb_who, perturb_how,
-                  prog_bar, show_progress);
+                  prog_bar, show_progress, false);
     }, n_threads);
 
 
@@ -972,13 +926,17 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
                              const std::vector<uint32>& perturb_when,
                              const std::vector<uint32>& perturb_where,
                              const std::vector<uint32>& perturb_who,
-                             const std::vector<double>& perturb_how) {
+                             const std::vector<double>& perturb_how,
+                             uint32 n_threads) {
 
 
     XPtr<std::vector<AllFields>> all_fields_vec_xptr(all_fields_ptr);
     std::vector<AllFields>& all_fields_vec(*all_fields_vec_xptr);
 
     uint32 n_reps = all_fields_vec.size();
+
+    // Check that # threads isn't too high:
+    thread_check(n_threads);
 
     // No perturbations allowed here:
     RcppThread::ProgressBar prog_bar(max_t * n_reps, 1);
@@ -987,22 +945,13 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
 
     std::vector<std::vector<AllStageInfo>> stage_ts(n_reps);
 
-    if (stage_ts_out) {
-        for (uint32 i = 0; i < n_reps; i++) {
-            one_rep__(summaries[i], stage_ts[i], all_fields_vec[i], i,
-                      max_t, save_every,
-                      perturb_when, perturb_where, perturb_who, perturb_how,
-                      prog_bar, show_progress);
-        }
-    } else {
-        for (uint32 i = 0; i < n_reps; i++) {
-            one_rep__(summaries[i], all_fields_vec[i], i,
-                      max_t, save_every,
-                      perturb_when, perturb_where, perturb_who, perturb_how,
-                      prog_bar, show_progress);
-        }
-    }
-
+    // Parallelized loop
+    RcppThread::parallelFor(0, n_reps, [&] (uint32 i) {
+        one_rep__(summaries[i], stage_ts[i], all_fields_vec[i], i,
+                  max_t, save_every,
+                  perturb_when, perturb_where, perturb_who, perturb_how,
+                  prog_bar, show_progress, stage_ts_out);
+    }, n_threads);
 
     /*
      When # reps > 1, combine all RepSummary objects into the first one.
