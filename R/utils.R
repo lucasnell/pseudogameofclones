@@ -45,22 +45,3 @@ rel_res_fitness <- function(para, p_res = 0.48) {
 
 }
 
-
-#' Remove tibbles from a cloneSims or cloneSimsRestart object
-#'
-#' @param sims_obj A cloneSims or cloneSimsRestart object
-#'
-#' @return
-#' The same class of object as input, but with the `aphids` and `wasps` fields
-#' converted to data frames instead of tibbles.
-#'
-#' @export
-#'
-rm_tibs <- function(sims_obj) {
-    stopifnot(inherits(sims_obj, "cloneSims") |
-                  inherits(sims_obj, "cloneSimsRestart"))
-    for (n in c("aphids", "wasps")) {
-        sims_obj[[n]] <- as.data.frame(sims_obj[[n]])
-    }
-    return(sims_obj)
-}

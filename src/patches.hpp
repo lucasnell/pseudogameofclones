@@ -93,8 +93,7 @@ class OneField {
 public:
 
     std::vector<AphidPop> aphids;   // aphids in this field
-    MummyPop mummies;               // mummies in this field
-    WaspPop wasps;                  // wasps in this field
+    WaspPop wasps;                  // wasps / mummies in this field
     bool empty;                     // whether no aphids are in this field
     double pred_rate;               // predation on aphids and mummies
     double K;                       // unparasitized aphid carrying capacity
@@ -109,7 +108,7 @@ public:
 
 
     OneField()
-        : aphids(), mummies(), wasps(), empty(true), pred_rate(0),
+        : aphids(), wasps(), empty(true), pred_rate(0),
           K(0), K_y(1), extinct_N() {};
 
     /*
@@ -118,39 +117,15 @@ public:
      In `leslie_mat` below, items in vector are aphid lines, slices are
      alate/apterous/parasitized.
      */
-    OneField(const double& sigma_x,
-             const double& sigma_y,
-             const double& rho,
-             const bool& aphid_demog_error,
-             const bool& wasp_demog_error,
+    OneField(const std::vector<AphidPop>& aphids_,
+             const WaspPop& wasps_,
              const double& K_,
              const double& K_y_,
-             const arma::mat& attack_surv_,
-             const std::vector<std::string>& aphid_name,
-             const std::vector<arma::cube>& leslie_mat,
-             const arma::cube& aphid_density_0,
-             const std::vector<double>& alate_b0,
-             const std::vector<double>& alate_b1,
-             const std::vector<uint32>& field_disp_start,
-             const std::vector<uint32>& living_days,
              const double& pred_rate_,
              const double& extinct_N_,
-             const arma::vec& mum_density_0,
-             const double& mum_smooth,
-             const arma::vec& rel_attack_,
-             const double& a_,
-             const double& k_,
-             const double& h_,
-             const double& wasp_density_0_,
-             const uint32& wasp_delay_,
-             const double& sex_ratio_,
-             const double& s_y_,
              const bool& constant_wasps_)
-        : aphids(),
-          mummies(mum_density_0, mum_smooth),
-          wasps(rel_attack_, a_, k_, h_,
-                wasp_density_0_, wasp_delay_,
-                sex_ratio_, s_y_, sigma_y, wasp_demog_error),
+        : aphids(aphids_),
+          wasps(wasps_),
           empty(true),
           pred_rate(pred_rate_),
           K(K_),
@@ -158,20 +133,10 @@ public:
           extinct_N(extinct_N_),
           constant_wasps(constant_wasps_) {
 
-        uint32 n_lines = aphid_name.size();
-
-        aphids.reserve(n_lines);
-
-        for (uint32 i = 0; i < n_lines; i++) {
-            AphidPop ap(aphid_name[i], sigma_x, rho, aphid_demog_error,
-                        attack_surv_.col(i),
-                        leslie_mat[i], aphid_density_0.slice(i),
-                        alate_b0[i], alate_b1[i], field_disp_start[i],
-                        living_days[i]);
-            aphids.push_back(ap);
-            double N = aphids.back().total_aphids();
+        for (AphidPop& aphid : aphids) {
+            double N = aphid.total_aphids();
             if (N < extinct_N) {
-                aphids.back().clear();
+                aphid.clear();
             } else if (empty) empty = false;
         }
 
@@ -180,7 +145,7 @@ public:
 
 
     OneField(const OneField& other)
-        : aphids(other.aphids), mummies(other.mummies), wasps(other.wasps),
+        : aphids(other.aphids), wasps(other.wasps),
           empty(other.empty), pred_rate(other.pred_rate),
           K(other.K), K_y(other.K_y), z(other.z),
           S(other.S), S_y(other.S_y),
@@ -189,7 +154,6 @@ public:
 
     OneField& operator=(const OneField& other) {
         aphids = other.aphids;
-        mummies = other.mummies;
         wasps = other.wasps;
         empty = other.empty;
         pred_rate = other.pred_rate;
@@ -222,7 +186,7 @@ public:
      */
     void clear() {
         for (AphidPop& ap : aphids) ap.clear();
-        mummies.clear();
+        wasps.mummies.clear();
         empty = true;
         return;
     }
@@ -241,8 +205,8 @@ public:
                 ap.extinct = false;
             }
         }
-        mummies.clear(surv);
-        if (arma::accu(mummies.Y) < extinct_N) mummies.Y.fill(0);
+        wasps.mummies.clear(surv);
+        if (arma::accu(wasps.mummies.Y) < extinct_N) wasps.mummies.Y.fill(0);
         return;
     }
 
@@ -264,7 +228,7 @@ public:
     }
     // Total mummies in field
     inline double total_mummies() const {
-        double tm = arma::accu(mummies.Y);
+        double tm = arma::accu(wasps.mummies.Y);
         return tm;
     }
 
@@ -422,40 +386,19 @@ public:
     };
 
 
+
     AllFields(const uint32& n_fields,
-              const std::vector<uint32>& wasp_delay,
-              const double& sigma_x,
-              const double& sigma_y,
-              const double& rho,
-              const bool& aphid_demog_error,
-              const bool& wasp_demog_error,
+              const std::vector<AphidPop>& aphids_,
+              const WaspPop& wasps_,
               const std::vector<double>& K,
               const std::vector<double>& K_y,
-              const arma::mat& attack_surv,
-              const std::vector<std::string>& aphid_name,
-              const std::vector<arma::cube>& leslie_mat,
-              const std::vector<arma::cube>& aphid_density_0,
-              const std::vector<double>& alate_b0,
-              const std::vector<double>& alate_b1,
-              const std::vector<uint32>& field_disp_start,
-              const std::vector<uint32>& living_days,
               const std::vector<double>& pred_rate,
               const double& extinct_N_,
-              const arma::mat& mum_density_0,
-              const double& mum_smooth,
-              const arma::vec& rel_attack,
-              const double& a,
-              const double& k,
-              const double& h,
-              const std::vector<double>& wasp_density_0,
-              const double& sex_ratio,
-              const std::vector<double>& s_y,
               const std::vector<bool>& constant_wasps,
               const double& alate_field_disp_p_,
               const double& wasp_disp_m0_,
               const double& wasp_disp_m1_,
-              const std::vector<double>& wasp_field_attract_,
-              const std::vector<uint64>& seeds)
+              const std::vector<double>& wasp_field_attract_)
         : eng(), fields(),
           alate_field_disp_p(alate_field_disp_p_),
           wasp_disp_m0(wasp_disp_m0_),
@@ -463,8 +406,6 @@ public:
           wasp_field_attract(wasp_field_attract_),
           extinct_N(extinct_N_),
           total_stages(0) {
-
-        seed_pcg(eng, seeds);
 
         //' Make sure `wasp_field_attract` sums to 1 (negative values
         //' and a sum <= 0 are already checked for in sim_pseudogameofclones_cpp):
@@ -475,21 +416,11 @@ public:
         fields.reserve(n_fields);
         for (uint32 i = 0; i < n_fields; i++) {
             fields.push_back(
-                OneField(sigma_x, sigma_y, rho,
-                         aphid_demog_error, wasp_demog_error,
-                         K[i], K_y[i],
-                         attack_surv,
-                         aphid_name, leslie_mat, aphid_density_0[i],
-                         alate_b0, alate_b1,
-                         field_disp_start,
-                         living_days, pred_rate[i],
-                         extinct_N, mum_density_0, mum_smooth,
-                         rel_attack, a, k, h,
-                         wasp_density_0[i], wasp_delay[i],
-                         sex_ratio, s_y[i], constant_wasps[i]));
+                OneField(aphids_, wasps_, K[i], K_y[i], pred_rate[i],
+                         extinct_N, constant_wasps[i]));
             total_stages += 1;
             const OneField& field(fields[i]);
-            total_stages += field.mummies.Y.n_elem;
+            total_stages += field.wasps.mummies.Y.n_elem;
             for (const AphidPop& aphid : field.aphids) {
                 total_stages += aphid.apterous.X.n_elem;
                 total_stages += aphid.alates.X.n_elem;

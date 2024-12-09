@@ -22,7 +22,7 @@ using namespace Rcpp;
 void OneField::update(pcg32& eng) {
 
     wasps.x = total_unpar_aphids();
-    double old_mums = mummies.Y.back();
+    double old_mums = wasps.mummies.Y.back();
 
     z = total_aphids();
 
@@ -45,9 +45,9 @@ void OneField::update(pcg32& eng) {
         extinct_colonize(i);
     }
 
-    mummies.update(pred_rate, nm);
-    double mums = arma::accu(mummies.Y);
-    if (mums < extinct_N) mummies.Y.fill(0);
+    wasps.mummies.update(pred_rate, nm);
+    double mums = arma::accu(wasps.mummies.Y);
+    if (mums < extinct_N) wasps.mummies.Y.fill(0);
 
     // Lastly update adult wasps (if constant_wasps = false):
     if (!constant_wasps) {
@@ -121,8 +121,8 @@ void AllFields::do_perturb(std::deque<PerturbInfo>& perturbs,
                 field.empty = true;
             }
         } else if (pert.index == nl) { // mummies + parasitized aphids
-            field.mummies.clear(mult);
-            if (arma::accu(field.mummies.Y) < extinct_N) field.mummies.Y.fill(0);
+            field.wasps.mummies.clear(mult);
+            if (arma::accu(field.wasps.mummies.Y) < extinct_N) field.wasps.mummies.Y.fill(0);
             for (AphidPop& aphids : field.aphids) {
                 aphids.paras.clear(mult);
                 if (aphids.total_aphids() < extinct_N) aphids.clear();
@@ -201,8 +201,8 @@ AllStageInfo AllFields::out_all_info() const {
         out.push_back(k+1, "", "wasp", 1, field.wasps.Y);
 
         // Mummies:
-        for (uint32 i = 0; i < field.mummies.Y.n_elem; i++) {
-            out.push_back(k+1, "", "mummy", i+1, field.mummies.Y[i]);
+        for (uint32 i = 0; i < field.wasps.mummies.Y.n_elem; i++) {
+            out.push_back(k+1, "", "mummy", i+1, field.wasps.mummies.Y[i]);
         }
 
         // Everything else:
@@ -251,7 +251,7 @@ void AllFields::from_vector(std::vector<double>& N) {
     for (OneField& field : fields) {
         field.wasps.Y = N[i];
         i++;
-        for (double& y : field.mummies.Y) {
+        for (double& y : field.wasps.mummies.Y) {
             y = N[i];
             i++;
         }
@@ -375,7 +375,7 @@ void AllFields::set_new_pars(const std::vector<double>& K_,
          */
         field.wasps.Y_0 = 0;
 
-        field.mummies.smooth = mum_smooth_;
+        field.wasps.mummies.smooth = mum_smooth_;
         field.pred_rate = pred_rate_[i];
 
         for (uint32 k = 0; k < field.aphids.size(); k++) {
@@ -393,3 +393,110 @@ void AllFields::set_new_pars(const std::vector<double>& K_,
 }
 
 
+
+
+
+//[[Rcpp::export]]
+SEXP make_field_ptr(const bool& aphid_demog_error,
+                    const arma::mat& aphid_density_0,
+                    const bool& wasp_demog_error,
+                    const std::vector<double>& wasp_density_0,
+                    const std::vector<uint32>& wasp_delay,
+                    const std::vector<double>& mummy_density_0,
+                    const bool& environ_error,
+                    SEXP aphids_ptr,
+                    SEXP wasp_ptr,
+                    const uint32& n_fields,
+                    const std::vector<double>& K,
+                    const std::vector<double>& K_y,
+                    const std::vector<double>& pred_rate,
+                    const double& extinct_N,
+                    const std::vector<bool>& constant_wasps,
+                    const double& alate_field_disp_p,
+                    const double& wasp_disp_m0,
+                    const double& wasp_disp_m1,
+                    const std::vector<double>& wasp_field_attract) {
+
+
+    if (aphid_density_0.n_rows != n_fields)
+        stop("aphid_density_0.n_rows != n_fields");
+    if (wasp_density_0.size() != n_fields)
+        stop("wasp_density_0.size() != n_fields");
+    if (wasp_delay.size() != n_fields)
+        stop("wasp_delay.size() != n_fields");
+    if (mummy_density_0.size() != n_fields)
+        stop("mummy_density_0.size() != n_fields");
+    if (K.size() != n_fields)
+        stop("K.size() != n_fields");
+    if (K_y.size() != n_fields)
+        stop("K_y.size() != n_fields");
+    if (pred_rate.size() != n_fields)
+        stop("pred_rate.size() != n_fields");
+    if (constant_wasps.size() != n_fields)
+        stop("constant_wasps.size() != n_fields");
+    if (wasp_field_attract.size() != n_fields)
+        stop("wasp_field_attract.size() != n_fields");
+
+    XPtr<std::vector<AphidPop>> aphids_xptr(aphids_ptr);
+    const std::vector<AphidPop>& aphids(*aphids_xptr);
+
+    uint32 n_lines = aphids.size();
+
+    if (aphid_density_0.n_cols != n_lines)
+        stop("aphid_density_0.n_cols != n_lines");
+
+    XPtr<WaspPop> wasp_xptr(wasp_ptr);
+    const WaspPop& wasps(*wasp_xptr);
+
+    XPtr<AllFields> fields_xptr(
+            new AllFields(n_fields, aphids, wasps, K, K_y, pred_rate,
+                          extinct_N, constant_wasps, alate_field_disp_p,
+                          wasp_disp_m0, wasp_disp_m1, wasp_field_attract), true);
+    AllFields& fields(*fields_xptr);
+
+    for (uint32 i = 0; i < n_fields; i++) {
+        OneField& field(fields[i]);
+        for (uint32 j = 0; j < n_lines; j++) {
+            field[j].adjust_error_X0(aphid_demog_error,
+                                     environ_error,
+                                     aphid_density_0(i,j));
+        }
+
+        field.wasps.adjust_error_Y0(wasp_demog_error, environ_error, wasp_delay[i],
+                                    wasp_density_0[i], mummy_density_0[i]);
+
+    }
+
+
+    return fields_xptr;
+
+}
+
+
+
+
+SEXP make_perturb_ptr(const std::vector<uint32>& perturb_when,
+                      const std::vector<uint32>& perturb_where,
+                      const std::vector<uint32>& perturb_who,
+                      const std::vector<double>& perturb_how) {
+
+    uint32 n_perturbs = perturb_when.size();
+    if (perturb_where.size() != n_perturbs)
+        stop("perturb_where.size() != perturb_when.size()");
+    if (perturb_who.size() != n_perturbs)
+        stop("perturb_who.size() != perturb_when.size()");
+    if (perturb_how.size() != n_perturbs)
+        stop("perturb_how.size() != perturb_when.size()");
+
+    XPtr<std::deque<PerturbInfo>> perturbs_xptr(
+            new std::deque<PerturbInfo>(n_perturbs), true);
+    std::deque<PerturbInfo>& perturbs(*perturbs_xptr);
+
+    for (uint32 i = 0; i < n_perturbs; i++) {
+        perturbs[i] = PerturbInfo(perturb_when[i], perturb_where[i],
+                                  perturb_who[i], perturb_how[i]);
+    }
+
+    return perturbs_xptr;
+
+}

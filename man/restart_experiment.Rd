@@ -27,7 +27,8 @@ restart_experiment(
   sep_adults = NULL,
   show_progress = NULL,
   perturb = NULL,
-  no_warns = FALSE
+  no_warns = FALSE,
+  n_threads = 1L
 )
 }
 \arguments{
@@ -44,105 +45,6 @@ information for all time points.
 If \code{TRUE}, the output object will contain this information in the
 \code{stage_ts} field, which will be a list of data frames.
 Defaults to \code{FALSE}.}
-
-\item{max_t}{How many days to simulate. Defaults to \code{250}.}
-
-\item{save_every}{Abundances will be stored every \code{save_every} time points.
-Defaults to \code{1}.}
-
-\item{alate_field_disp_p}{Proportion of alates from each field that
-are added to the dispersal pool.
-After adding alates to the pool, they are then evenly distributed
-to all fields.
-Defaults to \code{0.1}.}
-
-\item{K}{Aphid density dependence.
-Defaults to \code{12.5e3} because this caused simulations to
-approximately match experiments.}
-
-\item{alate_b0}{The proportion of offspring from apterous aphids is
-\code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
-aphids in that field.
-Defaults to \code{-5}.}
-
-\item{alate_b1}{The proportion of offspring from apterous aphids is
-\code{inv_logit(alate_b0 + alate_b1 * N)} where \code{N} is the total number of
-aphids in that field.
-Defaults to \code{0.0022}, which makes alate production only mildly
-density dependent.}
-
-\item{K_y_mult}{The number multiplied by \code{K} to get density dependence for
-parasitized aphids.
-Defaults to \code{1 / 1.57}, which is from Meisner et al. (2014).}
-
-\item{s_y}{Daily survival rate of adult wasps.
-Defaults to \code{populations$s_y}, which is from Meisner et al. (2014).}
-
-\item{a}{Parasitoid attack rate. Defaults to the internal object
-\code{wasp_attack$a}, which is from Meisner et al. (2014).}
-
-\item{k}{Aggregation parameter of the negative binomial distribution.
-Defaults to the internal object \code{wasp_attack$k},
-which is from Meisner et al. (2014).}
-
-\item{h}{Parasitoid handling time. Defaults to the internal object
-\code{wasp_attack$h}, which is from Meisner et al. (2014).}
-
-\item{wasp_disp_m0}{Proportion of adult wasps from each field that
-are added to the dispersal pool when there are no aphids present.
-After adding wasps to the pool, they are then evenly distributed
-to all fields unless values for \code{wasp_field_attract} are provided.
-Defaults to \code{0}.}
-
-\item{wasp_disp_m1}{Effect of aphid density on wasp emigration from a patch.
-Emigration is \code{wasp_disp_m0 * exp(-wasp_disp_m1 * log(z))}, where \code{z} is
-the total number of living aphids in the patch.
-Note that if \code{wasp_disp_m0 = 0}, then this parameter doesn't change
-anything.
-Defaults to \code{0}.}
-
-\item{wasp_field_attract}{Relative attractiveness of fields to wasps.
-This affects the proportion of wasps that immigrate from the dispersal
-pool to each field.
-It doesn't change the number of wasps that leave fields.
-This can be a single numeric or a numeric vector of length \code{n_fields}.
-If a single numeric is provided, all fields are equally attractive
-to wasps.
-If a vector is provided, then the vector is divided by its sum
-(to make it sum to 1), then those values are used as the proportion of
-wasps from the dispersal pool that immigrate to each field.
-Note that if \code{wasp_disp_m0 = 0}, then this parameter doesn't change
-anything.
-Defaults to \code{1}.}
-
-\item{mum_smooth}{Proportion of mummies that will NOT take exactly 3 days
-to develop. As this value approaches 2/3, it will provide greater
-smoothing of wasp numbers through time.
-Defaults to \code{0.4}.}
-
-\item{pred_rate}{Daily predation rate on aphids and mummies.
-Defaults to \code{0.1}.}
-
-\item{show_progress}{Boolean for whether to show progress bar.
-Defaults to \code{FALSE}.}
-
-\item{perturb}{Information for perturbing populations in the simulations.
-It should be a dataframe with 4 columns:
-* \code{when}: Integers indicating at what timepoint(s) to do the
-perturbations. These can be repeated if you want to perturb
-multiple things at the same time.
-* \code{where}: What field to do the perturbations in.
-* \code{who}: Which population to perturb.
-This can be a character vector where values must be the name of an
-aphid line, \code{"wasps"}, or \code{"mummies"}.
-It can also be an integer vector where, for \code{n} aphid lines,
-values \verb{<= n} indicate an aphid line,
-values \verb{== n+1} indicate mummies,
-and values \verb{== n+2} indicate adult wasps.
-Note that perturbing the mummy population also perturbs the
-still-living but parasitized aphids, too.
-* \code{how}: Numbers \verb{>= 0} that are multiplied by the desired population
-to cause the perturbation.}
 }
 \description{
 Note for most of this function's arguments, their default value is \code{NULL},

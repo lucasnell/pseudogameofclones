@@ -166,3 +166,50 @@ double AphidPop::update(const OneField* field,
 
 
 
+
+//[[Rcpp::export]]
+SEXP make_aphids_ptr(List aphid_list) {
+
+    XPtr<std::vector<AphidPop>> aphid_pops_xptr(
+            new std::vector<AphidPop>(), true);
+    std::vector<AphidPop>& aphid_pops(*aphid_pops_xptr);
+    aphid_pops.reserve(aphid_list.size());
+
+    std::string name;
+    double sigma_x;
+    double rho;
+    bool demog_error = false; // this parameter is defined later
+    arma::vec attack_surv;
+    arma::cube leslie_mat;
+    arma::mat density_0;
+    double alate_b0;
+    double alate_b1;
+    uint32 field_disp_start;
+    uint32 living_days;
+
+    for (uint32 i = 0; i < aphid_list.size(); i++) {
+
+        List aphid_i(aphid_list(i));
+
+        name = as<std::string>(aphid_i["name"]);
+        sigma_x = aphid_i["sigma_x"];
+        rho = aphid_i["rho"];
+        attack_surv = as<arma::vec>(aphid_i["attack_surv"]);
+        leslie_mat = as<arma::cube>(aphid_i["leslie_mat"]);
+        density_0 = as<arma::mat>(aphid_i["distr_0"]);
+        alate_b0 = aphid_i["alate_b0"];
+        alate_b1 = aphid_i["alate_b1"];
+        field_disp_start = aphid_i["field_disp_start"];
+        living_days = aphid_i["living_days"];
+
+        aphid_pops.push_back(AphidPop(name, sigma_x, rho, demog_error,
+                                      attack_surv, leslie_mat, density_0,
+                                      alate_b0, alate_b1, field_disp_start,
+                                      living_days));
+    }
+
+
+    return aphid_pops_xptr;
+
+}
+

@@ -332,10 +332,7 @@ void one_rep__(RepSummary& summary,
                const uint32& rep,
                const uint32& max_t,
                const uint32& save_every,
-               const std::vector<uint32>& perturb_when,
-               const std::vector<uint32>& perturb_where,
-               const std::vector<uint32>& perturb_who,
-               const std::vector<double>& perturb_how,
+               const std::deque<PerturbInfo> perturbs_,
                RcppThread::ProgressBar& prog_bar,
                const bool& show_progress,
                const bool& stage_ts_out) {
@@ -347,11 +344,7 @@ void one_rep__(RepSummary& summary,
 
     if (stage_ts_out) stage_ts.reserve(max_t);
 
-    std::deque<PerturbInfo> perturbs(perturb_when.size());
-    for (uint32 i = 0; i < perturb_when.size(); i++) {
-        perturbs[i] = PerturbInfo(perturb_when[i], perturb_where[i],
-                                  perturb_who[i], perturb_how[i]);
-    }
+    std::deque<PerturbInfo> perturbs(perturbs_);
 
     summary.push_back(0, fields);
 
@@ -381,369 +374,34 @@ void one_rep__(RepSummary& summary,
 
 
 
-/*
- This template checks for any negative values, and returns an error if
- it finds any.
- It works on std::vector<>, arma::Col<>, arma::Row<>, arma::Mat<>,
- and arma::Cube<>.
- */
-//
-template <typename T>
-void negative_check(const T& input, const std::string& name) {
-    for (uint32 i = 0; i < input.size(); i++) {
-        if (input[i] < 0) {
-            std::string msg = "\nERROR: " + name + " contains negative items\n";
-            stop(msg.c_str());
-        }
-    }
-    return;
-}
-// Same but for one double
-void one_negative_check(const double& input, const std::string& name) {
-    if (input < 0) {
-        std::string msg = "\nERROR: " + name + " is negative\n";
-        stop(msg.c_str());
-    }
-    return;
-}
-
-
-// Same but checks that the numbers are in range [0,1]
-template <typename T>
-void non_prop_check(const T& input, const std::string& name) {
-    for (uint32 i = 0; i < input.size(); i++) {
-        if (input[i] < 0 || input[i] > 1) {
-            std::string msg = "\nERROR: " + name + " contains items outside " +
-                "the range [0,1]\n";
-            stop(msg.c_str());
-        }
-    }
-    return;
-}
-// Same but for one double
-void one_non_prop_check(const double& input, const std::string& name) {
-    if (input < 0 || input > 1) {
-        std::string msg = "\nERROR: " + name + " is outside the range [0,1]\n";
-        stop(msg.c_str());
-    }
-    return;
-}
-
-
-// Same but number must be > 0
-template <typename T>
-void positive_check(const T& input, const std::string& name) {
-    for (uint32 i = 0; i < input.size(); i++) {
-        if (input[i] <= 0) {
-            std::string msg = "\nERROR: " + name + " contains items <= 0\n";
-            stop(msg.c_str());
-        }
-    }
-    return;
-}
-// Same but for unsigned integer
-void one_positive_check(const uint32& input, const std::string& name) {
-    if (input == 0) {
-        std::string msg = "\nERROR: " + name + " is zero\n";
-        stop(msg.c_str());
-    }
-    return;
-}
-
-
-
-
-
-void check_args(const uint32& n_reps,
-                const uint32& n_lines,
-                const uint32& n_fields,
-                const uint32& max_t,
-                const uint32& save_every,
-                const std::vector<double>& K,
-                const std::vector<double>& K_y,
-                const arma::mat& attack_surv,
-                const bool& aphid_demog_error,
-                const bool& wasp_demog_error,
-                const double& sigma_x,
-                const double& sigma_y,
-                const double& rho,
-                const double& extinct_N,
-                const std::vector<std::string>& aphid_name,
-                const std::vector<arma::cube>& leslie_mat,
-                const std::vector<arma::cube>& aphid_density_0,
-                const std::vector<double>& alate_b0,
-                const std::vector<double>& alate_b1,
-                const std::vector<uint32>& field_disp_start,
-                const std::vector<uint32>& living_days,
-                const std::vector<double>& pred_rate,
-                const arma::mat& mum_density_0,
-                const double& mum_smooth,
-                const arma::vec& rel_attack,
-                const double& a,
-                const double& k,
-                const double& h,
-                const std::vector<double>& wasp_density_0,
-                const std::vector<uint32>& wasp_delay,
-                const double& wasp_disp_m0,
-                const double& wasp_disp_m1,
-                const std::vector<double>& wasp_field_attract,
-                const double& sex_ratio,
-                const std::vector<double>& s_y,
-                const std::vector<bool>& constant_wasps,
-                const std::vector<uint32>& perturb_when,
-                const std::vector<uint32>& perturb_where,
-                const std::vector<uint32>& perturb_who,
-                const std::vector<double>& perturb_how,
-                uint32& n_threads) {
-
-
-    /*
-     ===============================================================
-     Checking dimensions
-     ===============================================================
-     */
-    uint32 n_stages = aphid_density_0.front().n_rows;
-
-    if (n_reps == 0) stop("\nERROR: n_reps == 0\n");
-    if (n_lines == 0) stop("\nERROR: n_lines == 0\n");
-    if (n_fields == 0) stop("\nERROR: n_fields == 0\n");
-    if (n_stages == 0) stop("\nERROR: n_stages == 0\n");
-
-    if (leslie_mat.size() != n_lines) {
-        stop("\nERROR: leslie_mat.size() != n_lines\n");
-    }
-    if (alate_b0.size() != n_lines) {
-        stop("\nERROR: alate_b0.size() != n_lines\n");
-    }
-    if (alate_b1.size() != n_lines) {
-        stop("\nERROR: alate_b1.size() != n_lines\n");
-    }
-    if (field_disp_start.size() != n_lines) {
-        stop("\nERROR: field_disp_start.size() != n_lines\n");
-    }
-    if (living_days.size() != n_lines) {
-        stop("\nERROR: living_days.size() != n_lines\n");
-    }
-    if (attack_surv.n_cols != n_lines || attack_surv.n_rows < 2) {
-        stop(std::string("\nERROR: attack_surv.n_cols != n_lines || ") +
-            std::string("attack_surv.n_rows < 2\n"));
-    }
-    if (leslie_mat.size() != n_lines) {
-        stop("\nERROR: leslie_mat.size() != n_lines\n");
-    }
-
-
-
-    // In `aphid_density_0`, rows are aphid stages, columns are types (alate vs
-    // apterous), and slices are aphid lines.
-    if (aphid_density_0.size() != n_fields) {
-        stop("\nERROR: aphid_density_0.size() != n_fields\n");
-    }
-    for (uint32 i = 0; i < n_fields; i++) {
-        if (aphid_density_0[i].n_rows != n_stages) {
-            stop("\nERROR: aphid_density_0[i].n_rows != n_stages\n");
-        }
-        if (aphid_density_0[i].n_cols != 2) {
-            stop("\nERROR: aphid_density_0[i].n_cols != 2\n");
-        }
-        if (aphid_density_0[i].n_slices != n_lines) {
-            stop("\nERROR: aphid_density_0[i].n_slices != n_lines\n");
-        }
-    }
-
-
-    // In `leslie_mat`, items in vector are aphid lines, slices are
-    // alate/apterous/parasitized.
-    if (leslie_mat.size() != n_lines) {
-        stop("\nERROR: leslie_mat.size() != n_lines\n");
-    }
-    for (uint32 i = 0; i < n_lines; i++) {
-        if (leslie_mat[i].n_rows != n_stages) {
-            stop("\nERROR: leslie_mat[i].n_rows != n_stages\n");
-        }
-        if (leslie_mat[i].n_cols != n_stages) {
-            stop("\nERROR: leslie_mat[i].n_cols != n_stages\n");
-        }
-        if (leslie_mat[i].n_slices != 3) {
-            stop("\nERROR: leslie_mat[i].n_slices != 3\n");
-        }
-    }
-
-
-    if (rel_attack.n_elem != n_stages) {
-        stop("\nERROR: rel_attack.n_elem != n_stages\n");
-    }
-
-    if (K_y.size() != n_fields) {
-        stop("\nERROR: K_y.size() != n_fields\n");
-    }
-    if (wasp_density_0.size() != n_fields) {
-        stop("\nERROR: wasp_density_0.size() != n_fields\n");
-    }
-    if (wasp_delay.size() != n_fields) {
-        stop("\nERROR: wasp_delay.size() != n_fields\n");
-    }
-    if (wasp_field_attract.size() != n_fields) {
-        stop("\nERROR: wasp_field_attract.size() != n_fields\n");
-    }
-    if (s_y.size() != n_fields) {
-        stop("\nERROR: s_y.size() != n_fields\n");
-    }
-    if (constant_wasps.size() != n_fields) {
-        stop("\nERROR: constant_wasps.size() != n_fields\n");
-    }
-
-    if (pred_rate.size() != n_fields) {
-        stop("\nERROR: pred_rate.size() != n_fields\n");
-    }
-    if (mum_density_0.n_cols != n_fields) {
-        stop("\nERROR: mum_density_0.n_cols != n_fields\n");
-    }
-    if (mum_density_0.n_rows == 0) {
-        stop("\nERROR: mum_density_0.n_rows == 0\n");
-    }
-
-    if (perturb_when.size() != perturb_where.size() ||
-        perturb_when.size() != perturb_who.size() ||
-        perturb_when.size() != perturb_how.size()) {
-        stop("\nERROR: perturb_* args not same size.");
-    }
-
-
-
-    /*
-     ===============================================================
-     Checking values
-     ===============================================================
-     */
-
-    // Check that # threads isn't too high:
-    thread_check(n_threads);
-
-    // doubles that must be >= 0
-    one_negative_check(sigma_x, "sigma_x");
-    one_negative_check(sigma_y, "sigma_y");
-    one_negative_check(rho, "rho");
-    one_negative_check(extinct_N, "extinct_N");
-    one_negative_check(a, "a");
-    one_negative_check(k, "k");
-    one_negative_check(h, "h");
-
-    // objects containing doubles that must be >= 0
-    negative_check<std::vector<double>>(K, "K");
-    negative_check<std::vector<double>>(K_y, "K_y");
-    negative_check<arma::mat>(attack_surv, "attack_surv");
-    for (uint32 i = 0; i < leslie_mat.size(); i++) {
-        negative_check<arma::cube>(leslie_mat[i], "leslie_mat");
-    }
-    for (uint32 i = 0; i < aphid_density_0.size(); i++) {
-        negative_check<arma::cube>(aphid_density_0[i], "aphid_density_0");
-    }
-    negative_check<std::vector<double>>(pred_rate, "pred_rate");
-    negative_check<arma::mat>(mum_density_0, "mum_density_0");
-    negative_check<arma::vec>(rel_attack, "rel_attack");
-    negative_check<std::vector<double>>(wasp_density_0, "wasp_density_0");
-    negative_check<std::vector<double>>(wasp_field_attract, "wasp_field_attract");
-
-
-    // doubles / double vectors that must be >= 0 and <= 1
-    one_non_prop_check(mum_smooth, "mum_smooth");
-    one_non_prop_check(sex_ratio, "sex_ratio");
-    one_non_prop_check(wasp_disp_m0, "wasp_disp_m0");
-    // one_non_prop_check(wasp_disp_m1, "wasp_disp_m1");  // << this can be anything
-    non_prop_check<std::vector<double>>(s_y, "s_y");
-
-    // below top rows should be >= 0 and <= 1:
-    auto iter = leslie_mat.begin();
-    arma::cube tmp((*iter).n_rows - 1, (*iter).n_cols, (*iter).n_slices);
-    for (; iter != leslie_mat.end(); iter++) {
-        tmp = (*iter)(arma::span(1, iter->n_rows - 1),
-               arma::span::all, arma::span::all);
-        non_prop_check<arma::cube>(tmp, "leslie_mat");
-    }
-
-    // integers that must be > 0
-    one_positive_check(max_t, "max_t");
-    positive_check<std::vector<uint32>>(living_days, "living_days");
-
-    // This vector can have zeros, but can't have all zeros:
-    double wfa_sum = std::accumulate(wasp_field_attract.begin(),
-                                     wasp_field_attract.end(), 0.0);
-    if (wfa_sum <= 0) {
-        std::string msg = "\nERROR: wasp_field_attract sums to <= 0.\n";
-        stop(msg.c_str());
-    }
-
-
-    return;
-}
-
-
 
 
 
 //[[Rcpp::export]]
-List sim_pseudogameofclones_cpp(const uint32& n_reps,
-                       const uint32& n_fields,
-                       const uint32& max_t,
-                       const uint32& save_every,
-                       const std::vector<double>& K,
-                       const std::vector<double>& K_y,
-                       const arma::mat& attack_surv,
-                       const bool& aphid_demog_error,
-                       const bool& wasp_demog_error,
-                       const double& sigma_x,
-                       const double& sigma_y,
-                       const double& rho,
-                       const double& extinct_N,
-                       const std::vector<std::string>& aphid_name,
-                       const std::vector<arma::cube>& leslie_mat,
-                       const std::vector<arma::cube>& aphid_density_0,
-                       const std::vector<double>& alate_b0,
-                       const std::vector<double>& alate_b1,
-                       const double& alate_field_disp_p,
-                       const std::vector<uint32>& field_disp_start,
-                       const std::vector<uint32>& living_days,
-                       const std::vector<double>& pred_rate,
-                       const arma::mat& mum_density_0,
-                       const double& mum_smooth,
-                       const arma::vec& rel_attack,
-                       const double& a,
-                       const double& k,
-                       const double& h,
-                       const std::vector<double>& wasp_density_0,
-                       const std::vector<uint32>& wasp_delay,
-                       const double& wasp_disp_m0,
-                       const double& wasp_disp_m1,
-                       const std::vector<double>& wasp_field_attract,
-                       const double& sex_ratio,
-                       const std::vector<double>& s_y,
-                       const std::vector<bool>& constant_wasps,
-                       const std::vector<uint32>& perturb_when,
-                       const std::vector<uint32>& perturb_where,
-                       const std::vector<uint32>& perturb_who,
-                       const std::vector<double>& perturb_how,
-                       const bool& sep_adults,
-                       uint32 n_threads,
-                       const bool& show_progress) {
+List sim_pseudogameofclones_cpp(SEXP fields_ptr,
+                                SEXP perturb_ptr,
+                                const uint32& n_reps,
+                                const uint32& max_t,
+                                const uint32& save_every,
+                                const bool& sep_adults,
+                                uint32 n_threads,
+                                const bool& show_progress) {
 
-    uint32 n_lines = aphid_name.size();
+    /*
+     These are the starting conditions for all fields.
+     (Note that it's not a vector of AllFields objects like
+      `all_fields_vec` below.)
+     I don't want to change these in case the `AllFields` object in R
+     is used again.
+     */
+    XPtr<AllFields> fields_xptr(fields_ptr);
+    const AllFields& fields0(*fields_xptr);
 
-    check_args(n_reps, n_lines, n_fields,
-               max_t, save_every,
-               K, K_y,
-               attack_surv, aphid_demog_error, wasp_demog_error,
-               sigma_x, sigma_y, rho, extinct_N, aphid_name,
-               leslie_mat, aphid_density_0, alate_b0, alate_b1,
-               field_disp_start,
-               living_days,
-               pred_rate, mum_density_0, mum_smooth,
-               rel_attack, a, k, h,
-               wasp_density_0, wasp_delay, wasp_disp_m0, wasp_disp_m1,
-               wasp_field_attract,
-               sex_ratio, s_y, constant_wasps,
-               perturb_when, perturb_where, perturb_who, perturb_how,
-               n_threads);
+    XPtr<std::deque<PerturbInfo>> perturb_xptr(perturb_ptr);
+    const std::deque<PerturbInfo>& perturbs(*perturb_xptr);
+
+    // Check that # threads isn't too high:
+    thread_check(n_threads);
 
     RcppThread::ProgressBar prog_bar(n_reps * max_t, 1);
 
@@ -759,25 +417,9 @@ List sim_pseudogameofclones_cpp(const uint32& n_reps,
      things after a custom perturbation.
      */
     XPtr<std::vector<AllFields>> all_fields_vec_xptr(
-            new std::vector<AllFields>(n_reps), true);
+            new std::vector<AllFields>(n_reps, fields0), true);
     std::vector<AllFields>& all_fields_vec(*all_fields_vec_xptr);
-    // Fill in first AllFields object, then copy that to the rest:
-    all_fields_vec[0] = AllFields(
-        n_fields, wasp_delay,
-        sigma_x, sigma_y, rho, aphid_demog_error, wasp_demog_error,
-        K, K_y,
-        attack_surv,
-        aphid_name, leslie_mat, aphid_density_0,
-        alate_b0, alate_b1,
-        field_disp_start,
-        living_days, pred_rate, extinct_N,
-        mum_density_0, mum_smooth,
-        rel_attack, a, k, h, wasp_density_0, sex_ratio,
-        s_y, constant_wasps,
-        alate_field_disp_p, wasp_disp_m0, wasp_disp_m1,
-        wasp_field_attract, seeds[0]);
-    for (uint32 i = 1; i < n_reps; i++){
-        all_fields_vec[i] = all_fields_vec[0];
+    for (uint32 i = 0; i < n_reps; i++) {
         all_fields_vec[i].reseed(seeds[i]);
     }
 
@@ -787,8 +429,7 @@ List sim_pseudogameofclones_cpp(const uint32& n_reps,
     // Parallelized loop
     RcppThread::parallelFor(0, n_reps, [&] (uint32 i) {
         one_rep__(summaries[i], stage_ts[i], all_fields_vec[i], i,
-                  max_t, save_every,
-                  perturb_when, perturb_where, perturb_who, perturb_how,
+                  max_t, save_every, perturbs,
                   prog_bar, show_progress, false);
     }, n_threads);
 
@@ -918,20 +559,20 @@ SEXP restart_fill_other_pars(SEXP all_fields_in_ptr,
 
 //[[Rcpp::export]]
 List restart_experiments_cpp(SEXP all_fields_ptr,
+                             SEXP perturb_ptr,
                              const uint32& max_t,
                              const uint32& save_every,
                              const bool& stage_ts_out,
                              const bool& sep_adults,
                              const bool& show_progress,
-                             const std::vector<uint32>& perturb_when,
-                             const std::vector<uint32>& perturb_where,
-                             const std::vector<uint32>& perturb_who,
-                             const std::vector<double>& perturb_how,
                              uint32 n_threads) {
 
 
     XPtr<std::vector<AllFields>> all_fields_vec_xptr(all_fields_ptr);
     std::vector<AllFields>& all_fields_vec(*all_fields_vec_xptr);
+
+    XPtr<std::deque<PerturbInfo>> perturb_xptr(perturb_ptr);
+    const std::deque<PerturbInfo>& perturbs(*perturb_xptr);
 
     uint32 n_reps = all_fields_vec.size();
 
@@ -948,8 +589,7 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
     // Parallelized loop
     RcppThread::parallelFor(0, n_reps, [&] (uint32 i) {
         one_rep__(summaries[i], stage_ts[i], all_fields_vec[i], i,
-                  max_t, save_every,
-                  perturb_when, perturb_where, perturb_who, perturb_how,
+                  max_t, save_every, perturbs,
                   prog_bar, show_progress, stage_ts_out);
     }, n_threads);
 

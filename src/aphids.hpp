@@ -367,6 +367,29 @@ public:
         return;
     }
 
+    // Adjust error parameters and starting abundances to a total abundance of `N`
+    void adjust_error_X0(const bool& demog_error_,
+                         const bool& environ_error_,
+                         double N) {
+
+        demog_error = demog_error_;
+        if (!environ_error_) sigma_x = 0;
+        if (environ_error_ && sigma_x == 0) {
+            stop("Cannot have environmental error with sigma_x == 0");
+        }
+
+        double X_0_sum = arma::accu(apterous.X_0_) + arma::accu(alates.X_0_);
+        if (X_0_sum != 1) N /= X_0_sum;
+        apterous.X_0_ *= N;
+        alates.X_0_ *= N;
+        // refresh starting conditions:
+        apterous.X = apterous.X_0_;
+        alates.X = alates.X_0_;
+        paras.X *= 0; // << because parasitized always start at zero abundance
+
+        return;
+    }
+
 
     // Update new aphid abundances, return the # newly mummified aphids
     double update(const OneField* field,

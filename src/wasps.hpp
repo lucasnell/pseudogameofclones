@@ -204,11 +204,12 @@ public:
 
 
 
-// Adult wasp population
+// Adult wasp and mummy population
 class WaspPop {
 
 public:
 
+    MummyPop mummies;       // mummy population
     WaspAttack attack;      // info for attack rates
     double Y_0;             // initial adult wasp density
     uint32 delay;           // when to add initial wasps
@@ -229,7 +230,7 @@ public:
 
     // Constructors
     WaspPop()
-        : attack(), Y_0(), delay(), sex_ratio(), s_y(), norm_distr(),
+        : mummies(), attack(), Y_0(), delay(), sex_ratio(), s_y(), norm_distr(),
           sigma_y(), binom_distr(), demog_error(), Y(), x() {};
     WaspPop(const arma::vec& rel_attack_,
             const double& a_,
@@ -240,8 +241,11 @@ public:
             const double& sex_ratio_,
             const double& s_y_,
             const double& sigma_y_,
-            const bool& demog_error_)
-        : attack(rel_attack_, a_, k_, h_),
+            const bool& demog_error_,
+            const arma::vec& mummy_Y_0_,
+            const double& mummy_smooth_)
+        : mummies(MummyPop(mummy_Y_0_, mummy_smooth_)),
+          attack(rel_attack_, a_, k_, h_),
           Y_0(Y_0_),
           delay(delay_),
           sex_ratio(sex_ratio_),
@@ -253,7 +257,8 @@ public:
           Y((delay_ == 0) ? Y_0_ : 0.0),
           x(0) {};
     WaspPop(const WaspPop& other)
-        : attack(other.attack),
+        : mummies(other.mummies),
+          attack(other.attack),
           Y_0(other.Y_0),
           delay(other.delay),
           sex_ratio(other.sex_ratio),
@@ -265,6 +270,7 @@ public:
           Y(other.Y),
           x(other.x) {};
     WaspPop& operator=(const WaspPop& other) {
+        mummies = other.mummies;
         attack = other.attack;
         Y_0 = other.Y_0;
         delay = other.delay;
@@ -277,6 +283,30 @@ public:
         Y = other.Y;
         x = other.x;
         return *this;
+    }
+
+
+    // Adjust error parameters, delay, and starting abundances
+    void adjust_error_Y0(const bool& demog_error_,
+                         const bool& environ_error_,
+                         const uint32& delay_,
+                         const double& adult_Y0, double mummy_Y0) {
+
+        demog_error = demog_error_;
+        delay = delay_;
+        if (!environ_error_) sigma_y = 0;
+        if (environ_error_ && sigma_y == 0) {
+            stop("Cannot have environmental error with sigma_y == 0");
+        }
+
+        Y_0 = adult_Y0;
+        double mum_y0_sum = arma::accu(mummies.Y_0);
+        if (mum_y0_sum != 1) mummy_Y0 /= mum_y0_sum;
+        mummies.Y_0 *= mummy_Y0;
+        // refresh starting conditions:
+        Y = Y_0;
+        mummies.Y *= mummies.Y_0;
+        return;
     }
 
 
