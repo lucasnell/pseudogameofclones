@@ -4,6 +4,11 @@ lgl_check <- function(x, n) {
         stop(paste("\nERROR:", n, "is not a single logical.\n"))
     }
 }
+lgl_vec_check <- function(x, n) {
+    if (!(is.logical(x) && is.null(dim(x)))) {
+        stop(paste("\nERROR:", n, "is not a logical vector.\n"))
+    }
+}
 
 uint_check <- function(x, n, .max = NULL, .min = NULL) {
     if (!(is.numeric(x) && length(x) == 1 && x %% 1 == 0 && x >= 0)) {

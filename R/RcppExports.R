@@ -55,8 +55,12 @@ fields_from_vectors <- function(all_fields_ptr, N_vecs) {
     invisible(.Call(`_pseudogameofclones_fields_from_vectors`, all_fields_ptr, N_vecs))
 }
 
-make_field_ptr <- function(aphid_demog_error, aphid_density_0, wasp_demog_error, wasp_density_0, wasp_delay, mummy_density_0, environ_error, aphids_ptr, wasp_ptr, n_fields, K, K_y, pred_rate, extinct_N, constant_wasps, alate_field_disp_p, wasp_disp_m0, wasp_disp_m1, wasp_field_attract) {
-    .Call(`_pseudogameofclones_make_field_ptr`, aphid_demog_error, aphid_density_0, wasp_demog_error, wasp_density_0, wasp_delay, mummy_density_0, environ_error, aphids_ptr, wasp_ptr, n_fields, K, K_y, pred_rate, extinct_N, constant_wasps, alate_field_disp_p, wasp_disp_m0, wasp_disp_m1, wasp_field_attract)
+make_field_ptr <- function(aphid_demog_error, aphid_density_0, wasp_demog_error, wasp_density_0, wasp_delay, mummy_density_0, environ_error, aphids_ptr, wasp_ptr, n_fields, K, K_y, pred_rate, extinct_N, constant_wasps, alate_field_disp_p, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, new_rel_attack) {
+    .Call(`_pseudogameofclones_make_field_ptr`, aphid_demog_error, aphid_density_0, wasp_demog_error, wasp_density_0, wasp_delay, mummy_density_0, environ_error, aphids_ptr, wasp_ptr, n_fields, K, K_y, pred_rate, extinct_N, constant_wasps, alate_field_disp_p, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, new_rel_attack)
+}
+
+make_perturb_ptr <- function(perturb_when, perturb_where, perturb_who, perturb_how) {
+    .Call(`_pseudogameofclones_make_perturb_ptr`, perturb_when, perturb_where, perturb_who, perturb_how)
 }
 
 #' Check that the number of threads doesn't exceed the number available.
@@ -77,7 +81,7 @@ restart_experiments_cpp <- function(all_fields_ptr, perturb_ptr, max_t, save_eve
     .Call(`_pseudogameofclones_restart_experiments_cpp`, all_fields_ptr, perturb_ptr, max_t, save_every, stage_ts_out, sep_adults, show_progress, n_threads)
 }
 
-make_wasps_ptr <- function(rel_attack, a, k, h, sex_ratio, s_y, sigma_y, mummy_smooth, mumm_dev_time) {
-    .Call(`_pseudogameofclones_make_wasps_ptr`, rel_attack, a, k, h, sex_ratio, s_y, sigma_y, mummy_smooth, mumm_dev_time)
+make_wasps_ptr <- function(rel_attack, a, k, h, sex_ratio, s_y, sigma_y, mummy_smooth, mummy_dev_time) {
+    .Call(`_pseudogameofclones_make_wasps_ptr`, rel_attack, a, k, h, sex_ratio, s_y, sigma_y, mummy_smooth, mummy_dev_time)
 }
 

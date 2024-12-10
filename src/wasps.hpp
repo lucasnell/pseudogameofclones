@@ -290,7 +290,8 @@ public:
     void adjust_error_Y0(const bool& demog_error_,
                          const bool& environ_error_,
                          const uint32& delay_,
-                         const double& adult_Y0, double mummy_Y0) {
+                         const double& adult_Y0,
+                         double mummy_Y0) {
 
         demog_error = demog_error_;
         delay = delay_;
@@ -305,7 +306,7 @@ public:
         mummies.Y_0 *= mummy_Y0;
         // refresh starting conditions:
         Y = Y_0;
-        mummies.Y *= mummies.Y_0;
+        mummies.Y = mummies.Y_0;
         return;
     }
 

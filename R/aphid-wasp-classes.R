@@ -326,8 +326,8 @@ c.AphidPop <- function(...) {
     }
 
     leslie_cubes <- lapply(z, function(x) x$leslie)
-    if (! all(apply(1, sapply(leslie_cubes, dim),
-                    function(z) length(unique(z)))) == 1) {
+    if (! all(apply(sapply(leslie_cubes, dim), 1,
+                    function(zz) length(unique(zz)))) == 1) {
         stop("\nAll aphid lines must have the same sized Leslie matrices\n")
     }
 
@@ -423,10 +423,11 @@ wasp_pop <- function(s_y = populations$s_y,
                           sex_ratio = sex_ratio,
                           s_y = s_y,
                           sigma_y = sigma_y,
-                          mummy_smooth = mummy_smooth,
-                          mumm_dev_time = dev_times$mum_days[2])
+                          mummy_smooth = mum_smooth,
+                          mummy_dev_time = dev_times$mum_days[2])
 
-    out <- structure(list("ptr" = ptr), class = "WaspPop")
+    out <- structure(list("ptr" = ptr, rel_attack = rel_attack),
+                     class = "WaspPop")
 
     return(out)
 
@@ -442,7 +443,7 @@ wasp_pop <- function(s_y = populations$s_y,
 #'     Each object in the `multiAphid` is an `aphid` object that results from
 #'     the `clonal_line` function.
 #'     Combine them using `c(aphid_obj1, aphid_obj2)`.
-#' @param wasp_pop A `WaspPop` object containing the parasitoid wasp info
+#' @param wasps A `WaspPop` object containing the parasitoid wasp info
 #'     for the simulations.
 #' @param n_fields The number of fields to simulate.
 #'     Both wasps and aphids operate separately across fields but can be
@@ -474,7 +475,7 @@ wasp_pop <- function(s_y = populations$s_y,
 #'     Either a single number for all fields, or a vector of length `n_fields`
 #'     to define separate values by field.
 #'     Defaults to `c(0, 3)`.
-#' @param mum_density_0
+#' @param mummy_density_0
 #'     Either a single number for all fields, or a vector of length `n_fields`
 #'     to define separate values by field.
 #'     Defaults to `0`.
@@ -524,8 +525,14 @@ wasp_pop <- function(s_y = populations$s_y,
 #' @export
 #'
 #' @examples
+#' wp <- wasp_pop()
+#' sa <- clonal_line("susceptible")
+#' ra <- clonal_line("resistant", resistant = TRUE, repro_apterous = "low")
+#' af <- all_fields(c(sa, ra), wp)
+#'
+#'
 all_fields <- function(clonal_lines,
-                       wasp_pop,
+                       wasps,
                        n_fields = 2,
                        environ_error = FALSE,
                        aphid_demog_error = FALSE,
@@ -534,7 +541,7 @@ all_fields <- function(clonal_lines,
                        K_y_mult = 1 / 1.57,
                        aphid_density_0 = 32,
                        wasp_density_0 = c(3, 0),
-                       mum_density_0 = 0,
+                       mummy_density_0 = 0,
                        wasp_delay = 8,
                        wasp_disp_m0 = 0.3,
                        wasp_disp_m1 = 0.34906,
@@ -545,44 +552,12 @@ all_fields <- function(clonal_lines,
                        extinct_N = 1) {
 
     # -----------------*
-    # Basic type checks
-    if (!inherits(clonal_lines, "multiAphid")) {
-        if (inherits(clonal_lines, "AphidPop")) {
-            clonal_lines <- c(clonal_lines)
-        } else stop("\n`clonal_lines` must be a multiAphid object.\n")
-    }
-    if (!inherits(attr(clonal_lines, "ptr"), "externalptr"))
-        stop("\n`attr(clonal_lines, \"ptr\")` must be an externalptr object.\n")
-    if (!inherits(wasp_pop, "WaspPop"))
-        stop("\n`wasp_pop` must be a WaspPop object.\n")
-    if (!inherits(wasp_pop$ptr, "externalptr"))
-        stop("\n`wasp_pop$ptr` must be an externalptr object.\n")
-    uint_check(n_fields, "n_fields", .min = 1)
-    lgl_check(environ_error, "environ_error")
-    lgl_check(aphid_demog_error, "aphid_demog_error")
-    lgl_check(wasp_demog_error, "wasp_demog_error")
-    dbl_vec_check(K, "K")
-    dbl_vec_check(K_y_mult, "K_y_mult")
-    dbl_mat_check(aphid_density_0, "aphid_density_0")
-    dbl_vec_check(wasp_density_0, "wasp_density_0")
-    dbl_vec_check(mum_density_0, "mum_density_0")
-    uint_vec_check(wasp_delay, "wasp_delay")
-    dbl_check(wasp_disp_m0, "wasp_disp_m0", .min = 0, .max = 1)
-    dbl_check(wasp_disp_m1, "wasp_disp_m1")
-    dbl_vec_check(wasp_field_attract, "wasp_field_attract", .min = 0)
-    stopifnot(sum(wasp_field_attract) > 0)
-    dbl_vec_check(pred_rate, "pred_rate")
-    dbl_check(alate_field_disp_p, "alate_field_disp_p", .min = 0, .max = 1)
-    lgl_check(constant_wasps, "constant_wasps")
-    dbl_check(extinct_N, "extinct_N")
-
-    # -----------------*
     # Dimension checks and adjustments
     n_lines <- length(clonal_lines)
     if (length(aphid_density_0) == 1) {
         aphid_density_0 <- matrix(aphid_density_0, n_fields, n_lines)
     }
-    if (! identical(dim(aphid_density_0), c(n_fields, n_lines))) {
+    if (! all(dim(aphid_density_0) == c(n_fields, n_lines))) {
         stop(paste0("\nIf provided as a matrix, `aphid_density_0` must have ",
                     "a row per field and a column per clonal line. ",
                     "Here, it should be ", n_fields, " x ", n_lines, ". ",
@@ -595,7 +570,7 @@ all_fields <- function(clonal_lines,
     if (length(mummy_density_0) == 1)
         mummy_density_0 <- rep(mummy_density_0, n_fields)
     if (length(K) == 1) K <- rep(K, n_fields)
-    if (length(K_y) == 1) K_y <- rep(K_y, n_fields)
+    if (length(K_y_mult) == 1) K_y_mult <- rep(K_y_mult, n_fields)
     if (length(pred_rate) == 1) pred_rate <- rep(pred_rate, n_fields)
     if (length(constant_wasps) == 1)
         constant_wasps <- rep(constant_wasps, n_fields)
@@ -603,6 +578,57 @@ all_fields <- function(clonal_lines,
         wasp_field_attract <- rep(wasp_field_attract, n_fields)
 
     # Other dimensions checks are done inside `make_field_ptr`
+
+
+    # -----------------*
+    # Basic type checks
+    if (!inherits(clonal_lines, "multiAphid")) {
+        if (inherits(clonal_lines, "AphidPop")) {
+            clonal_lines <- c(clonal_lines)
+        } else stop("\n`clonal_lines` must be a multiAphid object.\n")
+    }
+    if (!inherits(attr(clonal_lines, "ptr"), "externalptr"))
+        stop("\n`attr(clonal_lines, \"ptr\")` must be an externalptr object.\n")
+    if (!inherits(wasps, "WaspPop"))
+        stop("\n`wasps` must be a WaspPop object.\n")
+    if (!inherits(wasps$ptr, "externalptr"))
+        stop("\n`wasps$ptr` must be an externalptr object.\n")
+    uint_check(n_fields, "n_fields", .min = 1)
+    lgl_check(environ_error, "environ_error")
+    lgl_check(aphid_demog_error, "aphid_demog_error")
+    lgl_check(wasp_demog_error, "wasp_demog_error")
+    dbl_vec_check(K, "K")
+    dbl_vec_check(K_y_mult, "K_y_mult")
+    dbl_mat_check(aphid_density_0, "aphid_density_0")
+    dbl_vec_check(wasp_density_0, "wasp_density_0")
+    dbl_vec_check(mummy_density_0, "mummy_density_0")
+    uint_vec_check(wasp_delay, "wasp_delay")
+    dbl_check(wasp_disp_m0, "wasp_disp_m0", .min = 0, .max = 1)
+    dbl_check(wasp_disp_m1, "wasp_disp_m1")
+    dbl_vec_check(wasp_field_attract, "wasp_field_attract", .min = 0)
+    stopifnot(sum(wasp_field_attract) > 0)
+    dbl_vec_check(pred_rate, "pred_rate")
+    dbl_check(alate_field_disp_p, "alate_field_disp_p", .min = 0, .max = 1)
+    lgl_vec_check(constant_wasps, "constant_wasps")
+    dbl_check(extinct_N, "extinct_N")
+
+    # Adjusting wasp relative attack vector size to match number of aphid
+    # stages in Leslie matrices
+    rel_attack <- wasps$rel_attack
+    if (length(rel_attack) == 5) {
+        rel_attack <- rel_attack / sum(rel_attack)
+        cl <- clonal_lines[[1]]
+        dt <- dev_times$instar_days[[cl$temp]]
+        n_adult_days <- nrow(cl$leslie_mat) - sum(head(dt, -1))
+        stopifnot(n_adult_days >= 0)
+        if (tail(dt, 1) != n_adult_days) dt[length(dt)] <- n_adult_days
+        # Commented version isn't used bc it wasn't done this way when fitting
+        # the model.
+        # rel_attack__ <- mapply(function(.x, .y) rep(.x, .y) / .y,
+        #                        rel_attack,  dt)
+        rel_attack__ <- mapply(rep, rel_attack,  dt)
+        rel_attack <- do.call(c, rel_attack__)
+    } else stopifnot(length(rel_attack) == nrow(leslie_cubes[[1]]))
 
 
     ptr <- make_field_ptr(aphid_demog_error = aphid_demog_error,
@@ -613,17 +639,18 @@ all_fields <- function(clonal_lines,
                           mummy_density_0 = mummy_density_0,
                           environ_error = environ_error,
                           aphids_ptr = attr(clonal_lines, "ptr"),
-                          wasp_ptr = wasp_pop$ptr,
+                          wasp_ptr = wasps$ptr,
                           n_fields = n_fields,
                           K = K,
-                          K_y = K_y,
+                          K_y = K * K_y_mult,
                           pred_rate = pred_rate,
                           extinct_N = extinct_N,
                           constant_wasps = constant_wasps,
                           alate_field_disp_p = alate_field_disp_p,
                           wasp_disp_m0 = wasp_disp_m0,
                           wasp_disp_m1 = wasp_disp_m1,
-                          wasp_field_attract = wasp_field_attract)
+                          wasp_field_attract = wasp_field_attract,
+                          new_rel_attack = rel_attack)
 
     # Note: n_fields and aphid_names used in `make_perturb_list` inside
     # `sim_fields`

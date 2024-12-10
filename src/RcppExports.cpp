@@ -94,8 +94,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // make_field_ptr
-SEXP make_field_ptr(const bool& aphid_demog_error, const arma::mat& aphid_density_0, const bool& wasp_demog_error, const std::vector<double>& wasp_density_0, const std::vector<uint32>& wasp_delay, const std::vector<double>& mummy_density_0, const bool& environ_error, SEXP aphids_ptr, SEXP wasp_ptr, const uint32& n_fields, const std::vector<double>& K, const std::vector<double>& K_y, const std::vector<double>& pred_rate, const double& extinct_N, const std::vector<bool>& constant_wasps, const double& alate_field_disp_p, const double& wasp_disp_m0, const double& wasp_disp_m1, const std::vector<double>& wasp_field_attract);
-RcppExport SEXP _pseudogameofclones_make_field_ptr(SEXP aphid_demog_errorSEXP, SEXP aphid_density_0SEXP, SEXP wasp_demog_errorSEXP, SEXP wasp_density_0SEXP, SEXP wasp_delaySEXP, SEXP mummy_density_0SEXP, SEXP environ_errorSEXP, SEXP aphids_ptrSEXP, SEXP wasp_ptrSEXP, SEXP n_fieldsSEXP, SEXP KSEXP, SEXP K_ySEXP, SEXP pred_rateSEXP, SEXP extinct_NSEXP, SEXP constant_waspsSEXP, SEXP alate_field_disp_pSEXP, SEXP wasp_disp_m0SEXP, SEXP wasp_disp_m1SEXP, SEXP wasp_field_attractSEXP) {
+SEXP make_field_ptr(const bool& aphid_demog_error, const arma::mat& aphid_density_0, const bool& wasp_demog_error, const std::vector<double>& wasp_density_0, const std::vector<uint32>& wasp_delay, const std::vector<double>& mummy_density_0, const bool& environ_error, SEXP aphids_ptr, SEXP wasp_ptr, const uint32& n_fields, const std::vector<double>& K, const std::vector<double>& K_y, const std::vector<double>& pred_rate, const double& extinct_N, const std::vector<bool>& constant_wasps, const double& alate_field_disp_p, const double& wasp_disp_m0, const double& wasp_disp_m1, const std::vector<double>& wasp_field_attract, const arma::vec& new_rel_attack);
+RcppExport SEXP _pseudogameofclones_make_field_ptr(SEXP aphid_demog_errorSEXP, SEXP aphid_density_0SEXP, SEXP wasp_demog_errorSEXP, SEXP wasp_density_0SEXP, SEXP wasp_delaySEXP, SEXP mummy_density_0SEXP, SEXP environ_errorSEXP, SEXP aphids_ptrSEXP, SEXP wasp_ptrSEXP, SEXP n_fieldsSEXP, SEXP KSEXP, SEXP K_ySEXP, SEXP pred_rateSEXP, SEXP extinct_NSEXP, SEXP constant_waspsSEXP, SEXP alate_field_disp_pSEXP, SEXP wasp_disp_m0SEXP, SEXP wasp_disp_m1SEXP, SEXP wasp_field_attractSEXP, SEXP new_rel_attackSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -118,7 +118,22 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double& >::type wasp_disp_m0(wasp_disp_m0SEXP);
     Rcpp::traits::input_parameter< const double& >::type wasp_disp_m1(wasp_disp_m1SEXP);
     Rcpp::traits::input_parameter< const std::vector<double>& >::type wasp_field_attract(wasp_field_attractSEXP);
-    rcpp_result_gen = Rcpp::wrap(make_field_ptr(aphid_demog_error, aphid_density_0, wasp_demog_error, wasp_density_0, wasp_delay, mummy_density_0, environ_error, aphids_ptr, wasp_ptr, n_fields, K, K_y, pred_rate, extinct_N, constant_wasps, alate_field_disp_p, wasp_disp_m0, wasp_disp_m1, wasp_field_attract));
+    Rcpp::traits::input_parameter< const arma::vec& >::type new_rel_attack(new_rel_attackSEXP);
+    rcpp_result_gen = Rcpp::wrap(make_field_ptr(aphid_demog_error, aphid_density_0, wasp_demog_error, wasp_density_0, wasp_delay, mummy_density_0, environ_error, aphids_ptr, wasp_ptr, n_fields, K, K_y, pred_rate, extinct_N, constant_wasps, alate_field_disp_p, wasp_disp_m0, wasp_disp_m1, wasp_field_attract, new_rel_attack));
+    return rcpp_result_gen;
+END_RCPP
+}
+// make_perturb_ptr
+SEXP make_perturb_ptr(const std::vector<uint32>& perturb_when, const std::vector<uint32>& perturb_where, const std::vector<uint32>& perturb_who, const std::vector<double>& perturb_how);
+RcppExport SEXP _pseudogameofclones_make_perturb_ptr(SEXP perturb_whenSEXP, SEXP perturb_whereSEXP, SEXP perturb_whoSEXP, SEXP perturb_howSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::vector<uint32>& >::type perturb_when(perturb_whenSEXP);
+    Rcpp::traits::input_parameter< const std::vector<uint32>& >::type perturb_where(perturb_whereSEXP);
+    Rcpp::traits::input_parameter< const std::vector<uint32>& >::type perturb_who(perturb_whoSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type perturb_how(perturb_howSEXP);
+    rcpp_result_gen = Rcpp::wrap(make_perturb_ptr(perturb_when, perturb_where, perturb_who, perturb_how));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -184,8 +199,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // make_wasps_ptr
-SEXP make_wasps_ptr(const arma::vec& rel_attack, const double& a, const double& k, const double& h, const double& sex_ratio, const double& s_y, const double& sigma_y, const double& mummy_smooth, const uint32& mumm_dev_time);
-RcppExport SEXP _pseudogameofclones_make_wasps_ptr(SEXP rel_attackSEXP, SEXP aSEXP, SEXP kSEXP, SEXP hSEXP, SEXP sex_ratioSEXP, SEXP s_ySEXP, SEXP sigma_ySEXP, SEXP mummy_smoothSEXP, SEXP mumm_dev_timeSEXP) {
+SEXP make_wasps_ptr(const arma::vec& rel_attack, const double& a, const double& k, const double& h, const double& sex_ratio, const double& s_y, const double& sigma_y, const double& mummy_smooth, const uint32& mummy_dev_time);
+RcppExport SEXP _pseudogameofclones_make_wasps_ptr(SEXP rel_attackSEXP, SEXP aSEXP, SEXP kSEXP, SEXP hSEXP, SEXP sex_ratioSEXP, SEXP s_ySEXP, SEXP sigma_ySEXP, SEXP mummy_smoothSEXP, SEXP mummy_dev_timeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -197,8 +212,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double& >::type s_y(s_ySEXP);
     Rcpp::traits::input_parameter< const double& >::type sigma_y(sigma_ySEXP);
     Rcpp::traits::input_parameter< const double& >::type mummy_smooth(mummy_smoothSEXP);
-    Rcpp::traits::input_parameter< const uint32& >::type mumm_dev_time(mumm_dev_timeSEXP);
-    rcpp_result_gen = Rcpp::wrap(make_wasps_ptr(rel_attack, a, k, h, sex_ratio, s_y, sigma_y, mummy_smooth, mumm_dev_time));
+    Rcpp::traits::input_parameter< const uint32& >::type mummy_dev_time(mummy_dev_timeSEXP);
+    rcpp_result_gen = Rcpp::wrap(make_wasps_ptr(rel_attack, a, k, h, sex_ratio, s_y, sigma_y, mummy_smooth, mummy_dev_time));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -211,7 +226,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_pseudogameofclones_sad_leslie", (DL_FUNC) &_pseudogameofclones_sad_leslie, 1},
     {"_pseudogameofclones_fields_to_data_frames", (DL_FUNC) &_pseudogameofclones_fields_to_data_frames, 1},
     {"_pseudogameofclones_fields_from_vectors", (DL_FUNC) &_pseudogameofclones_fields_from_vectors, 2},
-    {"_pseudogameofclones_make_field_ptr", (DL_FUNC) &_pseudogameofclones_make_field_ptr, 19},
+    {"_pseudogameofclones_make_field_ptr", (DL_FUNC) &_pseudogameofclones_make_field_ptr, 20},
+    {"_pseudogameofclones_make_perturb_ptr", (DL_FUNC) &_pseudogameofclones_make_perturb_ptr, 4},
     {"_pseudogameofclones_sim_pseudogameofclones_cpp", (DL_FUNC) &_pseudogameofclones_sim_pseudogameofclones_cpp, 8},
     {"_pseudogameofclones_restart_fill_other_pars", (DL_FUNC) &_pseudogameofclones_restart_fill_other_pars, 15},
     {"_pseudogameofclones_restart_experiments_cpp", (DL_FUNC) &_pseudogameofclones_restart_experiments_cpp, 8},

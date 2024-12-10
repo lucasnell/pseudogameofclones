@@ -99,6 +99,13 @@ make_perturb_list <- function(perturb, fields) {
 #'
 #' @return A list of dataframes of aphids, wasps.
 #'
+#' @examples
+#' wp <- wasp_pop()
+#' sa <- clonal_line("susceptible")
+#' ra <- clonal_line("resistant", resistant = TRUE, repro_apterous = "low")
+#' af <- all_fields(c(sa, ra), wp)
+#' sf <- sim_fields(af)
+#'
 #'
 sim_fields <- function(fields,
                        n_reps = 1,

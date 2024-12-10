@@ -415,7 +415,8 @@ SEXP make_field_ptr(const bool& aphid_demog_error,
                     const double& alate_field_disp_p,
                     const double& wasp_disp_m0,
                     const double& wasp_disp_m1,
-                    const std::vector<double>& wasp_field_attract) {
+                    const std::vector<double>& wasp_field_attract,
+                    const arma::vec& new_rel_attack) {
 
 
     if (aphid_density_0.n_rows != n_fields)
@@ -440,6 +441,10 @@ SEXP make_field_ptr(const bool& aphid_demog_error,
     XPtr<std::vector<AphidPop>> aphids_xptr(aphids_ptr);
     const std::vector<AphidPop>& aphids(*aphids_xptr);
 
+    if (new_rel_attack.n_elem != aphids[0].apterous.leslie().n_rows) {
+        stop("`new_rel_attack` is wrong length");
+    }
+
     uint32 n_lines = aphids.size();
 
     if (aphid_density_0.n_cols != n_lines)
@@ -455,6 +460,7 @@ SEXP make_field_ptr(const bool& aphid_demog_error,
     AllFields& fields(*fields_xptr);
 
     for (uint32 i = 0; i < n_fields; i++) {
+
         OneField& field(fields[i]);
         for (uint32 j = 0; j < n_lines; j++) {
             field[j].adjust_error_X0(aphid_demog_error,
@@ -464,6 +470,7 @@ SEXP make_field_ptr(const bool& aphid_demog_error,
 
         field.wasps.adjust_error_Y0(wasp_demog_error, environ_error, wasp_delay[i],
                                     wasp_density_0[i], mummy_density_0[i]);
+        field.wasps.attack.rel_attack = new_rel_attack;
 
     }
 
@@ -474,7 +481,7 @@ SEXP make_field_ptr(const bool& aphid_demog_error,
 
 
 
-
+//[[Rcpp::export]]
 SEXP make_perturb_ptr(const std::vector<uint32>& perturb_when,
                       const std::vector<uint32>& perturb_where,
                       const std::vector<uint32>& perturb_who,

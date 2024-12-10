@@ -332,7 +332,7 @@ void one_rep__(RepSummary& summary,
                const uint32& rep,
                const uint32& max_t,
                const uint32& save_every,
-               const std::deque<PerturbInfo> perturbs_,
+               const std::deque<PerturbInfo>& perturbs_,
                RcppThread::ProgressBar& prog_bar,
                const bool& show_progress,
                const bool& stage_ts_out) {

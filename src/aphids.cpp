@@ -9,6 +9,7 @@
 #include "patches.hpp"          // field classes
 #include "pcg.hpp"              // runif_01 fxn
 
+#include <RcppThread.h>         // multithreading
 
 
 using namespace Rcpp;
@@ -97,69 +98,72 @@ double AphidPop::update(const OneField* field,
 
     double nm = 0; // newly mummified
 
-    if (total_aphids() > 0) {
+    if (total_aphids() <= 0) return nm;
 
-        const double& S(field->S);
-        const double& S_y(field->S_y);
 
-        arma::vec A_surv;
-        wasps->A_mats(A_surv, attack_surv);
-        arma::vec A_mumm = 1 - A_surv;
+    const double& S(field->S);
+    const double& S_y(field->S_y);
 
-        // making adult alates not able to be parasitized:
-        arma::vec A_surv_ala = A_surv;
-        arma::vec A_mumm_ala = A_mumm;
-        for (uint32 i = alates.field_disp_start_; i < alates.leslie_.n_cols; i++) {
+    arma::vec A_surv;
+    wasps->A_mats(A_surv, attack_surv);
+    arma::vec A_mumm = 1 - A_surv;
+
+    // making adult alates not able to be parasitized:
+    arma::vec A_surv_ala = A_surv;
+    arma::vec A_mumm_ala = A_mumm;
+    for (uint32 i = alates.field_disp_start_; i < alates.leslie_.n_cols; i++) {
+        if (i >= A_surv_ala.n_elem) RcppThread::Rcout << "i too long" << std::endl;
+        else if (i >= A_mumm_ala.n_elem) RcppThread::Rcout << "i too long 2" << std::endl;
+        else {
             A_surv_ala[i] = 1;
             A_mumm_ala[i] = 0;
         }
-
-        double pred_surv = 1 - field->pred_rate;
-
-        // Starting abundances (used in `process_error`):
-        arma::vec apterous_Xt = apterous.X;
-        arma::vec alates_Xt = alates.X;
-        arma::vec paras_Xt = paras.X;
-
-        // Basic updates for non-parasitized aphids:
-        arma::mat LX_apt = apterous.leslie_ * apterous.X;
-        arma::mat LX_ala = alates.leslie_ * alates.X;
-        apterous.X = (pred_surv * S * A_surv) % LX_apt;
-        alates.X = (pred_surv * S * A_surv_ala) % LX_ala;
-
-        double np = 0; // newly parasitized
-        np += pred_surv * S_y * arma::as_scalar(A_mumm.t() * LX_apt);
-        np += pred_surv * S_y * arma::as_scalar(A_mumm_ala.t() * LX_ala);
-
-        nm += pred_surv * paras.X.back();  // newly mummified
-
-        // alive but parasitized
-        if (paras.X.n_elem > 1) {
-            for (uint32 i = paras.X.n_elem - 1; i > 0; i--) {
-                paras.X(i) = pred_surv * paras.s(i) * S_y * paras.X(i-1);
-            }
-        }
-        paras.X.front() = np;
-
-
-        // Process error
-        if (demog_error || sigma_x > 0) {
-            process_error(apterous_Xt, alates_Xt, paras_Xt, eng);
-        }
-
-        // # offspring from apterous aphids that are alates:
-        double alate_prop = apterous.alate_prop(field->z);
-        double new_alates = apterous.X.front() * alate_prop;
-
-        /*
-         All offspring from alates are assumed to be apterous,
-         so the only way to get new alates is from apterous aphids.
-         */
-        apterous.X.front() -= new_alates;
-        apterous.X.front() += alates.X.front(); // <-- we assume alates make apterous
-        alates.X.front() = new_alates;
-
     }
+
+    double pred_surv = 1 - field->pred_rate;
+
+    // Starting abundances (used in `process_error`):
+    arma::vec apterous_Xt = apterous.X;
+    arma::vec alates_Xt = alates.X;
+    arma::vec paras_Xt = paras.X;
+
+    // Basic updates for non-parasitized aphids:
+    arma::mat LX_apt = apterous.leslie_ * apterous.X;
+    arma::mat LX_ala = alates.leslie_ * alates.X;
+    apterous.X = (pred_surv * S * A_surv) % LX_apt;
+    alates.X = (pred_surv * S * A_surv_ala) % LX_ala;
+
+    double np = 0; // newly parasitized
+    np += pred_surv * S_y * arma::as_scalar(A_mumm.t() * LX_apt);
+    np += pred_surv * S_y * arma::as_scalar(A_mumm_ala.t() * LX_ala);
+
+    nm += pred_surv * paras.X.back();  // newly mummified
+
+    // alive but parasitized
+    if (paras.X.n_elem > 1) {
+        for (uint32 i = paras.X.n_elem - 1; i > 0; i--) {
+            paras.X(i) = pred_surv * paras.s(i) * S_y * paras.X(i-1);
+        }
+    }
+    paras.X.front() = np;
+
+
+    // Process error
+    if (demog_error || sigma_x > 0) {
+        process_error(apterous_Xt, alates_Xt, paras_Xt, eng);
+    }
+
+    // # offspring from apterous aphids that are alates:
+    double alate_prop = apterous.alate_prop(field->z);
+    double new_alates = apterous.X.front() * alate_prop;
+
+    /*
+     All offspring from alates are assumed to be apterous,
+     so the only way to get new alates is from apterous aphids.
+     */
+    apterous.X.front() -= new_alates;
+    apterous.X.front() += alates.X.front(); // <-- we assume alates make apterous
+    alates.X.front() = new_alates;
 
     return nm;
 }
