@@ -53,7 +53,7 @@ make_perturb_list <- function(perturb, fields) {
 
 
 # full fun docs ----
-#'
+#' Simulate fields of aphids and natural enemies.
 #'
 #'
 #' @param fields An `AllFields` object created using the
@@ -211,7 +211,7 @@ make_all_info <- function(sims_obj) {
 #' You can suppress this warning by setting `no_warns = TRUE`.
 #'
 #'
-#' @param sims_obj A `cloneSims` object output from `sim_experiments`.
+#' @param sims_obj A `cloneSims` object output from `sim_fields`.
 #' @param new_starts A dataframe or list of dataframes indicating the
 #'     new starting abundances for all populations (wasps, mummies,
 #'     all aphid lines) and stages.
@@ -222,7 +222,7 @@ make_all_info <- function(sims_obj) {
 #'     If `TRUE`, the output object will contain this information in the
 #'     `stage_ts` field, which will be a list of data frames.
 #'     Defaults to `FALSE`.
-#' @inheritParams sim_experiments
+#' @inheritParams sim_fields
 #'
 #' @export
 #'

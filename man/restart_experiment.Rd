@@ -32,7 +32,7 @@ restart_experiment(
 )
 }
 \arguments{
-\item{sims_obj}{A \code{cloneSims} object output from \code{sim_experiments}.}
+\item{sims_obj}{A \code{cloneSims} object output from \code{sim_fields}.}
 
 \item{new_starts}{A dataframe or list of dataframes indicating the
 new starting abundances for all populations (wasps, mummies,
@@ -45,6 +45,41 @@ information for all time points.
 If \code{TRUE}, the output object will contain this information in the
 \code{stage_ts} field, which will be a list of data frames.
 Defaults to \code{FALSE}.}
+
+\item{max_t}{How many days to simulate. Defaults to \code{250}.}
+
+\item{save_every}{Abundances will be stored every \code{save_every} time points.
+Defaults to \code{1}.}
+
+\item{sep_adults}{Single logical for whether to separate adults vs
+juvenile aphids in the output.
+Useful for counting aphids with wings (adult alates).
+Defaults to \code{FALSE}.}
+
+\item{show_progress}{Boolean for whether to show progress bar.
+Defaults to \code{FALSE}.}
+
+\item{perturb}{Information for perturbing populations in the simulations.
+It should be a dataframe with 4 columns:
+* \code{when}: Integers indicating at what timepoint(s) to do the
+perturbations. These can be repeated if you want to perturb
+multiple things at the same time.
+* \code{where}: What field to do the perturbations in.
+* \code{who}: Which population to perturb.
+This can be a character vector where values must be the name of an
+aphid line, \code{"wasps"}, or \code{"mummies"}.
+It can also be an integer vector where, for \code{n} aphid lines,
+values \verb{<= n} indicate an aphid line,
+values \verb{== n+1} indicate mummies,
+and values \verb{== n+2} indicate adult wasps.
+Note that perturbing the mummy population also perturbs the
+still-living but parasitized aphids, too.
+* \code{how}: Numbers \verb{>= 0} that are multiplied by the desired population
+to cause the perturbation.}
+
+\item{n_threads}{Number of threads to use if \code{n_reps > 1}
+(ignored otherwise).
+Defaults to \code{1}.}
 }
 \description{
 Note for most of this function's arguments, their default value is \code{NULL},

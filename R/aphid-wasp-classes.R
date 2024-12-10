@@ -479,7 +479,12 @@ wasp_pop <- function(s_y = populations$s_y,
 #'     Either a single number for all fields, or a vector of length `n_fields`
 #'     to define separate values by field.
 #'     Defaults to `0`.
-#' @param wasp_delay
+#' @param wasp_delay Number of days to wait to add wasps. This can be useful
+#'     to prevent transient dynamics from causing early extinction of
+#'     aphid clone(s).
+#'     Either a single number for all fields, or a vector of length `n_fields`
+#'     to define separate values by field.
+#'     Defaults to `8`.
 #' @param wasp_disp_m0 Proportion of adult wasps from each field that
 #'     are added to the dispersal pool when there are no aphids present.
 #'     After adding wasps to the pool, they are then evenly distributed

@@ -6,7 +6,7 @@
 \usage{
 all_fields(
   clonal_lines,
-  wasp_pop,
+  wasps,
   n_fields = 2,
   environ_error = FALSE,
   aphid_demog_error = FALSE,
@@ -15,7 +15,7 @@ all_fields(
   K_y_mult = 1/1.57,
   aphid_density_0 = 32,
   wasp_density_0 = c(3, 0),
-  mum_density_0 = 0,
+  mummy_density_0 = 0,
   wasp_delay = 8,
   wasp_disp_m0 = 0.3,
   wasp_disp_m1 = 0.34906,
@@ -33,7 +33,7 @@ Each object in the \code{multiAphid} is an \code{aphid} object that results from
 the \code{clonal_line} function.
 Combine them using \code{c(aphid_obj1, aphid_obj2)}.}
 
-\item{wasp_pop}{A \code{WaspPop} object containing the parasitoid wasp info
+\item{wasps}{A \code{WaspPop} object containing the parasitoid wasp info
 for the simulations.}
 
 \item{n_fields}{The number of fields to simulate.
@@ -74,9 +74,16 @@ Either a single number for all fields, or a vector of length \code{n_fields}
 to define separate values by field.
 Defaults to \code{c(0, 3)}.}
 
-\item{mum_density_0}{Either a single number for all fields, or a vector of length \code{n_fields}
+\item{mummy_density_0}{Either a single number for all fields, or a vector of length \code{n_fields}
 to define separate values by field.
 Defaults to \code{0}.}
+
+\item{wasp_delay}{Number of days to wait to add wasps. This can be useful
+to prevent transient dynamics from causing early extinction of
+aphid clone(s).
+Either a single number for all fields, or a vector of length \code{n_fields}
+to define separate values by field.
+Defaults to \code{8}.}
 
 \item{wasp_disp_m0}{Proportion of adult wasps from each field that
 are added to the dispersal pool when there are no aphids present.
@@ -128,4 +135,12 @@ passed onto \code{sim_fields}.
 }
 \description{
 Create AllFields object containing aphid, wasp, and field parameters
+}
+\examples{
+wp <- wasp_pop()
+sa <- clonal_line("susceptible")
+ra <- clonal_line("resistant", resistant = TRUE, repro_apterous = "low")
+af <- all_fields(c(sa, ra), wp)
+
+
 }
