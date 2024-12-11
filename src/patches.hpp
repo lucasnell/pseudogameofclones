@@ -178,7 +178,20 @@ public:
         return aphids[idx];
     }
 
-
+    using iterator = std::vector<AphidPop>::iterator;
+    using const_iterator = std::vector<AphidPop>::const_iterator;
+    iterator begin() {
+        return aphids.begin();
+    }
+    const_iterator begin() const {
+        return aphids.begin();
+    }
+    iterator end() {
+        return aphids.end();
+    }
+    const_iterator end() const {
+        return aphids.end();
+    }
 
 
     /*
@@ -407,11 +420,17 @@ public:
           extinct_N(extinct_N_),
           total_stages(0) {
 
-        //' Make sure `wasp_field_attract` sums to 1 (negative values
-        //' and a sum <= 0 are already checked for in sim_pseudogameofclones_cpp):
+        // This vector can't have values < 0:
+        double wfa_min = *min_element(wasp_field_attract.begin(),
+                                      wasp_field_attract.end());
+        if (wfa_min < 0) stop("\nmin(wasp_field_attract) < 0.\n");
+        // It can have zeros, but can't have all zeros:
         double wfa_sum = std::accumulate(wasp_field_attract.begin(),
                                          wasp_field_attract.end(), 0.0);
+        if (wfa_sum <= 0) stop("\nwasp_field_attract sums to <= 0.\n");
+        // This makes it sum to 1:
         for (double& x : wasp_field_attract) x /= wfa_sum;
+
 
         fields.reserve(n_fields);
         for (uint32 i = 0; i < n_fields; i++) {
@@ -439,6 +458,21 @@ public:
     }
     const OneField& operator[](const uint32& idx) const {
         return fields[idx];
+    }
+
+    using iterator = std::vector<OneField>::iterator;
+    using const_iterator = std::vector<OneField>::const_iterator;
+    iterator begin() {
+        return fields.begin();
+    }
+    const_iterator begin() const {
+        return fields.begin();
+    }
+    iterator end() {
+        return fields.end();
+    }
+    const_iterator end() const {
+        return fields.end();
     }
 
     uint32 n_lines() const {

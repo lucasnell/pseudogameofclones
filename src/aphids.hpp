@@ -208,23 +208,6 @@ public:
 // Aphid population: both alates and apterous for one clonal line in a field
 class AphidPop {
 
-    double sigma_x;          // environmental standard deviation for aphids
-    double rho;              // environmental correlation among instars
-    bool demog_error;        // whether to include demographic stochasticity
-
-    uint32 adult_age;           // age at which aphids are adults
-                                // (assumed == `field_disp_start`)
-
-    /*
-     Vector of length >=2 with survival probabilities of singly & multiply
-     attacked aphids:
-     */
-    arma::vec attack_surv;
-
-    // for process error:
-    mutable std::normal_distribution<double> norm_distr =
-        std::normal_distribution<double>(0, 1);
-
     // Process error for all stages, plus checks so that they don't exceed
     // what's possible
     void process_error(const arma::vec& apterous_Xt,
@@ -247,10 +230,26 @@ class AphidPop {
     }
 
 
-
-
-
 public:
+
+    double sigma_x;          // environmental standard deviation for aphids
+    double rho;              // environmental correlation among instars
+    bool demog_error;        // whether to include demographic stochasticity
+
+    uint32 adult_age;           // age at which aphids are adults
+    // (assumed == `field_disp_start`)
+
+    /*
+     Vector of length >=2 with survival probabilities of singly & multiply
+     attacked aphids:
+     */
+    arma::vec attack_surv;
+
+    // for process error:
+    mutable std::normal_distribution<double> norm_distr =
+        std::normal_distribution<double>(0, 1);
+
+
     std::string aphid_name;    // unique identifying name for this aphid line
     ApterousPop apterous;
     AlatePop alates;

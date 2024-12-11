@@ -1,8 +1,8 @@
 
 
-# Check `perturb` dataframe and return a list that's properly formatted for use
-# in cpp code.
-make_perturb_list <- function(perturb, fields) {
+# Check `perturb` dataframe, create vectors that are properly formatted,
+# then create the XPtr to an object for use in C++
+make_perturb_ptr_R <- function(perturb, fields) {
 
     n_fields <- fields$n_fields
     aphid_names <- fields$aphid_names
@@ -34,21 +34,52 @@ make_perturb_list <- function(perturb, fields) {
         }
     }
 
-    perturb_list <- list(when = perturb_when,
-                         where = perturb_where,
-                         who = perturb_who,
-                         how = perturb_how)
-    uint_vec_check(perturb_list$when, "perturb_list$when")
-    uint_vec_check(perturb_list$where, "perturb_list$where")
-    uint_vec_check(perturb_list$who, "perturb_list$who")
-    dbl_vec_check(perturb_list$how, "perturb_list$how", .min = 0)
+    uint_vec_check(perturb_when, "perturb_when")
+    uint_vec_check(perturb_where, "perturb_where")
+    uint_vec_check(perturb_who, "perturb_who")
+    dbl_vec_check(perturb_how, "perturb_how", .min = 0)
 
-    return(perturb_list)
+    perturb_ptr <- make_perturb_ptr(perturb_when, perturb_where,
+                                    perturb_who, perturb_how)
+
+    return(perturb_ptr)
 }
 
 
 
+#
+# Convert output from `sim_fields_cpp` to a cloneSims object.
+#
+make_cloneSims_obj <- function(sims, call_, stage_ts_out, restarted = FALSE) {
 
+    sims[["aphids"]] <- mutate(sims[["aphids"]],
+                               across(c("rep", "time", "field"), as.integer))
+    sims[["aphids"]] <- mutate(sims[["aphids"]],
+                               across(c("rep", "field"), ~ .x + 1L))
+    sims[["aphids"]] <- mutate(sims[["aphids"]],
+                               line = ifelse(type == "mummy", NA, line))
+    sims[["aphids"]] <- as_tibble(sims[["aphids"]])
+
+    sims[["wasps"]] <- mutate(sims[["wasps"]],
+                              across(c("rep", "time", "field"), as.integer))
+    sims[["wasps"]] <- mutate(sims[["wasps"]],
+                              across(c("rep", "field"), ~ .x + 1L))
+    sims[["wasps"]] <- as_tibble(sims[["wasps"]])
+
+    sims[["all_info"]] <- make_all_info(sims)
+
+    sims[["call"]] <- call_
+
+    sims[["restarted"]] <- restarted
+
+    if (stage_ts_out) {
+        sims[["stage_ts"]] <- lapply(sims[["stage_ts"]], as.data.frame)
+    }
+
+    class(sims) <- "cloneSims"
+
+    return(sims)
+}
 
 
 
@@ -60,17 +91,6 @@ make_perturb_list <- function(perturb, fields) {
 #'     `all_fields` function.
 #' @param n_reps Number of reps to simulate. Defaults to `1`.
 #' @param max_t How many days to simulate. Defaults to `250`.
-#' @param sep_adults Single logical for whether to separate adults vs
-#'     juvenile aphids in the output.
-#'     Useful for counting aphids with wings (adult alates).
-#'     Defaults to `FALSE`.
-#' @param save_every Abundances will be stored every `save_every` time points.
-#'     Defaults to `1`.
-#' @param n_threads Number of threads to use if `n_reps > 1`
-#'     (ignored otherwise).
-#'     Defaults to `1`.
-#' @param show_progress Boolean for whether to show progress bar.
-#'     Defaults to `FALSE`.
 #' @param perturb Information for perturbing populations in the simulations.
 #'     It should be a dataframe with 4 columns:
 #'     * `when`: Integers indicating at what timepoint(s) to do the
@@ -88,6 +108,22 @@ make_perturb_list <- function(perturb, fields) {
 #'       still-living but parasitized aphids, too.
 #'     * `how`: Numbers `>= 0` that are multiplied by the desired population
 #'       to cause the perturbation.
+#' @param save_every Abundances will be stored every `save_every` time points.
+#'     Defaults to `1`.
+#' @param sep_adults Single logical for whether to separate adults vs
+#'     juvenile aphids in the output.
+#'     Useful for counting aphids with wings (adult alates).
+#'     Defaults to `FALSE`.
+#' @param stage_ts_out Single logical for whether to output stage-structured
+#'     information for all time points.
+#'     If `TRUE`, the output object will contain this information in the
+#'     `stage_ts` field, which will be a list of data frames.
+#'     Defaults to `FALSE`.
+#' @param show_progress Boolean for whether to show progress bar.
+#'     Defaults to `FALSE`.
+#' @param n_threads Number of threads to use if `n_reps > 1`
+#'     (ignored otherwise).
+#'     Defaults to `1`.
 #'
 #' @importFrom purrr map_dfr
 #' @importFrom dplyr as_tibble
@@ -110,11 +146,12 @@ make_perturb_list <- function(perturb, fields) {
 sim_fields <- function(fields,
                        n_reps = 1,
                        max_t = 250,
-                       sep_adults = FALSE,
+                       perturb = NULL,
                        save_every = 1,
-                       n_threads = 1,
+                       sep_adults = FALSE,
+                       stage_ts_out = FALSE,
                        show_progress = FALSE,
-                       perturb = NULL) {
+                       n_threads = 1L) {
 
     # This is like match.call but includes default arguments and
     # evaluates everything
@@ -131,35 +168,15 @@ sim_fields <- function(fields,
     uint_check(save_every, "save_every", .min = 1)
     uint_check(n_threads, "n_threads", .min = 1)
     lgl_check(show_progress, "show_progress")
+    lgl_check(stage_ts_out, "stage_ts_out")
 
-    perturb_list <- make_perturb_list(perturb, fields)
-    perturb_ptr <- make_perturb_ptr(perturb_list$when, perturb_list$where,
-                                    perturb_list$who, perturb_list$how)
+    perturb_ptr <- make_perturb_ptr_R(perturb, fields)
 
+    sims <- sim_fields_cpp(fields$ptr, perturb_ptr,
+                           n_reps, max_t, save_every, sep_adults,
+                           n_threads, show_progress, stage_ts_out)
 
-    sims <- sim_pseudogameofclones_cpp(fields$ptr, perturb_ptr,
-                                       n_reps, max_t, save_every, sep_adults,
-                                       n_threads, show_progress)
-
-    sims[["aphids"]] <- mutate(sims[["aphids"]],
-                               across(c("rep", "time", "field"), as.integer))
-    sims[["aphids"]] <- mutate(sims[["aphids"]],
-                               across(c("rep", "field"), ~ .x + 1L))
-    sims[["aphids"]] <- mutate(sims[["aphids"]],
-                               line = ifelse(type == "mummy", NA, line))
-    sims[["aphids"]] <- as_tibble(sims[["aphids"]])
-
-    sims[["wasps"]] <- mutate(sims[["wasps"]],
-                              across(c("rep", "time", "field"), as.integer))
-    sims[["wasps"]] <- mutate(sims[["wasps"]],
-                              across(c("rep", "field"), ~ .x + 1L))
-    sims[["wasps"]] <- as_tibble(sims[["wasps"]])
-
-    sims[["all_info"]] <- make_all_info(sims)
-
-    sims[["call"]] <- call_
-
-    class(sims) <- "cloneSims"
+    sims <- make_cloneSims_obj(sims, call_, stage_ts_out)
 
     return(sims)
 }
@@ -191,6 +208,71 @@ make_all_info <- function(sims_obj) {
 
 
 
+#
+# For `restart.cloneSims, if `new_starts` is provided, check it carefully then
+# return a list of N vectors (1 per rep) in the exact order necessary.
+#
+check_new_starts_adjust_N <- function(sims_obj, new_starts, new_field_ptr) {
+
+    stopifnot(inherits(new_starts, c("list", "data.frame")))
+    test_against_starts <- make_all_info(sims_obj)
+    n_reps <- length(test_against_starts)
+    if (length(sims_obj$all_info) != n_reps) {
+        stop("\nPlease do not directly edit `sims_obj$all_info`. ",
+             "You can try to fix this problem by running ",
+             "`sims_obj$all_info <- ",
+             "pseudogameofclones:::make_all_info(sims_obj)`")
+    }
+    if (is.data.frame(new_starts)) {
+        new_starts <- rep(list(new_starts), n_reps)
+    }
+    needed_cols <- c("field", "line", "type", "stage", "N")
+    for (i in 1:n_reps) {
+        not_present_cols <- needed_cols[!needed_cols %in%
+                                            colnames(new_starts[[i]])]
+        if (length(not_present_cols) > 0) {
+            stop("\n`new_starts` contains at least one dataframe without ",
+                 "the following needed column(s): ",
+                 paste(not_present_cols, collapse = ", "))
+        }
+        x <- test_against_starts[[i]][, head(needed_cols, -1)]
+        y <- new_starts[[i]][, head(needed_cols, -1)]
+        z <- sims_obj$all_info[[i]][, head(needed_cols, -1)]
+        if (!isTRUE(all.equal(x, y))) {
+            stop("\n`new_starts` contains at least one dataframe that ",
+                 "differs from its counterpart in ",
+                 "`sims_obj$all_info`. ",
+                 "Note that changing sims_obj$all_info does not fix ",
+                 "this problem.")
+        }
+        if (!isTRUE(all.equal(x, z))) {
+            stop("\nPlease do not directly edit `sims_obj$all_info`. ",
+                 "You can try to fix this problem by running ",
+                 "`sims_obj$all_info <- ",
+                 "pseudogameofclones:::make_all_info(sims_obj)`")
+        }
+    }
+    N_vecs <- lapply(new_starts, function(x) x[["N"]])
+
+    fields_from_vectors(new_field_ptr, N_vecs)
+
+    invisible(NULL)
+
+}
+
+
+
+
+#' Generic restart method
+#'
+#' @noRd
+#' @export
+#'
+restart <- function(sims_obj, ...) {
+    UseMethod("restart")
+}
+
+
 #' Restart experimental simulations.
 #'
 #' Note for most of this function's arguments, their default value is `NULL`,
@@ -211,261 +293,131 @@ make_all_info <- function(sims_obj) {
 #' You can suppress this warning by setting `no_warns = TRUE`.
 #'
 #'
-#' @param sims_obj A `cloneSims` object output from `sim_fields`.
+#' @param sims_obj A `cloneSims` object output from `sim_fields` or
+#'     from`restart.cloneSims`.
 #' @param new_starts A dataframe or list of dataframes indicating the
 #'     new starting abundances for all populations (wasps, mummies,
 #'     all aphid lines) and stages.
 #'     It should be the exact same format as what's in `sims_obj$all_info`.
 #'     (But don't change `sims_obj$all_info` to make this be true!)
-#' @param stage_ts_out Single logical for whether to output stage-structured
-#'     information for all time points.
-#'     If `TRUE`, the output object will contain this information in the
-#'     `stage_ts` field, which will be a list of data frames.
-#'     Defaults to `FALSE`.
+#' @param new_field_pars A named list of field-related arguments to change in
+#'     the restarted simulations.
+#'     The arguments available to change are `aphid_demog_error`,
+#'     `wasp_demog_error`, `K`, `K_y`, `pred_rate`, `constant_wasps`,
+#'     `alate_field_disp_p`, `wasp_disp_m0`, `wasp_disp_m1`, and
+#'     `wasp_field_attract`.
+#'     These arguments should follow the same specifications as for the
+#'     function [all_fields()].
+#'     Defaults to `NULL`, resulting in no changes.
+#' @param no_warns Single logical for whether not to output a warning about
+#'     having a perturbations in the initial simulation without them in this
+#'     restarted simulation. Defaults to `FALSE`.
 #' @inheritParams sim_fields
 #'
 #' @export
 #'
-restart_experiment <- function(sims_obj,
-                               new_starts = NULL,
-                               stage_ts_out = FALSE,
-                               max_t = 250,
-                               save_every = 1,
-                               alate_field_disp_p = NULL,
-                               K = NULL,
-                               alate_b0 = NULL,
-                               alate_b1 = NULL,
-                               K_y_mult = NULL,
-                               s_y = NULL,
-                               a = NULL,
-                               k = NULL,
-                               h = NULL,
-                               wasp_disp_m0 = NULL,
-                               wasp_disp_m1 = NULL,
-                               wasp_field_attract = NULL,
-                               mum_smooth = NULL,
-                               pred_rate = NULL,
-                               sep_adults = NULL,
-                               show_progress = NULL,
-                               perturb = NULL,
-                               no_warns = FALSE,
-                               n_threads = 1L) {
+#' @examples
+#' wp <- wasp_pop()
+#' sa <- clonal_line("susceptible")
+#' ra <- clonal_line("resistant", resistant = TRUE, repro_apterous = "low")
+#' af <- all_fields(c(sa, ra), wp)
+#' sf <- sim_fields(af)
+#' rf <- restart(sf)
+#'
+restart.cloneSims <- function(sims_obj,
+                              new_starts = NULL,
+                              new_field_pars = NULL,
+                              max_t = 250,
+                              perturb = NULL,
+                              no_warns = FALSE,
+                              save_every = 1,
+                              sep_adults = FALSE,
+                              stage_ts_out = FALSE,
+                              show_progress = FALSE,
+                              n_threads = 1L) {
 
-    stopifnot(inherits(sims_obj, "cloneSims") |
-                  inherits(sims_obj, "cloneSimsRestart"))
+    # This is like match.call but includes default arguments and
+    # evaluates everything
+    restart_call <- mget(names(formals()), sys.frame(sys.nframe()))
+    call_ <- sims_obj$call
+    for (n in c("max_t", "perturb", "save_every", "sep_adults", "stage_ts_out",
+                "show_progress", "n_threads")) {
+        if (n %in% names(restart_call)) call_[[n]] <- restart_call[[n]]
+    }
+
     if (!inherits(sims_obj$all_info_xptr, "externalptr")) {
         stop("\nSomething has happened to the \"all_info_xptr\" field ",
-             "in this `cloneSims*` object. Please re-run simulation.")
+             "in this `cloneSims` object. Please re-run simulation.")
     }
 
-    # Extract aphid line info (the location differs depending on whether it's
-    # a restart)
-    if (inherits(sims_obj, "cloneSimsRestart")) {
-        clonal_lines <- sims_obj$clonal_lines
-    } else {
-        clonal_lines <- sims_obj$call$clonal_lines
-    }
-    stopifnot(!is.null(clonal_lines))
-    if (!inherits(clonal_lines, "multiAphid")) {
-        if (inherits(clonal_lines, "aphid")) {
-            clonal_lines <- c(clonal_lines)
-        } else stop("\n`clonal_lines` must be a multiAphid/aphid object.")
+    n_reps <- sims_obj$call$n_reps
+    if (is.null(n_reps)) n_reps <- formals(sim_fields)[["n_reps"]]
+
+    uint_check(n_reps, "n_reps", .min = 1)
+    uint_check(max_t, "max_t", .min = 1)
+    lgl_check(no_warns, "no_warns")
+    uint_check(save_every, "save_every", .min = 1)
+    lgl_check(sep_adults, "sep_adults")
+    lgl_check(stage_ts_out, "stage_ts_out")
+    lgl_check(show_progress, "show_progress")
+    uint_check(n_threads, "n_threads", .min = 1)
+
+    if (!no_warns && !is.null(sims_obj$call$perturb) && is.null(perturb)) {
+        warning(paste("\nThe initial simulations had perturbations, but the",
+                      "new one won't. Provide a dataframe to the `perturb`",
+                      "argument to `restart.cloneSims` to add",
+                      "perturbations."))
     }
 
+    perturb_ptr <- make_perturb_ptr_R(perturb, call_$fields)
+
+    # Create pointer to a copied C++ object with new arguments if requested.
+    # Start with those from original simulations:
+    restart_args <- get_field_pars(sims_obj$all_info_xptr)
+    if (!is.null(new_field_pars)) {
+        if (!inherits(new_field_pars, "list") || is.null(names(new_field_pars))) {
+            stop("\n`new_field_pars` must be a named list")
+        }
+        restart_args[["K_y_mult"]] <- restart_args[["K_y"]] / restart_args[["K"]]
+        restart_args[["K_y"]] <- NULL
+        if (!all(names(new_field_pars) %in% names(restart_args))) {
+            bn <- names(new_field_pars)[!names(new_field_pars) %in% names(restart_args)]
+            stop(sprintf(paste("\nThis option is unavailable for the `restart_args`",
+                               "argument: '%s'.\nThese are the ones to choose from: %s."),
+                         bn, paste(names(restart_args), collapse = ", ")))
+        }
+        for (n in names(new_field_pars)) {
+            z <- new_field_pars[[n]]
+            if (length(z) == 1 && length(restart_args[[n]]) > 1) {
+                z <- rep(z, length(restart_args[[n]]))
+            }
+            if (length(z) != length(restart_args[[n]])) {
+                stop(sprintf("new_field_pars[[%s]] should be length 1 or %i",
+                             n, length(restart_args[[n]])))
+            }
+            if (class(z) != class(restart_args[[n]])) {
+                stop(sprintf("new_field_pars[[%s]] should be of class %s",
+                             n, class(restart_args[[n]])))
+            }
+            restart_args[[n]] <- z
+        }
+        restart_args[["K_y"]] <- restart_args[["K_y_mult"]] * restart_args[["K"]]
+        restart_args[["K_y_mult"]] <- NULL
+    }
+    restart_args[["all_fields_in_ptr"]] <- sims_obj$all_info_xptr
+    new_field_ptr <- do.call(restarted_field_ptr, restart_args)
 
     # If `new_starts` is provided, check it carefully then adjust the
     # underlying C++ objects accordingly.
     if (!is.null(new_starts)) {
-        stopifnot(inherits(new_starts, c("list", "data.frame")))
-        test_against_starts <- make_all_info(sims_obj)
-        n_reps <- length(test_against_starts)
-        if (length(sims_obj$all_info) != n_reps) {
-            stop("\nPlease do not directly edit `sims_obj$all_info`. ",
-                 "You can try to fix this problem by running ",
-                 "`sims_obj$all_info <- ",
-                 "pseudogameofclones:::make_all_info(sims_obj)`")
-        }
-        if (is.data.frame(new_starts)) {
-            new_starts <- rep(list(new_starts), n_reps)
-        }
-        needed_cols <- c("field", "line", "type", "stage", "N")
-        for (i in 1:n_reps) {
-            not_present_cols <- needed_cols[!needed_cols %in%
-                                                colnames(new_starts[[i]])]
-            if (length(not_present_cols) > 0) {
-                stop("\n`new_starts` contains at least one dataframe without ",
-                     "the following needed column(s): ",
-                     paste(not_present_cols, collapse = ", "))
-            }
-            x <- test_against_starts[[i]][, head(needed_cols, -1)]
-            y <- new_starts[[i]][, head(needed_cols, -1)]
-            z <- sims_obj$all_info[[i]][, head(needed_cols, -1)]
-            if (!isTRUE(all.equal(x, y))) {
-                stop("\n`new_starts` contains at least one dataframe that ",
-                     "differs from its counterpart in ",
-                     "`sims_obj$all_info`. ",
-                     "Note that changing sims_obj$all_info does not fix ",
-                     "this problem.")
-            }
-            if (!isTRUE(all.equal(x, z))) {
-                stop("\nPlease do not directly edit `sims_obj$all_info`. ",
-                     "You can try to fix this problem by running ",
-                     "`sims_obj$all_info <- ",
-                     "pseudogameofclones:::make_all_info(sims_obj)`")
-            }
-        }
-        N_vecs <- lapply(new_starts, function(x) x[["N"]])
-    } else {
-        N_vecs <- list()
+        check_new_starts_adjust_N(sims_obj, new_starts, new_field_ptr)
     }
 
+    sims <- sim_fields_cpp(new_field_ptr, perturb_ptr,
+                           n_reps, max_t, save_every, sep_adults,
+                           n_threads, show_progress, stage_ts_out)
 
-    # Fill in defaults / previously provided arguments:
-    if (is.null(alate_field_disp_p)) alate_field_disp_p <-
-            sims_obj$call[["alate_field_disp_p"]]
-    if (is.null(K)) K <- sims_obj$call[["K"]]
-    if (is.null(alate_b0)) alate_b0 <- sims_obj$call[["alate_b0"]]
-    if (is.null(alate_b1)) alate_b1 <- sims_obj$call[["alate_b1"]]
-    if (is.null(K_y_mult)) K_y_mult <- sims_obj$call[["K_y_mult"]]
-    if (is.null(s_y)) s_y <- sims_obj$call[["s_y"]]
-    if (is.null(a)) a <- sims_obj$call[["a"]]
-    if (is.null(k)) k <- sims_obj$call[["k"]]
-    if (is.null(h)) h <- sims_obj$call[["h"]]
-    if (is.null(wasp_disp_m0)) wasp_disp_m0 <- sims_obj$call[["wasp_disp_m0"]]
-    if (is.null(wasp_disp_m1)) wasp_disp_m1 <- sims_obj$call[["wasp_disp_m1"]]
-    if (is.null(wasp_field_attract)) {
-        wasp_field_attract <- sims_obj$call[["wasp_field_attract"]]
-    }
-    if (is.null(mum_smooth)) mum_smooth <- sims_obj$call[["mum_smooth"]]
-    if (is.null(pred_rate)) pred_rate <- sims_obj$call[["pred_rate"]]
-    if (is.null(sep_adults)) sep_adults <- sims_obj$call[["sep_adults"]]
-    if (is.null(show_progress)) show_progress <-
-            sims_obj$call[["show_progress"]]
-
-    # Error if any of these are still NULL, since this means they weren't in
-    # `sims_obj$call`
-    stopifnot(!is.null(alate_field_disp_p))
-    stopifnot(!is.null(K))
-    stopifnot(!is.null(alate_b0))
-    stopifnot(!is.null(alate_b1))
-    stopifnot(!is.null(K_y_mult))
-    stopifnot(!is.null(s_y))
-    stopifnot(!is.null(a))
-    stopifnot(!is.null(k))
-    stopifnot(!is.null(h))
-    stopifnot(!is.null(wasp_disp_m0))
-    stopifnot(!is.null(wasp_disp_m1))
-    stopifnot(!is.null(wasp_field_attract))
-    stopifnot(!is.null(mum_smooth))
-    stopifnot(!is.null(pred_rate))
-    stopifnot(!is.null(sep_adults))
-    stopifnot(!is.null(show_progress))
-
-    # Create / edit some items:
-    n_fields <- sims_obj$call$n_fields
-    n_lines <- length(clonal_lines)
-    uint_check(n_fields, "n_fields", .min = 1)
-    uint_check(n_lines, "n_lines", .min = 1)
-    if (length(pred_rate) == 1) pred_rate <- rep(pred_rate, n_fields)
-    if (length(alate_b0) == 1) alate_b0 <- rep(alate_b0, n_lines)
-    if (length(alate_b1) == 1) alate_b1 <- rep(alate_b1, n_lines)
-    if (length(K) == 1) K <- rep(K, n_fields)
-    if (length(K_y_mult) == 1) K_y_mult <- rep(K_y_mult, n_fields)
-    if (length(s_y) == 1) s_y <- rep(s_y, n_fields)
-    stopifnot(is.numeric(wasp_field_attract))
-    if (length(wasp_field_attract) == 1) {
-        wasp_field_attract <- rep(1, n_fields)
-    }
-
-    stopifnot(inherits(no_warns, "logical") && length(no_warns) == 1)
-    if (!no_warns && !is.null(sims_obj$call$perturb) && is.null(perturb)) {
-        warning(paste("\nThe initial simulations had perturbations, but the",
-                      "new one won't. Provide a dataframe to the `perturb`",
-                      "argument to `restart_experiments` to add",
-                      "perturbations."))
-    }
-
-    perturb_list <- make_perturb_list(perturb, fields)
-    perturb_ptr <- make_perturb_ptr(perturb_list$when, perturb_list$where,
-                                    perturb_list$who, perturb_list$how)
-
-
-    # This is like match.call but includes default arguments and
-    # evaluates everything
-    call_ <- mget(names(formals()), sys.frame(sys.nframe()))
-    call_$n_fields <- n_fields
-    call_$n_lines <- n_lines
-
-
-    # Check validity of arguments:
-    uint_check(max_t, "max_t", .min = 1)
-    uint_check(save_every, "save_every", .min = 1)
-    uint_check(n_threads, "n_threads", .min = 1)
-    dbl_check(alate_field_disp_p, "alate_field_disp_p", .min = 0, .max = 1)
-    dbl_vec_check(K, "K", .min = 0)
-    dbl_vec_check(alate_b0, "alate_b0")
-    dbl_vec_check(alate_b1, "alate_b1")
-    dbl_vec_check(K_y_mult, "K_y_mult", .min = 0)
-    dbl_vec_check(s_y, "s_y", .min = 0, .max = 1)
-    dbl_check(a, "a", .min = 0)
-    dbl_check(k, "k", .min = 0)
-    dbl_check(h, "h", .min = 0)
-    dbl_check(wasp_disp_m0, "wasp_disp_m0", .min = 0, .max = 1)
-    dbl_check(wasp_disp_m1, "wasp_disp_m1")
-    dbl_vec_check(wasp_field_attract, "wasp_field_attract", .min = 0)
-    stopifnot(sum(wasp_field_attract) > 0)
-    dbl_check(mum_smooth, "mum_smooth", .min = 0, .max = 1)
-    dbl_vec_check(pred_rate, "pred_rate", .min = 0, .max = 1)
-    stopifnot(inherits(sep_adults, "logical") && length(sep_adults) == 1)
-    stopifnot(inherits(show_progress, "logical") && length(show_progress) == 1)
-    stopifnot(inherits(stage_ts_out, "logical") && length(stage_ts_out) == 1)
-
-
-    # Make new C++ pointer to use for simulations:
-    new_all_info_xptr <- restart_fill_other_pars(sims_obj$all_info_xptr,
-                                                 K, alate_b0, alate_b1,
-                                                 alate_field_disp_p,
-                                                 K * K_y_mult,
-                                                 s_y, a, k, h,
-                                                 wasp_disp_m0, wasp_disp_m1,
-                                                 wasp_field_attract,
-                                                 mum_smooth, pred_rate)
-    # Now fill in abundances if they were input:
-    if (length(N_vecs) > 0) {
-        fields_from_vectors(new_all_info_xptr, N_vecs)
-    }
-
-    sims <- restart_experiments_cpp(new_all_info_xptr, perturb_ptr,
-                                    max_t, save_every,
-                                    stage_ts_out, sep_adults, show_progress,
-                                    n_threads)
-
-    sims[["aphids"]] <- mutate(sims[["aphids"]],
-                               across(c("rep", "time", "field"), as.integer))
-    sims[["aphids"]] <- mutate(sims[["aphids"]],
-                               across(c("rep", "field"), ~ .x + 1L))
-    sims[["aphids"]] <- mutate(sims[["aphids"]],
-                               line = ifelse(type == "mummy", NA, line))
-    sims[["aphids"]] <- as_tibble(sims[["aphids"]])
-
-    sims[["wasps"]] <- mutate(sims[["wasps"]],
-                              across(c("rep", "time", "field"), as.integer))
-    sims[["wasps"]] <- mutate(sims[["wasps"]],
-                              across(c("rep", "field"), ~ .x + 1L))
-    sims[["wasps"]] <- as_tibble(sims[["wasps"]])
-
-    sims[["all_info"]] <- make_all_info(sims)
-
-    sims[["call"]] <- call_
-
-    # This is important if you want to restart output from this function.
-    sims[["clonal_lines"]] <- clonal_lines
-
-    if (stage_ts_out) {
-        sims[["stage_ts"]] <- lapply(sims[["stage_ts"]], as.data.frame)
-    }
-
-    class(sims) <- "cloneSimsRestart"
+    sims <- make_cloneSims_obj(sims, call_, stage_ts_out, restarted = TRUE)
 
     return(sims)
 
@@ -492,29 +444,7 @@ print.cloneSims <- function(x, ...) {
         cat(sprintf("[[%i]]\n", i))
         print(as_tibble(x$all_info[[i]]), n = 5)
     }
+    if (x$restarted) cat("** these sims were restarted, so starting abundances",
+                         "in the `call` field are not accurate\n")
     invisible(x)
 }
-
-#'
-#' @export
-#' @noRd
-#'
-#' @importFrom dplyr as_tibble
-#'
-print.cloneSimsRestart <- function(x, ...) {
-    cat("< cloneSimsRestart object >\n\n")
-    cat("$aphids\n")
-    print(as_tibble(x$aphids), n = 5)
-    cat("\n$wasps\n")
-    print(as_tibble(x$wasps), n = 5)
-    cat("\n$all_info\n")
-    for (i in 1:length(x$all_info)) {
-        cat(sprintf("[[%i]]\n", i))
-        print(as_tibble(x$all_info[[i]]), n = 5)
-    }
-    invisible(x)
-}
-
-
-
-

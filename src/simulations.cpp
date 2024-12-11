@@ -374,18 +374,50 @@ void one_rep__(RepSummary& summary,
 
 
 
+List make_stage_ts_list(const std::vector<std::vector<AllStageInfo>>& stage_ts) {
+
+    uint32 n_reps = stage_ts.size();
+
+    List stage_ts_list;
+
+    if (n_reps > 1) {
+
+        stage_ts_list = List(n_reps);
+        for (uint32 i = 0; i < n_reps; i++) {
+            const std::vector<AllStageInfo>& stage_ts_i(stage_ts[i]);
+            List stage_ts_list_i = List(stage_ts_i.size());
+            for (uint32 j = 0; j < stage_ts_i.size(); j++) {
+                stage_ts_list_i(j) = stage_ts_i[j].to_data_frame();
+            }
+            stage_ts_list(i) = stage_ts_list_i;
+        }
+
+    } else {
+
+        const std::vector<AllStageInfo>& stage_ts_i(stage_ts[0]);
+        stage_ts_list = List(stage_ts_i.size());
+        for (uint32 j = 0; j < stage_ts_i.size(); j++) {
+            stage_ts_list(j) = stage_ts_i[j].to_data_frame();
+        }
+
+    }
+
+    return stage_ts_list;
+}
+
 
 
 
 //[[Rcpp::export]]
-List sim_pseudogameofclones_cpp(SEXP fields_ptr,
-                                SEXP perturb_ptr,
-                                const uint32& n_reps,
-                                const uint32& max_t,
-                                const uint32& save_every,
-                                const bool& sep_adults,
-                                uint32 n_threads,
-                                const bool& show_progress) {
+List sim_fields_cpp(SEXP fields_ptr,
+                    SEXP perturb_ptr,
+                    const uint32& n_reps,
+                    const uint32& max_t,
+                    const uint32& save_every,
+                    const bool& sep_adults,
+                    uint32 n_threads,
+                    const bool& show_progress,
+                    const bool& stage_ts_out) {
 
     /*
      These are the starting conditions for all fields.
@@ -423,14 +455,13 @@ List sim_pseudogameofclones_cpp(SEXP fields_ptr,
         all_fields_vec[i].reseed(seeds[i]);
     }
 
-    // Have to create this to make one_rep__ compatible with `restart_experiments`
     std::vector<std::vector<AllStageInfo>> stage_ts(n_reps);
 
     // Parallelized loop
     RcppThread::parallelFor(0, n_reps, [&] (uint32 i) {
         one_rep__(summaries[i], stage_ts[i], all_fields_vec[i], i,
                   max_t, save_every, perturbs,
-                  prog_bar, show_progress, false);
+                  prog_bar, show_progress, stage_ts_out);
     }, n_threads);
 
 
@@ -460,6 +491,10 @@ List sim_pseudogameofclones_cpp(SEXP fields_ptr,
                                 _["field"] = summ.wasp_field,
                                 _["wasps"] = summ.wasp_N),
                             _["all_info_xptr"] = all_fields_vec_xptr);
+
+    if (stage_ts_out) {
+        out["stage_ts"] = make_stage_ts_list(stage_ts);
+    }
 
     return out;
 }
@@ -558,14 +593,14 @@ SEXP restart_fill_other_pars(SEXP all_fields_in_ptr,
 
 
 //[[Rcpp::export]]
-List restart_experiments_cpp(SEXP all_fields_ptr,
-                             SEXP perturb_ptr,
-                             const uint32& max_t,
-                             const uint32& save_every,
-                             const bool& stage_ts_out,
-                             const bool& sep_adults,
-                             const bool& show_progress,
-                             uint32 n_threads) {
+List restart_sims_cpp(SEXP all_fields_ptr,
+                      SEXP perturb_ptr,
+                      const uint32& max_t,
+                      const uint32& save_every,
+                      const bool& stage_ts_out,
+                      const bool& sep_adults,
+                      const bool& show_progress,
+                      uint32 n_threads) {
 
 
     XPtr<std::vector<AllFields>> all_fields_vec_xptr(all_fields_ptr);
@@ -620,25 +655,7 @@ List restart_experiments_cpp(SEXP all_fields_ptr,
                                 _["wasps"] = summ.wasp_N),
                             _["all_info_xptr"] = all_fields_vec_xptr);
     if (stage_ts_out) {
-        List stage_ts_list;
-        if (n_reps > 1) {
-            stage_ts_list = List(n_reps);
-            for (uint32 i = 0; i < n_reps; i++) {
-                const std::vector<AllStageInfo>& stage_ts_i(stage_ts[i]);
-                List stage_ts_list_i = List(stage_ts_i.size());
-                for (uint32 j = 0; j < stage_ts_i.size(); j++) {
-                    stage_ts_list_i(j) = stage_ts_i[j].to_data_frame();
-                }
-                stage_ts_list(i) = stage_ts_list_i;
-            }
-        } else {
-            const std::vector<AllStageInfo>& stage_ts_i(stage_ts[0]);
-            stage_ts_list = List(stage_ts_i.size());
-            for (uint32 j = 0; j < stage_ts_i.size(); j++) {
-                stage_ts_list(j) = stage_ts_i[j].to_data_frame();
-            }
-        }
-        out["stage_ts"] = stage_ts_list;
+        out["stage_ts"] = make_stage_ts_list(stage_ts);
     }
 
     return out;

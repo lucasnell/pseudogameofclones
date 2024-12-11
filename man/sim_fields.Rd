@@ -8,11 +8,12 @@ sim_fields(
   fields,
   n_reps = 1,
   max_t = 250,
-  sep_adults = FALSE,
+  perturb = NULL,
   save_every = 1,
-  n_threads = 1,
+  sep_adults = FALSE,
+  stage_ts_out = FALSE,
   show_progress = FALSE,
-  perturb = NULL
+  n_threads = 1L
 )
 }
 \arguments{
@@ -22,21 +23,6 @@ sim_fields(
 \item{n_reps}{Number of reps to simulate. Defaults to \code{1}.}
 
 \item{max_t}{How many days to simulate. Defaults to \code{250}.}
-
-\item{sep_adults}{Single logical for whether to separate adults vs
-juvenile aphids in the output.
-Useful for counting aphids with wings (adult alates).
-Defaults to \code{FALSE}.}
-
-\item{save_every}{Abundances will be stored every \code{save_every} time points.
-Defaults to \code{1}.}
-
-\item{n_threads}{Number of threads to use if \code{n_reps > 1}
-(ignored otherwise).
-Defaults to \code{1}.}
-
-\item{show_progress}{Boolean for whether to show progress bar.
-Defaults to \code{FALSE}.}
 
 \item{perturb}{Information for perturbing populations in the simulations.
 It should be a dataframe with 4 columns:
@@ -55,6 +41,27 @@ Note that perturbing the mummy population also perturbs the
 still-living but parasitized aphids, too.
 * \code{how}: Numbers \verb{>= 0} that are multiplied by the desired population
 to cause the perturbation.}
+
+\item{save_every}{Abundances will be stored every \code{save_every} time points.
+Defaults to \code{1}.}
+
+\item{sep_adults}{Single logical for whether to separate adults vs
+juvenile aphids in the output.
+Useful for counting aphids with wings (adult alates).
+Defaults to \code{FALSE}.}
+
+\item{stage_ts_out}{Single logical for whether to output stage-structured
+information for all time points.
+If \code{TRUE}, the output object will contain this information in the
+\code{stage_ts} field, which will be a list of data frames.
+Defaults to \code{FALSE}.}
+
+\item{show_progress}{Boolean for whether to show progress bar.
+Defaults to \code{FALSE}.}
+
+\item{n_threads}{Number of threads to use if \code{n_reps > 1}
+(ignored otherwise).
+Defaults to \code{1}.}
 }
 \value{
 A list of dataframes of aphids, wasps.

@@ -32,7 +32,7 @@ SEXP make_wasps_ptr(const arma::vec& rel_attack,
     // these will also potentially vary by field so are not included here
     uint32 delay = 0;
     double Y_0 = 0;
-    arma::vec mummy_Y_0(mummy_dev_time, arma::fill::zeros);
+    arma::vec mummy_Y_0(mummy_dev_time, arma::fill::ones);
 
     XPtr<WaspPop> wasps_xptr(
             new WaspPop(rel_attack, a, k, h, Y_0, delay, sex_ratio, s_y,

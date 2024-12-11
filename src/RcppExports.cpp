@@ -123,6 +123,38 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// get_field_pars
+List get_field_pars(SEXP all_fields_in_ptr);
+RcppExport SEXP _pseudogameofclones_get_field_pars(SEXP all_fields_in_ptrSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type all_fields_in_ptr(all_fields_in_ptrSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_field_pars(all_fields_in_ptr));
+    return rcpp_result_gen;
+END_RCPP
+}
+// restarted_field_ptr
+SEXP restarted_field_ptr(SEXP all_fields_in_ptr, const bool& aphid_demog_error, const bool& wasp_demog_error, const std::vector<double>& K, const std::vector<double>& K_y, const std::vector<double>& pred_rate, const std::vector<bool>& constant_wasps, const double& alate_field_disp_p, const double& wasp_disp_m0, const double& wasp_disp_m1, std::vector<double> wasp_field_attract);
+RcppExport SEXP _pseudogameofclones_restarted_field_ptr(SEXP all_fields_in_ptrSEXP, SEXP aphid_demog_errorSEXP, SEXP wasp_demog_errorSEXP, SEXP KSEXP, SEXP K_ySEXP, SEXP pred_rateSEXP, SEXP constant_waspsSEXP, SEXP alate_field_disp_pSEXP, SEXP wasp_disp_m0SEXP, SEXP wasp_disp_m1SEXP, SEXP wasp_field_attractSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type all_fields_in_ptr(all_fields_in_ptrSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type aphid_demog_error(aphid_demog_errorSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type wasp_demog_error(wasp_demog_errorSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type K(KSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type K_y(K_ySEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type pred_rate(pred_rateSEXP);
+    Rcpp::traits::input_parameter< const std::vector<bool>& >::type constant_wasps(constant_waspsSEXP);
+    Rcpp::traits::input_parameter< const double& >::type alate_field_disp_p(alate_field_disp_pSEXP);
+    Rcpp::traits::input_parameter< const double& >::type wasp_disp_m0(wasp_disp_m0SEXP);
+    Rcpp::traits::input_parameter< const double& >::type wasp_disp_m1(wasp_disp_m1SEXP);
+    Rcpp::traits::input_parameter< std::vector<double> >::type wasp_field_attract(wasp_field_attractSEXP);
+    rcpp_result_gen = Rcpp::wrap(restarted_field_ptr(all_fields_in_ptr, aphid_demog_error, wasp_demog_error, K, K_y, pred_rate, constant_wasps, alate_field_disp_p, wasp_disp_m0, wasp_disp_m1, wasp_field_attract));
+    return rcpp_result_gen;
+END_RCPP
+}
 // make_perturb_ptr
 SEXP make_perturb_ptr(const std::vector<uint32>& perturb_when, const std::vector<uint32>& perturb_where, const std::vector<uint32>& perturb_who, const std::vector<double>& perturb_how);
 RcppExport SEXP _pseudogameofclones_make_perturb_ptr(SEXP perturb_whenSEXP, SEXP perturb_whereSEXP, SEXP perturb_whoSEXP, SEXP perturb_howSEXP) {
@@ -137,9 +169,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// sim_pseudogameofclones_cpp
-List sim_pseudogameofclones_cpp(SEXP fields_ptr, SEXP perturb_ptr, const uint32& n_reps, const uint32& max_t, const uint32& save_every, const bool& sep_adults, uint32 n_threads, const bool& show_progress);
-RcppExport SEXP _pseudogameofclones_sim_pseudogameofclones_cpp(SEXP fields_ptrSEXP, SEXP perturb_ptrSEXP, SEXP n_repsSEXP, SEXP max_tSEXP, SEXP save_everySEXP, SEXP sep_adultsSEXP, SEXP n_threadsSEXP, SEXP show_progressSEXP) {
+// sim_fields_cpp
+List sim_fields_cpp(SEXP fields_ptr, SEXP perturb_ptr, const uint32& n_reps, const uint32& max_t, const uint32& save_every, const bool& sep_adults, uint32 n_threads, const bool& show_progress, const bool& stage_ts_out);
+RcppExport SEXP _pseudogameofclones_sim_fields_cpp(SEXP fields_ptrSEXP, SEXP perturb_ptrSEXP, SEXP n_repsSEXP, SEXP max_tSEXP, SEXP save_everySEXP, SEXP sep_adultsSEXP, SEXP n_threadsSEXP, SEXP show_progressSEXP, SEXP stage_ts_outSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -151,7 +183,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const bool& >::type sep_adults(sep_adultsSEXP);
     Rcpp::traits::input_parameter< uint32 >::type n_threads(n_threadsSEXP);
     Rcpp::traits::input_parameter< const bool& >::type show_progress(show_progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(sim_pseudogameofclones_cpp(fields_ptr, perturb_ptr, n_reps, max_t, save_every, sep_adults, n_threads, show_progress));
+    Rcpp::traits::input_parameter< const bool& >::type stage_ts_out(stage_ts_outSEXP);
+    rcpp_result_gen = Rcpp::wrap(sim_fields_cpp(fields_ptr, perturb_ptr, n_reps, max_t, save_every, sep_adults, n_threads, show_progress, stage_ts_out));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -180,9 +213,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// restart_experiments_cpp
-List restart_experiments_cpp(SEXP all_fields_ptr, SEXP perturb_ptr, const uint32& max_t, const uint32& save_every, const bool& stage_ts_out, const bool& sep_adults, const bool& show_progress, uint32 n_threads);
-RcppExport SEXP _pseudogameofclones_restart_experiments_cpp(SEXP all_fields_ptrSEXP, SEXP perturb_ptrSEXP, SEXP max_tSEXP, SEXP save_everySEXP, SEXP stage_ts_outSEXP, SEXP sep_adultsSEXP, SEXP show_progressSEXP, SEXP n_threadsSEXP) {
+// restart_sims_cpp
+List restart_sims_cpp(SEXP all_fields_ptr, SEXP perturb_ptr, const uint32& max_t, const uint32& save_every, const bool& stage_ts_out, const bool& sep_adults, const bool& show_progress, uint32 n_threads);
+RcppExport SEXP _pseudogameofclones_restart_sims_cpp(SEXP all_fields_ptrSEXP, SEXP perturb_ptrSEXP, SEXP max_tSEXP, SEXP save_everySEXP, SEXP stage_ts_outSEXP, SEXP sep_adultsSEXP, SEXP show_progressSEXP, SEXP n_threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -194,7 +227,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const bool& >::type sep_adults(sep_adultsSEXP);
     Rcpp::traits::input_parameter< const bool& >::type show_progress(show_progressSEXP);
     Rcpp::traits::input_parameter< uint32 >::type n_threads(n_threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(restart_experiments_cpp(all_fields_ptr, perturb_ptr, max_t, save_every, stage_ts_out, sep_adults, show_progress, n_threads));
+    rcpp_result_gen = Rcpp::wrap(restart_sims_cpp(all_fields_ptr, perturb_ptr, max_t, save_every, stage_ts_out, sep_adults, show_progress, n_threads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -227,10 +260,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_pseudogameofclones_fields_to_data_frames", (DL_FUNC) &_pseudogameofclones_fields_to_data_frames, 1},
     {"_pseudogameofclones_fields_from_vectors", (DL_FUNC) &_pseudogameofclones_fields_from_vectors, 2},
     {"_pseudogameofclones_make_field_ptr", (DL_FUNC) &_pseudogameofclones_make_field_ptr, 20},
+    {"_pseudogameofclones_get_field_pars", (DL_FUNC) &_pseudogameofclones_get_field_pars, 1},
+    {"_pseudogameofclones_restarted_field_ptr", (DL_FUNC) &_pseudogameofclones_restarted_field_ptr, 11},
     {"_pseudogameofclones_make_perturb_ptr", (DL_FUNC) &_pseudogameofclones_make_perturb_ptr, 4},
-    {"_pseudogameofclones_sim_pseudogameofclones_cpp", (DL_FUNC) &_pseudogameofclones_sim_pseudogameofclones_cpp, 8},
+    {"_pseudogameofclones_sim_fields_cpp", (DL_FUNC) &_pseudogameofclones_sim_fields_cpp, 9},
     {"_pseudogameofclones_restart_fill_other_pars", (DL_FUNC) &_pseudogameofclones_restart_fill_other_pars, 15},
-    {"_pseudogameofclones_restart_experiments_cpp", (DL_FUNC) &_pseudogameofclones_restart_experiments_cpp, 8},
+    {"_pseudogameofclones_restart_sims_cpp", (DL_FUNC) &_pseudogameofclones_restart_sims_cpp, 8},
     {"_pseudogameofclones_make_wasps_ptr", (DL_FUNC) &_pseudogameofclones_make_wasps_ptr, 9},
     {NULL, NULL, 0}
 };

@@ -353,7 +353,7 @@ void AllFields::set_new_pars(const std::vector<double>& K_,
     this->wasp_disp_m1 = wasp_disp_m1_;
     this->wasp_field_attract = wasp_field_attract_;
     //' Make sure `wasp_field_attract` sums to 1 (negative values
-    //' and a sum <= 0 are already checked for in sim_pseudogameofclones_cpp):
+    //' and a sum <= 0 are already checked for in sim_fields_cpp):
     double wfa_sum = std::accumulate(wasp_field_attract.begin(),
                                      wasp_field_attract.end(), 0.0);
     for (double& x : wasp_field_attract) x /= wfa_sum;
@@ -478,6 +478,152 @@ SEXP make_field_ptr(const bool& aphid_demog_error,
     return fields_xptr;
 
 }
+
+/*
+ Extract the following elements from an AllFields object (for use in
+ `restarted_field_ptr` below):
+    - aphid_demog_error
+    - wasp_demog_error
+    - K
+    - K_y
+    - pred_rate
+    - constant_wasps
+    - alate_field_disp_p
+    - wasp_disp_m0
+    - wasp_disp_m1
+    - wasp_field_attract
+
+ It's assumed that all reps are the same.
+
+*/
+//[[Rcpp::export]]
+List get_field_pars(SEXP all_fields_in_ptr) {
+
+    XPtr<std::vector<AllFields>> all_fields_vec_in_xptr(all_fields_in_ptr);
+    if (all_fields_vec_in_xptr->empty()) stop("\nn_reps == 0\n");
+    const AllFields& repr_fields((*all_fields_vec_in_xptr)[0]);
+
+    uint32 n_fields = repr_fields.size();
+    if (n_fields == 0) stop("\nn_fields == 0\n");
+
+    // parameters that have one value per `AllFields` object (or are defined
+    //  at this level):
+    bool aphid_demog_error = repr_fields[0].aphids[0].demog_error;
+    bool wasp_demog_error = repr_fields[0].wasps.demog_error;
+    double alate_field_disp_p = repr_fields.alate_field_disp_p;
+    double wasp_disp_m0 = repr_fields.wasp_disp_m0;
+    double wasp_disp_m1 = repr_fields.wasp_disp_m1;
+    std::vector<double> wasp_field_attract = repr_fields.wasp_field_attract;
+
+    // parameters that can vary by field:
+    std::vector<double> K;
+    std::vector<double> K_y;
+    std::vector<double> pred_rate;
+    std::vector<bool> constant_wasps;
+    K.reserve(n_fields);
+    K_y.reserve(n_fields);
+    pred_rate.reserve(n_fields);
+    constant_wasps.reserve(n_fields);
+    for (const OneField& field : repr_fields) {
+        K.push_back(field.K);
+        K_y.push_back(field.K_y);
+        pred_rate.push_back(field.pred_rate);
+        constant_wasps.push_back(field.constant_wasps);
+    }
+
+
+
+    List out = List::create(_["aphid_demog_error"] = aphid_demog_error,
+                            _["wasp_demog_error"] = wasp_demog_error,
+                            _["K"] = K,
+                            _["K_y"] = K_y,
+                            _["pred_rate"] = pred_rate,
+                            _["constant_wasps"] = constant_wasps,
+                            _["alate_field_disp_p"] = alate_field_disp_p,
+                            _["wasp_disp_m0"] = wasp_disp_m0,
+                            _["wasp_disp_m1"] = wasp_disp_m1,
+                            _["wasp_field_attract"] = wasp_field_attract);
+
+    return out;
+
+}
+
+
+
+// note #2: this differs from `make_field_ptr` in that this creates a vector
+// of AllFields objects, one per simulation rep
+//
+//[[Rcpp::export]]
+SEXP restarted_field_ptr(SEXP all_fields_in_ptr,
+                         const bool& aphid_demog_error,
+                         const bool& wasp_demog_error,
+                         const std::vector<double>& K,
+                         const std::vector<double>& K_y,
+                         const std::vector<double>& pred_rate,
+                         const std::vector<bool>& constant_wasps,
+                         const double& alate_field_disp_p,
+                         const double& wasp_disp_m0,
+                         const double& wasp_disp_m1,
+                         std::vector<double> wasp_field_attract) {
+
+    XPtr<std::vector<AllFields>> all_fields_vec_in_xptr(all_fields_in_ptr);
+    const std::vector<AllFields>& all_fields_vec_in(*all_fields_vec_in_xptr);
+
+    uint32 n_reps = all_fields_vec_in.size();
+    if (n_reps == 0) stop("\nn_reps == 0\n");
+
+    // copy input XPtr to a new XPtr
+    XPtr<std::vector<AllFields>> all_fields_vec_xptr(
+            new std::vector<AllFields>(), true);
+    std::vector<AllFields>& all_fields_vec(*all_fields_vec_xptr);
+    all_fields_vec.reserve(n_reps);
+    for (const AllFields& in_fields : all_fields_vec_in){
+        all_fields_vec.push_back(in_fields);
+    }
+
+    // For checking dimensions of vectors
+    uint32 n_lines = all_fields_vec[0].n_lines();
+    uint32 n_fields = all_fields_vec[0].size();
+    if (n_lines == 0) stop("\nn_lines == 0\n");
+    if (n_fields == 0) stop("\nn_fields == 0\n");
+
+    // This vector can't have values < 0:
+    double wfa_min = *min_element(wasp_field_attract.begin(),
+                                  wasp_field_attract.end());
+    if (wfa_min < 0) stop("\nmin(wasp_field_attract) < 0.\n");
+    // It can have zeros, but can't have all zeros:
+    double wfa_sum = std::accumulate(wasp_field_attract.begin(),
+                                     wasp_field_attract.end(), 0.0);
+    if (wfa_sum <= 0) stop("\nwasp_field_attract sums to <= 0.\n");
+    for (double& x : wasp_field_attract) x /= wfa_sum;
+
+
+    // ------------*
+    // Now fill parameters
+    for (AllFields& fields : all_fields_vec) {
+        for (uint32 i = 0; i < fields.size(); i++) {
+            OneField& field(fields[i]);
+            for (AphidPop& a : field) a.demog_error = aphid_demog_error;
+            field.wasps.demog_error = wasp_demog_error;
+            field.K = K[i];
+            field.K_y = K_y[i];
+            field.pred_rate = pred_rate[i];
+            field.constant_wasps = constant_wasps[i];
+        }
+        fields.alate_field_disp_p = alate_field_disp_p;
+        fields.wasp_disp_m0 = wasp_disp_m0;
+        fields.wasp_disp_m1 = wasp_disp_m1;
+        fields.wasp_field_attract = wasp_field_attract;
+    }
+
+
+    return all_fields_vec_xptr;
+
+}
+
+
+
+
 
 
 
