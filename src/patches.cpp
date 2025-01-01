@@ -479,6 +479,46 @@ SEXP make_field_ptr(const bool& aphid_demog_error,
 
 }
 
+
+
+/*
+ Create a vector of AllFields objects, for use in an initial (i.e., not
+ restarted) simulation.
+ It also sets the RNG seed for each object.
+ Separate function from `make_field_ptr` above bc `make_field_ptr`
+ makes an XPtr for use inside an R object that might be used multiple times
+ so shouldn't be changed in place.
+ This function creates an object that will be changed inside `sim_fields_cpp`.
+ */
+//[[Rcpp::export]]
+SEXP make_all_fields_vec_ptr(SEXP one_field_ptr,
+                             const uint32& n_reps) {
+
+    XPtr<AllFields> fields_xptr(one_field_ptr);
+    const AllFields& fields0(*fields_xptr);
+
+    // Generate seeds for random number generators (1 set of seeds per rep)
+    const std::vector<std::vector<uint64>> seeds = mt_seeds(n_reps);
+
+    /*
+     Setting info for all AllFields objects.
+     I'm doing it this way so that I can store all info (including stages)
+     for the end of each rep, which also allows an easier time of repeating
+     things after a custom perturbation.
+     */
+    XPtr<std::vector<AllFields>> all_fields_vec_xptr(
+            new std::vector<AllFields>(n_reps, fields0), true);
+    std::vector<AllFields>& all_fields_vec(*all_fields_vec_xptr);
+    for (uint32 i = 0; i < n_reps; i++) {
+        all_fields_vec[i].reseed(seeds[i]);
+    }
+
+    return all_fields_vec_xptr;
+
+}
+
+
+
 /*
  Extract the following elements from an AllFields object (for use in
  `restarted_field_ptr` below):

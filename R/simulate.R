@@ -172,8 +172,12 @@ sim_fields <- function(fields,
 
     perturb_ptr <- make_perturb_ptr_R(perturb, fields)
 
-    sims <- sim_fields_cpp(fields$ptr, perturb_ptr,
-                           n_reps, max_t, save_every, sep_adults,
+    # Make XPtr<std::vector<AllFields>> that will be changed inside
+    # `sim_fields_cpp`:
+    all_fields_vec_ptr <- make_all_fields_vec_ptr(fields$ptr, n_reps)
+
+    sims <- sim_fields_cpp(all_fields_vec_ptr, perturb_ptr,
+                           max_t, save_every, sep_adults,
                            n_threads, show_progress, stage_ts_out)
 
     sims <- make_cloneSims_obj(sims, call_, stage_ts_out)
@@ -212,7 +216,7 @@ make_all_info <- function(sims_obj) {
 # For `restart.cloneSims, if `new_starts` is provided, check it carefully then
 # return a list of N vectors (1 per rep) in the exact order necessary.
 #
-check_new_starts_adjust_N <- function(sims_obj, new_starts, new_field_ptr) {
+check_new_starts_adjust_N <- function(sims_obj, new_starts, new_all_fields_vec_ptr) {
 
     stopifnot(inherits(new_starts, c("list", "data.frame")))
     test_against_starts <- make_all_info(sims_obj)
@@ -254,7 +258,7 @@ check_new_starts_adjust_N <- function(sims_obj, new_starts, new_field_ptr) {
     }
     N_vecs <- lapply(new_starts, function(x) x[["N"]])
 
-    fields_from_vectors(new_field_ptr, N_vecs)
+    fields_from_vectors(new_all_fields_vec_ptr, N_vecs)
 
     invisible(NULL)
 
@@ -405,16 +409,16 @@ restart.cloneSims <- function(sims_obj,
         restart_args[["K_y_mult"]] <- NULL
     }
     restart_args[["all_fields_in_ptr"]] <- sims_obj$all_info_xptr
-    new_field_ptr <- do.call(restarted_field_ptr, restart_args)
+    new_all_fields_vec_ptr <- do.call(restarted_field_ptr, restart_args)
 
     # If `new_starts` is provided, check it carefully then adjust the
     # underlying C++ objects accordingly.
     if (!is.null(new_starts)) {
-        check_new_starts_adjust_N(sims_obj, new_starts, new_field_ptr)
+        check_new_starts_adjust_N(sims_obj, new_starts, new_all_fields_vec_ptr)
     }
 
-    sims <- sim_fields_cpp(new_field_ptr, perturb_ptr,
-                           n_reps, max_t, save_every, sep_adults,
+    sims <- sim_fields_cpp(new_all_fields_vec_ptr, perturb_ptr,
+                           max_t, save_every, sep_adults,
                            n_threads, show_progress, stage_ts_out)
 
     sims <- make_cloneSims_obj(sims, call_, stage_ts_out, restarted = TRUE)

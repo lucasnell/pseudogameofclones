@@ -409,9 +409,8 @@ List make_stage_ts_list(const std::vector<std::vector<AllStageInfo>>& stage_ts) 
 
 
 //[[Rcpp::export]]
-List sim_fields_cpp(SEXP fields_ptr,
+List sim_fields_cpp(SEXP all_fields_vec_ptr,
                     SEXP perturb_ptr,
-                    const uint32& n_reps,
                     const uint32& max_t,
                     const uint32& save_every,
                     const bool& sep_adults,
@@ -419,15 +418,10 @@ List sim_fields_cpp(SEXP fields_ptr,
                     const bool& show_progress,
                     const bool& stage_ts_out) {
 
-    /*
-     These are the starting conditions for all fields.
-     (Note that it's not a vector of AllFields objects like
-      `all_fields_vec` below.)
-     I don't want to change these in case the `AllFields` object in R
-     is used again.
-     */
-    XPtr<AllFields> fields_xptr(fields_ptr);
-    const AllFields& fields0(*fields_xptr);
+    XPtr<std::vector<AllFields>> all_fields_vec_xptr(all_fields_vec_ptr);
+    std::vector<AllFields>& all_fields_vec(*all_fields_vec_xptr);
+
+    uint32 n_reps = all_fields_vec.size();
 
     XPtr<std::deque<PerturbInfo>> perturb_xptr(perturb_ptr);
     const std::deque<PerturbInfo>& perturbs(*perturb_xptr);
@@ -437,23 +431,7 @@ List sim_fields_cpp(SEXP fields_ptr,
 
     RcppThread::ProgressBar prog_bar(n_reps * max_t, 1);
 
-    // Generate seeds for random number generators (1 set of seeds per rep)
-    const std::vector<std::vector<uint64>> seeds = mt_seeds(n_reps);
-
     std::vector<RepSummary> summaries(n_reps, RepSummary(sep_adults));
-
-    /*
-     Setting info for all AllFields objects.
-     I'm doing it this way so that I can store all info (including stages)
-     for the end of each rep, which also allows an easier time of repeating
-     things after a custom perturbation.
-     */
-    XPtr<std::vector<AllFields>> all_fields_vec_xptr(
-            new std::vector<AllFields>(n_reps, fields0), true);
-    std::vector<AllFields>& all_fields_vec(*all_fields_vec_xptr);
-    for (uint32 i = 0; i < n_reps; i++) {
-        all_fields_vec[i].reseed(seeds[i]);
-    }
 
     std::vector<std::vector<AllStageInfo>> stage_ts(n_reps);
 
@@ -477,6 +455,7 @@ List sim_fields_cpp(SEXP fields_ptr,
             summ.assimilate(summaries[i]);
         }
     }
+
 
     List out = List::create(_["aphids"] = DataFrame::create(
                                 _["rep"] = summ.rep,
@@ -585,80 +564,6 @@ SEXP restart_fill_other_pars(SEXP all_fields_in_ptr,
 
 
     return all_fields_vec_xptr;
-
-}
-
-
-
-
-
-//[[Rcpp::export]]
-List restart_sims_cpp(SEXP all_fields_ptr,
-                      SEXP perturb_ptr,
-                      const uint32& max_t,
-                      const uint32& save_every,
-                      const bool& stage_ts_out,
-                      const bool& sep_adults,
-                      const bool& show_progress,
-                      uint32 n_threads) {
-
-
-    XPtr<std::vector<AllFields>> all_fields_vec_xptr(all_fields_ptr);
-    std::vector<AllFields>& all_fields_vec(*all_fields_vec_xptr);
-
-    XPtr<std::deque<PerturbInfo>> perturb_xptr(perturb_ptr);
-    const std::deque<PerturbInfo>& perturbs(*perturb_xptr);
-
-    uint32 n_reps = all_fields_vec.size();
-
-    // Check that # threads isn't too high:
-    thread_check(n_threads);
-
-    // No perturbations allowed here:
-    RcppThread::ProgressBar prog_bar(max_t * n_reps, 1);
-
-    std::vector<RepSummary> summaries(n_reps, RepSummary(sep_adults));
-
-    std::vector<std::vector<AllStageInfo>> stage_ts(n_reps);
-
-    // Parallelized loop
-    RcppThread::parallelFor(0, n_reps, [&] (uint32 i) {
-        one_rep__(summaries[i], stage_ts[i], all_fields_vec[i], i,
-                  max_t, save_every, perturbs,
-                  prog_bar, show_progress, stage_ts_out);
-    }, n_threads);
-
-    /*
-     When # reps > 1, combine all RepSummary objects into the first one.
-     This is to make it easier to add them to the output data frame.
-     */
-    RepSummary& summ(summaries.front());
-    if (n_reps > 1) {
-        summ.reserve(summ.N.size() * summaries.size(),
-                     summ.wasp_N.size() * summaries.size());
-        for (uint32 i = 1; i < n_reps; i++) {
-            summ.assimilate(summaries[i]);
-        }
-    }
-
-    List out = List::create(_["aphids"] = DataFrame::create(
-                                _["rep"] = summ.rep,
-                                _["time"] = summ.time,
-                                _["field"] = summ.field,
-                                _["line"] = summ.line,
-                                _["type"] = summ.type,
-                                _["N"] = summ.N),
-                            _["wasps"] = DataFrame::create(
-                                _["rep"] = summ.wasp_rep,
-                                _["time"] = summ.wasp_time,
-                                _["field"] = summ.wasp_field,
-                                _["wasps"] = summ.wasp_N),
-                            _["all_info_xptr"] = all_fields_vec_xptr);
-    if (stage_ts_out) {
-        out["stage_ts"] = make_stage_ts_list(stage_ts);
-    }
-
-    return out;
 
 }
 
