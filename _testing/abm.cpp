@@ -106,7 +106,11 @@ void check_args(const double& delta,
                 const double& l_i,
                 const double& bias,
                 const uint32_t& n_stay,
-                const uint32_t& n_ignore) {
+                Nullable<IntegerVector> n_ignore,
+                uint32_t& n_ignore_,
+                Nullable<NumericVector> xy0,
+                double& x0,
+                double& y0) {
 
     if (delta <= 0) stop("delta <= 0");
     if (x_size <= 0) stop("x_size <= 0");
@@ -150,6 +154,26 @@ void check_args(const double& delta,
         stop(err.c_str());
     }
 
+    if (n_ignore.isNotNull()) {
+        IntegerVector niv(n_ignore);
+        if (niv.size() != 1 || niv(0) < 0) {
+            stop("n_ignore must be NULL or a single non-negative integer");
+        }
+        n_ignore_ = niv(0);
+    }
+    if (xy0.isNotNull()) {
+        NumericVector xy0_vec(xy0);
+        if (xy0_vec.size() != 2) {
+            stop("xy0_vec must be NULL or a length-2 numeric vector");
+        }
+        if (xy0_vec(0) <= x_bounds(0) || xy0_vec(0) >= x_bounds(1) ||
+            xy0_vec(1) <= y_bounds(0) || xy0_vec(1) >= y_bounds(1)) {
+            stop("xy0_vec cannot contain items that reach or exceed bounds");
+        }
+        x0 = xy0_vec(0);
+        y0 = xy0_vec(1);
+    }
+
     return;
 
 }
@@ -168,19 +192,16 @@ DataFrame bias_bound_rw_cpp(const double& delta,
                             const double& bias,
                             const uint32_t& n_stay,
                             Nullable<IntegerVector> n_ignore = R_NilValue,
-                            const bool& random_xy0 = true) {
+                            Nullable<NumericVector> xy0 = R_NilValue) {
 
+    // For NULL-able arguments, fill defaults:
     uint32_t n_ignore_ = static_cast<uint32_t>(std::ceil(2.0 * l_star / delta));
-    if (n_ignore.isNotNull()) {
-        IntegerVector niv(n_ignore);
-        if (niv.size() != 1 || niv(0) < 0) {
-            stop("n_ignore must be NULL or a single non-negative integer");
-        }
-        n_ignore_ = niv(0);
-    }
+    double x0 = 0;
+    double y0 = 0;
 
+    // Check arguments and set n_ignore_, x0, and y0:
     check_args(delta, maxt, x_size, y_size, target_xy, l_star, l_i,
-               bias, n_stay, n_ignore_);
+               bias, n_stay, n_ignore, n_ignore_, xy0, x0, y0);
 
     arma::vec x_bounds = {-1, 1};
     x_bounds *= (x_size / 2);
@@ -193,13 +214,9 @@ DataFrame bias_bound_rw_cpp(const double& delta,
     // X and Y coordinates of searcher:
     arma::vec x(maxt + 1U);
     arma::vec y(maxt + 1U);
-    if (random_xy0) {
-        x(0) = runif(1, x_bounds(0), x_bounds(1))(0);
-        y(0) = runif(1, y_bounds(0), y_bounds(1))(0);
-    } else{
-        x(0) = 0.0;
-        y(0) = 0.0;
-    }
+    x(0) = x0;
+    y(0) = y0;
+
     // whether on target at given time:
     std::vector<bool> on_target(maxt + 1U, false);
     // whether hit a *new* target at given time:
