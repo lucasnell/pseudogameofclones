@@ -267,7 +267,7 @@ DataFrame bias_bound_rw_cpp(const double& delta,
             } else {
                 // If within l_star (but not directly on it) and there's
                 // target bias, then include target-directed motion:
-                dr_theta = std::atan((target_xy(i,1) - y(t)) /
+                dr_theta = std::atan2((target_xy(i,1) - y(t)),
                     (target_xy(i,0) - x(t)));
                 dr_dx = std::min(delta, l) * std::cos(dr_theta);
                 dr_dy = std::min(delta, l) * std::sin(dr_theta);
