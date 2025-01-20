@@ -139,11 +139,11 @@ void check_args(const double& delta,
                 const uint32_t& maxt,
                 const double& x_size,
                 const double& y_size,
-                const arma::mat& target_xy,
-                const double& l_star,
-                const double& l_i,
-                const double& bias,
-                const uint32_t& n_stay,
+                const std::vector<arma::mat>& target_xy,
+                const std::vector<double>& l_star,
+                const std::vector<double>& l_i,
+                const std::vector<double>& bias,
+                const std::vector<uint32_t>& n_stay,
                 Nullable<IntegerVector> n_ignore,
                 uint32_t& n_ignore_,
                 Nullable<NumericVector> xy0,
@@ -153,39 +153,67 @@ void check_args(const double& delta,
     if (delta <= 0) stop("delta <= 0");
     if (x_size <= 0) stop("x_size <= 0");
     if (y_size <= 0) stop("y_size <= 0");
-    if (l_star <= 0) stop("l_star <= 0");
-    if (l_i <= 0) stop("l_i <= 0");
-    if (bias < 0 || bias > 1) stop("bias < 0 || bias > 1");
+
+    uint32_t n_types = target_xy.size();
+    if (l_star.size() != n_types) stop("l_star.size() != target_xy.size()");
+    if (l_i.size() != n_types) stop("l_i.size() != target_xy.size()");
+    if (bias.size() != n_types) stop("bias.size() != target_xy.size()");
+    if (n_stay.size() != n_types) stop("n_stay.size() != target_xy.size()");
+    if (n_ignore.size() != n_types) stop("n_ignore.size() != target_xy.size()");
 
     arma::vec x_bounds = {-1, 1};
     x_bounds *= (x_size / 2);
     arma::vec y_bounds = {-1, 1};
     y_bounds *= (y_size / 2);
 
-    if (target_xy.n_cols != 2) stop("target_xy.n_cols != 2");
-    if (target_xy.n_rows < 1) stop("target_xy.n_rows < 1");
-    if (! arma::all(target_xy.col(0) > x_bounds[0])) {
-        stop("! arma::all(target_xy.col(0) > x_bounds[0])");
-    }
-    if (! arma::all(target_xy.col(0) < x_bounds[1])) {
-        stop("! arma::all(target_xy.col(0) < x_bounds[1])");
-    }
-    if (! arma::all(target_xy.col(1) > y_bounds[0])) {
-        stop("! arma::all(target_xy.col(1) > y_bounds[0])");
-    }
-    if (! arma::all(target_xy.col(1) < y_bounds[1])) {
-        stop("! arma::all(target_xy.col(1) < y_bounds[1])");
-    }
-    uint32_t n_targets = target_xy.n_rows;
-    // Check for overlapping bounds:
-    arma::mat target_dists(n_targets, n_targets, arma::fill::zeros);
-    for (uint32_t i = 1; i < n_targets; i++) {
-        for (uint32_t j = 0; j < i; j++) {
-            target_dists(i,j) = distance(target_xy(i,0), target_xy(i,1),
-                         target_xy(j,0), target_xy(j,1));
+    auto stop_i = [](std::string message, const uint32_t& i) {
+        message += " on item ";
+        message += std::to_string(i);
+        stop(message.c_str());
+    };
+
+    // To later create matrix of distances between all targets:
+    uint32_t n_targets = 0;
+    for (uint32_t i = 0; i < n_types; i++) n_targets += target_xy[i].n_rows;
+    arma::mat all_xy(n_targets, 2);
+    uint32_t k = 0;
+
+    for (uint32_t i = 0; i < n_types; i++) {
+        if (l_star[i] <= 0) stop_i("l_star <= 0", i);
+        if (l_i[i] <= 0) stop_i("l_i <= 0", i);
+        if (bias[i] < 0 || bias[i] > 1) stop_i("bias < 0 || bias > 1", i);
+
+        if (target_xy[i].n_cols != 2) stop_i("target_xy.n_cols != 2", i);
+        if (target_xy[i].n_rows < 1) stop_i("target_xy.n_rows < 1", i);
+        if (! arma::all(target_xy[i].col(0) > x_bounds[0])) {
+            stop_i("! arma::all(target_xy.col(0) > x_bounds[0])", i);
+        }
+        if (! arma::all(target_xy[i].col(0) < x_bounds[1])) {
+            stop_i("! arma::all(target_xy.col(0) < x_bounds[1])", i);
+        }
+        if (! arma::all(target_xy[i].col(1) > y_bounds[0])) {
+            stop_i("! arma::all(target_xy.col(1) > y_bounds[0])", i);
+        }
+        if (! arma::all(target_xy[i].col(1) < y_bounds[1])) {
+            stop_i("! arma::all(target_xy.col(1) < y_bounds[1])", i);
+        }
+        for (uint32_t j = 0; j < n_types; j++) {
+            all_xy(k, 0) = target_xy[i](j, 0);
+            all_xy(k, 1) = target_xy[i](j, 1);
+            k++;
         }
     }
-    arma::vec dists = target_dists(arma::trimatl_ind(arma::size(target_dists), -1));
+
+    // Lastly check for overlapping bounds:
+    arma::mat target_dists(n_targets, n_targets, arma::fill::none);
+    for (uint32_t i = 1; i < n_targets; i++) {
+        for (uint32_t j = 0; j < i; j++) {
+            target_dists(i,j) = distance(all_xy(i,0), all_xy(i,1),
+                                         all_xy(j,0), all_xy(j,1));
+        }
+    }
+    arma::uvec lower_tri = arma::trimatl_ind(arma::size(target_dists), -1);
+    arma::vec dists = target_dists(lower_tri);
     if (arma::min(dists) <= (2 * l_i)) {
         std::string err("targets are too close together which would ");
         err += "result in searchers interacting with >1 at a time.";
@@ -224,16 +252,30 @@ DataFrame bias_bound_rw_cpp(const double& delta,
                             const uint32_t& maxt,
                             const double& x_size,
                             const double& y_size,
-                            const arma::mat& target_xy,
-                            const double& l_star,
-                            const double& l_i,
-                            const double& bias,
-                            const uint32_t& n_stay,
+                            const std::vector<arma::mat>& target_xy,
+                            const std::vector<double>& l_star,
+                            const std::vector<double>& l_i,
+                            const std::vector<double>& bias,
+                            const std::vector<uint32_t>& n_stay,
                             Nullable<IntegerVector> n_ignore = R_NilValue,
                             Nullable<NumericVector> xy0 = R_NilValue) {
 
-    // For NULL-able arguments, fill defaults:
-    uint32_t n_ignore_ = static_cast<uint32_t>(std::ceil(2.0 * l_star / delta));
+    uint32_t n_types = target_xy.size();
+
+
+
+    std::vector<uint32_t> n_ignore_(n_types, static_cast<uint32_t>(
+            std::ceil(2.0 * l_star / delta)));
+    if (n_ignore.isNotNull()) {
+        IntegerVector niv(n_ignore);
+        if (niv.size() != n_types) {
+            stop("n_ignore must be NULL or a vector of same length as target_xy");
+        }
+        for (uint32_t i = 0; i < n_types; i++) {
+            if (niv(i) < 0) stop("n_ignore must have all non-negative integers");
+            n_ignore_[i] = niv(i);
+        }
+    }
     double x0 = 0;
     double y0 = 0;
 
