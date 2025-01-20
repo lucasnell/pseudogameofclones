@@ -143,7 +143,7 @@ bias_bound_rw <- function(delta, maxt, x_size, y_size, target_xy,
                                           target_xy[j,1], target_xy[j,2])
         }
     }
-    if (min(target_dists[lower.tri(target_dists)]) <= l_i) {
+    if (min(target_dists[lower.tri(target_dists)]) <= (2 * l_i)) {
         stop("targets are too close together which would result in searchers ",
              "interacting with >1 at a time.")
     }

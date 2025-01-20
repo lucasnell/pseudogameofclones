@@ -38,12 +38,14 @@ double distance(const double& x1, const double& y1,
 
 
 //
-// Update `i` (index / indices for targets within l_star),
+// Update `wi_lstar` (index / indices for targets within l_star),
+// `wi_li` (index for target within l_i),
 // `l_min` (distance to nearest target),
 // and `l_vec` (distances to all targets),
 // including ignoring recently visited target(s).
 //
-void update_i_l_lvec(arma::uvec& i,
+void update_wi_lvec(arma::uvec& wi_lstar,
+                    uint32_t& wi_li,
                      double& l_min,
                      arma::vec& l_vec,
                      const double& xt,
@@ -52,10 +54,12 @@ void update_i_l_lvec(arma::uvec& i,
                      const arma::uvec& visited,
                      const uint32_t& n_ignore,
                      const double& l_star,
+                     const double& l_i,
                      const double& max_size) {
 
+    wi_li = l_vec.n_elem + 1U;
     l_min = max_size * 2;
-    // it's faster than `arma::find(...)` to get size of `i` in first
+    // it's faster than `arma::find(...)` to get size of `wi_lstar` in first
     // loop then create it in another loop:
     uint32_t i_size = 0U;
 
@@ -63,15 +67,20 @@ void update_i_l_lvec(arma::uvec& i,
         l_vec(j) = distance(xt, yt, target_xy(j,0), target_xy(j,1));
         if (visited(j) < n_ignore) continue;
         if (l_vec(j) <= l_star) i_size++;
-        if (l_vec(j) < l_min) l_min = l_vec(j);
+        if (l_vec(j) < l_min) {
+            l_min = l_vec(j);
+            if (l_vec(j) <= l_i) wi_li = j;
+        }
     }
 
-    i.set_size(i_size);
-    uint32_t k = 0;
-    for (uint32_t j = 0; j < l_vec.n_elem; j++) {
-        if (l_vec(j) <= l_star) {
-            i(k) = j;
-            k++;
+    wi_lstar.set_size(i_size);
+    if (i_size > 0) {
+        uint32_t k = 0;
+        for (uint32_t j = 0; j < l_vec.n_elem; j++) {
+            if (visited(j) >= n_ignore && l_vec(j) <= l_star) {
+                wi_lstar(k) = j;
+                k++;
+            }
         }
     }
 
@@ -83,31 +92,39 @@ void update_i_l_lvec(arma::uvec& i,
 //
 // Same as above, but without updating `l_vec`
 //
-void update_i_l(arma::uvec& i,
+void update_wi(arma::uvec& wi_lstar,
+               uint32_t& wi_li,
                 double& l_min,
                 const arma::vec& l_vec,
                 const arma::uvec& visited,
                 const uint32_t& n_ignore,
                 const double& l_star,
+                const double& l_i,
                 const double& max_size) {
 
+    wi_li = l_vec.n_elem + 1U;
     l_min = max_size * 2;
-    // it's faster than `arma::find(...)` to get size of `i` in first
+    // it's faster than `arma::find(...)` to get size of `wi_lstar` in first
     // loop then create it in another loop:
     uint32_t i_size = 0U;
 
     for (uint32_t j = 0; j < l_vec.n_elem; j++) {
         if (visited(j) < n_ignore) continue;
         if (l_vec(j) <= l_star) i_size++;
-        if (l_vec(j) < l_min) l_min = l_vec(j);
+        if (l_vec(j) < l_min) {
+            l_min = l_vec(j);
+            if (l_vec(j) <= l_i) wi_li = j;
+        }
     }
 
-    i.set_size(i_size);
-    uint32_t k = 0;
-    for (uint32_t j = 0; j < l_vec.n_elem; j++) {
-        if (l_vec(j) <= l_star) {
-            i(k) = j;
-            k++;
+    wi_lstar.set_size(i_size);
+    if (i_size > 0) {
+        uint32_t k = 0;
+        for (uint32_t j = 0; j < l_vec.n_elem; j++) {
+            if (visited(j) >= n_ignore && l_vec(j) <= l_star) {
+                wi_lstar(k) = j;
+                k++;
+            }
         }
     }
 
@@ -169,7 +186,7 @@ void check_args(const double& delta,
         }
     }
     arma::vec dists = target_dists(arma::trimatl_ind(arma::size(target_dists), -1));
-    if (arma::min(dists) <= l_i) {
+    if (arma::min(dists) <= (2 * l_i)) {
         std::string err("targets are too close together which would ");
         err += "result in searchers interacting with >1 at a time.";
         stop(err.c_str());
@@ -224,10 +241,8 @@ DataFrame bias_bound_rw_cpp(const double& delta,
     check_args(delta, maxt, x_size, y_size, target_xy, l_star, l_i,
                bias, n_stay, n_ignore, n_ignore_, xy0, x0, y0);
 
-    arma::vec x_bounds = {-1, 1};
-    x_bounds *= (x_size / 2);
-    arma::vec y_bounds = {-1, 1};
-    y_bounds *= (y_size / 2);
+    arma::vec x_bounds = {-x_size / 2, x_size / 2};
+    arma::vec y_bounds = {-y_size / 2, y_size / 2};
     double max_size = std::sqrt(std::pow(x_size, 2U) + std::pow(y_size, 2U));
 
     // --------------------------------------------*
@@ -249,7 +264,9 @@ DataFrame bias_bound_rw_cpp(const double& delta,
     // Vector of distances from searcher to target(s) (will be updated below)
     arma::vec l_vec(n_targets, arma::fill::none);
     // which target(s) are within l_star (and thus influence trajectory):
-    arma::uvec i; // (will be updated below)
+    arma::uvec wi_lstar; // (will be updated below)
+    // which target (if any) are within l_i:
+    uint32_t wi_li; // (will be updated below)
     // distance to nearest target:
     double l_min; // (will be updated below)
     // number of time points within l_i of most recent target:
@@ -258,14 +275,14 @@ DataFrame bias_bound_rw_cpp(const double& delta,
     // recent visit for each target (only starts after leaving within
     // l_i of the target):
     arma::uvec visited(l_vec.n_elem, arma::fill::value(n_ignore_ * 2U));
-    // Update l_vec, i, and l_min:
-    update_i_l_lvec(i, l_min, l_vec, x(0), y(0), target_xy, visited,
-                    n_ignore_, l_star, max_size);
+    // Update l_vec, wi_lstar, and l_min:
+    update_wi_lvec(wi_lstar, wi_li, l_min, l_vec, x(0), y(0), target_xy, visited,
+                    n_ignore_, l_star, l_i, max_size);
     // Update on_target and new_target if searcher starts near a target:
     if (l_min <= l_i) {
         on_target[0] = true;
         new_target[0] = true;
-        visited(i) = 0;
+        visited(wi_li) = 0;
     }
 
     double rw_theta, rw_dx, rw_dy, dr_theta, dr_dx, dr_dy;
@@ -277,16 +294,15 @@ DataFrame bias_bound_rw_cpp(const double& delta,
         // move towards target and go to next iteration
         if (l_min <= l_i && stayed < n_stay) {
             if (l_min > 0) {
-                uint32_t ii = arma::as_scalar(arma::find(l_vec == l_min, 1));
-                dr_theta = std::atan2((target_xy(ii,1) - y(t)),
-                                      (target_xy(ii,0) - x(t)));
+                dr_theta = std::atan2((target_xy(wi_li,1) - y(t)),
+                                      (target_xy(wi_li,0) - x(t)));
                 dr_dx = std::min(delta, l_min) * std::cos(dr_theta);
                 dr_dy = std::min(delta, l_min) * std::sin(dr_theta);
                 x(t+1) = x(t) + dr_dx;
                 y(t+1) = y(t) + dr_dy;
-                l_min = distance(x(t+1), y(t+1), target_xy(ii,0),
-                                 target_xy(ii,1));
-                l_vec[ii] = l_min;
+                l_min = distance(x(t+1), y(t+1),
+                                 target_xy(wi_li,0), target_xy(wi_li,1));
+                l_vec[wi_li] = l_min;
             } else {
                 x(t+1) = x(t);
                 y(t+1) = y(t);
@@ -299,8 +315,9 @@ DataFrame bias_bound_rw_cpp(const double& delta,
         // for potentially ignoring target(s), then proceed as normal:
         if (l_min <= l_i && stayed >= n_stay) {
             stayed = 0U;
-            visited(i) = 0U;
-            update_i_l(i, l_min, l_vec, visited, n_ignore_, l_star, max_size);
+            visited(wi_li) = 0U;
+            update_wi(wi_lstar, wi_li, l_min, l_vec, visited, n_ignore_,
+                      l_star, l_i, max_size);
         }
 
         // -----------------*
@@ -323,13 +340,13 @@ DataFrame bias_bound_rw_cpp(const double& delta,
                 // (potentially including multiple targets).
                 //
                 // because we're weighting each target by its l_star / distance:
-                wts = l_star / l_vec(i);
+                wts = l_star / l_vec(wi_lstar);
                 wts /= arma::accu(wts);
                 // Now calculate get weighted mean for all targets:
                 dr_dx = 0;
                 dr_dy = 0;
-                for (uint32_t j = 0; j < i.n_elem; j++) {
-                    const arma::uword& k(i(j));
+                for (uint32_t j = 0; j < wi_lstar.n_elem; j++) {
+                    const arma::uword& k(wi_lstar(j));
                     const double& wt(wts(j));
                     const double& l(l_vec(k));
                     dr_theta = std::atan2((target_xy(k,1) - y(t)),
@@ -347,12 +364,12 @@ DataFrame bias_bound_rw_cpp(const double& delta,
             y(t+1) = y(t) + rw_dy;
         }
         // did it hit a new target? (also update distances for next iteration)
-        update_i_l_lvec(i, l_min, l_vec, x(t+1), y(t+1), target_xy, visited,
-                        n_ignore_, l_star, max_size);
+        update_wi_lvec(wi_lstar, wi_li, l_min, l_vec, x(t+1), y(t+1),
+                       target_xy, visited, n_ignore_, l_star, l_i, max_size);
         if (l_min <= l_i) {
             on_target[t+1] = true;
             new_target[t+1] = true;
-            visited(i) = 0;
+            visited(wi_li) = 0;
             stayed = 0;
         }
 
