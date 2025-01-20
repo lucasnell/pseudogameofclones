@@ -163,8 +163,11 @@ bias_bound_rw <- function(delta, maxt, x_size, y_size, target_xy,
     # Vector of distances from searcher to target(s)
     l_vec <- apply(target_xy, 1, \(xy) distance(x[1], y[1], xy[1], xy[2]))
     # which target(s) are within l_star (and thus influence trajectory):
-    i <- which(l_vec <= l_star)
-    l_min <- ifelse(length(i) == 0, l_star * 2, min(l_vec[i]))
+    wi_lstar <- which(l_vec <= l_star)
+    # which target is within l_i (there can be a max of 1 at a time):
+    wi_li <- which(l_vec <= l_i)
+    # minimum distance to a target:
+    l_min <- ifelse(length(wi_lstar) == 0, l_star * 2, min(l_vec[wi_lstar]))
     # number of time points within l_i of most recent target:
     stayed <- 0L
     # `visited` below indicates number of time points since the most
@@ -175,6 +178,7 @@ bias_bound_rw <- function(delta, maxt, x_size, y_size, target_xy,
     if (l_min <= l_i) {
         on_target[1] <- TRUE
         new_target[1] <- TRUE
+        visited[wi_li] <- TRUE
     }
 
     for (t in 1:maxt) {
@@ -182,12 +186,15 @@ bias_bound_rw <- function(delta, maxt, x_size, y_size, target_xy,
         # move towards target and go to next iteration
         if (l_min <= l_i && stayed < n_stay) {
             if (l_min > 0) {
-                dr_theta <- atan2((target_xy[i,2] - y[t]),
-                                  (target_xy[i,1] - x[t]))
+                dr_theta <- atan2((target_xy[wi_li,2] - y[t]),
+                                  (target_xy[wi_li,1] - x[t]))
                 dr_dx <- unname(min(delta, l_min) * cos(dr_theta))
                 dr_dy <- unname(min(delta, l_min) * sin(dr_theta))
                 x[t+1] <- x[t] + dr_dx
                 y[t+1] <- y[t] + dr_dy
+                l_min <- distance(x[t+1], y[t+1], target_xy[wi_li,1],
+                                  target_xy[wi_li,2])
+                l_vec[wi_li] <- l_min
             } else {
                 x[t+1] <- x[t]
                 y[t+1] <- y[t]
@@ -200,9 +207,11 @@ bias_bound_rw <- function(delta, maxt, x_size, y_size, target_xy,
         # for potentially ignoring target(s), then proceed as normal:
         if (l_min <= l_i && stayed >= n_stay) {
             stayed <- 0L
-            visited[i] <- 0L
-            i <- which(l_vec <= l_star & visited >= n_ignore)
-            l_min <- ifelse(length(i) == 0, l_star * 2, min(l_vec[i]))
+            visited[wi_li] <- 0L
+            wi_lstar <- which(l_vec <= l_star & visited >= n_ignore)
+            wi_li <- which(l_vec <= l_i & visited >= n_ignore)
+            l_min <- ifelse(length(wi_lstar) == 0, l_star * 2,
+                            min(l_vec[wi_lstar]))
         }
 
         # -----------------*
@@ -210,73 +219,53 @@ bias_bound_rw <- function(delta, maxt, x_size, y_size, target_xy,
         rw_theta <- runif(1, 0, 2 * pi)
         rw_dx <- reflect(x[t], delta * cos(rw_theta), x_bounds)
         rw_dy <- reflect(y[t], delta * sin(rw_theta), y_bounds)
-        # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        if ((x[t] + rw_dx) < x_bounds[1] || (x[t] + rw_dx) > x_bounds[2]) {
-            stop(sprintf("EXCEEDED BOUNDS\n  x = %s, y = %s, theta = %s\n",
-                         x[t], y[t], rw_theta))
-        }
-        # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
         # -----------------*
         if (l_min <= l_star && bias > 0) {
+
             if (l_min == 0) {
+
                 # If it's directly on the target, then the directed portion
                 # would be to stay in place (this if-else avoids NaNs):
                 dr_dx <- 0
                 dr_dy <- 0
+
             } else {
+
                 # If within l_star (but not directly on it) and there's
                 # target bias, then include target-directed motion:
-                dr_dxy <- sapply(i, \(ii) {
-                    l <- l_vec[[ii]]
-                    dr_theta <- atan2((target_xy[ii,2] - y[t]),
-                                         (target_xy[ii,1] - x[t]))
+                dr_dxy <- sapply(wi_lstar, \(k) {
+                    l <- l_vec[[k]]
+                    dr_theta <- atan2((target_xy[k,2] - y[t]),
+                                         (target_xy[k,1] - x[t]))
                     dr_dx <- unname(min(delta, l) * cos(dr_theta))
                     dr_dy <- unname(min(delta, l) * sin(dr_theta))
                     return(c(x = dr_dx, y = dr_dy))
                 })
-                rel_l <- l_vec[i] / l_star
-                dr_dx <- sum(dr_dxy[1,] * (rel_l / sum(rel_l)))
-                dr_dy <- sum(dr_dxy[2,] * (rel_l / sum(rel_l)))
-                # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-                # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-                if ((x[t] + dr_dx) < x_bounds[1] ||
-                    (x[t] + dr_dx) > x_bounds[2]) {
-                    stop(sprintf(paste("EXCEEDED BOUNDS\n",
-                                       " x = %s, y = %s, i = c(%s), l = c(%s)\n"),
-                                 x[t], y[t],
-                                 paste(i, collapse = ","),
-                                 paste(l_vec[i], collapse = ",")))
-                }
-                # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                wts <- (l_star / l_vec[wi_lstar]) / sum(l_star / l_vec[wi_lstar])
+                dr_dx <- sum(dr_dxy[1,] * wts)
+                dr_dy <- sum(dr_dxy[2,] * wts)
             }
             # combine:
             x[t+1] <- x[t] + (1 - bias) * rw_dx + bias * dr_dx
             y[t+1] <- y[t] + (1 - bias) * rw_dy + bias * dr_dy
-            # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-            # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-            if ((x[t] + dr_dx) < x_bounds[1] ||
-                (x[t] + dr_dx) > x_bounds[2]) {
-                stop(sprintf(paste("EXCEEDED BOUNDS\n",
-                                   " x = %s, y = %s, rw_dx = %s, dr_dx = %s\n"),
-                             x[t], y[t], rw_dx, dr_dx))
-            }
-            # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-            # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
         } else {
+
             # random walk otherwise:
             x[t+1] <- x[t] + rw_dx
             y[t+1] <- y[t] + rw_dy
+
         }
+
         # did it hit a new target? (also update distances for next iteration)
         l_vec <- apply(target_xy, 1, \(xy) distance(x[t+1], y[t+1], xy[1], xy[2]))
-        i <- which(l_vec <= l_star & visited >= n_ignore)
-        l_min <- ifelse(length(i) == 0, l_star * 2, min(l_vec[i]))
+        wi_lstar <- which(l_vec <= l_star & visited >= n_ignore)
+        wi_li <- which(l_vec <= l_i & visited >= n_ignore)
+        l_min <- ifelse(length(wi_lstar) == 0, l_star * 2,
+                        min(l_vec[wi_lstar]))
         if (l_min <= l_i) {
-            on_target[(t+1)] <- TRUE
+            on_target[t+1] <- TRUE
             new_target[t+1] <- TRUE
             visited[i] <- 0L
             stayed <- 0L
@@ -289,12 +278,6 @@ bias_bound_rw <- function(delta, maxt, x_size, y_size, target_xy,
     tibble(t = 0:maxt, x = x, y = y, on = on_target, hit = new_target)
 }
 
-
-bias_bound_rw(delta = 0.2, maxt = 1000, x_size = xs, y_size = ys,
-              target_xy = target_xy,
-              l_star = 0.4, l_i = 0.1, bias = 1,
-              n_stay = 5L,
-              n_ignore = 0, xy0 = runif(2, c(-xs/2, -ys/2), c(xs/2, ys/2)))
 
 
 
@@ -324,21 +307,11 @@ x <- bias_bound_rw(delta = 0.5, maxt = 100, x_size = xs, y_size = ys,
                    l_star = 5, l_i = 1, bias = 1,
                    n_stay = 5L,
                    n_ignore = 1e6,
-                   xy0 = c(-2.1, 0))
+                   xy0 = c(-1.9, 0))
                    # xy0 = runif(2, c(-xs/2, -ys/2), c(xs/2, ys/2)))
-x |>
-    # filter(t < 10) |>
-    ggplot(aes(x,y)) +
-    geom_hline(yintercept = c(-1, 1) * xs / 2, color = "gray70") +
-    geom_vline(xintercept = c(-1, 1) * ys / 2, color = "gray70") +
-    geom_point(data = as_tibble(target_xy2) |> set_names(c("x", "y")),
-               color = "red", size = 3) +
-    geom_path(linewidth = 1) +
-    geom_point(size = 2) +
-    coord_equal()
-
 
 p <- x |>
+    filter(t < 10) |>
     ggplot(aes(x,y)) +
     geom_hline(yintercept = c(-1, 1) * xs / 2, color = "gray70") +
     geom_vline(xintercept = c(-1, 1) * ys / 2, color = "gray70") +
@@ -365,27 +338,64 @@ anim
 
 
 
-set.seed(1421273395)
-x <- bias_bound_rw(delta = 0.5, maxt = 58, x_size = xs, y_size = ys,
-                   target_xy = target_xy2,
-                   l_star = 5, l_i = 1, bias = 1,
-                   n_stay = 0L,
-                   n_ignore = 10, xy0 = NULL)
+
+Rcpp::cppFunction(depends = "RcppArmadillo",
+"arma::uvec arma_find1(const arma::vec& x, const std::vector<double>& y) {
+    arma::uvec z;
+    for (size_t i = 0; i < y.size(); i++) z = arma::find(x > y[i]);
+    return z;
+}
+")
+Rcpp::cppFunction(depends = "RcppArmadillo",
+"arma::uvec arma_find2(const arma::vec& x, const std::vector<double>& y) {
+    arma::uvec z;
+    size_t n;
+    for (size_t i = 0; i < y.size(); i++) {
+        n = 0;
+        for (const double& xx : x) if (xx > y[i]) n++;
+        z.set_size(n);
+        n = 0;
+        for (size_t j = 0; j < x.n_elem; j++) {
+            if (x(j) > y[i]) {
+                z(n) = j;
+                n++;
+            }
+        }
+    }
+    return z;
+}
+")
+Rcpp::cppFunction(depends = "RcppArmadillo",
+"arma::uvec arma_find3(const arma::vec& x, const std::vector<double>& y) {
+    arma::uvec z;
+    std::vector<arma::uword> zv;
+    zv.reserve(x.n_elem);
+    for (size_t i = 0; i < y.size(); i++) {
+        zv.clear();
+        for (arma::uword j = 0; j < x.n_elem; j++) {
+            if (x(j) > y[i]) zv.push_back(j);
+        }
+        z.set_size(zv.size());
+        for (size_t j = 0; j < zv.size(); j++) z(j)  = zv[j];
+    }
+    return z;
+}
+")
 
 
+x <- runif(100)
+y <- runif(1000)
+real <- which(x > y[1]) - 1L
 
+identical(as.integer(arma_find1(x, y[1])), real) &&
+    identical(as.integer(arma_find2(x, y[1])), real) &&
+    identical(as.integer(arma_find3(x, y[1])), real)
 
-dr_dxy <- sapply(2, \(ii) {
-    # ii = 2
-    l <- 3.68389420346679
-    dr_theta <- atan2((0 - -2.82779409141925), (3 - 5.36107117191976))
-    dr_dx <- unname(l * cos(dr_theta))
-    dr_dy <- unname(l * sin(dr_theta))
-    return(c(x = dr_dx, y = dr_dy))
-})
-rel_l <- 3.68389420346679 / 0.4
-dr_dx <- sum(dr_dxy[1,] * (rel_l / sum(rel_l)))
-dr_dy <- sum(dr_dxy[2,] * (rel_l / sum(rel_l)))
+identical(arma_find1(x, y), arma_find2(x, y)) &&
+    identical(arma_find1(x, y), arma_find3(x, y))
 
+microbenchmark::microbenchmark(a = arma_find1(x, y),
+                               b = arma_find2(x, y),
+                               c = arma_find3(x, y))
 
 
