@@ -139,50 +139,43 @@ double distance(const double& x1, const double& y1,
 // and `l_vec` (distances to all targets),
 // including ignoring recently visited target(s).
 //
-void update_wi_lvec(std::vector<arma::uvec>& wi_lstar,
-                    arma::uvec& wi_li,
-                    arma::vec& l_min,
-                    arma::mat& l_vec,
-                    const arma::vec& xt,
-                    const arma::vec& yt,
+void update_wi_lvec(arma::uvec& wi_lstar,
+                    uint32_t& wi_li,
+                    double& l_min,
+                    arma::vec& l_vec,
+                    const double& xt,
+                    const double& yt,
                     const arma::mat& target_xy,
-                    const arma::umat& visited,
+                    const arma::uvec& visited,
                     const TargetTypesInfo& target_info,
                     const double& max_size) {
 
-    uint32_t n_searchers = l_vec.n_rows;
-    uint32_t n_targets = l_vec.n_cols;
+    wi_li = l_vec.n_elem + 1U;
+    l_min = max_size * 2;
+    // it's faster than `arma::find(...)` to get size of `wi_lstar` in first
+    // loop then create it in another loop:
+    uint32_t wil_size = 0U;
 
-    for (uint32_t i = 0; i < n_searchers; i++) {
+    for (uint32_t j = 0; j < l_vec.n_elem; j++) {
+        l_vec(j) = distance(xt, yt, target_xy(j,0), target_xy(j,1));
+        if (visited(j) < target_info.n_ignore(j)) continue;
+        if (l_vec(j) <= target_info.l_star(j)) wil_size++;
+        if (l_vec(j) < l_min) {
+            l_min = l_vec(j);
+            if (l_vec(j) <= target_info.l_i(j)) wi_li = j;
+        }
+    }
 
-        wi_li(i) = n_targets + 1U;
-        l_min(i) = max_size * 2;
-        // it's faster than `arma::find(...)` to get size of `wi_lstar` in first
-        // loop then create it in another loop:
-        uint32_t wil_size = 0U;
-
-        for (uint32_t j = 0; j < n_targets; j++) {
-            l_vec(i,j) = distance(xt(i), yt(i), target_xy(j,0), target_xy(j,1));
-            if (visited(i,j) < target_info.n_ignore(j)) continue;
-            if (l_vec(i,j) <= target_info.l_star(j)) wil_size++;
-            if (l_vec(i,j) < l_min(i)) {
-                l_min(i) = l_vec(i,j);
-                if (l_vec(i,j) <= target_info.l_i(j)) wi_li(i) = j;
+    wi_lstar.set_size(wil_size);
+    if (wil_size > 0) {
+        uint32_t k = 0;
+        for (uint32_t j = 0; j < l_vec.n_elem; j++) {
+            if (visited(j) >= target_info.n_ignore(j) &&
+                l_vec(j) <= target_info.l_star(j)) {
+                wi_lstar(k) = j;
+                k++;
             }
         }
-
-        wi_lstar.set_size(wil_size);
-        if (wil_size > 0) {
-            uint32_t k = 0;
-            for (uint32_t j = 0; j < n_targets; j++) {
-                if (visited(j) >= target_info.n_ignore(j) &&
-                    l_vec(j) <= target_info.l_star(j)) {
-                    wi_lstar(k) = j;
-                    k++;
-                }
-            }
-        }
-
     }
 
     return;
@@ -245,15 +238,13 @@ void check_args(const double& delta,
                 const std::vector<double>& bias,
                 const std::vector<uint32_t>& n_stay,
                 const std::vector<uint32_t>& n_ignore,
-                Nullable<NumericMatrix> xy0,
-                const uint32_t& n_searchers,
-                arma::vec& x0,
-                arma::vec& y0) {
+                Nullable<NumericVector> xy0,
+                double& x0,
+                double& y0) {
 
     if (delta <= 0) stop("delta <= 0");
     if (x_size <= 0) stop("x_size <= 0");
     if (y_size <= 0) stop("y_size <= 0");
-    if (n_searchers == 0) stop("n_searchers == 0");
 
     if (target_types.size() == 0) stop("target_types.size() == 0");
     if (target_types.size() != target_xy.n_rows)
@@ -337,24 +328,16 @@ void check_args(const double& delta,
     }
 
     if (xy0.isNotNull()) {
-        NumericMatrix xy0_mat(xy0);
-        if (xy0_mat.ncol() != 2) {
-            stop("xy0 must be NULL or a 2-column numeric vector");
+        NumericVector xy0_vec(xy0);
+        if (xy0_vec.size() != 2) {
+            stop("xy0_vec must be NULL or a length-2 numeric vector");
         }
-        if (xy0_mat.nrow() != n_searchers) {
-            stop("xy0 must be NULL or a numeric vector with `n_searchers` rows");
+        if (xy0_vec(0) <= x_bounds(0) || xy0_vec(0) >= x_bounds(1) ||
+            xy0_vec(1) <= y_bounds(0) || xy0_vec(1) >= y_bounds(1)) {
+            stop("xy0_vec cannot contain items that reach or exceed bounds");
         }
-        x0 = as<arma::vec>(xy0_mat(_, 0));
-        y0 = as<arma::vec>(xy0_mat(_, 1));
-        if (arma::min(x0) <= x_bounds(0) || arma::max(x0) >= x_bounds(1) ||
-            arma::min(y0) <= y_bounds(0) || arma::max(y0) >= y_bounds(1)) {
-            stop("xy0 cannot contain items that reach or exceed bounds");
-        }
-    } else {
-        // x0 = arma::vec(n_searchers, arma::fill::zeros);
-        // y0 = arma::vec(n_searchers, arma::fill::zeros);
-        x0 = as<arma::vec>(runif(n_searchers, x_bounds(0), x_bounds(1)));
-        y0 = as<arma::vec>(runif(n_searchers, y_bounds(0), y_bounds(1)));
+        x0 = xy0_vec(0);
+        y0 = xy0_vec(1);
     }
 
     return;
@@ -376,15 +359,14 @@ DataFrame bias_bound_rw_cpp(const double& delta,
                             const std::vector<double>& bias,
                             const std::vector<uint32_t>& n_stay,
                             const std::vector<uint32_t>& n_ignore,
-                            Nullable<NumericMatrix> xy0 = R_NilValue,
-                            const uint32_t& n_searchers = 1U) {
+                            Nullable<NumericVector> xy0 = R_NilValue) {
 
-    arma::vec x0;
-    arma::vec y0;
+    double x0 = 0;
+    double y0 = 0;
 
     // Check arguments and optionally set x0 and y0:
     check_args(delta, maxt, x_size, y_size, target_xy, target_types, l_star, l_i,
-               bias, n_stay, n_ignore, xy0, n_searchers, x0, y0);
+               bias, n_stay, n_ignore, xy0, x0, y0);
 
     // convert from R 1-based to c++ 0-based indices:
     for (uint32_t& tt : target_types) tt--;
@@ -398,37 +380,36 @@ DataFrame bias_bound_rw_cpp(const double& delta,
 
     // --------------------------------------------*
     // CREATE OUTPUTS
-    // X and Y coordinates of searchers (time is columns here bc that's what
-    // I'm iterating across so should be able to pass to functions more
-    // efficiently):
-    arma::mat x(n_searchers, maxt + 1U, arma::fill::none);
-    arma::mat y(n_searchers, maxt + 1U, arma::fill::none);
-    x.col(0) = x0;
-    y.col(0) = y0;
-    // whether on target at given time (0 for false, 1 for true):
-    arma::umat on_target(n_searchers, maxt + 1U, arma::fill::zeros);
+    // X and Y coordinates of searcher:
+    arma::vec x(maxt + 1U);
+    arma::vec y(maxt + 1U);
+    x(0) = x0;
+    y(0) = y0;
+
+    // whether on target at given time:
+    std::vector<bool> on_target(maxt + 1U, false);
     // whether hit a *new* target at given time:
-    arma::umat new_target(n_searchers, maxt + 1U, arma::fill::zeros);
+    std::vector<bool> new_target(maxt + 1U, false);
 
     // --------------------------------------------*
     // OTHER USEFUL OBJECTS:
     uint32_t n_targets = target_xy.n_rows;
     // Vector of distances from searcher to target(s) (will be updated below)
-    arma::mat l_vec(n_searchers, n_targets, arma::fill::none);
+    arma::vec l_vec(n_targets, arma::fill::none);
     // which target(s) are within l_star (and thus influence trajectory):
-    std::vector<arma::uvec> wi_lstar(n_searchers); // (will be updated below)
+    arma::uvec wi_lstar; // (will be updated below)
     // which target (if any) is within l_i; if none, this is set to 1+n_targets:
-    arma::uvec wi_li(n_searchers); // (will be updated below)
+    uint32_t wi_li; // (will be updated below)
     // distance to nearest target:
-    arma::vec l_min(n_searchers); // (will be updated below)
+    double l_min; // (will be updated below)
     // number of time points within l_i of most recent target:
-    arma::uvec stayed(n_searchers, arma::fill::zeros);
+    uint32_t stayed = 0;
     // max bias for any type of target:
     double max_bias = *std::max_element(bias.begin(), bias.end());
     // `visited` below indicates number of time points since the most
     // recent visit for each target (only starts after leaving within
     // l_i of the target):
-    arma::umat visited(n_searchers, n_targets, arma::fill::value(
+    arma::uvec visited(l_vec.n_elem, arma::fill::value(
             (*std::max_element(n_ignore.begin(), n_ignore.end())) * 2U));
     // Update l_vec, wi_lstar, and l_min:
     update_wi_lvec(wi_lstar, wi_li, l_min, l_vec, x(0), y(0), target_xy, visited,
