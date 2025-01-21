@@ -284,41 +284,47 @@ bias_bound_rw <- function(delta, maxt, x_size, y_size, target_xy,
 Rcpp::sourceCpp("_testing/abm.cpp")
 
 
-
 xs <- 11; ys <- 11
 target_xy <- crossing(x = -5:5, y = -5:5) |>
     as.matrix()
-
-crossing(x = -5:5, y = -5:5) |>
-    mutate(t = factor((1:n()) %% 2 == 0L)) |>
-    ggplot(aes(x,y)) +
-    geom_hline(yintercept = c(-1, 1) * xs / 2, color = "gray70") +
-    geom_vline(xintercept = c(-1, 1) * ys / 2, color = "gray70") +
-    geom_point(aes(color = t), size = 3) +
-    coord_equal()
-
+target_types <- as.integer((1:nrow(target_xy)) %% 2 == 0L) + 1L
 
 
 target_xy2 <- rbind(c(-3, 0), c(3, 0))
+target_types2 <- 1:2
 
 .seed <- sample.int(2^31-1, 1); set.seed(.seed); print(.seed)
-x <- bias_bound_rw(delta = 0.5, maxt = 100, x_size = xs, y_size = ys,
-                   target_xy = target_xy2,
-                   l_star = 5, l_i = 1, bias = 1,
-                   n_stay = 5L,
-                   n_ignore = 1e6,
-                   xy0 = c(-1.9, 0))
+x <- bias_bound_rw_cpp(delta = 0.5, maxt = 1000, x_size = xs, y_size = ys,
+                   # target_xy = target_xy, target_types = target_types,
+                   # l_star = c(2, 0.5),
+                   # l_i = c(0.1, 0.1),
+                   target_xy = target_xy2, target_types = target_types2,
+                   l_star = c(5, 5),
+                   l_i = c(1, 1),
+                   bias = c(0.5, -0.1),
+                   n_stay = c(5L, 5L),
+                   n_ignore = c(1e6, 1e6),
+                   xy0 = c(1, 0))
                    # xy0 = runif(2, c(-xs/2, -ys/2), c(xs/2, ys/2)))
 
 p <- x |>
-    filter(t < 10) |>
+    filter(t < 100) |>
     ggplot(aes(x,y)) +
     geom_hline(yintercept = c(-1, 1) * xs / 2, color = "gray70") +
     geom_vline(xintercept = c(-1, 1) * ys / 2, color = "gray70") +
-    geom_point(data = as_tibble(target_xy2) |> set_names(c("x", "y")),
-               color = "red", size = 3) +
+    # geom_point(data = as_tibble(target_xy) |>
+    #                set_names(c("x", "y")) |>
+    #                mutate(type = factor(target_types,
+    #                                     labels = c("virus", "pseudo"))),
+    #            aes(color = type), size = 3) +
+    geom_point(data = as_tibble(target_xy2) |>
+                   set_names(c("x", "y")) |>
+                   mutate(type = factor(target_types2,
+                                        labels = c("virus", "pseudo"))),
+               aes(color = type), size = 3) +
     geom_path(linewidth = 1) +
     geom_point(size = 2) +
+    scale_color_manual(NULL, values = c("dodgerblue", "firebrick1")) +
     coord_equal()
 
 anim <- p +
@@ -397,5 +403,7 @@ identical(arma_find1(x, y), arma_find2(x, y)) &&
 microbenchmark::microbenchmark(a = arma_find1(x, y),
                                b = arma_find2(x, y),
                                c = arma_find3(x, y))
+
+
 
 
