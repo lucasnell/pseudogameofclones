@@ -9,51 +9,37 @@
  *****************************************************************************
  */
 
+
 #include <RcppArmadillo.h>      // arma namespace
+
+#ifndef RCPPTHREAD_OVERRIDE_COUT
+#define RCPPTHREAD_OVERRIDE_COUT 1    // std::cout override
+#endif
+#ifndef RCPPTHREAD_OVERRIDE_CERR
+#define RCPPTHREAD_OVERRIDE_CERR 1    // std::cerr override
+#endif
+// #ifndef RCPPTHREAD_OVERRIDE_THREAD
+// #define RCPPTHREAD_OVERRIDE_THREAD 1  // std::thread override
+// #endif
+#include <RcppThread.h>         // multithreading
+
 #include <vector>               // vector class
+#include <pcg/pcg_random.hpp>   // pcg prng
 #include <random>               // normal distribution
 #include <utility>              // std::pair, std::make_pair
 #include <deque>                // deque
-#include <pcg/pcg_random.hpp>   // pcg prng
-
-// #define RCPPTHREAD_OVERRIDE_COUT 1    // std::cout override
-// #define RCPPTHREAD_OVERRIDE_CERR 1    // std::cerr override
-// #define RCPPTHREAD_OVERRIDE_THREAD 1  // std::thread override
-#include <RcppThread.h>         // multithreading
-
 
 
 #include "pseudogameofclones_types.hpp"  // integer types
 #include "aphids.hpp"           // aphid classes
 #include "patches.hpp"          // field classes
+#include "util.hpp"              // thread_check fxn
 #include "pcg.hpp"              // mt_seeds seed_pcg fxns
 
 
 
 
 
-
-
-//' Check that the number of threads doesn't exceed the number available.
-//'
-//' @noRd
-//'
-inline void thread_check(uint32& n_threads) {
-
-    if (n_threads == 0) n_threads = 1;
-
-    uint32 max_threads = std::thread::hardware_concurrency();
-
-    if (n_threads > max_threads) {
-        std::string mt_str = std::to_string(max_threads);
-        std::string err_msg = "\nThe number of requested threads (" +
-            std::to_string(n_threads) +
-            ") exceeds the max available on the system (" + mt_str + ").";
-        stop(err_msg.c_str());
-    }
-
-    return;
-}
 
 
 

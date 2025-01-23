@@ -53,6 +53,15 @@ inline std::vector<std::vector<uint64>> mt_seeds(const uint32& n_reps) {
 
     return sub_seeds;
 }
+// Overloaded for a single rep:
+inline std::vector<uint64> mt_seeds() {
+
+    std::vector<uint64> sub_seeds;
+    // These are 32-bit integers cast as 64-bit for downstream compatibility
+    sub_seeds = as<std::vector<uint64>>(Rcpp::runif(4,0,4294967296));
+
+    return sub_seeds;
+}
 
 
 // Change seed of existing rng from four 32-bit seeds (casted to 64-bit)
