@@ -234,8 +234,8 @@ public:
     // *==================== outputs ====================*
     arma::vec x;
     arma::vec y;
-    // whether on target at given time:
-    std::vector<bool> on_target;
+    // which target searcher is on at given time (-1 for none):
+    std::vector<sint32> on_target;
     // whether hit a *new* target at given time:
     std::vector<bool> new_target;
 
@@ -279,7 +279,7 @@ public:
           wts(),
           x(max_t_ + 1U, arma::fill::none),
           y(max_t_ + 1U, arma::fill::none),
-          on_target(max_t_ + 1U, false),
+          on_target(max_t_ + 1U, -1),
           new_target(max_t_ + 1U, false) {
 
         std::vector<uint64> seeds = mt_seeds();
@@ -298,7 +298,7 @@ public:
 
         // Update on_target and new_target if searcher starts near a target:
         if (wi_li < n_targets && l_min <= target_info->l_i(wi_li)) {
-            on_target[0] = true;
+            on_target[0] = wi_li;
             new_target[0] = true;
             visited(wi_li) = 0;
         }

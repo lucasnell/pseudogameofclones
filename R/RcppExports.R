@@ -66,8 +66,9 @@
 #'
 #' @returns A tibble with the columns `rep` (repetition number),
 #'     `t` (time), `x` (x coordinate), `y` (y coordinate),
-#'     `on` (is searcher on (within `l_i`) target?), and
-#'     `hit` (is searcher on a new target?).
+#'     `on` (which target is searcher interacting with (within `l_i`)?), and
+#'     `hit` (is searcher interacting with a new target?).
+#'     Column `on` is `0` if the searcher is not on any targets.
 #'
 #'
 #' @export

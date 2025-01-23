@@ -103,8 +103,9 @@ Defaults to \code{1L}.}
 \value{
 A tibble with the columns \code{rep} (repetition number),
 \code{t} (time), \code{x} (x coordinate), \code{y} (y coordinate),
-\code{on} (is searcher on (within \code{l_i}) target?), and
-\code{hit} (is searcher on a new target?).
+\code{on} (which target is searcher interacting with (within \code{l_i})?), and
+\code{hit} (is searcher interacting with a new target?).
+Column \code{on} is \code{0} if the searcher is not on any targets.
 }
 \description{
 Simulate searchers seeking targets.

@@ -91,7 +91,7 @@ void ABMsimulator::stay_at_target(const uint32& t) {
         x(t+1) = x(t);
         y(t+1) = y(t);
     }
-    on_target[t+1] = true;
+    on_target[t+1] = wi_li;
     stayed++;
 
     return;
@@ -173,7 +173,7 @@ void ABMsimulator::iterate(const uint32& t) {
     // did it hit a new target? (also update distances for next iteration)
     update_wi_lvec(t+1, true);
     if (wi_li < n_targets && l_min <= target_info->l_i(wi_li)) {
-        on_target[t+1] = true;
+        on_target[t+1] = wi_li;
         new_target[t+1] = true;
         visited(wi_li) = 0;
         stayed = 0;
@@ -394,8 +394,9 @@ void check_args(const double& delta,
 //'
 //' @returns A tibble with the columns `rep` (repetition number),
 //'     `t` (time), `x` (x coordinate), `y` (y coordinate),
-//'     `on` (is searcher on (within `l_i`) target?), and
-//'     `hit` (is searcher on a new target?).
+//'     `on` (which target is searcher interacting with (within `l_i`)?), and
+//'     `hit` (is searcher interacting with a new target?).
+//'     Column `on` is `0` if the searcher is not on any targets.
 //'
 //'
 //' @export
@@ -452,7 +453,7 @@ DataFrame searcher_sims(const double& delta,
     std::vector<int> time;
     std::vector<double> x;
     std::vector<double> y;
-    std::vector<bool> on;
+    std::vector<int> on;
     std::vector<bool> hit;
     rep.reserve((max_t+1U) * n_reps);
     time.reserve((max_t+1U) * n_reps);
@@ -467,7 +468,7 @@ DataFrame searcher_sims(const double& delta,
             time.push_back(j);
             x.push_back(simmers[i].x[j]);
             y.push_back(simmers[i].y[j]);
-            on.push_back(simmers[i].on_target[j]);
+            on.push_back(simmers[i].on_target[j] + 1);
             hit.push_back(simmers[i].new_target[j]);
         }
     }
