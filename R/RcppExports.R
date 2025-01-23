@@ -65,10 +65,11 @@
 #'     Defaults to `1L`.
 #'
 #' @returns A tibble with the columns `rep` (repetition number),
-#'     `t` (time), `x` (x coordinate), `y` (y coordinate),
-#'     `on` (which target is searcher interacting with (within `l_i`)?), and
-#'     `hit` (is searcher interacting with a new target?).
-#'     Column `on` is `0` if the searcher is not on any targets.
+#'     `time` (time), `x` (x coordinate), `y` (y coordinate),
+#'     `type` (which target type is searcher interacting with (within `l_i`)?),
+#'      and
+#'     `hit` (logical - is searcher interacting with a new target?).
+#'     Column `type` is `0` if the searcher is not on any targets.
 #'
 #'
 #' @export

@@ -325,6 +325,55 @@ void check_args(const double& delta,
 
 
 
+DataFrame create_output(const uint32& max_t,
+                        const uint32& n_reps,
+                        const std::vector<ABMsimulator>& simmers,
+                        const TargetInfo& target_info) {
+
+    std::vector<uint32> tt = target_info.types();
+
+    std::vector<int> rep;
+    std::vector<int> time;
+    std::vector<double> x;
+    std::vector<double> y;
+    std::vector<int> type;
+    std::vector<bool> hit;
+    rep.reserve((max_t+1U) * n_reps);
+    time.reserve((max_t+1U) * n_reps);
+    x.reserve((max_t+1U) * n_reps);
+    y.reserve((max_t+1U) * n_reps);
+    type.reserve((max_t+1U) * n_reps);
+    hit.reserve((max_t+1U) * n_reps);
+
+    for (uint32 i = 0; i < n_reps; i++) {
+        for (uint32 j = 0; j <= max_t; j++) {
+            rep.push_back(i);
+            time.push_back(j);
+            x.push_back(simmers[i].x[j]);
+            y.push_back(simmers[i].y[j]);
+            if (simmers[i].on_target[j] < 0) {
+                type.push_back(0);
+            } else type.push_back(tt[simmers[i].on_target[j]] + 1);
+            hit.push_back(simmers[i].new_target[j]);
+        }
+    }
+
+    DataFrame out = DataFrame::create(
+        _["rep"] = rep,
+        _["time"] = time,
+        _["x"] = x,
+        _["y"] = y,
+        _["type"] = type,
+        _["hit"] = hit);
+
+    out.attr("class") = CharacterVector({"tbl_df", "tbl", "data.frame"});
+
+    return out;
+
+}
+
+
+
 
 
 
@@ -393,10 +442,11 @@ void check_args(const double& delta,
 //'     Defaults to `1L`.
 //'
 //' @returns A tibble with the columns `rep` (repetition number),
-//'     `t` (time), `x` (x coordinate), `y` (y coordinate),
-//'     `on` (which target is searcher interacting with (within `l_i`)?), and
-//'     `hit` (is searcher interacting with a new target?).
-//'     Column `on` is `0` if the searcher is not on any targets.
+//'     `time` (time), `x` (x coordinate), `y` (y coordinate),
+//'     `type` (which target type is searcher interacting with (within `l_i`)?),
+//'      and
+//'     `hit` (logical - is searcher interacting with a new target?).
+//'     Column `type` is `0` if the searcher is not on any targets.
 //'
 //'
 //' @export
@@ -449,40 +499,7 @@ DataFrame searcher_sims(const double& delta,
     }, n_threads);
 
 
-    std::vector<int> rep;
-    std::vector<int> time;
-    std::vector<double> x;
-    std::vector<double> y;
-    std::vector<int> on;
-    std::vector<bool> hit;
-    rep.reserve((max_t+1U) * n_reps);
-    time.reserve((max_t+1U) * n_reps);
-    x.reserve((max_t+1U) * n_reps);
-    y.reserve((max_t+1U) * n_reps);
-    on.reserve((max_t+1U) * n_reps);
-    hit.reserve((max_t+1U) * n_reps);
-
-    for (uint32 i = 0; i < n_reps; i++) {
-        for (uint32 j = 0; j <= max_t; j++) {
-            rep.push_back(i);
-            time.push_back(j);
-            x.push_back(simmers[i].x[j]);
-            y.push_back(simmers[i].y[j]);
-            on.push_back(simmers[i].on_target[j] + 1);
-            hit.push_back(simmers[i].new_target[j]);
-        }
-    }
-
-    DataFrame out = DataFrame::create(
-        _["rep"] = rep,
-        _["t"] = time,
-        _["x"] = x,
-        _["y"] = y,
-        _["on"] = on,
-        _["hit"] = hit);
-
-    out.attr("class") = CharacterVector({"tbl_df", "tbl", "data.frame"});
-
+    DataFrame out = create_output(max_t, n_reps, simmers, target_info);
 
     return out;
 }

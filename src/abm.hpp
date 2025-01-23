@@ -57,7 +57,7 @@ inline double distance(const double& x1, const double& y1,
 class TargetInfo {
 
     arma::mat target_xy;
-    std::vector<uint32> type_map;
+    std::vector<uint32> type_map_;
     std::vector<double> l_star_;
     std::vector<double> l_i_;
     std::vector<double> bias_;
@@ -67,21 +67,21 @@ class TargetInfo {
 public:
 
     TargetInfo(const arma::mat& target_xy_,
-                    const std::vector<uint32>& type_map_,
+                    const std::vector<uint32>& type_map__,
                     const std::vector<double>& l_star__,
                     const std::vector<double>& l_i__,
                     const std::vector<double>& bias__,
                     const std::vector<uint32>& n_stay__,
                     const std::vector<uint32>& n_ignore__)
-        : target_xy(target_xy_), type_map(type_map_),
+        : target_xy(target_xy_), type_map_(type_map__),
           l_star_(l_star__), l_i_(l_i__),
           bias_(bias__), n_stay_(n_stay__), n_ignore_(n_ignore__) {
 
         if (target_xy.n_cols != 2) stop("target_xy.n_cols != 2");
-        if (target_xy.n_rows != type_map.size())
-            stop("target_xy.n_rows != type_map.size()");
+        if (target_xy.n_rows != type_map_.size())
+            stop("target_xy.n_rows != type_map_.size()");
 
-        uint32 max_idx = *std::max_element(type_map.begin(), type_map.end());
+        uint32 max_idx = *std::max_element(type_map_.begin(), type_map_.end());
         if (l_star_.size() != max_idx+1U) stop("wrong length for l_star");
         if (l_i_.size() != max_idx+1U) stop("wrong length for l_i");
         if (bias_.size() != max_idx+1U) stop("wrong length for bias");
@@ -90,14 +90,25 @@ public:
 
     };
 
+    // Total number of targets:
     uint32 n_targets() const {
-        return type_map.size();
+        return type_map_.size();
+    }
+
+    // Number of target types:
+    uint32 n_types() const {
+        return l_star_.size();
+    }
+
+    // Vector of target types:
+    std::vector<uint32> types() const {
+        return type_map_;
     }
 
     /*
      For all below, `i` should be the index for the target_xy matrix row.
      This class maps that index to the index for the target type via
-     the `type_map` vector.
+     the `type_map_` vector.
      */
 
     double x(const uint32& i) const {
@@ -107,53 +118,53 @@ public:
         return target_xy(i, 1);
     }
     double l_star(const uint32& i) const {
-        return l_star_[type_map[i]];
+        return l_star_[type_map_[i]];
     }
     double l_i(const uint32& i) const {
-        return l_i_[type_map[i]];
+        return l_i_[type_map_[i]];
     }
     double bias(const uint32& i) const {
-        return bias_[type_map[i]];
+        return bias_[type_map_[i]];
     }
     uint32 n_stay(const uint32& i) const {
-        return n_stay_[type_map[i]];
+        return n_stay_[type_map_[i]];
     }
     uint32 n_ignore(const uint32& i) const {
-        return n_ignore_[type_map[i]];
+        return n_ignore_[type_map_[i]];
     }
     // Overloaded to make arma vectors:
     arma::vec l_star(const arma::uvec& i) const {
         arma::vec out(i.n_elem);
         for (uint32 j = 0; j < i.n_elem; j++) {
-            out(j) = l_star_[type_map[i(j)]];
+            out(j) = l_star_[type_map_[i(j)]];
         }
         return out;
     }
     arma::vec l_i(const arma::uvec& i) const {
         arma::vec out(i.n_elem);
         for (uint32 j = 0; j < i.n_elem; j++) {
-            out(j) = l_i_[type_map[i(j)]];
+            out(j) = l_i_[type_map_[i(j)]];
         }
         return out;
     }
     arma::vec bias(const arma::uvec& i) const {
         arma::vec out(i.n_elem);
         for (uint32 j = 0; j < i.n_elem; j++) {
-            out(j) = bias_[type_map[i(j)]];
+            out(j) = bias_[type_map_[i(j)]];
         }
         return out;
     }
     arma::uvec n_stay(const arma::uvec& i) const {
         arma::uvec out(i.n_elem);
         for (uint32 j = 0; j < i.n_elem; j++) {
-            out(j) = n_stay_[type_map[i(j)]];
+            out(j) = n_stay_[type_map_[i(j)]];
         }
         return out;
     }
     arma::uvec n_ignore(const arma::uvec& i) const {
         arma::uvec out(i.n_elem);
         for (uint32 j = 0; j < i.n_elem; j++) {
-            out(j) = n_ignore_[type_map[i(j)]];
+            out(j) = n_ignore_[type_map_[i(j)]];
         }
         return out;
     }
