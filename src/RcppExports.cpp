@@ -13,6 +13,32 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// searcher_sims
+DataFrame searcher_sims(const double& delta, const uint32& max_t, const double& x_size, const double& y_size, const arma::mat& target_xy, std::vector<uint32> target_types, const std::vector<double>& l_star, const std::vector<double>& l_i, const std::vector<double>& bias, const std::vector<uint32>& n_stay, const std::vector<uint32>& n_ignore, Nullable<NumericVector> xy0, const bool& randomize_xy0, const uint32& n_reps, const bool& show_progress, uint32 n_threads);
+RcppExport SEXP _pseudogameofclones_searcher_sims(SEXP deltaSEXP, SEXP max_tSEXP, SEXP x_sizeSEXP, SEXP y_sizeSEXP, SEXP target_xySEXP, SEXP target_typesSEXP, SEXP l_starSEXP, SEXP l_iSEXP, SEXP biasSEXP, SEXP n_staySEXP, SEXP n_ignoreSEXP, SEXP xy0SEXP, SEXP randomize_xy0SEXP, SEXP n_repsSEXP, SEXP show_progressSEXP, SEXP n_threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const double& >::type delta(deltaSEXP);
+    Rcpp::traits::input_parameter< const uint32& >::type max_t(max_tSEXP);
+    Rcpp::traits::input_parameter< const double& >::type x_size(x_sizeSEXP);
+    Rcpp::traits::input_parameter< const double& >::type y_size(y_sizeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type target_xy(target_xySEXP);
+    Rcpp::traits::input_parameter< std::vector<uint32> >::type target_types(target_typesSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type l_star(l_starSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type l_i(l_iSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type bias(biasSEXP);
+    Rcpp::traits::input_parameter< const std::vector<uint32>& >::type n_stay(n_staySEXP);
+    Rcpp::traits::input_parameter< const std::vector<uint32>& >::type n_ignore(n_ignoreSEXP);
+    Rcpp::traits::input_parameter< Nullable<NumericVector> >::type xy0(xy0SEXP);
+    Rcpp::traits::input_parameter< const bool& >::type randomize_xy0(randomize_xy0SEXP);
+    Rcpp::traits::input_parameter< const uint32& >::type n_reps(n_repsSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type show_progress(show_progressSEXP);
+    Rcpp::traits::input_parameter< uint32 >::type n_threads(n_threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(searcher_sims(delta, max_t, x_size, y_size, target_xy, target_types, l_star, l_i, bias, n_stay, n_ignore, xy0, randomize_xy0, n_reps, show_progress, n_threads));
+    return rcpp_result_gen;
+END_RCPP
+}
 // make_aphids_ptr
 SEXP make_aphids_ptr(List aphid_list);
 RcppExport SEXP _pseudogameofclones_make_aphids_ptr(SEXP aphid_listSEXP) {
@@ -245,6 +271,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_pseudogameofclones_searcher_sims", (DL_FUNC) &_pseudogameofclones_searcher_sims, 16},
     {"_pseudogameofclones_make_aphids_ptr", (DL_FUNC) &_pseudogameofclones_make_aphids_ptr, 1},
     {"_pseudogameofclones_logit", (DL_FUNC) &_pseudogameofclones_logit, 1},
     {"_pseudogameofclones_inv_logit", (DL_FUNC) &_pseudogameofclones_inv_logit, 1},
