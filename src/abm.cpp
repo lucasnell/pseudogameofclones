@@ -280,23 +280,20 @@ void check_args(const double& delta,
 
 
     // Lastly check for overlapping bounds.
-    // The lower triangle of this matrix contains distances between targets
-    // minus the sum of their l_i values
-    arma::mat target_dists(target_xy.n_rows, target_xy.n_rows, arma::fill::none);
+    // I'll check that no distance between targets is less than the sum
+    // of their l_i values
+    double dist, sum_l_i;
     for (uint32 i = 1; i < target_xy.n_rows; i++) {
         for (uint32 j = 0; j < i; j++) {
-            target_dists(i,j) = distance(target_xy(i,0), target_xy(i,1),
-                                         target_xy(j,0), target_xy(j,1));
-            target_dists(i,j) -= l_i[target_types[i]];
-            target_dists(i,j) -= l_i[target_types[j]];
+            dist = distance(target_xy(i,0), target_xy(i,1),
+                            target_xy(j,0), target_xy(j,1));
+            sum_l_i = l_i[target_types[i]] + l_i[target_types[j]];
+            if (dist <= sum_l_i) {
+                std::string err("targets are too close together which would ");
+                err += "result in searchers interacting with >1 at a time.";
+                stop(err.c_str());
+            }
         }
-    }
-    arma::uvec lower_tri = arma::trimatl_ind(arma::size(target_dists), -1);
-    arma::vec dists = target_dists(lower_tri);
-    if (arma::min(dists) <= 0) {
-        std::string err("targets are too close together which would ");
-        err += "result in searchers interacting with >1 at a time.";
-        stop(err.c_str());
     }
 
     if (xy0.isNotNull()) {
