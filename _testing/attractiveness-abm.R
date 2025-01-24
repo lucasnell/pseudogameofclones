@@ -31,38 +31,55 @@ if (interactive()) {
 
 
 
-xs <- 11; ys <- 11
+xs <- 101; ys <- 101
 
-target_xy <- crossing(x = -5:5, y = -5:5) |>
+target_xy <- crossing(x = -(floor(xs / 2)):(floor(xs / 2)),
+                      y = -(floor(ys / 2)):(floor(ys / 2))) |>
     as.matrix()
 target_types <- as.integer((1:nrow(target_xy)) %% 2 == 0L) + 1L
 
 # target_xy <- cbind(x = c(-3, -3), y = c(0, 0))
 # target_types <- 1:2
 
+# Info for target types: virus- and Pseudomonas-infected, respectively:
+target_info <- list(l_star = c(5, 1),
+                    l_i = c(0.2, 0.2),
+                    bias = c(0.3, -0.6),
+                    n_stay = c(5L, 5L),
+                    n_ignore = c(1e6, 1e6))
+target_info$n_ignore  <- ceiling(2 * target_info$l_star / 0.5)
+
+# Change these if only two targets (used for testing)
 if (nrow(target_xy) == 2) {
-    l_star <- c(5, 5)
-    l_i <- c(1, 1)
-} else {
-    l_star <- c(2, 0.5)
-    l_i <- c(0.1, 0.1)
+    target_info$l_star <- c(5, 5)
+    target_info$l_i <- c(1, 1)
 }
 
-x <- searcher_sims(delta = 0.5, max_t = 100, x_size = xs, y_size = ys,
-                   target_xy = target_xy, target_types = target_types,
-                   l_star = l_star,
-                   l_i = l_i,
-                   bias = c(0.5, -0.1),
-                   n_stay = c(5L, 5L),
-                   # n_ignore = ceiling(2 * l_star / 0.5),
-                   n_ignore = c(1e6, 1e6),
-                   xy0 = NULL,
-                   randomize_xy0 = TRUE,
-                   n_reps = 100L,
-                   show_progress = FALSE,
-                   n_threads = .n_threads)
 
-p <- x |>
+# Simulations with bacteria:
+b_sims <- searcher_sims(delta = 2, max_t = 100, x_size = xs, y_size = ys,
+                        target_xy = target_xy, target_types = target_types,
+                        l_star = target_info$l_star,
+                        l_i = target_info$l_i,
+                        bias = target_info$bias,
+                        n_stay = target_info$n_stay,
+                        n_ignore = target_info$n_ignore,
+                        n_reps = 100L,
+                        n_threads = .n_threads)
+# no bacteria sims:
+nb_sims <- searcher_sims(delta = 2, max_t = 100, x_size = xs, y_size = ys,
+                         target_xy = target_xy[target_types == 1,],
+                         target_types = target_types[target_types == 1],
+                         l_star = target_info$l_star[1],
+                         l_i = target_info$l_i[1],
+                         bias = target_info$bias[1],
+                         n_stay = target_info$n_stay[1],
+                         n_ignore = target_info$n_ignore[1],
+                         n_reps = 100L,
+                         n_threads = .n_threads)
+
+
+p <- b_sims |>
     mutate(rep = factor(rep)) |>
     # filter(t < 100) |>
     ggplot(aes(x,y)) +
@@ -84,23 +101,38 @@ anim <- p +
     transition_reveal(time) +
     ease_aes("linear")
 
-animate(anim, nframes = length(unique(x$time)))
+# animate(anim, nframes = length(unique(b_sims$time)))
 
 
-anim_save("~/Desktop/searchers.gif", anim, nframes = length(unique(x$time)),
-          height = 5, width = 5, units = "in", res = 300)
+# anim_save("~/Desktop/searchers.gif", anim, nframes = length(unique(b_sims$time)),
+#           height = 5, width = 5, units = "in", res = 300)
 
-x |>
-    filter(type > 0) |>
-    mutate(type = factor(type, labels = c("virus", "bacteria"))) |>
-    group_by(type, rep) |>
+# b_sims |>
+#     filter(type > 0) |>
+#     mutate(type = factor(type, labels = c("virus", "bacteria"))) |>
+#     group_by(type, rep) |>
+#     summarize(on = n(), hit = sum(hit), .groups = "drop") |>
+#     pivot_longer(on:hit) |>
+#     ggplot(aes(type, value)) +
+#     geom_hline(yintercept = 0, linewidth = 0.5, color = "gray70") +
+#     geom_jitter(aes(color = type), width = 0.25, height = 0, shape = 1) +
+#     facet_wrap(~ name, scales = "free_y") +
+#     scale_color_manual(NULL, values = c("dodgerblue", "goldenrod"),
+#                        guide = "none")
+
+
+
+bind_rows(b_sims |> mutate(bact = "w"),
+          nb_sims |> mutate(bact = "wo")) |>
+    mutate(bact = factor(bact, levels = c("w", "wo"))) |>
+    filter(type == 1) |>
+    group_by(rep, bact) |>
     summarize(on = n(), hit = sum(hit), .groups = "drop") |>
     pivot_longer(on:hit) |>
-    ggplot(aes(type, value)) +
+    ggplot(aes(bact, value)) +
     geom_hline(yintercept = 0, linewidth = 0.5, color = "gray70") +
-    geom_jitter(aes(color = type), width = 0.25, height = 0, shape = 1) +
-    facet_wrap(~ name, scales = "free_y") +
-    scale_color_manual(NULL, values = c("dodgerblue", "goldenrod"),
-                       guide = "none")
+    geom_jitter(width = 0.25, height = 0, shape = 1) +
+    stat_summary(geom = "point", fun = mean, size = 3, color = "firebrick") +
+    facet_wrap(~ name, scales = "free_y")
 
 
