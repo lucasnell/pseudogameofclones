@@ -66,10 +66,11 @@
 #'
 #' @returns A tibble with the columns `rep` (repetition number),
 #'     `time` (time), `x` (x coordinate), `y` (y coordinate),
-#'     `type` (which target type is searcher interacting with (within `l_i`)?),
+#'     `tar` (which target is searcher interacting with (within `l_i`)?),
+#'     `type` (which target type is searcher interacting with?),
 #'      and
 #'     `hit` (logical - is searcher interacting with a new target?).
-#'     Column `type` is `0` if the searcher is not on any targets.
+#'     Columns `tar` and `type` are `0` if the searcher is not on any targets.
 #'
 #'
 #' @export

@@ -336,12 +336,14 @@ DataFrame create_output(const uint32& max_t,
     std::vector<int> time;
     std::vector<double> x;
     std::vector<double> y;
+    std::vector<int> tar;
     std::vector<int> type;
     std::vector<bool> hit;
     rep.reserve((max_t+1U) * n_reps);
     time.reserve((max_t+1U) * n_reps);
     x.reserve((max_t+1U) * n_reps);
     y.reserve((max_t+1U) * n_reps);
+    tar.reserve((max_t+1U) * n_reps);
     type.reserve((max_t+1U) * n_reps);
     hit.reserve((max_t+1U) * n_reps);
 
@@ -351,6 +353,7 @@ DataFrame create_output(const uint32& max_t,
             time.push_back(j);
             x.push_back(simmers[i].x[j]);
             y.push_back(simmers[i].y[j]);
+            tar.push_back(simmers[i].on_target[j] + 1);
             if (simmers[i].on_target[j] < 0) {
                 type.push_back(0);
             } else type.push_back(tt[simmers[i].on_target[j]] + 1);
@@ -363,6 +366,7 @@ DataFrame create_output(const uint32& max_t,
         _["time"] = time,
         _["x"] = x,
         _["y"] = y,
+        _["tar"] = tar,
         _["type"] = type,
         _["hit"] = hit);
 
@@ -443,10 +447,11 @@ DataFrame create_output(const uint32& max_t,
 //'
 //' @returns A tibble with the columns `rep` (repetition number),
 //'     `time` (time), `x` (x coordinate), `y` (y coordinate),
-//'     `type` (which target type is searcher interacting with (within `l_i`)?),
+//'     `tar` (which target is searcher interacting with (within `l_i`)?),
+//'     `type` (which target type is searcher interacting with?),
 //'      and
 //'     `hit` (logical - is searcher interacting with a new target?).
-//'     Column `type` is `0` if the searcher is not on any targets.
+//'     Columns `tar` and `type` are `0` if the searcher is not on any targets.
 //'
 //'
 //' @export
