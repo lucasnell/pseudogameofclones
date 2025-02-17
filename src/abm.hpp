@@ -25,9 +25,14 @@
 using namespace Rcpp;
 
 
+// Simple sign function:
+template <typename T>
+int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
 
 //
-// New dx or dy that includes effects of reflecting off bound(s).
+// Iterate x or y and include effects of reflecting off bound(s).
 //
 inline double reflect(const double& start,
                       double d,
@@ -42,7 +47,7 @@ inline double reflect(const double& start,
         past_bounds(0) = (start + d) < bounds(0);
         past_bounds(1) = (start + d) > bounds(1);
     }
-    return d;
+    return start + d;
 }
 
 //
@@ -59,8 +64,9 @@ class TargetInfo {
     arma::mat target_xy;
     std::vector<uint32> type_map_;
     std::vector<double> l_star_;
-    std::vector<double> l_i_;
+    std::vector<double> l_int_;
     std::vector<double> bias_;
+    std::vector<double> abs_bias_;
     std::vector<uint32> n_stay_;
     std::vector<uint32> n_ignore_;
 
@@ -69,13 +75,13 @@ public:
     TargetInfo(const arma::mat& target_xy_,
                     const std::vector<uint32>& type_map__,
                     const std::vector<double>& l_star__,
-                    const std::vector<double>& l_i__,
+                    const std::vector<double>& l_int__,
                     const std::vector<double>& bias__,
                     const std::vector<uint32>& n_stay__,
                     const std::vector<uint32>& n_ignore__)
         : target_xy(target_xy_), type_map_(type_map__),
-          l_star_(l_star__), l_i_(l_i__),
-          bias_(bias__), n_stay_(n_stay__), n_ignore_(n_ignore__) {
+          l_star_(l_star__), l_int_(l_int__),
+          bias_(bias__), abs_bias_(bias__), n_stay_(n_stay__), n_ignore_(n_ignore__) {
 
         if (target_xy.n_cols != 2) stop("target_xy.n_cols != 2");
         if (target_xy.n_rows != type_map_.size())
@@ -83,10 +89,12 @@ public:
 
         uint32 max_idx = *std::max_element(type_map_.begin(), type_map_.end());
         if (l_star_.size() != max_idx+1U) stop("wrong length for l_star");
-        if (l_i_.size() != max_idx+1U) stop("wrong length for l_i");
+        if (l_int_.size() != max_idx+1U) stop("wrong length for l_int");
         if (bias_.size() != max_idx+1U) stop("wrong length for bias");
         if (n_stay_.size() != max_idx+1U) stop("wrong length for n_stay");
         if (n_ignore_.size() != max_idx+1U) stop("wrong length for n_ignore");
+
+        for (double& ab : abs_bias_) ab = std::abs(ab);
 
     };
 
@@ -120,11 +128,14 @@ public:
     double l_star(const uint32& i) const {
         return l_star_[type_map_[i]];
     }
-    double l_i(const uint32& i) const {
-        return l_i_[type_map_[i]];
+    double l_int(const uint32& i) const {
+        return l_int_[type_map_[i]];
     }
     double bias(const uint32& i) const {
         return bias_[type_map_[i]];
+    }
+    double abs_bias(const uint32& i) const {
+        return abs_bias_[type_map_[i]];
     }
     uint32 n_stay(const uint32& i) const {
         return n_stay_[type_map_[i]];
@@ -140,10 +151,10 @@ public:
         }
         return out;
     }
-    arma::vec l_i(const arma::uvec& i) const {
+    arma::vec l_int(const arma::uvec& i) const {
         arma::vec out(i.n_elem);
         for (uint32 j = 0; j < i.n_elem; j++) {
-            out(j) = l_i_[type_map_[i(j)]];
+            out(j) = l_int_[type_map_[i(j)]];
         }
         return out;
     }
@@ -151,6 +162,13 @@ public:
         arma::vec out(i.n_elem);
         for (uint32 j = 0; j < i.n_elem; j++) {
             out(j) = bias_[type_map_[i(j)]];
+        }
+        return out;
+    }
+    arma::vec abs_bias(const arma::uvec& i) const {
+        arma::vec out(i.n_elem);
+        for (uint32 j = 0; j < i.n_elem; j++) {
+            out(j) = abs_bias_[type_map_[i(j)]];
         }
         return out;
     }
@@ -182,7 +200,7 @@ class ABMsimulator {
 
     pcg32 eng;
     const TargetInfo* target_info;
-    double delta;
+    double d;
     arma::vec x_bounds;
     arma::vec y_bounds;
     double max_size;
@@ -191,20 +209,20 @@ class ABMsimulator {
     arma::vec l_vec;
     // which target(s) are within l_star (and thus influence trajectory):
     arma::uvec wi_lstar;
-    // which target (if any) is within l_i; if none, this is set to 1+n_targets:
+    // which target (if any) is within l_int; if none, this is set to 1+n_targets:
     uint32 wi_li;
     // distance to nearest target:
     double l_min;
-    // number of time points within l_i of most recent target:
+    // number of time points within l_int of most recent target:
     uint32 stayed;
     // max bias and n_ignore for any type of target:
-    double max_bias;
+    double max_abs_bias;
     uint32 max_n_ignore;
     // max time steps to simulate:
     uint32 max_t;
     // `visited` below indicates number of time points since the most
     // recent visit for each target (only starts after leaving within
-    // l_i of the target):
+    // l_int of the target):
     arma::uvec visited;
     // These are objects used temporarily in the simulations themselves:
     double rw_theta;
@@ -221,7 +239,7 @@ class ABMsimulator {
     /*
 
      Update `wi_lstar` (index / indices for targets within l_star),
-     `wi_li` (index for target within l_i),
+     `wi_li` (index for target within l_int),
      `l_min` (distance to nearest target),
      and optionally `l_vec` (distances to all targets),
      including ignoring recently visited target(s).
@@ -252,10 +270,10 @@ public:
 
 
     ABMsimulator(const TargetInfo& target_info_,
-                 const double& delta_,
+                 const double& d_,
                  const double& x_size,
                  const double& y_size,
-                 const std::vector<double>& bias,
+                 std::vector<double> bias,
                  const std::vector<uint32>& n_ignore,
                  const uint32& max_t_,
                  const double& x0,
@@ -263,9 +281,9 @@ public:
                  const bool& randomize_xy0)
         : eng(),
           target_info(&target_info_),
-          delta(delta_),
-          x_bounds({-x_size / 2, x_size / 2}),
-          y_bounds({-y_size / 2, y_size / 2}),
+          d(d_),
+          x_bounds({0, x_size}),
+          y_bounds({0, y_size}),
           max_size(std::sqrt(std::pow(x_size, 2U) + std::pow(y_size, 2U))),
           n_targets(target_info_.n_targets()),
           l_vec(target_info_.n_targets(), arma::fill::none),
@@ -273,7 +291,7 @@ public:
           wi_li(),
           l_min(),
           stayed(0),
-          max_bias(*std::max_element(bias.begin(), bias.end())),
+          max_abs_bias(),
           max_n_ignore(*std::max_element(n_ignore.begin(), n_ignore.end())),
           max_t(max_t_),
           visited(target_info_.n_targets(),
@@ -304,11 +322,17 @@ public:
             y(0) = y0;
         }
 
+        // Because biases can be negative, and bc the use of this is only to
+        // exclude situations where all biases == 0:
+        for (double& b : bias) b = std::abs(b);
+        max_abs_bias = *std::max_element(bias.begin(), bias.end());
+
+
         // Update l_vec, wi_lstar, and l_min:
         update_wi_lvec(0, true);
 
         // Update on_target and new_target if searcher starts near a target:
-        if (wi_li < n_targets && l_min <= target_info->l_i(wi_li)) {
+        if (wi_li < n_targets && l_min <= target_info->l_int(wi_li)) {
             on_target[0] = wi_li;
             new_target[0] = true;
             visited(wi_li) = 0;

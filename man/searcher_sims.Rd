@@ -5,14 +5,14 @@
 \title{Simulate searchers seeking targets.}
 \usage{
 searcher_sims(
-  delta,
+  d,
   max_t,
   x_size,
   y_size,
   target_xy,
   target_types,
   l_star,
-  l_i,
+  l_int,
   bias,
   n_stay,
   n_ignore,
@@ -24,32 +24,32 @@ searcher_sims(
 )
 }
 \arguments{
-\item{delta}{Single numeric indicating search rate of searcher.}
+\item{d}{Single numeric indicating search rate of searcher.}
 
 \item{max_t}{Single integer indicating the number of time steps to simulate.}
 
 \item{x_size}{Single numeric indicating x dimension of search area.
-Bounds will be \code{c(-x_size/2, x_size/2)}.}
+Bounds will be \code{c(0, x_size)}.}
 
 \item{y_size}{Single numeric indicating y dimension of search area.
-Bounds will be \code{c(-y_size/2, y_size/2)}.}
+Bounds will be \code{c(0, y_size)}.}
 
 \item{target_xy}{Two-column numeric matrix containing x and y coordinates
 for targets.}
 
 \item{target_types}{Integer vector with the same number of items as the
 number of rows in \code{target_xy} indicating the type of target each
-target is. Targets can vary in their \code{l_star}, \code{l_i}, \code{bias},
+target is. Targets can vary in their \code{l_star}, \code{l_int}, \code{bias},
 \code{n_stay}, and \code{n_ignore} parameters (see descriptions below).
 This vector should consist of integers from 1 to the number of items
-in the arguments \code{l_star}, \code{l_i}, \code{bias}, \code{n_stay}, and \code{n_ignore}.}
+in the arguments \code{l_star}, \code{l_int}, \code{bias}, \code{n_stay}, and \code{n_ignore}.}
 
 \item{l_star}{Numeric vector indicating, for each target type,
 the distance from searcher to target that causes targets to bias
 searcher movement.
 Its length should be equal to the number of unique type(s) of targets.}
 
-\item{l_i}{Numeric vector indicating, for each target type,
+\item{l_int}{Numeric vector indicating, for each target type,
 the distance from searcher to target that causes an interaction.
 Its length should be equal to the number of unique type(s) of targets.}
 
@@ -102,10 +102,12 @@ Defaults to \code{1L}.}
 }
 \value{
 A tibble with the columns \code{rep} (repetition number),
-\code{t} (time), \code{x} (x coordinate), \code{y} (y coordinate),
-\code{on} (which target is searcher interacting with (within \code{l_i})?), and
-\code{hit} (is searcher interacting with a new target?).
-Column \code{on} is \code{0} if the searcher is not on any targets.
+\code{time} (time), \code{x} (x coordinate), \code{y} (y coordinate),
+\code{tar} (which target is searcher interacting with (within \code{l_int})?),
+\code{type} (which target type is searcher interacting with?),
+and
+\code{hit} (logical - is searcher interacting with a new target?).
+Columns \code{tar} and \code{type} are \code{0} if the searcher is not on any targets.
 }
 \description{
 Simulate searchers seeking targets.

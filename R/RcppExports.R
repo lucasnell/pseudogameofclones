@@ -3,25 +3,25 @@
 
 #' Simulate searchers seeking targets.
 #'
-#' @param delta Single numeric indicating search rate of searcher.
+#' @param d Single numeric indicating search rate of searcher.
 #' @param max_t Single integer indicating the number of time steps to simulate.
 #' @param x_size Single numeric indicating x dimension of search area.
-#'     Bounds will be `c(-x_size/2, x_size/2)`.
+#'     Bounds will be `c(0, x_size)`.
 #' @param y_size Single numeric indicating y dimension of search area.
-#'     Bounds will be `c(-y_size/2, y_size/2)`.
+#'     Bounds will be `c(0, y_size)`.
 #' @param target_xy Two-column numeric matrix containing x and y coordinates
 #'     for targets.
 #' @param target_types Integer vector with the same number of items as the
 #'     number of rows in `target_xy` indicating the type of target each
-#'     target is. Targets can vary in their `l_star`, `l_i`, `bias`,
+#'     target is. Targets can vary in their `l_star`, `l_int`, `bias`,
 #'     `n_stay`, and `n_ignore` parameters (see descriptions below).
 #'     This vector should consist of integers from 1 to the number of items
-#'     in the arguments `l_star`, `l_i`, `bias`, `n_stay`, and `n_ignore`.
+#'     in the arguments `l_star`, `l_int`, `bias`, `n_stay`, and `n_ignore`.
 #' @param l_star Numeric vector indicating, for each target type,
 #'     the distance from searcher to target that causes targets to bias
 #'     searcher movement.
 #'     Its length should be equal to the number of unique type(s) of targets.
-#' @param l_i Numeric vector indicating, for each target type,
+#' @param l_int Numeric vector indicating, for each target type,
 #'     the distance from searcher to target that causes an interaction.
 #'     Its length should be equal to the number of unique type(s) of targets.
 #' @param bias Numeric vector indicating, for each target type,
@@ -66,7 +66,7 @@
 #'
 #' @returns A tibble with the columns `rep` (repetition number),
 #'     `time` (time), `x` (x coordinate), `y` (y coordinate),
-#'     `tar` (which target is searcher interacting with (within `l_i`)?),
+#'     `tar` (which target is searcher interacting with (within `l_int`)?),
 #'     `type` (which target type is searcher interacting with?),
 #'      and
 #'     `hit` (logical - is searcher interacting with a new target?).
@@ -75,8 +75,8 @@
 #'
 #' @export
 #'
-searcher_sims <- function(delta, max_t, x_size, y_size, target_xy, target_types, l_star, l_i, bias, n_stay, n_ignore, xy0 = NULL, randomize_xy0 = TRUE, n_reps = 1L, show_progress = FALSE, n_threads = 1L) {
-    .Call(`_pseudogameofclones_searcher_sims`, delta, max_t, x_size, y_size, target_xy, target_types, l_star, l_i, bias, n_stay, n_ignore, xy0, randomize_xy0, n_reps, show_progress, n_threads)
+searcher_sims <- function(d, max_t, x_size, y_size, target_xy, target_types, l_star, l_int, bias, n_stay, n_ignore, xy0 = NULL, randomize_xy0 = TRUE, n_reps = 1L, show_progress = FALSE, n_threads = 1L) {
+    .Call(`_pseudogameofclones_searcher_sims`, d, max_t, x_size, y_size, target_xy, target_types, l_star, l_int, bias, n_stay, n_ignore, xy0, randomize_xy0, n_reps, show_progress, n_threads)
 }
 
 make_aphids_ptr <- function(aphid_list) {
