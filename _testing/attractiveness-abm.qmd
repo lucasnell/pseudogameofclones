@@ -1,0 +1,214 @@
+---
+title: "ABM of attracting and repelling targets"
+author: "Lucas A. Nell"
+format:
+  pdf: default
+  html:
+    include-in-header: in-line_math_mode.html
+editor: source
+date: "2025-02-13"
+date-format: "D MMM YYYY"
+editor_options: 
+  chunk_output_type: console
+---
+
+\raggedright
+
+```{r}
+#| label: setup
+#| include: false
+
+knitr::opts_chunk$set(echo = TRUE)
+
+suppressPackageStartupMessages({
+    library(knitr)
+    library(tidyverse)
+    library(gganimate)
+    library(pseudogameofclones)
+    library(kableExtra)
+})
+# number of threads:
+.n_threads <- max(1L, parallel::detectCores() - 2L)
+```
+
+Agent-based model of searchers (aphids) and targets (plants) where some targets attract searchers (virus-infected plants) while others repel them (*Pseudomonas*-infected plants). I am using these more computationally intensive simulations to describe the functional form of interaction rates in response to both attracting and repelling targets.
+
+
+
+## Model description
+
+
+
+The model starts with sizes for the x and y dimensions ($x_{\text{size}}$ and
+$y_{\text{size}}$), and the total landscape is defined by the bounds
+$\left[ 0, \, x_{\text{size}} \right]$ and $\left[ 0, \, y_{\text{size}} \right]$.
+Searchers move within this landscape and operate independently from each other.
+Searchers reflect off the x and y bounds if their movement would otherwise 
+cause them to move past them.
+Targets are located within these bounds and do not move.
+Once a searcher moves close enough to a target, the target can repel or 
+attract them.
+These repellent or attractant effects can vary in strength from a mild 
+bias (i.e., close to a random walk) to completely directed movement.
+Targets can differ in how they bias searcher movement and in the distance
+within which they affect searcher movement.
+Only one target affects a given searcher's movement at a time.
+If a searcher is within multiple targets' directed-movement thresholds,
+the target with the greater directed-movement strength (repellent or 
+attractant) affects it.
+Once a searcher moves even closer to a target, the searcher interacts with
+the target, and the simulations record this event.
+In the context of pea aphids and pea plants, an interaction means
+an encounter that would allow for potential loading of viruses between
+the aphid vector and pea-plant host.
+After an interaction occurs, searchers can stay on the target for a number
+of time steps (potentially indefinitely).
+This would be akin to aphids finding a host plant and staying to feed.
+After leaving the target, searchers can ignore that target for a number
+of time steps (potentially indefinitely).
+This allows searchers to escape the influence of the target to avoid
+staying there indefinitely.
+See @tbl-parameters for parameter descriptions.
+
+When far from all targets, searchers move a set distance ($d$) in a random 
+direction each time step:
+$$
+\begin{split}
+x_{t+1} &= x_{t} + d \cos(\theta_{r}) \\
+y_{t+1} &= y_{t} + d \sin(\theta_{r}) \\
+\theta_{r} &\sim {\text{U}}(0, 2 \pi)
+\end{split},
+$${#eq-random-walk}
+where
+$x_{t}$ and $y_{t}$ indicate searcher location at time $t$,
+and $\theta_r$ is the random turn angle in radians.
+
+
+When a searcher's distance between itself and target $i$ ($l_i$) is
+less than target $i$'s directed-movement threshold ($l_{\star,i}$), 
+the target influences searcher movement according to the bias 
+it exerts on searchers:
+$$
+\begin{split}
+x_{t+1} &= x_{t} + (1 - |b_i|) \, \ddot{\Delta}{x} + |b_i| \, \vec{\Delta}{x} \\
+y_{t+1} &= y_{t} + (1 - |b_i|) \, \ddot{\Delta}{y} + |b_i| \, \vec{\Delta}{y}
+\end{split},
+$$ {#eq-bias}
+where 
+$\ddot{\Delta}{x}$ and $\ddot{\Delta}{y}$ indicate changes in location via 
+entirely random movement ($\ddot{\Delta}{x} = d \cos(\theta_r)$ and 
+$\ddot{\Delta}{y} = d \sin(\theta_r)$ from @eq-random-walk),
+$\vec{\Delta}{x}$ and $\vec{\Delta}{y}$ indicate entirely directed movement
+(defined in @eq-one-lstar below),
+$| \cdot |$ indicates absolute value,
+and
+$b_i$ indicates bias for target $i$ and can range from $-1$ to $+1$.
+Biases near zero result in mostly random movement, whereas values near
+$1$ result in mostly directed movement.
+Negative $b_i$ indicates repellent effects on searchers, and
+positive values indicate attractant effects.
+
+The sign of $b_i$ comes into play in the directed portion of movement.
+Directed movement toward or away from target $i$ is
+$$
+\begin{split}
+\delta_i &= 
+    \begin{cases}
+        l_i, & \text{if } b_i > 0 \text{ and } l_i < d \\
+        d,   & \text{otherwise}
+    \end{cases} \\
+\theta_i &= \text{atan2}\left[\text{sgn}(b_i) \left( \vec{y}_i - y_t \right), \; \text{sgn}(b_i) \left( \vec{x}_i - x_t \right) \right] \\
+\vec{\Delta}{x} &= \delta_i \, \cos(\theta_i) \\
+\vec{\Delta}{y} &= \delta_i \, \sin(\theta_i) \\
+\end{split},
+$${#eq-one-lstar}
+where
+$\text{atan2}$ is the 2-argument arctangent function
+and
+$\vec{x}_i$ and $\vec{y}_i$ indicate the location of target $i$.
+This approach causes searchers to move away from targets when $b_i < 0$ and
+toward them when $b_i > 0$.
+It also prevents a searcher from overshooting a target it's moving toward
+when the searcher step size exceeds the distance between searcher 
+and target.
+If multiple targets are within their values of $l_{\star}$ of the 
+searcher, then the target with the greater absolute bias ($|b|$) 
+is the only target that affects searcher movement.
+If both targets have the same $|b|$, then the closer target is chosen.
+In the rare event where they also share the same distance, then a
+target is chosen at random.
+
+
+<!-- Searchers can be influenced by multiple targets, in which -->
+<!-- case directed movement is weighted by each target's magnitude of bias, $|b_i|$. -->
+<!-- For a vector containing all indices for targets within their directed-movement -->
+<!-- threshold of the searcher ($\mathbf{R}$), directed movement is as follows: -->
+<!-- $$ -->
+<!-- \begin{split} -->
+<!-- \mathbf{R} &= \left\{\text{ all } i \text{ such that } l_i \le l_{\star,i} \right\} \\ -->
+<!-- |b| &= \max_{i \in \mathbf{R}}\left( | b_i | \right) \\ -->
+<!-- \vec{\Delta}{x} &= \sum_{i \in \mathbf{R}}{\left( \omega_i \, \vec{\Delta}{x}_i \right)} \\ -->
+<!-- \vec{\Delta}{y} &= \sum_{i \in \mathbf{R}}{\left( \omega_i \, \vec{\Delta}{y}_i \right)} \\ -->
+<!-- \omega_i        &= \frac{|b_i|}{ -->
+<!--     \sum\limits_{j \in \mathbf{R}}{ |b_j| }} -->
+<!-- \end{split}, -->
+<!-- $$ {#eq-mult-lstars} -->
+<!-- where -->
+<!-- $l_i$ is the distance from the searcher to nearby target $i$, -->
+<!-- and -->
+<!-- $\vec{\Delta}{x}_i$ and $\vec{\Delta}{y}_i$ indicate entirely directed movement  -->
+<!-- toward nearby target $i$ (@eq-one-lstar). -->
+
+
+
+A searcher interacts with target $i$ when $l_i \le l_{\circledast,i}$,
+and $l_{\circledast,i}$ can also vary among targets.
+After this interaction occurs, the searcher can optionally stay target $i$
+for $n_s$ time steps, during which time the searcher will move entirely
+directed toward the target.
+Afterward, the searcher can optionally ignore target $i$ for $n_g$ time steps.
+
+
+
+\clearpage
+
+```{r}
+#| label: tbl-parameters
+#| tbl-cap: "Parameters in the model with descriptions."
+#| echo: false
+
+tribble(
+    ~ Name, ~ Description,
+    "$x_{\\text{size}}$", "Size of landscape in x dimension",
+    "$y_{\\text{size}}$", "Size of landscape in y dimension",
+    "$x_t$", "x coordinate of searcher at time $t$",
+    "$y_t$", "y coordinate of searcher at time $t$",
+    "$d$", "Distance searchers move per time step",
+    "$\\theta_r$", "Random-walk turn angle in radians",
+    "$l_i$", "Distance between searcher and target $i$",
+    "$l_{\\star,i}$", paste("Threshold for target $i$ within which searchers",
+                            "are biased by it"),
+    "$b_i$", paste("Bias for target $i$ ($b_i \\in \\left[ -1,1 \\right]$);",
+                   "values near 0 are closer to a random walk; negative",
+                   "values repel, while positive values attract"),
+    "$\\vec{x}_i$", "x coordinate for target $i$",
+    "$\\vec{y}_i$", "y coordinate for target $i$",
+    "$l_{\\circledast,i}$", "Threshold for target $i$ within which searchers interact with it",
+    "$n_s$", "Number of time steps searchers interact with a target",
+    "$n_g$", "Number of time steps searchers ignore a target after interacting"
+    ) |> 
+    kbl(escape = FALSE, booktabs = TRUE, linesep = "\\addlinespace") |> 
+    column_spec(2, "5.5in")
+```
+
+
+
+## Simulations
+
+
+
+
+<!-- ```{r} -->
+<!-- #| animation-hook: gifski -->
+<!-- ``` -->
+
