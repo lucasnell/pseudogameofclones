@@ -19,6 +19,7 @@ searcher_sims(
   xy0 = NULL,
   randomize_xy0 = TRUE,
   n_reps = 1L,
+  summarize = FALSE,
   show_progress = FALSE,
   n_threads = 1L
 )
@@ -92,6 +93,10 @@ repetitions to run. This can be thought of as the number of searchers
 on the landscape if searchers are independent of one another.
 Defaults to \code{1L}.}
 
+\item{summarize}{Single logical for whether to summarize output by
+rep. See below for details on how this changes the output.
+Defaults to \code{FALSE}.}
+
 \item{show_progress}{Single logical for whether to show progress bar.
 Defaults to \code{FALSE}.}
 
@@ -101,13 +106,22 @@ strange warning I cannot explain.
 Defaults to \code{1L}.}
 }
 \value{
-A tibble with the columns \code{rep} (repetition number),
+If \code{summarize = FALSE}, then it outputs a tibble with the columns
+\code{rep} (repetition number),
 \code{time} (time), \code{x} (x coordinate), \code{y} (y coordinate),
 \code{tar} (which target is searcher interacting with (within \code{l_int})?),
 \code{type} (which target type is searcher interacting with?),
 and
 \code{hit} (logical - is searcher interacting with a new target?).
 Columns \code{tar} and \code{type} are \code{0} if the searcher is not on any targets.
+If \code{summarize = TRUE}, then it outputs a tibble with the columns
+\code{rep} (repetition number),
+\code{type} (which target type is searcher interacting with?),
+\code{on} (integer - how many time steps did the searcher spend on this
+type of target?).
+and
+\code{hit} (integer - how many times did this searcher interact with
+a new target of this type?).
 }
 \description{
 Simulate searchers seeking targets.

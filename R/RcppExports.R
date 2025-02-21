@@ -63,6 +63,9 @@ target_type_sims <- function(x_size, y_size, corr, n_samples) {
 #'     repetitions to run. This can be thought of as the number of searchers
 #'     on the landscape if searchers are independent of one another.
 #'     Defaults to `1L`.
+#' @param summarize Single logical for whether to summarize output by
+#'     rep. See below for details on how this changes the output.
+#'     Defaults to `FALSE`.
 #' @param show_progress Single logical for whether to show progress bar.
 #'     Defaults to `FALSE`.
 #' @param n_threads Single integer for the number of threads to use.
@@ -70,19 +73,28 @@ target_type_sims <- function(x_size, y_size, corr, n_samples) {
 #'     strange warning I cannot explain.
 #'     Defaults to `1L`.
 #'
-#' @returns A tibble with the columns `rep` (repetition number),
+#' @returns If `summarize = FALSE`, then it outputs a tibble with the columns
+#'     `rep` (repetition number),
 #'     `time` (time), `x` (x coordinate), `y` (y coordinate),
 #'     `tar` (which target is searcher interacting with (within `l_int`)?),
 #'     `type` (which target type is searcher interacting with?),
 #'      and
 #'     `hit` (logical - is searcher interacting with a new target?).
 #'     Columns `tar` and `type` are `0` if the searcher is not on any targets.
+#'     If `summarize = TRUE`, then it outputs a tibble with the columns
+#'     `rep` (repetition number),
+#'     `type` (which target type is searcher interacting with?),
+#'     `on` (integer - how many time steps did the searcher spend on this
+#'     type of target?).
+#'     and
+#'     `hit` (integer - how many times did this searcher interact with
+#'     a new target of this type?).
 #'
 #'
 #' @export
 #'
-searcher_sims <- function(d, max_t, x_size, y_size, target_xy, target_types, l_star, l_int, bias, n_stay, n_ignore, xy0 = NULL, randomize_xy0 = TRUE, n_reps = 1L, show_progress = FALSE, n_threads = 1L) {
-    .Call(`_pseudogameofclones_searcher_sims`, d, max_t, x_size, y_size, target_xy, target_types, l_star, l_int, bias, n_stay, n_ignore, xy0, randomize_xy0, n_reps, show_progress, n_threads)
+searcher_sims <- function(d, max_t, x_size, y_size, target_xy, target_types, l_star, l_int, bias, n_stay, n_ignore, xy0 = NULL, randomize_xy0 = TRUE, n_reps = 1L, summarize = FALSE, show_progress = FALSE, n_threads = 1L) {
+    .Call(`_pseudogameofclones_searcher_sims`, d, max_t, x_size, y_size, target_xy, target_types, l_star, l_int, bias, n_stay, n_ignore, xy0, randomize_xy0, n_reps, summarize, show_progress, n_threads)
 }
 
 make_aphids_ptr <- function(aphid_list) {

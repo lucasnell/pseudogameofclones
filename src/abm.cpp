@@ -47,7 +47,7 @@ void ABMsimulator::update_wi_lvec(const uint32& t,
     double ab_j;
     bool new_wi_lstar;
     std::vector<uint32_t> ties;
-    ties.reserve(n_targets);
+    ties.reserve(std::max(10U, n_targets / 2U));
 
     const double& xt(x(t));
     const double& yt(y(t));
@@ -365,47 +365,96 @@ void check_args(const double& d,
 DataFrame create_output(const uint32& max_t,
                         const uint32& n_reps,
                         const std::vector<ABMsimulator>& simmers,
-                        const TargetInfo& target_info) {
+                        const TargetInfo& target_info,
+                        const bool& summarize) {
+
+    DataFrame out;
+
 
     std::vector<uint32> tt = target_info.types();
-
     std::vector<int> rep;
-    std::vector<int> time;
-    std::vector<double> x;
-    std::vector<double> y;
-    std::vector<int> tar;
     std::vector<int> type;
-    std::vector<bool> hit;
-    rep.reserve((max_t+1U) * n_reps);
-    time.reserve((max_t+1U) * n_reps);
-    x.reserve((max_t+1U) * n_reps);
-    y.reserve((max_t+1U) * n_reps);
-    tar.reserve((max_t+1U) * n_reps);
-    type.reserve((max_t+1U) * n_reps);
-    hit.reserve((max_t+1U) * n_reps);
 
-    for (uint32 i = 0; i < n_reps; i++) {
-        for (uint32 j = 0; j <= max_t; j++) {
-            rep.push_back(i);
-            time.push_back(j);
-            x.push_back(simmers[i].x[j]);
-            y.push_back(simmers[i].y[j]);
-            tar.push_back(simmers[i].on_target[j] + 1);
-            if (simmers[i].on_target[j] < 0) {
-                type.push_back(0);
-            } else type.push_back(tt[simmers[i].on_target[j]] + 1);
-            hit.push_back(simmers[i].new_target[j]);
+    if (summarize) {
+
+        uint32_t n_types = target_info.n_types();
+        std::vector<int> on;
+        std::vector<int> hit;
+
+        rep.reserve(n_types * n_reps);
+        type.reserve(n_types * n_reps);
+        on.reserve(n_types * n_reps);
+        hit.reserve(n_types * n_reps);
+
+        // Fill with correct `rep` and `type` values, then with zeros for
+        // `on` and `hit` (which will be updated below):
+        for (uint32 i = 0; i < n_reps; i++) {
+            for (uint32 j = 0; j < n_types; j++) {
+                rep.push_back(i+1);
+                type.push_back(j+1);
+                on.push_back(0);
+                hit.push_back(0);
+            }
         }
+
+        // Now fill for `on` and `hit` values
+        uint32_t k, j;
+        for (uint32 i = 0; i < n_reps; i++) {
+            for (uint32 t = 0; t <= max_t; t++) {
+                if (simmers[i].on_target[t] >= 0) {
+                    j = tt[simmers[i].on_target[t]];
+                    k = j + i * n_types;
+                    on[k]++;
+                    if (simmers[i].new_target[t]) hit[k]++;
+                }
+            }
+        }
+
+        out = DataFrame::create(_["rep"] = rep,
+                                _["type"] = type,
+                                _["on"] = on,
+                                _["hit"] = hit);
+
+    } else {
+
+        std::vector<int> time;
+        std::vector<double> x;
+        std::vector<double> y;
+        std::vector<int> tar;
+        std::vector<bool> hit;
+        rep.reserve((max_t+1U) * n_reps);
+        time.reserve((max_t+1U) * n_reps);
+        x.reserve((max_t+1U) * n_reps);
+        y.reserve((max_t+1U) * n_reps);
+        tar.reserve((max_t+1U) * n_reps);
+        type.reserve((max_t+1U) * n_reps);
+        hit.reserve((max_t+1U) * n_reps);
+
+        for (uint32 i = 0; i < n_reps; i++) {
+            for (uint32 t = 0; t <= max_t; t++) {
+                rep.push_back(i+1);
+                time.push_back(t);
+                x.push_back(simmers[i].x[t]);
+                y.push_back(simmers[i].y[t]);
+                tar.push_back(simmers[i].on_target[t] + 1);
+                if (simmers[i].on_target[t] < 0) {
+                    type.push_back(0);
+                } else type.push_back(tt[simmers[i].on_target[t]] + 1);
+                hit.push_back(simmers[i].new_target[t]);
+            }
+        }
+
+        out = DataFrame::create(
+            _["rep"] = rep,
+            _["time"] = time,
+            _["x"] = x,
+            _["y"] = y,
+            _["tar"] = tar,
+            _["type"] = type,
+            _["hit"] = hit);
+
     }
 
-    DataFrame out = DataFrame::create(
-        _["rep"] = rep,
-        _["time"] = time,
-        _["x"] = x,
-        _["y"] = y,
-        _["tar"] = tar,
-        _["type"] = type,
-        _["hit"] = hit);
 
     out.attr("class") = CharacterVector({"tbl_df", "tbl", "data.frame"});
 
@@ -475,6 +524,9 @@ DataFrame create_output(const uint32& max_t,
 //'     repetitions to run. This can be thought of as the number of searchers
 //'     on the landscape if searchers are independent of one another.
 //'     Defaults to `1L`.
+//' @param summarize Single logical for whether to summarize output by
+//'     rep. See below for details on how this changes the output.
+//'     Defaults to `FALSE`.
 //' @param show_progress Single logical for whether to show progress bar.
 //'     Defaults to `FALSE`.
 //' @param n_threads Single integer for the number of threads to use.
@@ -482,13 +534,22 @@ DataFrame create_output(const uint32& max_t,
 //'     strange warning I cannot explain.
 //'     Defaults to `1L`.
 //'
-//' @returns A tibble with the columns `rep` (repetition number),
+//' @returns If `summarize = FALSE`, then it outputs a tibble with the columns
+//'     `rep` (repetition number),
 //'     `time` (time), `x` (x coordinate), `y` (y coordinate),
 //'     `tar` (which target is searcher interacting with (within `l_int`)?),
 //'     `type` (which target type is searcher interacting with?),
 //'      and
 //'     `hit` (logical - is searcher interacting with a new target?).
 //'     Columns `tar` and `type` are `0` if the searcher is not on any targets.
+//'     If `summarize = TRUE`, then it outputs a tibble with the columns
+//'     `rep` (repetition number),
+//'     `type` (which target type is searcher interacting with?),
+//'     `on` (integer - how many time steps did the searcher spend on this
+//'     type of target?).
+//'     and
+//'     `hit` (integer - how many times did this searcher interact with
+//'     a new target of this type?).
 //'
 //'
 //' @export
@@ -508,6 +569,7 @@ DataFrame searcher_sims(const double& d,
                         Nullable<NumericVector> xy0 = R_NilValue,
                         const bool& randomize_xy0 = true,
                         const uint32& n_reps = 1,
+                        const bool& summarize = false,
                         const bool& show_progress = false,
                         uint32 n_threads = 1) {
 
@@ -540,7 +602,8 @@ DataFrame searcher_sims(const double& d,
     }, n_threads);
 
 
-    DataFrame out = create_output(max_t, n_reps, simmers, target_info);
+    DataFrame out = create_output(max_t, n_reps, simmers, target_info,
+                                  summarize);
 
     return out;
 }
