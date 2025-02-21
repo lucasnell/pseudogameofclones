@@ -207,8 +207,9 @@ class ABMsimulator {
     uint32 n_targets;
     // Vector of distances from searcher to target(s)
     arma::vec l_vec;
-    // which target(s) are within l_star (and thus influence trajectory):
-    arma::uvec wi_lstar;
+    // which target (if any) are within l_star (and thus influence trajectory);
+    // if none, this is set to 1+n_targets:
+    uint32 wi_lstar;
     // which target (if any) is within l_int; if none, this is set to 1+n_targets:
     uint32 wi_li;
     // distance to nearest target:
@@ -234,11 +235,10 @@ class ABMsimulator {
     bool within_li;
     bool within_lstar;
     bool keep_staying;
-    arma::vec wts;
 
     /*
 
-     Update `wi_lstar` (index / indices for targets within l_star),
+     Update `wi_lstar` (index for target influencing movement),
      `wi_li` (index for target within l_int),
      `l_min` (distance to nearest target),
      and optionally `l_vec` (distances to all targets),
@@ -305,7 +305,6 @@ public:
           within_li(),
           within_lstar(),
           keep_staying(),
-          wts(),
           x(max_t_ + 1U, arma::fill::none),
           y(max_t_ + 1U, arma::fill::none),
           on_target(max_t_ + 1U, -1),

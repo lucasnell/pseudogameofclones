@@ -25,7 +25,7 @@ using namespace Rcpp;
 
 /*
 
- Update `wi_lstar` (index / indices for targets within l_star),
+ Update `wi_lstar` (index for targets affecting movement),
  `wi_li` (index for target within l_int),
  `l_min` (distance to nearest target),
  and optionally `l_vec` (distances to all targets),
@@ -38,10 +38,16 @@ void ABMsimulator::update_wi_lvec(const uint32& t,
                                   const bool& update_l_vec) {
 
     wi_li = n_targets + 1U;
+    wi_lstar = n_targets + 1U;
     l_min = max_size * 2;
-    // it's faster than `arma::find(...)` to get size of `wi_lstar` in first
-    // loop then create it in another loop:
-    uint32 wil_size = 0U;
+
+    // values used to choose wi_lstar:
+    double max_ab = 0;              // abs(bias)
+    double min_l = max_size * 2;    // l_i
+    double ab_j;
+    bool new_wi_lstar;
+    std::vector<uint32_t> ties;
+    ties.reserve(n_targets);
 
     const double& xt(x(t));
     const double& yt(y(t));
@@ -50,22 +56,47 @@ void ABMsimulator::update_wi_lvec(const uint32& t,
         if (update_l_vec)
             l_vec(j) = distance(xt, yt, target_info->x(j), target_info->y(j));
         if (visited(j) < target_info->n_ignore(j)) continue;
-        if (l_vec(j) <= target_info->l_star(j)) wil_size++;
+        if (l_vec(j) <= target_info->l_star(j)) {
+            ab_j = target_info->abs_bias(j);
+            if (ab_j >= max_ab) {
+                // Update to new target if abs(bias) is greater OR if it's
+                // the same and closer:
+                new_wi_lstar = ab_j > max_ab || (ab_j == max_ab &&
+                    l_vec(j) < min_l);
+                // If both of those are a tie, then choose randomly (have to
+                // do this later to be unbiased):
+                if (!new_wi_lstar && ab_j == max_ab && l_vec(j) == min_l) {
+                    ties.push_back(j);
+                }
+                if (new_wi_lstar) {
+                    wi_lstar = j;
+                    max_ab = ab_j;
+                    min_l = l_vec(j);
+                }
+            }
+        }
         if (l_vec(j) < l_min) {
             l_min = l_vec(j);
             if (l_min <= target_info->l_int(j)) wi_li = j;
         }
     }
 
-    wi_lstar.set_size(wil_size);
-    if (wil_size > 0) {
-        uint32 k = 0;
-        for (uint32 j = 0; j < n_targets; j++) {
-            if (visited(j) >= target_info->n_ignore(j) &&
-                l_vec(j) <= target_info->l_star(j)) {
-                wi_lstar(k) = j;
-                k++;
+    // When choosing wi_lstar, if there are ties for bias and distance,
+    // choose among them randomly:
+    if (ties.size() > 0) {
+        // Filter for indices that are tied with the final minimum values:
+        std::vector<uint32_t> real_ties;
+        real_ties.reserve(ties.size() + 1);
+        for (const uint32_t& j : ties) {
+            if (target_info->abs_bias(j) == max_ab && l_vec(j) == min_l) {
+                real_ties.push_back(j);
             }
+        }
+        if (real_ties.size() > 0) {
+            // Also include the item that was assigned to wi_lstar:
+            real_ties.push_back(wi_lstar);
+            uint32_t rnd = runif_01(eng) * real_ties.size();
+            wi_lstar = real_ties[rnd];
         }
     }
 
@@ -108,46 +139,37 @@ void ABMsimulator::biased_movement(const uint32& t) {
         y(t+1) = y(t);
     } else {
 
-        double delta, dx, dy;
-        double bias_sign;
+        double dx, dy;
 
         // If within l_star (but not directly on it) and there's
-        // target bias, then include target-directed motion
-        // (potentially including multiple targets).
-        //
-        // because we're weighting each target by its bias:
-        wts = target_info->abs_bias(wi_lstar);
-        double wts_sum = arma::accu(wts);
-        wts /= wts_sum;
-        if (wts_sum > 0) {
-            // maximum absolute value of biases for nearby targets (used when
-            // combining random walk with directed movement):
-            double mab = target_info->abs_bias(wi_lstar(0));
-            // Now calculate weighted mean for all targets:
-            dr_dx = 0;
-            dr_dy = 0;
-            for (uint32 j = 0; j < wi_lstar.n_elem; j++) {
-                const arma::uword& k(wi_lstar(j));
-                const double& wt(wts(j));
-                const double& l(l_vec(k));
-                const double& b(target_info->bias(k));
-                // this is used to reverse direction if bias is negative:
-                bias_sign = sgn<double>(b);
-                delta = (b > 0 && l < d) ? l : d;
-                dr_theta = std::atan2(bias_sign * (target_info->y(k) - y(t)),
-                                      bias_sign * (target_info->x(k) - x(t)));
-                dr_dx += (delta * std::cos(dr_theta) * wt);
-                dr_dy += (delta * std::sin(dr_theta) * wt);
-                if (target_info->abs_bias(k) > mab) mab = target_info->abs_bias(k);
-            }
+        // target bias, then include target-directed motion.
+        if (wi_lstar < n_targets && target_info->abs_bias(wi_lstar) > 0) {
+
+            const uint32_t& i(wi_lstar);
+            const double& l(l_vec(i));
+            const double& b(target_info->bias(i));
+            const double& ab(target_info->abs_bias(i));
+
+            // this is used to reverse direction if bias is negative:
+            double bias_sign = sgn<double>(b);
+            double delta = (b > 0 && l < d) ? l : d;
+            dr_theta = std::atan2(bias_sign * (target_info->y(i) - y(t)),
+                                  bias_sign * (target_info->x(i) - x(t)));
+            dr_dx = delta * std::cos(dr_theta);
+            dr_dy = delta * std::sin(dr_theta);
+
             // combine:
-            dx = (1 - mab) * rw_dx + mab * dr_dx;
-            dy = (1 - mab) * rw_dy + mab * dr_dy;
+            dx = (1 - ab) * rw_dx + ab * dr_dx;
+            dy = (1 - ab) * rw_dy + ab * dr_dy;
+
         } else {
-            // just do random walk if biases are all zero:
+
+            // just do random walk if bias is zero:
             dx = rw_dx;
             dy = rw_dy;
+
         }
+
         // Negative biases and random walks can result in exceeding bounds,
         // so pass to `reflect`:
         x(t+1) = reflect(x(t), dx, x_bounds);
@@ -182,7 +204,7 @@ void ABMsimulator::iterate(const uint32& t) {
     rw_dy = d * std::sin(rw_theta);
 
     // -----------------*
-    within_lstar = wi_lstar.n_elem > 0;
+    within_lstar = wi_lstar < n_targets;
     if (within_lstar && max_abs_bias > 0) {
         biased_movement(t);
     } else {
