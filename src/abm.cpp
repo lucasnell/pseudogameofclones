@@ -235,7 +235,7 @@ void check_args(const double& d,
                 const double& x_size,
                 const double& y_size,
                 const arma::mat& target_xy,
-                std::vector<std::vector<uint32>>& target_types,
+                std::vector<uint32>& target_types,
                 const std::vector<double>& l_star,
                 const std::vector<double>& l_int,
                 const std::vector<double>& bias,
@@ -262,19 +262,13 @@ void check_args(const double& d,
         stop("target_types.size() != target_xy.n_rows");
 
     // Create vector of unique, sorted values from `target_types`:
-    std::vector<uint32> unq_types;
-    uint32 n_unq_types = 0;
-    for (const std::vector<uint32>& tts : target_types) n_unq_types += tts.size();
-    unq_types.reserve(n_unq_types);
-    for (const std::vector<uint32>& tts : target_types) {
-        (const uint32& tt : tts) unq_types.push_back(tt);
-    }
-    std::sort(unq_types.begin(), unq_types.end());
+    std::vector<uint32> unq_targets = target_types;
+    std::sort(unq_targets.begin(), unq_targets.end());
     std::vector<uint32>::iterator it;
-    it = std::unique(unq_types.begin(), unq_types.end());
-    unq_types.resize(std::distance(unq_types.begin(), it));
+    it = std::unique(unq_targets.begin(), unq_targets.end());
+    unq_targets.resize(std::distance(unq_targets.begin(), it));
 
-    uint32 n_types = unq_types.size();
+    uint32 n_types = unq_targets.size();
 
     if (l_star.size() != n_types)
         stop("l_star.size() != length(unique(target_types))");
@@ -297,20 +291,18 @@ void check_args(const double& d,
         if (l_star[i] <= 0) stop_i("l_star <= 0", i);
         if (l_int[i] <= 0) stop_i("l_int <= 0", i);
         if (bias[i] < -1 || bias[i] > 1) stop_i("bias < -1 || bias > 1", i);
-        if (unq_types[i] != i+1U) {
+        if (unq_targets[i] != i+1U) {
             std::string msg("target_types should contain unique values that, ");
             msg += "when sorted, are identical to a vector from 1 to ";
             msg += "the number of unique values. Yours is c(";
-            for (uint32& ut : unq_types) msg += std::to_string(ut) + ", ";
+            for (uint32& ut : unq_targets) msg += std::to_string(ut) + ", ";
             msg += ").";
             stop(msg);
         }
     }
 
     // convert from R 1-based to c++ 0-based indices:
-    for (std::vector<uint32>& tts : target_types) {
-        (uint32& tt : tts) tt--;
-    }
+    for (uint32& tt : target_types) tt--;
 
     arma::vec x_bounds = {0, x_size};
     arma::vec y_bounds = {0, y_size};
@@ -330,20 +322,12 @@ void check_args(const double& d,
     // Lastly check for overlapping bounds.
     // I'll check that no distance between targets is less than the sum
     // of their l_int values
-    double dist, l_int_i, l_int_j, sum_l_int;
+    double dist, sum_l_int;
     for (uint32 i = 1; i < target_xy.n_rows; i++) {
         for (uint32 j = 0; j < i; j++) {
             dist = distance(target_xy(i,0), target_xy(i,1),
                             target_xy(j,0), target_xy(j,1));
-            l_int_i = target_types[i][0];
-            for (uint32 k = 1; k < target_types[i].size(); k++) {
-                if (target_types[i][k] > l_int_i) l_int_i = target_types[i][k];
-            }
-            l_int_j = target_types[j][0];
-            for (uint32 k = 1; k < target_types[j].size(); k++) {
-                if (target_types[j][k] > l_int_j) l_int_j = target_types[j][k];
-            }
-            sum_l_int = l_int_i + l_int_j;
+            sum_l_int = l_int[target_types[i]] + l_int[target_types[j]];
             if (dist <= sum_l_int) {
                 std::string err("targets are too close together which would ");
                 err += "result in searchers interacting with >1 at a time.";
@@ -494,13 +478,11 @@ DataFrame create_output(const uint32& max_t,
 //'     Bounds will be `c(0, y_size)`.
 //' @param target_xy Two-column numeric matrix containing x and y coordinates
 //'     for targets.
-//' @param target_types List with each item being an integer vector
-//'     indicating the type(s) of target each target is.
-//'     The list length should be equal to the number of rows in `target_xy`.
-//'     Targets can vary in their `l_star`, `l_int`, `bias`,
+//' @param target_types Integer vector with the same number of items as the
+//'     number of rows in `target_xy` indicating the type of target each
+//'     target is. Targets can vary in their `l_star`, `l_int`, `bias`,
 //'     `n_stay`, and `n_ignore` parameters (see descriptions below).
-//'     This list, when unnested and with duplicate values removed, should
-//'     consist of integers from 1 to the number of items
+//'     This vector should consist of integers from 1 to the number of items
 //'     in the arguments `l_star`, `l_int`, `bias`, `n_stay`, and `n_ignore`.
 //' @param l_star Numeric vector indicating, for each target type,
 //'     the distance from searcher to target that causes targets to bias
@@ -578,7 +560,7 @@ DataFrame searcher_sims(const double& d,
                         const double& x_size,
                         const double& y_size,
                         const arma::mat& target_xy,
-                        std::vector<std::vector<uint32>> target_types,
+                        std::vector<uint32> target_types,
                         const std::vector<double>& l_star,
                         const std::vector<double>& l_int,
                         const std::vector<double>& bias,
