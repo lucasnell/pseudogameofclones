@@ -77,6 +77,23 @@ inline void seed_pcg(pcg32& eng, const std::vector<uint64>& sub_seeds) {
 
     return;
 }
+// Overloaded for a single rep
+inline void seed_pcg(pcg32& eng) {
+
+    std::vector<uint64> sub_seeds;
+    // These are 32-bit integers cast as 64-bit for downstream compatibility
+    sub_seeds = as<std::vector<uint64>>(Rcpp::runif(4,0,4294967296));
+
+    uint64 seed1;
+    uint64 seed2;
+    // Converting to two 64-bit seeds for pcg32
+    seed1 = (sub_seeds[0]<<32) + sub_seeds[1];
+    seed2 = (sub_seeds[2]<<32) + sub_seeds[3];
+
+    eng.seed(seed1, seed2);
+
+    return;
+}
 
 
 /*

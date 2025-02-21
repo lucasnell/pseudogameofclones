@@ -1,0 +1,119 @@
+
+#include <RcppArmadillo.h>
+#include <vector>
+#include <math.h>
+#include <algorithm>
+#include <iterator>
+#include <pcg/pcg_random.hpp>   // pcg prng
+
+#include "pseudogameofclones_types.hpp"  // integer types
+#include "pcg.hpp"              // runif_01, seed_rng functions
+#include "abm-targets.hpp"      // DimensionConverter and LocationSampler classes
+
+
+
+using namespace Rcpp;
+
+
+
+//' @export
+//' @noRd
+//[[Rcpp::export]]
+DataFrame target_type_sims(const int& x_size,
+                           const int& y_size,
+                           const arma::mat& corr,
+                           const arma::ivec& n_samples) {
+
+    if (x_size <= 0) stop("x_size must be > 0");
+    if (y_size <= 0) stop("y_size must be > 0");
+    if (corr.n_elem == 0) stop("corr cannot be empty");
+    if (!corr.is_symmetric()) stop("corr must be symmetric");
+    if (arma::any(arma::vectorise(corr) < 0)) stop("corr cannot contain values < 0");
+    if (n_samples.n_elem != corr.n_rows)
+        stop("length(n_samples) == nrow(corr) must be true");
+    if (arma::any(n_samples <= 0)) stop("n_samples cannot contain values <= 0");
+    if (arma::any(n_samples > x_size * y_size))
+        stop("n_samples cannot contain values > x_size * y_size");
+
+    uint32_t n_types = corr.n_rows;
+    uint32_t n_points = x_size * y_size;
+
+    // One location sampler for each type:
+    std::vector<LocationSampler> samplers(n_types, LocationSampler(n_points));
+
+    // Convert coordinates between 1D and 2D:
+    DimensionConverter dim_conv(x_size, y_size);
+
+    // Output object:
+    std::vector<arma::umat> samps;
+    samps.reserve(n_types);
+    for (uint32_t i = 0; i < n_types; i++) {
+        samps.push_back(arma::umat(n_samples(i), 2U, arma::fill::none));
+    }
+
+    int32_t total_samps = arma::accu(n_samples);
+    // # sims done for each type (also doubles as indices for output):
+    arma::ivec sims_done(n_types, arma::fill::zeros);
+    uint32_t x, y, k;
+    std::vector<uint32_t> neighbors;
+    neighbors.reserve(9); // highest number of neighbors possible
+
+    pcg32 eng;
+    seed_pcg(eng);
+
+    while (total_samps > 0) {
+        for (uint32_t i = 0; i < n_types; i++) {
+
+            if (sims_done(i) >= n_samples(i)) continue;
+
+            k = samplers[i].sample(eng);
+            dim_conv.to_2d(x, y, k); // assign new x and y based on k
+
+            // assign to output:
+            samps[i](sims_done(i), 0) = x;
+            samps[i](sims_done(i), 1) = y;
+
+            // Adjust sampling probabilities:
+            dim_conv.get_neighbors(neighbors, k); // fill neighbors vector
+            for (uint32_t j = 0; j < n_types; j++) {
+                samplers[j].update_weights(neighbors, corr(i,j));
+            }
+            /*
+             Note: You don't have to update `k`th prob to zero after the call
+             to `update_weights` on `neighbors` even though the latter also
+             updates `k` because `update_weights` never updates weights that
+             are already set to zero.
+             */
+            samplers[i].update_weights(k, 0.0);
+
+            // Iterate sample numbers:
+            sims_done(i)++;
+            total_samps--;
+        }
+    }
+
+    // Create output dataframe:
+    DataFrame out = DataFrame::create(
+        _["type"] = IntegerVector(arma::accu(n_samples)),
+        _["x"] = IntegerVector(arma::accu(n_samples)),
+        _["y"] = IntegerVector(arma::accu(n_samples)));
+    // References to columns:
+    IntegerVector out_type = out[0];
+    IntegerVector out_x = out[1];
+    IntegerVector out_y = out[2];
+
+    k = 0;
+    for (uint32_t i = 0; i < n_types; i++) {
+        for (uint32_t j = 0; j < n_samples(i); j++) {
+            out_type(k) = i;
+            out_x(k) = samps[i](j, 0);
+            out_y(k) = samps[i](j, 1);
+            k++;
+        }
+    }
+
+    out.attr("class") = CharacterVector({"tbl_df", "tbl", "data.frame"});
+
+    return out;
+
+}

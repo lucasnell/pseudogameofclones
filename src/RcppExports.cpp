@@ -13,6 +13,20 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// target_type_sims
+DataFrame target_type_sims(const int& x_size, const int& y_size, const arma::mat& corr, const arma::ivec& n_samples);
+RcppExport SEXP _pseudogameofclones_target_type_sims(SEXP x_sizeSEXP, SEXP y_sizeSEXP, SEXP corrSEXP, SEXP n_samplesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const int& >::type x_size(x_sizeSEXP);
+    Rcpp::traits::input_parameter< const int& >::type y_size(y_sizeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type corr(corrSEXP);
+    Rcpp::traits::input_parameter< const arma::ivec& >::type n_samples(n_samplesSEXP);
+    rcpp_result_gen = Rcpp::wrap(target_type_sims(x_size, y_size, corr, n_samples));
+    return rcpp_result_gen;
+END_RCPP
+}
 // searcher_sims
 DataFrame searcher_sims(const double& d, const uint32& max_t, const double& x_size, const double& y_size, const arma::mat& target_xy, std::vector<uint32> target_types, const std::vector<double>& l_star, const std::vector<double>& l_int, const std::vector<double>& bias, const std::vector<uint32>& n_stay, const std::vector<uint32>& n_ignore, Nullable<NumericVector> xy0, const bool& randomize_xy0, const uint32& n_reps, const bool& show_progress, uint32 n_threads);
 RcppExport SEXP _pseudogameofclones_searcher_sims(SEXP dSEXP, SEXP max_tSEXP, SEXP x_sizeSEXP, SEXP y_sizeSEXP, SEXP target_xySEXP, SEXP target_typesSEXP, SEXP l_starSEXP, SEXP l_intSEXP, SEXP biasSEXP, SEXP n_staySEXP, SEXP n_ignoreSEXP, SEXP xy0SEXP, SEXP randomize_xy0SEXP, SEXP n_repsSEXP, SEXP show_progressSEXP, SEXP n_threadsSEXP) {
@@ -271,6 +285,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_pseudogameofclones_target_type_sims", (DL_FUNC) &_pseudogameofclones_target_type_sims, 4},
     {"_pseudogameofclones_searcher_sims", (DL_FUNC) &_pseudogameofclones_searcher_sims, 16},
     {"_pseudogameofclones_make_aphids_ptr", (DL_FUNC) &_pseudogameofclones_make_aphids_ptr, 1},
     {"_pseudogameofclones_logit", (DL_FUNC) &_pseudogameofclones_logit, 1},
