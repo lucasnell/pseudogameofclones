@@ -44,12 +44,13 @@ DataFrame target_type_sims(const int& x_size,
     // Convert coordinates between 1D and 2D:
     DimensionConverter dim_conv(x_size, y_size);
 
-    // Output object:
-    std::vector<arma::umat> samps;
-    samps.reserve(n_types);
-    for (uint32 i = 0; i < n_types; i++) {
-        samps.push_back(arma::umat(n_samples(i), 2U, arma::fill::none));
-    }
+    // Object collecting samples:
+    std::vector<std::vector<uint32>> samps(n_points);
+    // Note: not reserving storage here. I do it below when an item in `samps`
+    // is assigned its first item. Doing it this way saves a bit of memory.
+
+    // Number of points assigned to 1 or more types (used to define output below)
+    uint32 n_used_pts = 0;
 
     int32_t total_samps = arma::accu(n_samples);
     // # sims done for each type (also doubles as indices for output):
@@ -69,9 +70,13 @@ DataFrame target_type_sims(const int& x_size,
             k = samplers[i].sample(eng);
             dim_conv.to_2d(x, y, k); // assign new x and y based on k
 
-            // assign to output:
-            samps[i](sims_done(i), 0) = x;
-            samps[i](sims_done(i), 1) = y;
+            // reserve memory so that it doesn't have to be moved after this:
+            if (samps[k].empty()) {
+                n_used_pts++;
+                samps[k].reserve(n_types);
+            }
+            // add to output:
+            samps[k].push_back(i+1); //+1 to convert to R's 1-based indexing
 
             // Adjust sampling probabilities:
             dim_conv.get_neighbors(neighbors, k); // fill neighbors vector
@@ -93,26 +98,30 @@ DataFrame target_type_sims(const int& x_size,
     }
 
     // Create output dataframe:
+    List out_type(n_used_pts); // this has to be created separately & added later
     DataFrame out = DataFrame::create(
-        _["type"] = IntegerVector(arma::accu(n_samples)),
-        _["x"] = IntegerVector(arma::accu(n_samples)),
-        _["y"] = IntegerVector(arma::accu(n_samples)));
+        _["x"] = IntegerVector(n_used_pts),
+        _["y"] = IntegerVector(n_used_pts));
     // References to columns:
-    IntegerVector out_type = out[0];
-    IntegerVector out_x = out[1];
-    IntegerVector out_y = out[2];
+    IntegerVector out_x = out[0];
+    IntegerVector out_y = out[1];
 
-    k = 0;
-    for (uint32 i = 0; i < n_types; i++) {
-        for (uint32 j = 0; j < n_samples(i); j++) {
-            out_type(k) = i;
-            out_x(k) = samps[i](j, 0);
-            out_y(k) = samps[i](j, 1);
-            k++;
+    uint32 i = 0;
+    for (uint32 k = 0; k < samps.size(); k++) {
+        if (!samps[k].empty()) {
+            std::sort(samps[k].begin(), samps[k].end());
+            out_type(i) = samps[k];
+            dim_conv.to_2d(x, y, k);
+            out_x(i) = x;
+            out_y(i) = y;
+            i++;
         }
     }
+    out["type"] = out_type;
 
     out.attr("class") = CharacterVector({"tbl_df", "tbl", "data.frame"});
+    // `row.names` is required for playing nice with list column!
+    out.attr("row.names") = Rcpp::seq(1, n_used_pts);
 
     return out;
 
