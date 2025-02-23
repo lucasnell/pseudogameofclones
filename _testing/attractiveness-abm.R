@@ -49,16 +49,16 @@ target_p <- as_tibble(target_xy) |>
 # target_p
 
 # Info for target types: virus- and Pseudomonas-infected, respectively:
-target_info <- list(l_star = c(5, 1),
+target_info <- list(l_star = c(5, 1) |> as.list(),
                     l_i = c(0.2, 0.2),
-                    bias = c(0.3, -0.6),
+                    bias = c(0.3, -0.6) |> as.list(),
                     n_stay = c(5L, 5L),
                     n_ignore = c(1e6, 1e6))
-target_info$n_ignore  <- ceiling(2 * target_info$l_star / 0.5)
+target_info$n_ignore  <- ceiling(2 * unlist(target_info$l_star) / 0.5)
 
 # Change these if only two targets (used for testing)
 if (nrow(target_xy) == 2) {
-    target_info$l_star <- c(5, 5)
+    target_info$l_star <- c(5, 5) |> as.list()
     target_info$l_i <- c(1, 1)
 }
 
@@ -71,7 +71,7 @@ b_sims <- searcher_sims(d = 2, max_t = 100, x_size = xs, y_size = ys,
                         bias = target_info$bias,
                         n_stay = target_info$n_stay,
                         n_ignore = target_info$n_ignore,
-                        n_reps = 100L,
+                        n_searchers = 100L,
                         n_threads = .n_threads)
 # no bacteria sims:
 nb_sims <- searcher_sims(d = 2, max_t = 100, x_size = xs, y_size = ys,
@@ -82,12 +82,12 @@ nb_sims <- searcher_sims(d = 2, max_t = 100, x_size = xs, y_size = ys,
                          bias = target_info$bias[1],
                          n_stay = target_info$n_stay[1],
                          n_ignore = target_info$n_ignore[1],
-                         n_reps = 100L,
+                         n_searchers = 100L,
                          n_threads = .n_threads)
 
 
 p <- b_sims |>
-    mutate(rep = factor(rep)) |>
+    mutate(searcher = factor(searcher)) |>
     # filter(t < 100) |>
     ggplot(aes(x,y)) +
     geom_hline(yintercept = c(0, xs), color = "gray70") +
@@ -96,8 +96,8 @@ p <- b_sims |>
                    mutate(type = factor(target_types,
                                         labels = c("virus", "bacteria"))),
                aes(fill = type), shape = 21, size = 1, stroke = 0) +
-    geom_path(aes(color = rep), linewidth = 1, alpha = 0.5) +
-    geom_point(aes(color = rep), size = 2, alpha = 0.5) +
+    geom_path(aes(color = searcher), linewidth = 1, alpha = 0.5) +
+    geom_point(aes(color = searcher), size = 2, alpha = 0.5) +
     scale_color_viridis_d(NULL, guide = "none") +
     scale_fill_manual(NULL, values = c("dodgerblue", "goldenrod"),
                       guide = "none") +
@@ -117,7 +117,7 @@ anim <- p +
 # b_sims |>
 #     filter(type > 0) |>
 #     mutate(type = factor(type, labels = c("virus", "bacteria"))) |>
-#     group_by(type, rep) |>
+#     group_by(type, searcher) |>
 #     summarize(on = n(), hit = sum(hit), .groups = "drop") |>
 #     pivot_longer(on:hit) |>
 #     ggplot(aes(type, value)) +
@@ -133,7 +133,7 @@ bind_rows(b_sims |> mutate(bact = "w"),
           nb_sims |> mutate(bact = "wo")) |>
     mutate(bact = factor(bact, levels = c("w", "wo"))) |>
     filter(type == 1) |>
-    group_by(rep, bact) |>
+    group_by(searcher, bact) |>
     summarize(on = n(), hit = sum(hit), .groups = "drop") |>
     pivot_longer(on:hit) |>
     ggplot(aes(bact, value)) +
@@ -147,6 +147,8 @@ bind_rows(b_sims |> mutate(bact = "w"),
 
 library(tidyverse)
 library(pseudogameofclones)
+
+
 
 
 
@@ -256,8 +258,8 @@ target_type_sims_R <- function(x_size,
 
 x_size = 50L
 y_size = 50L
-corr = rbind(c(1, 10),
-             c(10, 10))
+corr = rbind(c(1, 1.2),
+             c(1.2, 2))
 # corr <- c(0,0,0)
 # corr_d = 2 * c(1, 1, 1)
 # n_samples <- NULL
@@ -267,8 +269,7 @@ samp_df <- target_type_sims(x_size,
                  y_size,
                  corr,
                  n_samples) |>
-    group_by(x, y) |>
-    summarize(type = paste(type, collapse = "_"), .groups = "drop")
+    mutate(type = map_chr(type, \(x) paste(x, collapse = "_")))
 
 
 samp_df2 <- target_type_sims_R(x_size,
@@ -286,7 +287,8 @@ samp_df2 |>
     summarize(n = n())
 
 
-samp_df |>
+
+samp_df2 |>
     filter(map_lgl(type, \(x) !is.null(x))) |>
     mutate(type = map_chr(type, \(x) paste(sort(x), collapse = "_"))) |>
     ggplot(aes(x, y, color = type)) +

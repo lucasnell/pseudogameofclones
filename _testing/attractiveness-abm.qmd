@@ -132,8 +132,8 @@ It also prevents a searcher from overshooting a target it's moving toward
 when the searcher step size exceeds the distance between searcher 
 and target.
 If multiple targets are within their values of $l_{\star}$ of the 
-searcher, then the target with the greater absolute bias ($|b|$) 
-is the only target that affects searcher movement.
+searcher (but not close enough to interact), then the target with the
+greater absolute bias ($|b|$) is the only target that affects searcher movement.
 If both targets have the same $|b|$, then the closer target is chosen.
 In the rare event where they also share the same distance, then a
 target is chosen at random.
