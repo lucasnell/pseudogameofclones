@@ -35,8 +35,8 @@ DataFrame target_type_sims(const int& x_size,
     if (arma::any(n_samples > x_size * y_size))
         stop("n_samples cannot contain values > x_size * y_size");
 
-    uint32_t n_types = corr.n_rows;
-    uint32_t n_points = x_size * y_size;
+    uint32 n_types = corr.n_rows;
+    uint32 n_points = x_size * y_size;
 
     // One location sampler for each type:
     std::vector<LocationSampler> samplers(n_types, LocationSampler(n_points));
@@ -47,22 +47,22 @@ DataFrame target_type_sims(const int& x_size,
     // Output object:
     std::vector<arma::umat> samps;
     samps.reserve(n_types);
-    for (uint32_t i = 0; i < n_types; i++) {
+    for (uint32 i = 0; i < n_types; i++) {
         samps.push_back(arma::umat(n_samples(i), 2U, arma::fill::none));
     }
 
     int32_t total_samps = arma::accu(n_samples);
     // # sims done for each type (also doubles as indices for output):
     arma::ivec sims_done(n_types, arma::fill::zeros);
-    uint32_t x, y, k;
-    std::vector<uint32_t> neighbors;
+    uint32 x, y, k;
+    std::vector<uint32> neighbors;
     neighbors.reserve(9); // highest number of neighbors possible
 
     pcg32 eng;
     seed_pcg(eng);
 
     while (total_samps > 0) {
-        for (uint32_t i = 0; i < n_types; i++) {
+        for (uint32 i = 0; i < n_types; i++) {
 
             if (sims_done(i) >= n_samples(i)) continue;
 
@@ -75,7 +75,7 @@ DataFrame target_type_sims(const int& x_size,
 
             // Adjust sampling probabilities:
             dim_conv.get_neighbors(neighbors, k); // fill neighbors vector
-            for (uint32_t j = 0; j < n_types; j++) {
+            for (uint32 j = 0; j < n_types; j++) {
                 samplers[j].update_weights(neighbors, corr(i,j));
             }
             /*
@@ -103,8 +103,8 @@ DataFrame target_type_sims(const int& x_size,
     IntegerVector out_y = out[2];
 
     k = 0;
-    for (uint32_t i = 0; i < n_types; i++) {
-        for (uint32_t j = 0; j < n_samples(i); j++) {
+    for (uint32 i = 0; i < n_types; i++) {
+        for (uint32 j = 0; j < n_samples(i); j++) {
             out_type(k) = i;
             out_x(k) = samps[i](j, 0);
             out_y(k) = samps[i](j, 1);

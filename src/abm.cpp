@@ -46,7 +46,7 @@ void ABMsimulator::update_wi_lvec(const uint32& t,
     double min_l = max_size * 2;    // l_i
     double ab_j;
     bool new_wi_lstar;
-    std::vector<uint32_t> ties;
+    std::vector<uint32> ties;
     ties.reserve(std::max(10U, n_targets / 2U));
 
     const double& xt(x(t));
@@ -85,9 +85,9 @@ void ABMsimulator::update_wi_lvec(const uint32& t,
     // choose among them randomly:
     if (ties.size() > 0) {
         // Filter for indices that are tied with the final minimum values:
-        std::vector<uint32_t> real_ties;
+        std::vector<uint32> real_ties;
         real_ties.reserve(ties.size() + 1);
-        for (const uint32_t& j : ties) {
+        for (const uint32& j : ties) {
             if (l_vec(j) == min_l && target_info->abs_bias(j, l_vec(j)) == max_ab) {
                 real_ties.push_back(j);
             }
@@ -95,7 +95,7 @@ void ABMsimulator::update_wi_lvec(const uint32& t,
         if (real_ties.size() > 0) {
             // Also include the item that was assigned to wi_lstar:
             real_ties.push_back(wi_lstar);
-            uint32_t rnd = runif_01(eng) * real_ties.size();
+            uint32 rnd = runif_01(eng) * real_ties.size();
             wi_lstar = real_ties[rnd];
         }
     }
@@ -145,7 +145,7 @@ void ABMsimulator::biased_movement(const uint32& t) {
         // target-directed motion (note: all biases must be != 0).
         if (wi_lstar < n_targets) {
 
-            const uint32_t& i(wi_lstar);
+            const uint32& i(wi_lstar);
             const double& l(l_vec(i));
             double b = target_info->bias(i, l_min);
             double ab = target_info->abs_bias(i, l_min);
@@ -385,7 +385,7 @@ DataFrame create_output(const uint32& max_t,
 
     if (summarize) {
 
-        uint32_t n_types = target_info.n_types();
+        uint32 n_types = target_info.n_types();
         std::vector<int> on;
         std::vector<int> hit;
 
@@ -406,7 +406,7 @@ DataFrame create_output(const uint32& max_t,
         }
 
         // Now fill for `on` and `hit` values
-        uint32_t k, j;
+        uint32 k, j;
         for (uint32 i = 0; i < n_searchers; i++) {
             for (uint32 t = 0; t <= max_t; t++) {
                 if (simmers[i].on_target[t] >= 0) {
