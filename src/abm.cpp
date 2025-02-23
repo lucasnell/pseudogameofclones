@@ -57,7 +57,7 @@ void ABMsimulator::update_wi_lvec(const uint32& t,
             l_vec(j) = distance(xt, yt, target_info->x(j), target_info->y(j));
         if (visited(j) < target_info->n_ignore(j)) continue;
         if (l_vec(j) <= target_info->l_star(j)) {
-            ab_j = target_info->abs_bias(j);
+            ab_j = target_info->abs_bias(j, l_vec(j));
             if (ab_j >= max_ab) {
                 // Update to new target if abs(bias) is greater OR if it's
                 // the same and closer:
@@ -88,7 +88,7 @@ void ABMsimulator::update_wi_lvec(const uint32& t,
         std::vector<uint32_t> real_ties;
         real_ties.reserve(ties.size() + 1);
         for (const uint32_t& j : ties) {
-            if (target_info->abs_bias(j) == max_ab && l_vec(j) == min_l) {
+            if (l_vec(j) == min_l && target_info->abs_bias(j, l_vec(j)) == max_ab) {
                 real_ties.push_back(j);
             }
         }
@@ -141,14 +141,15 @@ void ABMsimulator::biased_movement(const uint32& t) {
 
         double dx, dy;
 
-        // If within l_star (but not directly on it) and there's
-        // target bias, then include target-directed motion.
-        if (wi_lstar < n_targets && target_info->abs_bias(wi_lstar) > 0) {
+        // If within l_star (but not directly on it), then include
+        // target-directed motion (note: all biases must be != 0).
+        if (wi_lstar < n_targets) {
 
             const uint32_t& i(wi_lstar);
             const double& l(l_vec(i));
-            const double& b(target_info->bias(i));
-            const double& ab(target_info->abs_bias(i));
+            double b = target_info->bias(i, l_min);
+            double ab = target_info->abs_bias(i, l_min);
+            if (b < -1 || ab < 0) stop("l_min too big for chosen target");
 
             // this is used to reverse direction if bias is negative:
             double bias_sign = sgn<double>(b);
@@ -205,7 +206,7 @@ void ABMsimulator::iterate(const uint32& t) {
 
     // -----------------*
     within_lstar = wi_lstar < n_targets;
-    if (within_lstar && max_abs_bias > 0) {
+    if (within_lstar) {
         biased_movement(t);
     } else {
         // random walk otherwise:
@@ -236,16 +237,16 @@ void check_args(const double& d,
                 const double& y_size,
                 const arma::mat& target_xy,
                 std::vector<uint32>& target_types,
-                const std::vector<double>& l_star,
+                const std::vector<std::vector<double>>& l_star,
+                const std::vector<std::vector<double>>& bias,
                 const std::vector<double>& l_int,
-                const std::vector<double>& bias,
                 const std::vector<uint32>& n_stay,
                 const std::vector<uint32>& n_ignore,
                 Nullable<NumericVector> xy0,
                 const bool& randomize_xy0,
                 double& x0,
                 double& y0,
-                const uint32& n_reps,
+                const uint32& n_searchers,
                 uint32& n_threads) {
 
     // Check that # threads isn't too high:
@@ -255,7 +256,7 @@ void check_args(const double& d,
     if (max_t == 0) stop("max_t == 0");
     if (x_size <= 0) stop("x_size <= 0");
     if (y_size <= 0) stop("y_size <= 0");
-    if (n_reps == 0) stop("n_reps == 0");
+    if (n_searchers == 0) stop("n_searchers == 0");
 
     if (target_types.size() == 0) stop("target_types.size() == 0");
     if (target_types.size() != target_xy.n_rows)
@@ -288,9 +289,16 @@ void check_args(const double& d,
     };
 
     for (uint32 i = 0; i < n_types; i++) {
-        if (l_star[i] <= 0) stop_i("l_star <= 0", i);
+        if (l_star[i].size() != bias[i].size()) {
+            stop_i("length(l_star[[i]]) != length(bias[[i]])", i);
+        }
+        for (uint32 j = 0; j < l_star[i].size(); j++) {
+            if (l_star[i][j] <= 0) stop_i("l_star <= 0", i);
+            if (bias[i][j] < -1 || bias[i][j] > 1)
+                stop_i("bias < -1 || bias > 1", i);
+            if (bias[i][j] == 0) stop_i("bias == 0", i);
+        }
         if (l_int[i] <= 0) stop_i("l_int <= 0", i);
-        if (bias[i] < -1 || bias[i] > 1) stop_i("bias < -1 || bias > 1", i);
         if (unq_targets[i] != i+1U) {
             std::string msg("target_types should contain unique values that, ");
             msg += "when sorted, are identical to a vector from 1 to ";
@@ -363,7 +371,7 @@ void check_args(const double& d,
 
 
 DataFrame create_output(const uint32& max_t,
-                        const uint32& n_reps,
+                        const uint32& n_searchers,
                         const std::vector<ABMsimulator>& simmers,
                         const TargetInfo& target_info,
                         const bool& summarize) {
@@ -372,7 +380,7 @@ DataFrame create_output(const uint32& max_t,
 
 
     std::vector<uint32> tt = target_info.types();
-    std::vector<int> rep;
+    std::vector<int> searcher;
     std::vector<int> type;
 
     if (summarize) {
@@ -381,16 +389,16 @@ DataFrame create_output(const uint32& max_t,
         std::vector<int> on;
         std::vector<int> hit;
 
-        rep.reserve(n_types * n_reps);
-        type.reserve(n_types * n_reps);
-        on.reserve(n_types * n_reps);
-        hit.reserve(n_types * n_reps);
+        searcher.reserve(n_types * n_searchers);
+        type.reserve(n_types * n_searchers);
+        on.reserve(n_types * n_searchers);
+        hit.reserve(n_types * n_searchers);
 
-        // Fill with correct `rep` and `type` values, then with zeros for
+        // Fill with correct `searcher` and `type` values, then with zeros for
         // `on` and `hit` (which will be updated below):
-        for (uint32 i = 0; i < n_reps; i++) {
+        for (uint32 i = 0; i < n_searchers; i++) {
             for (uint32 j = 0; j < n_types; j++) {
-                rep.push_back(i+1);
+                searcher.push_back(i+1);
                 type.push_back(j+1);
                 on.push_back(0);
                 hit.push_back(0);
@@ -399,7 +407,7 @@ DataFrame create_output(const uint32& max_t,
 
         // Now fill for `on` and `hit` values
         uint32_t k, j;
-        for (uint32 i = 0; i < n_reps; i++) {
+        for (uint32 i = 0; i < n_searchers; i++) {
             for (uint32 t = 0; t <= max_t; t++) {
                 if (simmers[i].on_target[t] >= 0) {
                     j = tt[simmers[i].on_target[t]];
@@ -410,7 +418,7 @@ DataFrame create_output(const uint32& max_t,
             }
         }
 
-        out = DataFrame::create(_["rep"] = rep,
+        out = DataFrame::create(_["searcher"] = searcher,
                                 _["type"] = type,
                                 _["on"] = on,
                                 _["hit"] = hit);
@@ -422,17 +430,17 @@ DataFrame create_output(const uint32& max_t,
         std::vector<double> y;
         std::vector<int> tar;
         std::vector<bool> hit;
-        rep.reserve((max_t+1U) * n_reps);
-        time.reserve((max_t+1U) * n_reps);
-        x.reserve((max_t+1U) * n_reps);
-        y.reserve((max_t+1U) * n_reps);
-        tar.reserve((max_t+1U) * n_reps);
-        type.reserve((max_t+1U) * n_reps);
-        hit.reserve((max_t+1U) * n_reps);
+        searcher.reserve((max_t+1U) * n_searchers);
+        time.reserve((max_t+1U) * n_searchers);
+        x.reserve((max_t+1U) * n_searchers);
+        y.reserve((max_t+1U) * n_searchers);
+        tar.reserve((max_t+1U) * n_searchers);
+        type.reserve((max_t+1U) * n_searchers);
+        hit.reserve((max_t+1U) * n_searchers);
 
-        for (uint32 i = 0; i < n_reps; i++) {
+        for (uint32 i = 0; i < n_searchers; i++) {
             for (uint32 t = 0; t <= max_t; t++) {
-                rep.push_back(i+1);
+                searcher.push_back(i+1);
                 time.push_back(t);
                 x.push_back(simmers[i].x[t]);
                 y.push_back(simmers[i].y[t]);
@@ -445,7 +453,7 @@ DataFrame create_output(const uint32& max_t,
         }
 
         out = DataFrame::create(
-            _["rep"] = rep,
+            _["searcher"] = searcher,
             _["time"] = time,
             _["x"] = x,
             _["y"] = y,
@@ -484,22 +492,35 @@ DataFrame create_output(const uint32& max_t,
 //'     `n_stay`, and `n_ignore` parameters (see descriptions below).
 //'     This vector should consist of integers from 1 to the number of items
 //'     in the arguments `l_star`, `l_int`, `bias`, `n_stay`, and `n_ignore`.
-//' @param l_star Numeric vector indicating, for each target type,
-//'     the distance from searcher to target that causes targets to bias
-//'     searcher movement.
+//' @param l_star List where each element is a numeric vector indicating,
+//'     for each target type, the distance(s) from searcher to target that
+//'     causes targets to bias searcher movement.
 //'     Its length should be equal to the number of unique type(s) of targets.
+//'     Target types can have multiple `l_star` values if they have, for
+//'     example, both a virus that attracts searchers and an epiphytic
+//'     bacteria that repels them. If the cues from the virus and bacteria
+//'     happen at different spatial scales, then this would result in
+//'     multiple `l_star` values. It would also result in multiple `bias`
+//'     values for targets of this type.
+//'     For multiple values of `l_star` and `bias`, it's assumed that they
+//'     are ordered the same (i.e., `l_star[[i]][[j]]` coincides with
+//'     `bias[[i]][[j]]`).
+//'     It's also required that within the same target type, higher values
+//'     of `l_star` coincide with lower values of `abs(bias)`.
 //' @param l_int Numeric vector indicating, for each target type,
 //'     the distance from searcher to target that causes an interaction.
 //'     Its length should be equal to the number of unique type(s) of targets.
-//' @param bias Numeric vector indicating, for each target type,
-//'     the bias the target causes searcher movement once they're `<= l_star`
-//'     away from it. Values range from -1 to 1,
+//' @param bias List where each item is a numeric vector indicating, for
+//'     each target type, the bias(es) the target causes searcher movement
+//'     once they're `<= l_star` away from it. Values range from -1 to 1,
 //'     with negative values resulting in searchers being repelled.
 //'     Values of +1 (-1) cause searchers to move directly towards (away from)
 //'     targets once within `l_star`.
 //'     Values nearer to zero cause movement that is more similar to
 //'     a random walk.
 //'     Its length should be equal to the number of unique type(s) of targets.
+//'     See the description for parameter `l_star` for an example of why you
+//'     might need multiple `bias` values for one target type.
 //' @param n_stay Numeric vector indicating, for each target type,
 //'     the number of time steps searchers stay at targets when they interact
 //'     with them.
@@ -520,12 +541,11 @@ DataFrame create_output(const uint32& max_t,
 //'     generated from a random uniform distribution ranging from the lower
 //'     to upper bound for each dimension.
 //'     Defaults to `TRUE`.
-//' @param n_reps Single integer indicating the number of independent
-//'     repetitions to run. This can be thought of as the number of searchers
-//'     on the landscape if searchers are independent of one another.
+//' @param n_searchers Single integer indicating the number of independent
+//'     searchers to simulate.
 //'     Defaults to `1L`.
 //' @param summarize Single logical for whether to summarize output by
-//'     rep. See below for details on how this changes the output.
+//'     searcher. See below for details on how this changes the output.
 //'     Defaults to `FALSE`.
 //' @param show_progress Single logical for whether to show progress bar.
 //'     Defaults to `FALSE`.
@@ -535,7 +555,7 @@ DataFrame create_output(const uint32& max_t,
 //'     Defaults to `1L`.
 //'
 //' @returns If `summarize = FALSE`, then it outputs a tibble with the columns
-//'     `rep` (repetition number),
+//'     `searcher` (searcher number),
 //'     `time` (time), `x` (x coordinate), `y` (y coordinate),
 //'     `tar` (which target is searcher interacting with (within `l_int`)?),
 //'     `type` (which target type is searcher interacting with?),
@@ -543,7 +563,7 @@ DataFrame create_output(const uint32& max_t,
 //'     `hit` (logical - is searcher interacting with a new target?).
 //'     Columns `tar` and `type` are `0` if the searcher is not on any targets.
 //'     If `summarize = TRUE`, then it outputs a tibble with the columns
-//'     `rep` (repetition number),
+//'     `searcher` (searcher number),
 //'     `type` (which target type is searcher interacting with?),
 //'     `on` (integer - how many time steps did the searcher spend on this
 //'     type of target?).
@@ -561,14 +581,14 @@ DataFrame searcher_sims(const double& d,
                         const double& y_size,
                         const arma::mat& target_xy,
                         std::vector<uint32> target_types,
-                        const std::vector<double>& l_star,
+                        const std::vector<std::vector<double>>& l_star,
+                        const std::vector<std::vector<double>>& bias,
                         const std::vector<double>& l_int,
-                        const std::vector<double>& bias,
                         const std::vector<uint32>& n_stay,
                         const std::vector<uint32>& n_ignore,
                         Nullable<NumericVector> xy0 = R_NilValue,
                         const bool& randomize_xy0 = true,
-                        const uint32& n_reps = 1,
+                        const uint32& n_searchers = 1,
                         const bool& summarize = false,
                         const bool& show_progress = false,
                         uint32 n_threads = 1) {
@@ -577,32 +597,32 @@ DataFrame searcher_sims(const double& d,
     double y0 = y_size / 2;
 
     // Check arguments and optionally set x0 and y0:
-    check_args(d, max_t, x_size, y_size, target_xy, target_types, l_star, l_int,
-               bias, n_stay, n_ignore, xy0, randomize_xy0, x0, y0,
-               n_reps, n_threads);
+    check_args(d, max_t, x_size, y_size, target_xy, target_types, l_star, bias,
+               l_int, n_stay, n_ignore, xy0, randomize_xy0, x0, y0,
+               n_searchers, n_threads);
 
-    const TargetInfo target_info(target_xy, target_types, l_star,
-                                 l_int, bias, n_stay, n_ignore);
+    const TargetInfo target_info(target_xy, target_types, l_star, bias,
+                                 l_int, n_stay, n_ignore);
 
-    // Create one simulator object per rep.
+    // Create one simulator object per searcher.
     // This also generates a seeded RNG for each, using R's runif(...) for
     // reproducibility.
     std::vector<ABMsimulator> simmers;
-    simmers.reserve(n_reps);
-    for (uint32 i = 0; i < n_reps; i++) {
+    simmers.reserve(n_searchers);
+    for (uint32 i = 0; i < n_searchers; i++) {
         simmers.push_back(ABMsimulator(target_info, d, x_size, y_size, bias,
                                        n_ignore, max_t, x0, y0, randomize_xy0));
     }
 
-    RcppThread::ProgressBar prog_bar(n_reps * max_t, 1);
+    RcppThread::ProgressBar prog_bar(n_searchers * max_t, 1);
 
     // Parallelized loop
-    RcppThread::parallelFor(0, n_reps, [&] (uint32 i) {
+    RcppThread::parallelFor(0, n_searchers, [&] (uint32 i) {
         simmers[i].run(prog_bar, show_progress);
     }, n_threads);
 
 
-    DataFrame out = create_output(max_t, n_reps, simmers, target_info,
+    DataFrame out = create_output(max_t, n_searchers, simmers, target_info,
                                   summarize);
 
     return out;

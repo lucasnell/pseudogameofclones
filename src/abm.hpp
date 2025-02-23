@@ -59,42 +59,127 @@ inline double distance(const double& x1, const double& y1,
 }
 
 
+
+
+class OneTargetType {
+
+    std::vector<double> l_star_;
+    std::vector<double> bias_;
+    std::vector<double> abs_bias_;
+    double l_int_;
+    uint32 n_stay_;
+    uint32 n_ignore_;
+
+public:
+
+    OneTargetType(const std::vector<double>& l_star__,
+                  const std::vector<double>& bias__,
+                  const double& l_int__,
+                  const uint32& n_stay__,
+                  const uint32& n_ignore__)
+        : l_star_(),
+          bias_(),
+          abs_bias_(),
+          l_int_(l_int__),
+          n_stay_(n_stay__),
+          n_ignore_(n_ignore__) {
+
+        uint32 n = l_star__.size();
+        if (bias__.size() != n) stop("bias and l_star sizes don't match");
+
+        l_star_.reserve(n);
+        bias_.reserve(n);
+        abs_bias_.reserve(n);
+
+        // Create vector of indices that sorts by increasing `l_star`:
+        std::vector<uint32> indices(n);
+        std::iota(indices.begin(), indices.end(), 0U);
+        std::sort(indices.begin(), indices.end(),
+                  [&](uint32 A, uint32 B) -> bool {
+                      return l_star__[A] < l_star__[B];
+                  });
+        // Now add `l_star`, `bias`, and `abs_bias` based on this sorting:
+        for (const uint32& i : indices) {
+            l_star_.push_back(l_star__[i]);
+            bias_.push_back(bias__[i]);
+            abs_bias_.push_back(std::abs(bias__[i]));
+        }
+
+        // Check that increasing `l_star` always coincides with decreasing
+        // `abs_bias` (so `abs_bias` must be sorted in decreasing order):
+        for (uint32 i = 1; i < n; i++) {
+            if (abs_bias_[i-1] > abs_bias_[i]) {
+                stop("higher `l_star` must always coincide with lower `abs(bias)`");
+            }
+        }
+
+
+    };
+
+    double l_star() const {
+        return l_star_.back(); // bc they're sorted, this is the greatest value
+    }
+    double bias(const double& l_i) const {
+        uint32 i = 0;
+        while (l_star_[i] < l_i) i++;
+        if (i >= bias_.size()) return -100;
+        return bias_[i];
+    }
+    double abs_bias(const double& l_i) const {
+        uint32 i = 0;
+        while (l_star_[i] < l_i) i++;
+        if (i >= abs_bias_.size()) return -100;
+        return abs_bias_[i];
+    }
+    double l_int() const {
+        return l_int_;
+    }
+    uint32 n_stay() const {
+        return n_stay_;
+    }
+    uint32 n_ignore() const {
+        return n_ignore_;
+    }
+
+};
+
+
+
+
 class TargetInfo {
 
     arma::mat target_xy;
     std::vector<uint32> type_map_;
-    std::vector<double> l_star_;
-    std::vector<double> l_int_;
-    std::vector<double> bias_;
-    std::vector<double> abs_bias_;
-    std::vector<uint32> n_stay_;
-    std::vector<uint32> n_ignore_;
+    std::vector<OneTargetType> types_;
 
 public:
 
     TargetInfo(const arma::mat& target_xy_,
                     const std::vector<uint32>& type_map__,
-                    const std::vector<double>& l_star__,
-                    const std::vector<double>& l_int__,
-                    const std::vector<double>& bias__,
-                    const std::vector<uint32>& n_stay__,
-                    const std::vector<uint32>& n_ignore__)
+                    const std::vector<std::vector<double>>& l_star_,
+                    const std::vector<std::vector<double>>& bias_,
+                    const std::vector<double>& l_int_,
+                    const std::vector<uint32>& n_stay_,
+                    const std::vector<uint32>& n_ignore_)
         : target_xy(target_xy_), type_map_(type_map__),
-          l_star_(l_star__), l_int_(l_int__),
-          bias_(bias__), abs_bias_(bias__), n_stay_(n_stay__), n_ignore_(n_ignore__) {
+          types_() {
 
         if (target_xy.n_cols != 2) stop("target_xy.n_cols != 2");
         if (target_xy.n_rows != type_map_.size())
             stop("target_xy.n_rows != type_map_.size()");
 
-        uint32 max_idx = *std::max_element(type_map_.begin(), type_map_.end());
-        if (l_star_.size() != max_idx+1U) stop("wrong length for l_star");
-        if (l_int_.size() != max_idx+1U) stop("wrong length for l_int");
-        if (bias_.size() != max_idx+1U) stop("wrong length for bias");
-        if (n_stay_.size() != max_idx+1U) stop("wrong length for n_stay");
-        if (n_ignore_.size() != max_idx+1U) stop("wrong length for n_ignore");
+        uint32 n_types = 1U + *std::max_element(type_map_.begin(), type_map_.end());
+        if (l_star_.size() != n_types) stop("wrong length for l_star");
+        if (bias_.size() != n_types) stop("wrong length for bias");
+        if (l_int_.size() != n_types) stop("wrong length for l_int");
+        if (n_stay_.size() != n_types) stop("wrong length for n_stay");
+        if (n_ignore_.size() != n_types) stop("wrong length for n_ignore");
 
-        for (double& ab : abs_bias_) ab = std::abs(ab);
+        types_.reserve(n_types);
+        for (uint32 i = 0; i < n_types; i++) {
+            types_.push_back(OneTargetType(l_star_[i], bias_[i], l_int_[i],
+                                           n_stay_[i], n_ignore_[i]));
+        }
 
     };
 
@@ -105,7 +190,7 @@ public:
 
     // Number of target types:
     uint32 n_types() const {
-        return l_star_.size();
+        return types_.size();
     }
 
     // Vector of target types:
@@ -126,65 +211,22 @@ public:
         return target_xy(i, 1);
     }
     double l_star(const uint32& i) const {
-        return l_star_[type_map_[i]];
+        return types_[type_map_[i]].l_star();
+    }
+    double bias(const uint32& i, const double& l_i) const {
+        return types_[type_map_[i]].bias(l_i);
+    }
+    double abs_bias(const uint32& i, const double& l_i) const {
+        return types_[type_map_[i]].abs_bias(l_i);
     }
     double l_int(const uint32& i) const {
-        return l_int_[type_map_[i]];
-    }
-    double bias(const uint32& i) const {
-        return bias_[type_map_[i]];
-    }
-    double abs_bias(const uint32& i) const {
-        return abs_bias_[type_map_[i]];
+        return types_[type_map_[i]].l_int();
     }
     uint32 n_stay(const uint32& i) const {
-        return n_stay_[type_map_[i]];
+        return types_[type_map_[i]].n_stay();
     }
     uint32 n_ignore(const uint32& i) const {
-        return n_ignore_[type_map_[i]];
-    }
-    // Overloaded to make arma vectors:
-    arma::vec l_star(const arma::uvec& i) const {
-        arma::vec out(i.n_elem);
-        for (uint32 j = 0; j < i.n_elem; j++) {
-            out(j) = l_star_[type_map_[i(j)]];
-        }
-        return out;
-    }
-    arma::vec l_int(const arma::uvec& i) const {
-        arma::vec out(i.n_elem);
-        for (uint32 j = 0; j < i.n_elem; j++) {
-            out(j) = l_int_[type_map_[i(j)]];
-        }
-        return out;
-    }
-    arma::vec bias(const arma::uvec& i) const {
-        arma::vec out(i.n_elem);
-        for (uint32 j = 0; j < i.n_elem; j++) {
-            out(j) = bias_[type_map_[i(j)]];
-        }
-        return out;
-    }
-    arma::vec abs_bias(const arma::uvec& i) const {
-        arma::vec out(i.n_elem);
-        for (uint32 j = 0; j < i.n_elem; j++) {
-            out(j) = abs_bias_[type_map_[i(j)]];
-        }
-        return out;
-    }
-    arma::uvec n_stay(const arma::uvec& i) const {
-        arma::uvec out(i.n_elem);
-        for (uint32 j = 0; j < i.n_elem; j++) {
-            out(j) = n_stay_[type_map_[i(j)]];
-        }
-        return out;
-    }
-    arma::uvec n_ignore(const arma::uvec& i) const {
-        arma::uvec out(i.n_elem);
-        for (uint32 j = 0; j < i.n_elem; j++) {
-            out(j) = n_ignore_[type_map_[i(j)]];
-        }
-        return out;
+        return types_[type_map_[i]].n_ignore();
     }
 
 
@@ -216,8 +258,7 @@ class ABMsimulator {
     double l_min;
     // number of time points within l_int of most recent target:
     uint32 stayed;
-    // max bias and n_ignore for any type of target:
-    double max_abs_bias;
+    // max n_ignore for any type of target:
     uint32 max_n_ignore;
     // max time steps to simulate:
     uint32 max_t;
@@ -273,7 +314,7 @@ public:
                  const double& d_,
                  const double& x_size,
                  const double& y_size,
-                 std::vector<double> bias,
+                 const std::vector<std::vector<double>>& bias,
                  const std::vector<uint32>& n_ignore,
                  const uint32& max_t_,
                  const double& x0,
@@ -291,7 +332,6 @@ public:
           wi_li(),
           l_min(),
           stayed(0),
-          max_abs_bias(),
           max_n_ignore(*std::max_element(n_ignore.begin(), n_ignore.end())),
           max_t(max_t_),
           visited(target_info_.n_targets(),
@@ -320,12 +360,6 @@ public:
             x(0) = x0;
             y(0) = y0;
         }
-
-        // Because biases can be negative, and bc the use of this is only to
-        // exclude situations where all biases == 0:
-        for (double& b : bias) b = std::abs(b);
-        max_abs_bias = *std::max_element(bias.begin(), bias.end());
-
 
         // Update l_vec, wi_lstar, and l_min:
         update_wi_lvec(0, true);
