@@ -3,8 +3,8 @@
 
 #' @export
 #' @noRd
-target_type_sims <- function(x_size, y_size, corr, n_samples) {
-    .Call(`_pseudogameofclones_target_type_sims`, x_size, y_size, corr, n_samples)
+target_type_sims <- function(x_size, y_size, corr, n_samples, fill_all = FALSE) {
+    .Call(`_pseudogameofclones_target_type_sims`, x_size, y_size, corr, n_samples, fill_all)
 }
 
 #' Simulate searchers seeking targets.

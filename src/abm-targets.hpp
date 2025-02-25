@@ -57,6 +57,12 @@ public:
         y = k / y_size;
         return;
     }
+    // Overloaded for signed ints (for use with Rcpp::IntegerVector)
+    void to_2d(int& x, int& y, const uint32& k) const {
+        x = k - y_size * (k / y_size);
+        y = k / y_size;
+        return;
+    }
     // Convert from 2D to 1D:
     void to_1d(uint32& k, const uint32& x, const uint32& y) const {
         k = (y * x_size + x);

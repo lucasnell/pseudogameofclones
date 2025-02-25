@@ -14,8 +14,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // target_type_sims
-DataFrame target_type_sims(const int& x_size, const int& y_size, const arma::mat& corr, const arma::ivec& n_samples);
-RcppExport SEXP _pseudogameofclones_target_type_sims(SEXP x_sizeSEXP, SEXP y_sizeSEXP, SEXP corrSEXP, SEXP n_samplesSEXP) {
+DataFrame target_type_sims(const int& x_size, const int& y_size, const arma::mat& corr, const arma::ivec& n_samples, const bool& fill_all);
+RcppExport SEXP _pseudogameofclones_target_type_sims(SEXP x_sizeSEXP, SEXP y_sizeSEXP, SEXP corrSEXP, SEXP n_samplesSEXP, SEXP fill_allSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -23,7 +23,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const int& >::type y_size(y_sizeSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type corr(corrSEXP);
     Rcpp::traits::input_parameter< const arma::ivec& >::type n_samples(n_samplesSEXP);
-    rcpp_result_gen = Rcpp::wrap(target_type_sims(x_size, y_size, corr, n_samples));
+    Rcpp::traits::input_parameter< const bool& >::type fill_all(fill_allSEXP);
+    rcpp_result_gen = Rcpp::wrap(target_type_sims(x_size, y_size, corr, n_samples, fill_all));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -286,7 +287,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_pseudogameofclones_target_type_sims", (DL_FUNC) &_pseudogameofclones_target_type_sims, 4},
+    {"_pseudogameofclones_target_type_sims", (DL_FUNC) &_pseudogameofclones_target_type_sims, 5},
     {"_pseudogameofclones_searcher_sims", (DL_FUNC) &_pseudogameofclones_searcher_sims, 17},
     {"_pseudogameofclones_make_aphids_ptr", (DL_FUNC) &_pseudogameofclones_make_aphids_ptr, 1},
     {"_pseudogameofclones_logit", (DL_FUNC) &_pseudogameofclones_logit, 1},

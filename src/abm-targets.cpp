@@ -22,7 +22,8 @@ using namespace Rcpp;
 DataFrame target_type_sims(const int& x_size,
                            const int& y_size,
                            const arma::mat& corr,
-                           const arma::ivec& n_samples) {
+                           const arma::ivec& n_samples,
+                           const bool& fill_all = false) {
 
     if (x_size <= 0) stop("x_size must be > 0");
     if (y_size <= 0) stop("y_size must be > 0");
@@ -97,6 +98,9 @@ DataFrame target_type_sims(const int& x_size,
         }
     }
 
+
+    if (fill_all) n_used_pts = n_points;
+
     // Create output dataframe:
     List out_type(n_used_pts); // this has to be created separately & added later
     DataFrame out = DataFrame::create(
@@ -106,15 +110,30 @@ DataFrame target_type_sims(const int& x_size,
     IntegerVector out_x = out[0];
     IntegerVector out_y = out[1];
 
-    uint32 i = 0;
-    for (uint32 k = 0; k < samps.size(); k++) {
-        if (!samps[k].empty()) {
-            std::sort(samps[k].begin(), samps[k].end());
-            out_type(i) = samps[k];
-            dim_conv.to_2d(x, y, k);
-            out_x(i) = x;
-            out_y(i) = y;
-            i++;
+    bool samps_empty;
+    if (fill_all) {
+        std::vector<uint32> filler(1, n_types+1);
+        for (uint32 k = 0; k < samps.size(); k++) {
+            const uint32& i(k); // for consistently when !fill_all below
+            samps_empty = samps[k].empty();
+            if (samps_empty) {
+                out_type(i) = filler;
+            } else {
+                std::sort(samps[k].begin(), samps[k].end());
+                out_type(i) = samps[k];
+            }
+            dim_conv.to_2d(out_x(i), out_y(i), k);
+        }
+    } else {
+        uint32 i = 0;
+        for (uint32 k = 0; k < samps.size(); k++) {
+            samps_empty = samps[k].empty();
+            if (!samps_empty) {
+                std::sort(samps[k].begin(), samps[k].end());
+                out_type(i) = samps[k];
+                dim_conv.to_2d(out_x(i), out_y(i), k);
+                i++;
+            }
         }
     }
     out["type"] = out_type;
