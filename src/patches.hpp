@@ -503,12 +503,20 @@ public:
         if (fields.size() > 1 && wasp_disp_m0 > 0) {
             double from_wasp_pool = 0;
             if (wasp_disp_m1 != 0) {
-                double p_out, lz;
+                double z, p_out, lz;
                 for (OneField& field : fields) {
-                    lz = std::log(field.total_aphids());
-                    p_out = wasp_disp_m0 * std::exp(-wasp_disp_m1 * lz);
-                    from_wasp_pool += (field.wasps.Y * p_out);
-                    field.wasps.Y *= (1 - p_out);
+                    if (field.wasps.Y <= 0) continue;
+                    z = field.total_aphids();
+                    if (z > 0) {
+                        lz = std::log(z);
+                        p_out = wasp_disp_m0 * std::exp(-wasp_disp_m1 * lz);
+                        if (p_out > 1) p_out = 1; // can happen if z < 1
+                        from_wasp_pool += (field.wasps.Y * p_out);
+                        field.wasps.Y *= (1 - p_out);
+                    } else {
+                        from_wasp_pool += field.wasps.Y;
+                        field.wasps.Y = 0;
+                    }
                 }
             } else {
                 for (OneField& field : fields) {

@@ -302,10 +302,12 @@ public:
 
         Y_0 = adult_Y0;
         double mum_y0_sum = arma::accu(mummies.Y_0);
-        if (mum_y0_sum != 1) mummy_Y0 /= mum_y0_sum;
+        if (mum_y0_sum != 1 && mum_y0_sum > 0) mummy_Y0 /= mum_y0_sum;
         mummies.Y_0 *= mummy_Y0;
         // refresh starting conditions:
-        Y = Y_0;
+        if (delay_ == 0) {
+            Y = Y_0;
+        } else Y = 0;
         mummies.Y = mummies.Y_0;
         return;
     }

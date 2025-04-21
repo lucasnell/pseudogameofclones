@@ -617,6 +617,11 @@ all_fields <- function(clonal_lines,
     lgl_vec_check(constant_wasps, "constant_wasps")
     dbl_check(extinct_N, "extinct_N")
 
+    if (wasp_disp_m0 == 0 && wasp_disp_m1 != 0) {
+        stop(paste("\nHaving wasp_disp_m0 == 0 and wasp_disp_m1 != 0 makes",
+                   "no sense because wasp_disp_m1 will be ignored."))
+    }
+
     # Adjusting wasp relative attack vector size to match number of aphid
     # stages in Leslie matrices
     rel_attack <- wasps$rel_attack

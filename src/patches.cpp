@@ -169,12 +169,7 @@ bool AllFields::update(const uint32& t,
 
         field.update(eng);
 
-        if (all_empty) {
-            if (!field.empty) {
-                all_empty = false;
-                break;
-            }
-        }
+        if (all_empty && !field.empty) all_empty = false;
 
     }
 
