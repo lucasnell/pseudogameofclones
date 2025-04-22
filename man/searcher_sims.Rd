@@ -12,13 +12,13 @@ searcher_sims(
   target_xy,
   target_types,
   l_star,
-  l_int,
   bias,
+  l_int,
   n_stay,
   n_ignore,
   xy0 = NULL,
   randomize_xy0 = TRUE,
-  n_reps = 1L,
+  n_searchers = 1L,
   summarize = FALSE,
   show_progress = FALSE,
   n_threads = 1L
@@ -45,23 +45,36 @@ target is. Targets can vary in their \code{l_star}, \code{l_int}, \code{bias},
 This vector should consist of integers from 1 to the number of items
 in the arguments \code{l_star}, \code{l_int}, \code{bias}, \code{n_stay}, and \code{n_ignore}.}
 
-\item{l_star}{Numeric vector indicating, for each target type,
-the distance from searcher to target that causes targets to bias
-searcher movement.
-Its length should be equal to the number of unique type(s) of targets.}
+\item{l_star}{List where each element is a numeric vector indicating,
+for each target type, the distance(s) from searcher to target that
+causes targets to bias searcher movement.
+Its length should be equal to the number of unique type(s) of targets.
+Target types can have multiple \code{l_star} values if they have, for
+example, both a virus that attracts searchers and an epiphytic
+bacteria that repels them. If the cues from the virus and bacteria
+happen at different spatial scales, then this would result in
+multiple \code{l_star} values. It would also result in multiple \code{bias}
+values for targets of this type.
+For multiple values of \code{l_star} and \code{bias}, it's assumed that they
+are ordered the same (i.e., \code{l_star[[i]][[j]]} coincides with
+\code{bias[[i]][[j]]}).
+It's also required that within the same target type, higher values
+of \code{l_star} coincide with lower values of \code{abs(bias)}.}
 
-\item{l_int}{Numeric vector indicating, for each target type,
-the distance from searcher to target that causes an interaction.
-Its length should be equal to the number of unique type(s) of targets.}
-
-\item{bias}{Numeric vector indicating, for each target type,
-the bias the target causes searcher movement once they're \verb{<= l_star}
-away from it. Values range from -1 to 1,
+\item{bias}{List where each item is a numeric vector indicating, for
+each target type, the bias(es) the target causes searcher movement
+once they're \verb{<= l_star} away from it. Values range from -1 to 1,
 with negative values resulting in searchers being repelled.
 Values of +1 (-1) cause searchers to move directly towards (away from)
 targets once within \code{l_star}.
 Values nearer to zero cause movement that is more similar to
 a random walk.
+Its length should be equal to the number of unique type(s) of targets.
+See the description for parameter \code{l_star} for an example of why you
+might need multiple \code{bias} values for one target type.}
+
+\item{l_int}{Numeric vector indicating, for each target type,
+the distance from searcher to target that causes an interaction.
 Its length should be equal to the number of unique type(s) of targets.}
 
 \item{n_stay}{Numeric vector indicating, for each target type,
@@ -88,13 +101,12 @@ generated from a random uniform distribution ranging from the lower
 to upper bound for each dimension.
 Defaults to \code{TRUE}.}
 
-\item{n_reps}{Single integer indicating the number of independent
-repetitions to run. This can be thought of as the number of searchers
-on the landscape if searchers are independent of one another.
+\item{n_searchers}{Single integer indicating the number of independent
+searchers to simulate.
 Defaults to \code{1L}.}
 
 \item{summarize}{Single logical for whether to summarize output by
-rep. See below for details on how this changes the output.
+searcher. See below for details on how this changes the output.
 Defaults to \code{FALSE}.}
 
 \item{show_progress}{Single logical for whether to show progress bar.
@@ -107,7 +119,7 @@ Defaults to \code{1L}.}
 }
 \value{
 If \code{summarize = FALSE}, then it outputs a tibble with the columns
-\code{rep} (repetition number),
+\code{searcher} (searcher number),
 \code{time} (time), \code{x} (x coordinate), \code{y} (y coordinate),
 \code{tar} (which target is searcher interacting with (within \code{l_int})?),
 \code{type} (which target type is searcher interacting with?),
@@ -115,7 +127,7 @@ and
 \code{hit} (logical - is searcher interacting with a new target?).
 Columns \code{tar} and \code{type} are \code{0} if the searcher is not on any targets.
 If \code{summarize = TRUE}, then it outputs a tibble with the columns
-\code{rep} (repetition number),
+\code{searcher} (searcher number),
 \code{type} (which target type is searcher interacting with?),
 \code{on} (integer - how many time steps did the searcher spend on this
 type of target?).

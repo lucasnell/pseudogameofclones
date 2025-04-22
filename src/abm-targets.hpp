@@ -87,9 +87,11 @@ public:
         if (y0 > 0) neigh_y.push_back(y0-1);
         neigh_y.push_back(y0);
         if (y0 < x_size-1) neigh_y.push_back(y0+1);
+        uint32 k_out;
         for (const uint32& x : neigh_x) {
             for (const uint32& y : neigh_y) {
-                indices.push_back(y * x_size + x);
+                to_1d(k_out, x, y);
+                indices.push_back(k_out);
             }
         }
         return;

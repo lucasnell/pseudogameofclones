@@ -16,27 +16,62 @@ using namespace Rcpp;
 
 
 
+//' Simulate targets of different types
+//'
+//' Simulate locations of targets of different types along an evenly spaced
+//' grid of integers, where the placement of one target can affect subsequent
+//' placement of other targets.
+//'
+//'
+//' @inheritParams searcher_sims
+//' @param wt_mat Square numeric matrix indicating how sample weighting on
+//'     neighboring locations is affected by a target of each type being
+//'     placed in a particular spot.
+//'     Item `wt_mat[i,j]` indicates the effect of target type `i` on
+//'     subsequent samplings of target type `j`.
+//'     Values above 1 cause neighboring locations to be more likely to be
+//'     sampled later, while values below 1 cause them to be less likely
+//'     sampled.
+//'     For locations that have been adjusted using `wt_mat` multiple times,
+//'     the weights are multiplied by each other
+//'     (e.g., `w *= wt_mat[1,3]` at time `t`, then
+//'     `w *= wt_mat[1,2]` at time `t+1`).
+//'     All weights start with values of `1`.
+//'     The matrix should have the same number of rows and columns as the
+//'     number of target types.
+//' @param n_samples Integer vector indicating the number of samples to
+//'     produce per target type. The length should equal the number of
+//'     target types, and all values should be `>=1`.
+//' @param fill_all Single logical indicating whether to include a row for
+//'     all points in the landscape. If `TRUE`, then locations where no targets
+//'     exist will contain an empty vector in the `type` column.
+//'     Defaults to `FALSE`.
+//'
+//'
+//' @return A [`tibble`][tibble::tbl_df] with columns `x`, `y`, and `type`.
+//'
+//'
 //' @export
-//' @noRd
+//'
 //[[Rcpp::export]]
 DataFrame target_type_sims(const int& x_size,
                            const int& y_size,
-                           const arma::mat& corr,
+                           const arma::mat& wt_mat,
                            const arma::ivec& n_samples,
                            const bool& fill_all = false) {
 
     if (x_size <= 0) stop("x_size must be > 0");
     if (y_size <= 0) stop("y_size must be > 0");
-    if (corr.n_elem == 0) stop("corr cannot be empty");
-    if (!corr.is_symmetric()) stop("corr must be symmetric");
-    if (arma::any(arma::vectorise(corr) < 0)) stop("corr cannot contain values < 0");
-    if (n_samples.n_elem != corr.n_rows)
-        stop("length(n_samples) == nrow(corr) must be true");
+    if (wt_mat.n_elem == 0) stop("wt_mat cannot be empty");
+    if (!wt_mat.is_square()) stop("wt_mat must be square");
+    if (arma::any(arma::vectorise(wt_mat) < 0)) stop("wt_mat cannot contain values < 0");
+    if (n_samples.n_elem != wt_mat.n_rows)
+        stop("length(n_samples) == nrow(wt_mat) must be true");
     if (arma::any(n_samples <= 0)) stop("n_samples cannot contain values <= 0");
     if (arma::any(n_samples > x_size * y_size))
         stop("n_samples cannot contain values > x_size * y_size");
 
-    uint32 n_types = corr.n_rows;
+    uint32 n_types = wt_mat.n_rows;
     uint32 n_points = x_size * y_size;
 
     // One location sampler for each type:
@@ -82,7 +117,7 @@ DataFrame target_type_sims(const int& x_size,
             // Adjust sampling probabilities:
             dim_conv.get_neighbors(neighbors, k); // fill neighbors vector
             for (uint32 j = 0; j < n_types; j++) {
-                samplers[j].update_weights(neighbors, corr(i,j));
+                samplers[j].update_weights(neighbors, wt_mat(i,j));
             }
             /*
              Note: You don't have to update `k`th prob to zero after the call
