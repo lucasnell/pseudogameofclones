@@ -5,8 +5,9 @@ format:
   pdf: default
   html:
     include-in-header: in-line_math_mode.html
+number-sections: true
 editor: source
-date: "2025-02-13"
+date: today
 date-format: "D MMM YYYY"
 editor_options: 
   chunk_output_type: console
@@ -18,15 +19,22 @@ editor_options:
 #| label: setup
 #| include: false
 
-knitr::opts_chunk$set(echo = TRUE)
-
 suppressPackageStartupMessages({
     library(knitr)
     library(tidyverse)
     library(gganimate)
     library(pseudogameofclones)
     library(kableExtra)
+    library(patchwork)
+    library(viridisLite)
 })
+.dev <- "png"
+output_format <- opts_knit$get("rmarkdown.pandoc.to")
+if (output_format == "html") .dev <- "svg"
+if (output_format == "latex") .dev <- "pdf"
+
+opts_chunk$set(echo = FALSE, dev = .dev)
+
 # number of threads:
 .n_threads <- max(1L, parallel::detectCores() - 2L)
 ```
@@ -37,25 +45,24 @@ Agent-based model of searchers (aphids) and targets (plants) where some targets 
 
 ## Model description
 
-
-
 The model starts with sizes for the x and y dimensions ($x_{\text{size}}$ and
 $y_{\text{size}}$), and the total landscape is defined by the bounds
 $\left[ 0, \, x_{\text{size}} \right]$ and $\left[ 0, \, y_{\text{size}} \right]$.
-Searchers move within this landscape and operate independently from each other.
-Searchers reflect off the x and y bounds if their movement would otherwise 
-cause them to move past them.
-Targets are located within these bounds and do not move.
+Because of how target locations are defined (see @sec-targets),
+$x_{\text{size}} \ge 2$ and $y_{\text{size}} \ge 2$.
+Targets do not move within these bounds, whereas 
+searchers move throughout landscape and operate independently from each other.
 Once a searcher moves close enough to a target, the target can repel or 
 attract them.
 These repellent or attractant effects can vary in strength from a mild 
 bias (i.e., close to a random walk) to completely directed movement.
 Targets can differ in how they bias searcher movement and in the distance
 within which they affect searcher movement.
-Only one target affects a given searcher's movement at a time.
-If a searcher is within multiple targets' directed-movement thresholds,
-the target with the greater directed-movement strength (repellent or 
-attractant) affects it.
+Targets are located along an evenly spaced grid within the landscape
+to approximate a field of agricultural crops, and their degree of spatial
+overlap can vary.
+
+
 Once a searcher moves even closer to a target, the searcher interacts with
 the target, and the simulations record this event.
 In the context of pea aphids and pea plants, an interaction means
@@ -67,8 +74,92 @@ This would be akin to aphids finding a host plant and staying to feed.
 After leaving the target, searchers can ignore that target for a number
 of time steps (potentially indefinitely).
 This allows searchers to escape the influence of the target to avoid
-staying there indefinitely.
+being repeatedly attracted to the same target.
 See @tbl-parameters for parameter descriptions.
+
+
+
+### Target locations {#sec-targets}
+
+
+Targets are located along an evenly spaced integer grid, defined by all 
+combinations of
+$x \in \left\{ 1, \ldots, \lfloor x_{\text{size}} -1 \rfloor \right\}$ and
+$y \in \left\{ 1, \ldots, \lfloor y_{\text{size}} -1 \rfloor \right\}$,
+where $\lfloor \cdot \rfloor$ indicates the floor function.
+Because the total landscape is defined by the bounds
+$\left[ 0, \, x_{\text{size}} \right]$ and $\left[ 0, \, y_{\text{size}} \right]$,
+this grid design prevents targets from being located directly on a boundary.
+The first target location is sampled randomly from this grid.
+Subsequent locations are sampled with weighting affected by targets already
+existing on the landscape.
+Each target type can increase or decrease the probability that other targets
+(same or different types) will be later sampled to a location directly 
+next to it.
+By increasing (decreasing) the sampling probability of neighboring locations 
+for targets of the same type, we increase (decrease) spatial clustering of 
+that target type.
+By increasing (decreasing) the sampling probability of neighboring locations
+for targets of different types, we increase (decrease) spatial overlap
+between those types.
+Simulations also allow a target to be multiple types.
+This is because a plant that hosts an epiphytic bacteria can also be infected
+with a virus.
+The different target-type effects (i.e., different effects of bacteria and virus)
+both affect searchers but do so to a different degree and 
+at different spatial scales.
+See @fig-target-sims for examples.
+
+
+```{r}
+#| label: fig-target-sims
+#| fig.height: 5
+#| fig.width: 6.5
+#| fig-cap: "Simulations of 1000 bacteria and 1000 virus-containing plants across a $50\\times50$ grid, where different or same types attract or repel. The type not indicated is neutral (i.e., has no effect on sampling)."
+
+# color palette for target types:
+type_pal <- c(viridis(3, begin = 0.1, end = 0.9)[c(1,3,2)], "gray80") |> 
+    set_names(c("bacteria", "virus", "bacteria + virus", "none"))
+
+list(
+    "different types repel" = c(same = 1, diff = 0.1),
+    "different types attract" = c(same = 1, diff = 10),
+    "same types attract" = c(same = 10, diff = 1),
+    "same types repel" = c(same = 0.1, diff = 1)) |>
+    imap(\(x, n) {
+        wt_mat <- rbind(c(x[["same"]], x[["diff"]]), 
+                        c(x[["diff"]], x[["same"]]))
+        x_size = 50L
+        y_size = 50L
+        samp_df <- target_type_sims(x_size = x_size,
+                                    y_size = y_size,
+                                    wt_mat,
+                                    n_samples = rep(1000, 2)) |>
+            mutate(type = type |>
+                       map(\(x) c("bacteria", "virus", "none")[x]) |>
+                       map_chr(\(x) paste(x, collapse = " + ")) |>
+                       factor(levels = c("bacteria", "virus", "bacteria + virus", "none")))
+        samp_df |>
+            filter(map_lgl(type, \(x) !is.null(x))) |>
+            ggplot(aes(x, y, color = type)) +
+            geom_point(size = 0.5) +
+            scale_color_manual(NULL, values = type_pal) +
+            coord_equal(xlim = c(0, x_size), ylim = c(0, y_size)) +
+            guides(color = guide_legend(override.aes = list(size = 3))) +
+            ggtitle(n) +
+            theme(axis.title = element_blank(),
+                  axis.text = element_blank(),
+                  axis.ticks = element_blank())
+    }) |> 
+    c(list(nrow = 2, guides = "collect")) |> 
+    do.call(what = wrap_plots)
+
+
+
+```
+
+
+### Searchers {#sec-searchers}
 
 When far from all targets, searchers move a set distance ($d$) in a random 
 direction each time step:
@@ -82,6 +173,8 @@ $${#eq-random-walk}
 where
 $x_{t}$ and $y_{t}$ indicate searcher location at time $t$,
 and $\theta_r$ is the random turn angle in radians.
+In both random and directed movement, if searcher movement would cause them 
+to move outside the landscape, they reflect off the x and y bounds instead.
 
 
 When a searcher's distance between itself and target $i$ ($l_i$) is
@@ -104,7 +197,7 @@ $| \cdot |$ indicates absolute value,
 and
 $b_i$ indicates bias for target $i$ and can range from $-1$ to $+1$.
 Biases near zero result in mostly random movement, whereas values near
-$1$ result in mostly directed movement.
+$-1$ or $+1$ result in mostly directed movement.
 Negative $b_i$ indicates repellent effects on searchers, and
 positive values indicate attractant effects.
 
@@ -163,14 +256,13 @@ target is chosen at random.
 
 A searcher interacts with target $i$ when $l_i \le l_{\circledast,i}$,
 and $l_{\circledast,i}$ can also vary among targets.
-After this interaction occurs, the searcher can optionally stay target $i$
-for $n_s$ time steps, during which time the searcher will move entirely
-directed toward the target.
+After this interaction occurs, the searcher can optionally stay at target $i$
+for $n_s$ time steps, during which time the searcher will move directly
+toward the target.
 Afterward, the searcher can optionally ignore target $i$ for $n_g$ time steps.
 
 
 
-\clearpage
 
 ```{r}
 #| label: tbl-parameters
@@ -206,9 +298,15 @@ tribble(
 ## Simulations
 
 
+```{r}
+#| label: basic-sims
+#| animation-hook: gifski
 
 
-<!-- ```{r} -->
-<!-- #| animation-hook: gifski -->
-<!-- ``` -->
+
+
+# if (output_format == "pdf")
+
+
+```
 
