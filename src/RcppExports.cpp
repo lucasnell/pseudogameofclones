@@ -14,17 +14,18 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // target_type_sims
-DataFrame target_type_sims(const int& x_size, const int& y_size, const arma::mat& wt_mat, const arma::ivec& n_samples, const bool& fill_all);
-RcppExport SEXP _pseudogameofclones_target_type_sims(SEXP x_sizeSEXP, SEXP y_sizeSEXP, SEXP wt_matSEXP, SEXP n_samplesSEXP, SEXP fill_allSEXP) {
+DataFrame target_type_sims(int x_size, int y_size, const arma::mat& wt_mat, const arma::ivec& n_samples, const bool& allow_overlap, const bool& fill_all);
+RcppExport SEXP _pseudogameofclones_target_type_sims(SEXP x_sizeSEXP, SEXP y_sizeSEXP, SEXP wt_matSEXP, SEXP n_samplesSEXP, SEXP allow_overlapSEXP, SEXP fill_allSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const int& >::type x_size(x_sizeSEXP);
-    Rcpp::traits::input_parameter< const int& >::type y_size(y_sizeSEXP);
+    Rcpp::traits::input_parameter< int >::type x_size(x_sizeSEXP);
+    Rcpp::traits::input_parameter< int >::type y_size(y_sizeSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type wt_mat(wt_matSEXP);
     Rcpp::traits::input_parameter< const arma::ivec& >::type n_samples(n_samplesSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type allow_overlap(allow_overlapSEXP);
     Rcpp::traits::input_parameter< const bool& >::type fill_all(fill_allSEXP);
-    rcpp_result_gen = Rcpp::wrap(target_type_sims(x_size, y_size, wt_mat, n_samples, fill_all));
+    rcpp_result_gen = Rcpp::wrap(target_type_sims(x_size, y_size, wt_mat, n_samples, allow_overlap, fill_all));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -287,7 +288,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_pseudogameofclones_target_type_sims", (DL_FUNC) &_pseudogameofclones_target_type_sims, 5},
+    {"_pseudogameofclones_target_type_sims", (DL_FUNC) &_pseudogameofclones_target_type_sims, 6},
     {"_pseudogameofclones_searcher_sims", (DL_FUNC) &_pseudogameofclones_searcher_sims, 17},
     {"_pseudogameofclones_make_aphids_ptr", (DL_FUNC) &_pseudogameofclones_make_aphids_ptr, 1},
     {"_pseudogameofclones_logit", (DL_FUNC) &_pseudogameofclones_logit, 1},

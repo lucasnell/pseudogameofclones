@@ -6,9 +6,21 @@
 #' Simulate locations of targets of different types along an evenly spaced
 #' grid of integers, where the placement of one target can affect subsequent
 #' placement of other targets.
+#' Target locations are drawn from all combinations of `1` to
+#' `x_size-1` and `1` to `y_size-1`.
+#' I'm subtracting 1 because the landscape in `searcher_sims` is defined by
+#' the bounds `c(0, x_size)` and `c(0, y_size)`, so this subtraction
+#' keeps a gap of 1 between the most extreme locations and the bounds
+#' of the landscape.
+#' This prevents targets from being located on the bounds.
 #'
 #'
-#' @inheritParams searcher_sims
+#' @param x_size Single integer indicating x dimension of search area.
+#'     Locations will be drawn from `1` to `x_size-1`.
+#'     See description above for why.
+#' @param y_size Single integer indicating y dimension of search area.
+#'     Locations will be drawn from `1` to `y_size-1`.
+#'     See description above for why.
 #' @param wt_mat Square numeric matrix indicating how sample weighting on
 #'     neighboring locations is affected by a target of each type being
 #'     placed in a particular spot.
@@ -27,10 +39,15 @@
 #' @param n_samples Integer vector indicating the number of samples to
 #'     produce per target type. The length should equal the number of
 #'     target types, and all values should be `>=1`.
-#' @param fill_all Single logical indicating whether to include a row for
-#'     all points in the landscape. If `TRUE`, then locations where no targets
-#'     exist will contain an empty vector in the `type` column.
-#'     Defaults to `FALSE`.
+#' @param allow_overlap Single logical indicating whether to allow
+#'     targets to be more than one type.
+#'     An example of a target being multiple types would be a plant that
+#'     hosts an epiphytic bacteria and is also infected with a virus.
+#'     Defaults to `TRUE`.
+#' @param fill_all Single logical indicating whether to have a target at all
+#'     points in the landscape. If `TRUE`, then locations where no targets
+#'     were simulated will be assigned to a target type `length(n_samples)+1`.
+#'     Defaults to `TRUE`.
 #'
 #'
 #' @return A [`tibble`][tibble::tbl_df] with columns `x`, `y`, and `type`.
@@ -38,8 +55,8 @@
 #'
 #' @export
 #'
-target_type_sims <- function(x_size, y_size, wt_mat, n_samples, fill_all = FALSE) {
-    .Call(`_pseudogameofclones_target_type_sims`, x_size, y_size, wt_mat, n_samples, fill_all)
+target_type_sims <- function(x_size, y_size, wt_mat, n_samples, allow_overlap = TRUE, fill_all = TRUE) {
+    .Call(`_pseudogameofclones_target_type_sims`, x_size, y_size, wt_mat, n_samples, allow_overlap, fill_all)
 }
 
 #' Simulate searchers seeking targets.
@@ -58,6 +75,9 @@ target_type_sims <- function(x_size, y_size, wt_mat, n_samples, fill_all = FALSE
 #'     `n_stay`, and `n_ignore` parameters (see descriptions below).
 #'     This vector should consist of integers from 1 to the number of items
 #'     in the arguments `l_star`, `l_int`, `bias`, `n_stay`, and `n_ignore`.
+#'     It's allowed that some target types don't show up in this vector
+#'     since this can be useful for simulations where you remove or replace
+#'     target type(s).
 #' @param l_star List where each element is a numeric vector indicating,
 #'     for each target type, the distance(s) from searcher to target that
 #'     causes targets to bias searcher movement.

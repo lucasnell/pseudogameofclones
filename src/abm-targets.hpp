@@ -123,6 +123,10 @@ class LocationSampler {
     // weights / sum(weights). The last value in `cs_probs` should always be 1.
     void calc_cumsum() {
         double p_sum = arma::accu(weights);
+        if (p_sum <= 0) {
+            weights.ones();
+            p_sum = weights.n_elem;
+        }
         cs_probs(0) = weights(0) / p_sum;
         for (uint32 i = 1; i < n; i++) {
             cs_probs(i) = cs_probs(i-1) + weights(i) / p_sum;

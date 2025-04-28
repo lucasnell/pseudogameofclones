@@ -4,14 +4,23 @@
 \alias{target_type_sims}
 \title{Simulate targets of different types}
 \usage{
-target_type_sims(x_size, y_size, wt_mat, n_samples, fill_all = FALSE)
+target_type_sims(
+  x_size,
+  y_size,
+  wt_mat,
+  n_samples,
+  allow_overlap = TRUE,
+  fill_all = TRUE
+)
 }
 \arguments{
-\item{x_size}{Single numeric indicating x dimension of search area.
-Bounds will be \code{c(0, x_size)}.}
+\item{x_size}{Single integer indicating x dimension of search area.
+Locations will be drawn from \code{1} to \code{x_size-1}.
+See description above for why.}
 
-\item{y_size}{Single numeric indicating y dimension of search area.
-Bounds will be \code{c(0, y_size)}.}
+\item{y_size}{Single integer indicating y dimension of search area.
+Locations will be drawn from \code{1} to \code{y_size-1}.
+See description above for why.}
 
 \item{wt_mat}{Square numeric matrix indicating how sample weighting on
 neighboring locations is affected by a target of each type being
@@ -33,10 +42,16 @@ number of target types.}
 produce per target type. The length should equal the number of
 target types, and all values should be \verb{>=1}.}
 
-\item{fill_all}{Single logical indicating whether to include a row for
-all points in the landscape. If \code{TRUE}, then locations where no targets
-exist will contain an empty vector in the \code{type} column.
-Defaults to \code{FALSE}.}
+\item{allow_overlap}{Single logical indicating whether to allow
+targets to be more than one type.
+An example of a target being multiple types would be a plant that
+hosts an epiphytic bacteria and is also infected with a virus.
+Defaults to \code{TRUE}.}
+
+\item{fill_all}{Single logical indicating whether to have a target at all
+points in the landscape. If \code{TRUE}, then locations where no targets
+were simulated will be assigned to a target type \code{length(n_samples)+1}.
+Defaults to \code{TRUE}.}
 }
 \value{
 A \code{\link[tibble:tbl_df-class]{tibble}} with columns \code{x}, \code{y}, and \code{type}.
@@ -45,4 +60,11 @@ A \code{\link[tibble:tbl_df-class]{tibble}} with columns \code{x}, \code{y}, and
 Simulate locations of targets of different types along an evenly spaced
 grid of integers, where the placement of one target can affect subsequent
 placement of other targets.
+Target locations are drawn from all combinations of \code{1} to
+\code{x_size-1} and \code{1} to \code{y_size-1}.
+I'm subtracting 1 because the landscape in \code{searcher_sims} is defined by
+the bounds \code{c(0, x_size)} and \code{c(0, y_size)}, so this subtraction
+keeps a gap of 1 between the most extreme locations and the bounds
+of the landscape.
+This prevents targets from being located on the bounds.
 }

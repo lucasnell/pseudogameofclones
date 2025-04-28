@@ -21,9 +21,21 @@ using namespace Rcpp;
 //' Simulate locations of targets of different types along an evenly spaced
 //' grid of integers, where the placement of one target can affect subsequent
 //' placement of other targets.
+//' Target locations are drawn from all combinations of `1` to
+//' `x_size-1` and `1` to `y_size-1`.
+//' I'm subtracting 1 because the landscape in `searcher_sims` is defined by
+//' the bounds `c(0, x_size)` and `c(0, y_size)`, so this subtraction
+//' keeps a gap of 1 between the most extreme locations and the bounds
+//' of the landscape.
+//' This prevents targets from being located on the bounds.
 //'
 //'
-//' @inheritParams searcher_sims
+//' @param x_size Single integer indicating x dimension of search area.
+//'     Locations will be drawn from `1` to `x_size-1`.
+//'     See description above for why.
+//' @param y_size Single integer indicating y dimension of search area.
+//'     Locations will be drawn from `1` to `y_size-1`.
+//'     See description above for why.
 //' @param wt_mat Square numeric matrix indicating how sample weighting on
 //'     neighboring locations is affected by a target of each type being
 //'     placed in a particular spot.
@@ -42,10 +54,15 @@ using namespace Rcpp;
 //' @param n_samples Integer vector indicating the number of samples to
 //'     produce per target type. The length should equal the number of
 //'     target types, and all values should be `>=1`.
-//' @param fill_all Single logical indicating whether to include a row for
-//'     all points in the landscape. If `TRUE`, then locations where no targets
-//'     exist will contain an empty vector in the `type` column.
-//'     Defaults to `FALSE`.
+//' @param allow_overlap Single logical indicating whether to allow
+//'     targets to be more than one type.
+//'     An example of a target being multiple types would be a plant that
+//'     hosts an epiphytic bacteria and is also infected with a virus.
+//'     Defaults to `TRUE`.
+//' @param fill_all Single logical indicating whether to have a target at all
+//'     points in the landscape. If `TRUE`, then locations where no targets
+//'     were simulated will be assigned to a target type `length(n_samples)+1`.
+//'     Defaults to `TRUE`.
 //'
 //'
 //' @return A [`tibble`][tibble::tbl_df] with columns `x`, `y`, and `type`.
@@ -54,22 +71,29 @@ using namespace Rcpp;
 //' @export
 //'
 //[[Rcpp::export]]
-DataFrame target_type_sims(const int& x_size,
-                           const int& y_size,
+DataFrame target_type_sims(int x_size,
+                           int y_size,
                            const arma::mat& wt_mat,
                            const arma::ivec& n_samples,
-                           const bool& fill_all = false) {
+                           const bool& allow_overlap = true,
+                           const bool& fill_all = true) {
 
-    if (x_size <= 0) stop("x_size must be > 0");
-    if (y_size <= 0) stop("y_size must be > 0");
+    if (x_size < 2) stop("x_size must be >= 2");
+    if (y_size < 2) stop("y_size must be >= 2");
     if (wt_mat.n_elem == 0) stop("wt_mat cannot be empty");
     if (!wt_mat.is_square()) stop("wt_mat must be square");
     if (arma::any(arma::vectorise(wt_mat) < 0)) stop("wt_mat cannot contain values < 0");
     if (n_samples.n_elem != wt_mat.n_rows)
         stop("length(n_samples) == nrow(wt_mat) must be true");
     if (arma::any(n_samples <= 0)) stop("n_samples cannot contain values <= 0");
+
+    // I'm reducing these by 1 bc I want to sample from 1 to floor(x_size)
+    // and floor(y_size). See description in docs above for why.
+    x_size--;
+    y_size--;
+
     if (arma::any(n_samples > x_size * y_size))
-        stop("n_samples cannot contain values > x_size * y_size");
+        stop("n_samples cannot contain values > (x_size-1) * (y_size-1)");
 
     uint32 n_types = wt_mat.n_rows;
     uint32 n_points = x_size * y_size;
@@ -89,6 +113,10 @@ DataFrame target_type_sims(const int& x_size,
     uint32 n_used_pts = 0;
 
     int32_t total_samps = arma::accu(n_samples);
+    if (!allow_overlap && total_samps > n_points) {
+        stop("sum(n_samples) cannot be > (x_size-1) * (y_size-1) when allow_overlap = FALSE");
+    }
+
     // # sims done for each type (also doubles as indices for output):
     arma::ivec sims_done(n_types, arma::fill::zeros);
     uint32 x, y, k;
@@ -118,6 +146,7 @@ DataFrame target_type_sims(const int& x_size,
             dim_conv.get_neighbors(neighbors, k); // fill neighbors vector
             for (uint32 j = 0; j < n_types; j++) {
                 samplers[j].update_weights(neighbors, wt_mat(i,j));
+                if (!allow_overlap) samplers[j].update_weights(k, 0.0);
             }
             /*
              Note: You don't have to update `k`th prob to zero after the call
@@ -158,6 +187,9 @@ DataFrame target_type_sims(const int& x_size,
                 out_type(i) = samps[k];
             }
             dim_conv.to_2d(out_x(i), out_y(i), k);
+            // Convert from 0- to 1-based indexing:
+            out_x(i)++;
+            out_y(i)++;
         }
     } else {
         uint32 i = 0;
@@ -167,6 +199,8 @@ DataFrame target_type_sims(const int& x_size,
                 std::sort(samps[k].begin(), samps[k].end());
                 out_type(i) = samps[k];
                 dim_conv.to_2d(out_x(i), out_y(i), k);
+                out_x(i)++;
+                out_y(i)++;
                 i++;
             }
         }

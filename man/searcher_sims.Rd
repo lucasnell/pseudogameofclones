@@ -43,7 +43,10 @@ number of rows in \code{target_xy} indicating the type of target each
 target is. Targets can vary in their \code{l_star}, \code{l_int}, \code{bias},
 \code{n_stay}, and \code{n_ignore} parameters (see descriptions below).
 This vector should consist of integers from 1 to the number of items
-in the arguments \code{l_star}, \code{l_int}, \code{bias}, \code{n_stay}, and \code{n_ignore}.}
+in the arguments \code{l_star}, \code{l_int}, \code{bias}, \code{n_stay}, and \code{n_ignore}.
+It's allowed that some target types don't show up in this vector
+since this can be useful for simulations where you remove or replace
+target type(s).}
 
 \item{l_star}{List where each element is a numeric vector indicating,
 for each target type, the distance(s) from searcher to target that

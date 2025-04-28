@@ -254,33 +254,21 @@ void check_args(const double& d,
 
     if (d <= 0) stop("d <= 0");
     if (max_t == 0) stop("max_t == 0");
-    if (x_size <= 0) stop("x_size <= 0");
-    if (y_size <= 0) stop("y_size <= 0");
+    if (x_size < 2) stop("x_size < 2");
+    if (y_size < 2) stop("y_size < 2");
     if (n_searchers == 0) stop("n_searchers == 0");
 
     if (target_types.size() == 0) stop("target_types.size() == 0");
     if (target_types.size() != target_xy.n_rows)
         stop("target_types.size() != target_xy.n_rows");
 
-    // Create vector of unique, sorted values from `target_types`:
-    std::vector<uint32> unq_targets = target_types;
-    std::sort(unq_targets.begin(), unq_targets.end());
-    std::vector<uint32>::iterator it;
-    it = std::unique(unq_targets.begin(), unq_targets.end());
-    unq_targets.resize(std::distance(unq_targets.begin(), it));
+    uint32 n_types = l_star.size();
 
-    uint32 n_types = unq_targets.size();
-
-    if (l_star.size() != n_types)
-        stop("l_star.size() != length(unique(target_types))");
-    if (l_int.size() != n_types)
-        stop("l_int.size() != length(unique(target_types))");
-    if (bias.size() != n_types)
-        stop("bias.size() != length(unique(target_types))");
-    if (n_stay.size() != n_types)
-        stop("n_stay.size() != length(unique(target_types))");
-    if (n_ignore.size() != n_types)
-        stop("n_ignore.size() != length(unique(target_types))");
+    if (n_types == 0) stop("length(l_star) == 0");
+    if (l_int.size() != n_types) stop("length(l_int) != length(l_star)");
+    if (bias.size() != n_types) stop("length(bias) != length(l_star)");
+    if (n_stay.size() != n_types) stop("length(n_stay) != length(l_star)");
+    if (n_ignore.size() != n_types) stop("length(n_ignore) != length(l_star)");
 
     auto stop_i = [](std::string message, const uint32& i) {
         message += " on item ";
@@ -299,18 +287,13 @@ void check_args(const double& d,
             if (bias[i][j] == 0) stop_i("bias == 0", i);
         }
         if (l_int[i] <= 0) stop_i("l_int <= 0", i);
-        if (unq_targets[i] != i+1U) {
-            std::string msg("target_types should contain unique values that, ");
-            msg += "when sorted, are identical to a vector from 1 to ";
-            msg += "the number of unique values. Yours is c(";
-            for (uint32& ut : unq_targets) msg += std::to_string(ut) + ", ";
-            msg += ").";
-            stop(msg);
-        }
     }
 
-    // convert from R 1-based to c++ 0-based indices:
-    for (uint32& tt : target_types) tt--;
+    // Check values and convert from R 1-based to c++ 0-based indices:
+    for (uint32& tt : target_types) {
+        if (tt > n_types) stop("target_types contains values > length(l_star)");
+        tt--;
+    }
 
     arma::vec x_bounds = {0, x_size};
     arma::vec y_bounds = {0, y_size};
@@ -492,6 +475,9 @@ DataFrame create_output(const uint32& max_t,
 //'     `n_stay`, and `n_ignore` parameters (see descriptions below).
 //'     This vector should consist of integers from 1 to the number of items
 //'     in the arguments `l_star`, `l_int`, `bias`, `n_stay`, and `n_ignore`.
+//'     It's allowed that some target types don't show up in this vector
+//'     since this can be useful for simulations where you remove or replace
+//'     target type(s).
 //' @param l_star List where each element is a numeric vector indicating,
 //'     for each target type, the distance(s) from searcher to target that
 //'     causes targets to bias searcher movement.

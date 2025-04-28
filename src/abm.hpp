@@ -108,7 +108,7 @@ public:
         // Check that increasing `l_star` always coincides with decreasing
         // `abs_bias` (so `abs_bias` must be sorted in decreasing order):
         for (uint32 i = 1; i < n; i++) {
-            if (abs_bias_[i-1] > abs_bias_[i]) {
+            if (abs_bias_[i-1] < abs_bias_[i]) {
                 stop("higher `l_star` must always coincide with lower `abs(bias)`");
             }
         }
@@ -168,12 +168,20 @@ public:
         if (target_xy.n_rows != type_map_.size())
             stop("target_xy.n_rows != type_map_.size()");
 
+        /*
+         The next two lines are done bc this allows me to have target types
+         that aren't present in the landscape.
+         This is useful for simulations where you remove or replace
+         target type(s).
+         */
         uint32 n_types = 1U + *std::max_element(type_map_.begin(), type_map_.end());
-        if (l_star_.size() != n_types) stop("wrong length for l_star");
-        if (bias_.size() != n_types) stop("wrong length for bias");
-        if (l_int_.size() != n_types) stop("wrong length for l_int");
-        if (n_stay_.size() != n_types) stop("wrong length for n_stay");
-        if (n_ignore_.size() != n_types) stop("wrong length for n_ignore");
+        if (l_star_.size() > n_types) n_types = l_star_.size();
+
+        if (l_star_.size() < n_types) stop("l_star too short");
+        if (bias_.size() < n_types) stop("bias too short");
+        if (l_int_.size() < n_types) stop("l_int too short");
+        if (n_stay_.size() < n_types) stop("n_stay too short");
+        if (n_ignore_.size() < n_types) stop("n_ignore too short");
 
         types_.reserve(n_types);
         for (uint32 i = 0; i < n_types; i++) {
