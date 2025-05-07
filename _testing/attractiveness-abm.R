@@ -273,25 +273,3 @@ samp_list <- cbind(samp_df$x, samp_df$y) |>
 
 joincount.multi(factor(samp_df$type), samp_listw)
 
-
-
-
-
-
-
-c("White Tail Bristletooth Tang
-(Ctenochaetus flavicauda)",
-"Two Spot Bristletooth Tang
-(Ctenochaetus binotatus)",
-"Bristletooth Tomini Tang
-(Ctenochaetus tominiensis)",
-"Kole Yellow Eye Tang
-(Ctenochaetus strigosus)",
-"Squaretail Bristletooth Tang
-(Ctenochaetus truncatus)") |>
-    str_split("\n\\(") |>
-    map_chr(\(x) x[[2]]) |>
-    str_remove_all("\\)") |>
-    str_split(" ") |>
-    map_chr(\(x) x[[2]]) |>
-    paste(collapse = "\n") |> cat()

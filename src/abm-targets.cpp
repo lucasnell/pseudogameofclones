@@ -148,10 +148,8 @@ List target_type_sims(int x_size,
     }
 
     List out(n_lands);
-    DataFrame out_df;
     for (uint32 i = 0; i < n_lands; i++) {
-        out_df = simmers[i].create_output(fill_all);
-        out[i] = out_df;
+        out[i] = simmers[i].create_output(fill_all);
     }
 
     return out;
