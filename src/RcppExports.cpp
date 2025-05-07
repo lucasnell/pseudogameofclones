@@ -13,6 +13,30 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// alate_search_sims
+DataFrame alate_search_sims(const uint32& max_t, const arma::imat& plant_xy, const arma::ivec& plant_types, const double& alpha, const double& beta, const double& epsilon, const double& w, const double& radius, Nullable<IntegerVector> xy0, const bool& randomize_xy0, const uint32& n_alates, const std::string& summarize, const bool& show_progress, uint32 n_threads);
+RcppExport SEXP _pseudogameofclones_alate_search_sims(SEXP max_tSEXP, SEXP plant_xySEXP, SEXP plant_typesSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP epsilonSEXP, SEXP wSEXP, SEXP radiusSEXP, SEXP xy0SEXP, SEXP randomize_xy0SEXP, SEXP n_alatesSEXP, SEXP summarizeSEXP, SEXP show_progressSEXP, SEXP n_threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const uint32& >::type max_t(max_tSEXP);
+    Rcpp::traits::input_parameter< const arma::imat& >::type plant_xy(plant_xySEXP);
+    Rcpp::traits::input_parameter< const arma::ivec& >::type plant_types(plant_typesSEXP);
+    Rcpp::traits::input_parameter< const double& >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< const double& >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< const double& >::type epsilon(epsilonSEXP);
+    Rcpp::traits::input_parameter< const double& >::type w(wSEXP);
+    Rcpp::traits::input_parameter< const double& >::type radius(radiusSEXP);
+    Rcpp::traits::input_parameter< Nullable<IntegerVector> >::type xy0(xy0SEXP);
+    Rcpp::traits::input_parameter< const bool& >::type randomize_xy0(randomize_xy0SEXP);
+    Rcpp::traits::input_parameter< const uint32& >::type n_alates(n_alatesSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type summarize(summarizeSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type show_progress(show_progressSEXP);
+    Rcpp::traits::input_parameter< uint32 >::type n_threads(n_threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(alate_search_sims(max_t, plant_xy, plant_types, alpha, beta, epsilon, w, radius, xy0, randomize_xy0, n_alates, summarize, show_progress, n_threads));
+    return rcpp_result_gen;
+END_RCPP
+}
 // target_type_sims
 DataFrame target_type_sims(int x_size, int y_size, const arma::mat& wt_mat, const arma::ivec& n_samples, const bool& allow_overlap, const bool& fill_all);
 RcppExport SEXP _pseudogameofclones_target_type_sims(SEXP x_sizeSEXP, SEXP y_sizeSEXP, SEXP wt_matSEXP, SEXP n_samplesSEXP, SEXP allow_overlapSEXP, SEXP fill_allSEXP) {
@@ -288,6 +312,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_pseudogameofclones_alate_search_sims", (DL_FUNC) &_pseudogameofclones_alate_search_sims, 14},
     {"_pseudogameofclones_target_type_sims", (DL_FUNC) &_pseudogameofclones_target_type_sims, 6},
     {"_pseudogameofclones_searcher_sims", (DL_FUNC) &_pseudogameofclones_searcher_sims, 17},
     {"_pseudogameofclones_make_aphids_ptr", (DL_FUNC) &_pseudogameofclones_make_aphids_ptr, 1},
