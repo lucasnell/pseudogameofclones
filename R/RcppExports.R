@@ -160,15 +160,6 @@ target_type_sims <- function(x_size, y_size, wt_mat, n_samples, allow_overlap = 
     .Call(`_pseudogameofclones_target_type_sims`, x_size, y_size, wt_mat, n_samples, allow_overlap, fill_all, n_lands, show_progress, n_threads)
 }
 
-#'
-#' @noRd
-#'
-#' @export
-#'
-target_type_sims2 <- function(x_size, y_size, probs, k, sigma2) {
-    .Call(`_pseudogameofclones_target_type_sims2`, x_size, y_size, probs, k, sigma2)
-}
-
 #' Simulate searchers seeking targets.
 #'
 #' @param d Single numeric indicating search rate of searcher.
