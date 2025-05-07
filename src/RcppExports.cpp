@@ -56,6 +56,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// target_type_sims2
+DataFrame target_type_sims2(int x_size, int y_size, const arma::vec& probs, const double& k, const double& sigma2);
+RcppExport SEXP _pseudogameofclones_target_type_sims2(SEXP x_sizeSEXP, SEXP y_sizeSEXP, SEXP probsSEXP, SEXP kSEXP, SEXP sigma2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type x_size(x_sizeSEXP);
+    Rcpp::traits::input_parameter< int >::type y_size(y_sizeSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type probs(probsSEXP);
+    Rcpp::traits::input_parameter< const double& >::type k(kSEXP);
+    Rcpp::traits::input_parameter< const double& >::type sigma2(sigma2SEXP);
+    rcpp_result_gen = Rcpp::wrap(target_type_sims2(x_size, y_size, probs, k, sigma2));
+    return rcpp_result_gen;
+END_RCPP
+}
 // searcher_sims
 DataFrame searcher_sims(const double& d, const uint32& max_t, const double& x_size, const double& y_size, const arma::mat& target_xy, std::vector<uint32> target_types, const std::vector<std::vector<double>>& l_star, const std::vector<std::vector<double>>& bias, const std::vector<double>& l_int, const std::vector<uint32>& n_stay, const std::vector<uint32>& n_ignore, Nullable<NumericVector> xy0, const bool& randomize_xy0, const uint32& n_searchers, const bool& summarize, const bool& show_progress, uint32 n_threads);
 RcppExport SEXP _pseudogameofclones_searcher_sims(SEXP dSEXP, SEXP max_tSEXP, SEXP x_sizeSEXP, SEXP y_sizeSEXP, SEXP target_xySEXP, SEXP target_typesSEXP, SEXP l_starSEXP, SEXP biasSEXP, SEXP l_intSEXP, SEXP n_staySEXP, SEXP n_ignoreSEXP, SEXP xy0SEXP, SEXP randomize_xy0SEXP, SEXP n_searchersSEXP, SEXP summarizeSEXP, SEXP show_progressSEXP, SEXP n_threadsSEXP) {
@@ -317,6 +332,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_pseudogameofclones_alate_search_sims", (DL_FUNC) &_pseudogameofclones_alate_search_sims, 14},
     {"_pseudogameofclones_target_type_sims", (DL_FUNC) &_pseudogameofclones_target_type_sims, 9},
+    {"_pseudogameofclones_target_type_sims2", (DL_FUNC) &_pseudogameofclones_target_type_sims2, 5},
     {"_pseudogameofclones_searcher_sims", (DL_FUNC) &_pseudogameofclones_searcher_sims, 17},
     {"_pseudogameofclones_make_aphids_ptr", (DL_FUNC) &_pseudogameofclones_make_aphids_ptr, 1},
     {"_pseudogameofclones_logit", (DL_FUNC) &_pseudogameofclones_logit, 1},
