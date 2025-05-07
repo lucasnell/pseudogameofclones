@@ -536,8 +536,7 @@ DataFrame create_output(const uint32& max_t,
 //' @param show_progress Single logical for whether to show progress bar.
 //'     Defaults to `FALSE`.
 //' @param n_threads Single integer for the number of threads to use.
-//'     For now, this is ignored because the multithreading is causing a
-//'     strange warning I cannot explain.
+//'     Ignored if `n_searchers == 1`.
 //'     Defaults to `1L`.
 //'
 //' @returns If `summarize = FALSE`, then it outputs a tibble with the columns
@@ -602,7 +601,7 @@ DataFrame searcher_sims(const double& d,
 
     RcppThread::ProgressBar prog_bar(n_searchers * max_t, 1);
 
-    if (n_threads > 1U) {
+    if (n_threads > 1U && n_searchers > 1U) {
         RcppThread::parallelFor(0, n_searchers, [&] (uint32 i) {
             simmers[i].run(prog_bar, show_progress);
         }, n_threads);

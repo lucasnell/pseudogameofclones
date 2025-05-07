@@ -422,7 +422,7 @@ List sim_fields_cpp(SEXP all_fields_vec_ptr,
     std::vector<std::vector<AllStageInfo>> stage_ts(n_reps);
 
 
-    if (n_threads > 1U) {
+    if (n_threads > 1U && n_reps > 1U) {
         RcppThread::parallelFor(0, n_reps, [&] (uint32 i) {
             one_rep__(summaries[i], stage_ts[i], all_fields_vec[i], i,
                       max_t, save_every, perturbs,

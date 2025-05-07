@@ -531,8 +531,7 @@ DataFrame create_output(const std::vector<OneAlate>& alates,
 //' @param show_progress Single logical for whether to show progress bar.
 //'     Defaults to `FALSE`.
 //' @param n_threads Single integer for the number of threads to use.
-//'     For now, this is ignored because the multithreading is causing a
-//'     strange warning I cannot explain.
+//'     Ignored if `n_alates == 1`.
 //'     Defaults to `1L`.
 //'
 //' @returns If `summarize = "none"`, a tibble with the columns
@@ -596,7 +595,7 @@ DataFrame alate_search_sims(const uint32& max_t,
 
     RcppThread::ProgressBar prog_bar(n_alates, 1);
 
-    if (n_threads > 1U) {
+    if (n_threads > 1U && n_alates > 1U) {
         RcppThread::parallelFor(0, n_alates, [&] (uint32 i) {
             alates[i].run(prog_bar, show_progress);
         }, n_threads);

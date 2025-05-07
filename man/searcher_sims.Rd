@@ -116,8 +116,7 @@ Defaults to \code{FALSE}.}
 Defaults to \code{FALSE}.}
 
 \item{n_threads}{Single integer for the number of threads to use.
-For now, this is ignored because the multithreading is causing a
-strange warning I cannot explain.
+Ignored if \code{n_searchers == 1}.
 Defaults to \code{1L}.}
 }
 \value{

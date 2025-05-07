@@ -69,8 +69,7 @@
 #' @param show_progress Single logical for whether to show progress bar.
 #'     Defaults to `FALSE`.
 #' @param n_threads Single integer for the number of threads to use.
-#'     For now, this is ignored because the multithreading is causing a
-#'     strange warning I cannot explain.
+#'     Ignored if `n_alates == 1`.
 #'     Defaults to `1L`.
 #'
 #' @returns If `summarize = "none"`, a tibble with the columns
@@ -228,8 +227,7 @@ target_type_sims <- function(x_size, y_size, wt_mat, n_samples, allow_overlap = 
 #' @param show_progress Single logical for whether to show progress bar.
 #'     Defaults to `FALSE`.
 #' @param n_threads Single integer for the number of threads to use.
-#'     For now, this is ignored because the multithreading is causing a
-#'     strange warning I cannot explain.
+#'     Ignored if `n_searchers == 1`.
 #'     Defaults to `1L`.
 #'
 #' @returns If `summarize = FALSE`, then it outputs a tibble with the columns
