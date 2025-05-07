@@ -193,78 +193,171 @@ public:
 };
 
 
-// class AliasSampler {
-// public:
-//     AliasSampler() : Prob(), Alias(), n(0) {};
-//     AliasSampler(const std::vector<double>& probs)
-//         : Prob(probs.size()), Alias(probs.size()), n(probs.size()) {
-//         arma::vec p(probs);
-//         construct(p);
-//     }
-//     AliasSampler(arma::vec probs)
-//         : Prob(probs.n_elem), Alias(probs.n_elem), n(probs.n_elem) {
-//         construct(probs);
-//     }
-//     // Copy constructor
-//     AliasSampler(const AliasSampler& other)
-//         : Prob(other.Prob), Alias(other.Alias), n(other.n) {}
-//
-//     // Actual alias sampling
-//     inline uint32 sample(pcg64& eng) const {
-//         // Fair dice roll from n-sided die
-//         uint32 i = runif_01(eng) * n;
-//         // uniform in range (0,1)
-//         double u = runif_01(eng);
-//         if (u < Prob[i]) return(i);
-//         return Alias[i];
-//     };
-//
-// private:
-//     std::vector<double> Prob;
-//     std::vector<uint32> Alias;
-//     uint32 n;
-//
-//
-//     void construct(arma::vec& p) {
-//
-//         p /= arma::accu(p);  // make sure they sum to 1
-//         p *= n;
-//
-//         std::deque<uint32> Small;
-//         std::deque<uint32> Large;
-//         for (uint32 i = 0; i < n; i++) {
-//             if (p(i) < 1) {
-//                 Small.push_back(i);
-//             } else Large.push_back(i);
-//         }
-//
-//         uint32 l, g;
-//         while (!Small.empty() && !Large.empty()) {
-//             l = Small.front();
-//             Small.pop_front();
-//             g = Large.front();
-//             Large.pop_front();
-//             Prob[l] = p(l);
-//             Alias[l] = g;
-//             p(g) = (p(g) + p(l)) - 1;
-//             if (p(g) < 1) {
-//                 Small.push_back(g);
-//             } else Large.push_back(g);
-//         }
-//         while (!Large.empty()) {
-//             g = Large.front();
-//             Large.pop_front();
-//             Prob[g] = 1;
-//         }
-//         while (!Small.empty()) {
-//             l = Small.front();
-//             Small.pop_front();
-//             Prob[l] = 1;
-//         }
-//
-//         return;
-//     }
-// };
+class LandSimmer {
+
+    arma::mat wt_mat;
+    arma::ivec n_samples;
+    uint32 n_types;
+    uint32 n_points;
+    int x_size;
+    int y_size;
+    bool allow_overlap;
+
+    // One location sampler for each type:
+    std::vector<LocationSampler> samplers;
+
+    // Convert coordinates between 1D and 2D:
+    DimensionConverter dim_conv;
+
+    // Object collecting samples:
+    std::vector<std::vector<uint32>> samps;
+
+    // Random number generator
+    pcg32 eng;
+
+    // Number of points assigned to 1 or more types (used to define output)
+    uint32 n_used_pts;
+
+
+public:
+
+    // Note: not reserving storage for each item in `samps` upon initialization.
+    // I do it below when an item in `samps` is assigned its first item.
+    // Doing it this way saves a bit of memory.
+
+    LandSimmer(const arma::mat& wt_mat_,
+               const arma::ivec& n_samples_,
+               int x_size_,
+               int y_size_,
+               const bool& allow_overlap_)
+    : wt_mat(wt_mat_),
+      n_samples(n_samples_),
+      n_types(wt_mat_.n_rows),
+      n_points(x_size_ * y_size_),
+      x_size(x_size_),
+      y_size(y_size_),
+      allow_overlap(allow_overlap_),
+      samplers(n_types, LocationSampler(n_points)),
+      dim_conv(x_size, y_size),
+      samps(n_points),
+      eng(),
+      n_used_pts(0U) {
+        seed_pcg(eng);
+      }
+
+
+    void run(RcppThread::ProgressBar& prog_bar, const bool& show_progress) {
+
+        int32_t total_samps = arma::accu(n_samples);
+        uint32 n = 0;// for iterating
+
+        // # sims done for each type (also doubles as indices for output):
+        arma::ivec sims_done(n_types, arma::fill::zeros);
+        uint32 x, y, k;
+        std::vector<uint32> neighbors;
+        neighbors.reserve(9); // highest number of neighbors possible
+
+        while (total_samps > 0) {
+            for (uint32 i = 0; i < n_types; i++) {
+
+                if (sims_done(i) >= n_samples(i)) continue;
+
+                k = samplers[i].sample(eng);
+                dim_conv.to_2d(x, y, k); // assign new x and y based on k
+
+                // reserve memory so that it doesn't have to be moved after this:
+                if (samps[k].empty()) {
+                    n_used_pts++;
+                    samps[k].reserve(n_types);
+                }
+                // add to output:
+                samps[k].push_back(i+1); //+1 to convert to R's 1-based indexing
+
+                // Adjust sampling probabilities:
+                dim_conv.get_neighbors(neighbors, k); // fill neighbors vector
+                for (uint32 j = 0; j < n_types; j++) {
+                    samplers[j].update_weights(neighbors, wt_mat(i,j));
+                    if (!allow_overlap) samplers[j].update_weights(k, 0.0);
+                }
+                /*
+                 Note: You don't have to update `k`th prob to zero after the call
+                 to `update_weights` on `neighbors` even though the latter also
+                 updates `k` because `update_weights` never updates weights that
+                 are already set to zero.
+                 */
+                samplers[i].update_weights(k, 0.0);
+
+                // Iterate sample numbers:
+                sims_done(i)++;
+                total_samps--;
+                n++;
+
+                if (show_progress) prog_bar++;
+                if (n % 10 == 0) RcppThread::checkUserInterrupt();
+            }
+        }
+
+        return;
+    }
+
+    DataFrame create_output(const bool& fill_all) {
+
+        if (fill_all) n_used_pts = n_points;
+
+        // Create output dataframe:
+        List out_type(n_used_pts); // this has to be created separately & added later
+        DataFrame out_df = DataFrame::create(
+            _["x"] = IntegerVector(n_used_pts),
+            _["y"] = IntegerVector(n_used_pts));
+        // References to columns:
+        IntegerVector out_x = out_df[0];
+        IntegerVector out_y = out_df[1];
+
+        bool samps_empty;
+        if (fill_all) {
+            std::vector<uint32> filler(1, n_types+1);
+            for (uint32 k = 0; k < samps.size(); k++) {
+                const uint32& i(k); // for consistently with !fill_all below
+                samps_empty = samps[k].empty();
+                if (samps_empty) {
+                    out_type(i) = filler;
+                } else {
+                    std::sort(samps[k].begin(), samps[k].end());
+                    out_type(i) = samps[k];
+                }
+                dim_conv.to_2d(out_x(i), out_y(i), k);
+                // Convert from 0- to 1-based indexing:
+                out_x(i)++;
+                out_y(i)++;
+            }
+        } else {
+            uint32 i = 0;
+            for (uint32 k = 0; k < samps.size(); k++) {
+                samps_empty = samps[k].empty();
+                if (!samps_empty) {
+                    std::sort(samps[k].begin(), samps[k].end());
+                    out_type(i) = samps[k];
+                    dim_conv.to_2d(out_x(i), out_y(i), k);
+                    out_x(i)++;
+                    out_y(i)++;
+                    i++;
+                }
+            }
+        }
+        out_df["type"] = out_type;
+
+        out_df.attr("class") = CharacterVector({"tbl_df", "tbl", "data.frame"});
+        // `row.names` is required for playing nice with list column!
+        out_df.attr("row.names") = Rcpp::seq(1, n_used_pts);
+
+        return out_df;
+
+
+    }
+
+
+
+};
 
 
 

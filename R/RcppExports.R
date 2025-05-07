@@ -139,15 +139,25 @@ alate_search_sims <- function(max_t, plant_xy, plant_types, alpha, beta, epsilon
 #'     points in the landscape. If `TRUE`, then locations where no targets
 #'     were simulated will be assigned to a target type `length(n_samples)+1`.
 #'     Defaults to `TRUE`.
+#' @param n_lands Single integer indicating the number of independent
+#'     landscapes to simulate. Each landscape will have a number of samples
+#'     per type according to `n_samples`.
+#'     Must be `> 0` and `< 1e6`.
+#'     Defaults to `1`.
+#' @param show_progress Single logical for whether to show progress bar.
+#'     Defaults to `FALSE`.
+#' @param n_threads Single integer for the number of threads to use.
+#'     Ignored if `n_lands == 1`.
+#'     Defaults to `1L`.
 #'
-#'
-#' @return A [`tibble`][tibble::tbl_df] with columns `x`, `y`, and `type`.
+#' @return A list of length `n_lands`, where each item is a
+#'     [`tibble`][tibble::tbl_df] with columns `x`, `y`, and `type`.
 #'
 #'
 #' @export
 #'
-target_type_sims <- function(x_size, y_size, wt_mat, n_samples, allow_overlap = TRUE, fill_all = TRUE) {
-    .Call(`_pseudogameofclones_target_type_sims`, x_size, y_size, wt_mat, n_samples, allow_overlap, fill_all)
+target_type_sims <- function(x_size, y_size, wt_mat, n_samples, allow_overlap = TRUE, fill_all = TRUE, n_lands = 1L, show_progress = FALSE, n_threads = 1L) {
+    .Call(`_pseudogameofclones_target_type_sims`, x_size, y_size, wt_mat, n_samples, allow_overlap, fill_all, n_lands, show_progress, n_threads)
 }
 
 #' Simulate searchers seeking targets.

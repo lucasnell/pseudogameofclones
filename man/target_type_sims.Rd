@@ -10,7 +10,10 @@ target_type_sims(
   wt_mat,
   n_samples,
   allow_overlap = TRUE,
-  fill_all = TRUE
+  fill_all = TRUE,
+  n_lands = 1L,
+  show_progress = FALSE,
+  n_threads = 1L
 )
 }
 \arguments{
@@ -52,9 +55,23 @@ Defaults to \code{TRUE}.}
 points in the landscape. If \code{TRUE}, then locations where no targets
 were simulated will be assigned to a target type \code{length(n_samples)+1}.
 Defaults to \code{TRUE}.}
+
+\item{n_lands}{Single integer indicating the number of independent
+landscapes to simulate. Each landscape will have a number of samples
+per type according to \code{n_samples}.
+Must be \verb{> 0} and \verb{< 1e6}.
+Defaults to \code{1}.}
+
+\item{show_progress}{Single logical for whether to show progress bar.
+Defaults to \code{FALSE}.}
+
+\item{n_threads}{Single integer for the number of threads to use.
+Ignored if \code{n_lands == 1}.
+Defaults to \code{1L}.}
 }
 \value{
-A \code{\link[tibble:tbl_df-class]{tibble}} with columns \code{x}, \code{y}, and \code{type}.
+A list of length \code{n_lands}, where each item is a
+\code{\link[tibble:tbl_df-class]{tibble}} with columns \code{x}, \code{y}, and \code{type}.
 }
 \description{
 Simulate locations of targets of different types along an evenly spaced
