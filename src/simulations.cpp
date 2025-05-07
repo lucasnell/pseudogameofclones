@@ -421,12 +421,20 @@ List sim_fields_cpp(SEXP all_fields_vec_ptr,
 
     std::vector<std::vector<AllStageInfo>> stage_ts(n_reps);
 
-    // Parallelized loop
-    RcppThread::parallelFor(0, n_reps, [&] (uint32 i) {
-        one_rep__(summaries[i], stage_ts[i], all_fields_vec[i], i,
-                  max_t, save_every, perturbs,
-                  prog_bar, show_progress, stage_ts_out);
-    }, n_threads);
+
+    if (n_threads > 1U) {
+        RcppThread::parallelFor(0, n_reps, [&] (uint32 i) {
+            one_rep__(summaries[i], stage_ts[i], all_fields_vec[i], i,
+                      max_t, save_every, perturbs,
+                      prog_bar, show_progress, stage_ts_out);
+        }, n_threads);
+    } else {
+        for (uint32 i = 0; i < n_reps; i++) {
+            one_rep__(summaries[i], stage_ts[i], all_fields_vec[i], i,
+                      max_t, save_every, perturbs,
+                      prog_bar, show_progress, stage_ts_out);
+        }
+    }
 
 
     /*

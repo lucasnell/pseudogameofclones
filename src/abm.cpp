@@ -602,10 +602,15 @@ DataFrame searcher_sims(const double& d,
 
     RcppThread::ProgressBar prog_bar(n_searchers * max_t, 1);
 
-    // Parallelized loop
-    RcppThread::parallelFor(0, n_searchers, [&] (uint32 i) {
-        simmers[i].run(prog_bar, show_progress);
-    }, n_threads);
+    if (n_threads > 1U) {
+        RcppThread::parallelFor(0, n_searchers, [&] (uint32 i) {
+            simmers[i].run(prog_bar, show_progress);
+        }, n_threads);
+    } else {
+        for (uint32 i = 0; i < n_searchers; i++) {
+            simmers[i].run(prog_bar, show_progress);
+        }
+    }
 
 
     DataFrame out = create_output(max_t, n_searchers, simmers, target_info,
