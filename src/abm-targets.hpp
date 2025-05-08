@@ -305,38 +305,40 @@ public:
         if (fill_all) n_used_pts = n_points;
 
         // Create output dataframe:
-        List out_type(n_used_pts); // this has to be created separately & added later
         DataFrame out_df = DataFrame::create(
             _["x"] = IntegerVector(n_used_pts),
-            _["y"] = IntegerVector(n_used_pts));
+            _["y"] = IntegerVector(n_used_pts),
+            _["type"] = CharacterVector(n_used_pts));
         // References to columns:
         IntegerVector out_x = out_df[0];
         IntegerVector out_y = out_df[1];
+        CharacterVector out_type = out_df[2];
 
-        bool samps_empty;
         if (fill_all) {
-            std::vector<uint32> filler(1, n_types+1);
             for (uint32 k = 0; k < samps.size(); k++) {
-                const uint32& i(k); // for consistently with !fill_all below
-                samps_empty = samps[k].empty();
-                if (samps_empty) {
-                    out_type(i) = filler;
-                } else {
+                out_type(k) = "";
+                if (!samps[k].empty()) {
                     std::sort(samps[k].begin(), samps[k].end());
-                    out_type(i) = samps[k];
+                    for (uint32 s = 0; s < samps[k].size(); s++) {
+                        out_type(k) += std::to_string(samps[k][s]);
+                        if (s < samps[k].size() - 1) out_type(k) += "_";
+                    }
                 }
-                dim_conv.to_2d(out_x(i), out_y(i), k);
+                dim_conv.to_2d(out_x(k), out_y(k), k);
                 // Convert from 0- to 1-based indexing:
-                out_x(i)++;
-                out_y(i)++;
+                out_x(k)++;
+                out_y(k)++;
             }
         } else {
             uint32 i = 0;
             for (uint32 k = 0; k < samps.size(); k++) {
-                samps_empty = samps[k].empty();
-                if (!samps_empty) {
+                if (!samps[k].empty()) {
                     std::sort(samps[k].begin(), samps[k].end());
-                    out_type(i) = samps[k];
+                    out_type(i) = "";
+                    for (uint32 s = 0; s < samps[k].size(); s++) {
+                        out_type(k) += std::to_string(samps[k][s]);
+                        if (s < samps[k].size() - 1) out_type(k) += "_";
+                    }
                     dim_conv.to_2d(out_x(i), out_y(i), k);
                     out_x(i)++;
                     out_y(i)++;
@@ -344,11 +346,8 @@ public:
                 }
             }
         }
-        out_df["type"] = out_type;
 
         out_df.attr("class") = CharacterVector({"tbl_df", "tbl", "data.frame"});
-        // `row.names` is required for playing nice with list column!
-        out_df.attr("row.names") = Rcpp::seq(1, n_used_pts);
 
         return out_df;
 

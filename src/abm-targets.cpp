@@ -98,9 +98,9 @@ List target_type_sims(int x_size,
                       int y_size,
                       const arma::mat& wt_mat,
                       const arma::ivec& n_samples,
+                      const uint32& n_lands = 1,
                       const bool& allow_overlap = true,
                       const bool& fill_all = true,
-                      const uint32& n_lands = 1,
                       const bool& show_progress = false,
                       uint32 n_threads = 1) {
 

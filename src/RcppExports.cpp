@@ -38,8 +38,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // target_type_sims
-List target_type_sims(int x_size, int y_size, const arma::mat& wt_mat, const arma::ivec& n_samples, const bool& allow_overlap, const bool& fill_all, const uint32& n_lands, const bool& show_progress, uint32 n_threads);
-RcppExport SEXP _pseudogameofclones_target_type_sims(SEXP x_sizeSEXP, SEXP y_sizeSEXP, SEXP wt_matSEXP, SEXP n_samplesSEXP, SEXP allow_overlapSEXP, SEXP fill_allSEXP, SEXP n_landsSEXP, SEXP show_progressSEXP, SEXP n_threadsSEXP) {
+List target_type_sims(int x_size, int y_size, const arma::mat& wt_mat, const arma::ivec& n_samples, const uint32& n_lands, const bool& allow_overlap, const bool& fill_all, const bool& show_progress, uint32 n_threads);
+RcppExport SEXP _pseudogameofclones_target_type_sims(SEXP x_sizeSEXP, SEXP y_sizeSEXP, SEXP wt_matSEXP, SEXP n_samplesSEXP, SEXP n_landsSEXP, SEXP allow_overlapSEXP, SEXP fill_allSEXP, SEXP show_progressSEXP, SEXP n_threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -47,12 +47,12 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type y_size(y_sizeSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type wt_mat(wt_matSEXP);
     Rcpp::traits::input_parameter< const arma::ivec& >::type n_samples(n_samplesSEXP);
+    Rcpp::traits::input_parameter< const uint32& >::type n_lands(n_landsSEXP);
     Rcpp::traits::input_parameter< const bool& >::type allow_overlap(allow_overlapSEXP);
     Rcpp::traits::input_parameter< const bool& >::type fill_all(fill_allSEXP);
-    Rcpp::traits::input_parameter< const uint32& >::type n_lands(n_landsSEXP);
     Rcpp::traits::input_parameter< const bool& >::type show_progress(show_progressSEXP);
     Rcpp::traits::input_parameter< uint32 >::type n_threads(n_threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(target_type_sims(x_size, y_size, wt_mat, n_samples, allow_overlap, fill_all, n_lands, show_progress, n_threads));
+    rcpp_result_gen = Rcpp::wrap(target_type_sims(x_size, y_size, wt_mat, n_samples, n_lands, allow_overlap, fill_all, show_progress, n_threads));
     return rcpp_result_gen;
 END_RCPP
 }

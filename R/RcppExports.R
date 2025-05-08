@@ -156,8 +156,8 @@ alate_search_sims <- function(max_t, plant_xy, plant_types, alpha, beta, epsilon
 #'
 #' @export
 #'
-target_type_sims <- function(x_size, y_size, wt_mat, n_samples, allow_overlap = TRUE, fill_all = TRUE, n_lands = 1L, show_progress = FALSE, n_threads = 1L) {
-    .Call(`_pseudogameofclones_target_type_sims`, x_size, y_size, wt_mat, n_samples, allow_overlap, fill_all, n_lands, show_progress, n_threads)
+target_type_sims <- function(x_size, y_size, wt_mat, n_samples, n_lands = 1L, allow_overlap = TRUE, fill_all = TRUE, show_progress = FALSE, n_threads = 1L) {
+    .Call(`_pseudogameofclones_target_type_sims`, x_size, y_size, wt_mat, n_samples, n_lands, allow_overlap, fill_all, show_progress, n_threads)
 }
 
 #' Simulate searchers seeking targets.
