@@ -6,17 +6,10 @@
 #' to both attracting and repelling.
 #'
 
-library(tidyverse)
+
+source("_testing/_preamble.R")
+
 library(gganimate)
-library(pseudogameofclones)
-library(viridisLite)
-library(ggtext)
-
-# number of threads:
-.n_threads <- max(1L, parallel::detectCores() - 2L)
-
-if (file.exists("_testing/_preamble.R")) source("_testing/_preamble.R")
-
 
 
 
