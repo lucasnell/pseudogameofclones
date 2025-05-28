@@ -33,23 +33,125 @@ target_sims <- target_type_sims(xs+1L, ys+1L, #<< bc it sims locations 1:(*_size
                                .default = type))
 
 
-{
-    t0 <- Sys.time()
-    sim_df <- alate_search_sims(max_t = 100,
-                                plant_xy = target_sims[,c("x","y")] |> as.matrix(),
-                                plant_types = target_sims$type,
-                                alpha = 0.5,
-                                beta = -1,
-                                epsilon = 0.5,
-                                n_alates = 100e3L,
-                                summarize = "types",
-                                n_threads = 6)
-    t1 <- Sys.time()
-    print(t1 - t0); rm(t0, t1)
+
+sim_df <- alate_search_sims(max_t = 100,
+                            plant_xy = target_sims[,c("x","y")] |> as.matrix(),
+                            plant_types = target_sims$type,
+                            alpha = 0.5,
+                            beta = -1,
+                            epsilon = 0.5,
+                            n_alates = 100,
+                            # summarize = "types",
+                            n_threads = 6)
+
+plot_search_sims <- function(alate_sims,
+                             target_sims,
+                             anim_return = TRUE,
+                             anim_start = FALSE,
+                             anim_fps = 5) {
+
+    x_max <- max(alate_sims$x)
+    y_max <- max(alate_sims$y)
+
+    p <- alate_sims |>
+        mutate(across(c(alate, to, from), factor)) |>
+        ggplot(aes(x,y)) +
+        geom_rect(aes(xmin = 0, xmax = x_max+1, ymin = 0, ymax = y_max+1),
+                  fill = NA, color = "black", linewidth = 0.75) +
+        geom_point(data = target_sims |>
+                       mutate(type = factor(type,
+                                            labels = c("virus", "pseudo",
+                                                       "none", "both"))),
+                   aes(fill = type), shape = 21, size = 1, stroke = 0) +
+        geom_path(aes(color = alate), linewidth = 1, alpha = 0.5) +
+        geom_point(aes(color = alate), size = 2) +
+        scale_color_viridis_d(NULL, guide = "none", option = "plasma") +
+        scale_fill_manual(NULL, values = type_pal) +
+        guides(fill = guide_legend(override.aes = list(size = 3))) +
+        coord_equal(clip = "off", expand = FALSE) +
+        theme(axis.line = element_blank())
+
+    if (!anim_return) return(p)
+
+    anim <- p +
+        labs(title = "Time: {frame_along}") +
+        transition_reveal(time) +
+        ease_aes("linear") +
+        theme(plot.title = element_text(margin = margin(0,0,0,b=12)))
+
+    if (anim_start) {
+        animate(anim, nframes = max(alate_sims$time)+1, fps = anim_fps)
+    }
+
+    return(anim)
 }
 
 
-#
+dt <- 10
+
+list("different types repel" = c(same = 1, diff = 1/dt),
+     "different types attract" = c(same = 1, diff = dt),
+     "same types attract" = c(same = dt, diff = 1),
+     "same types repel" = c(same = 1/dt, diff = 1),  ## same as neutral
+     "same repel, diff. attract" = c(same = 1/dt, diff = dt),
+     "same attract, diff. repel" = c(same = dt, diff = 1/dt),
+     "neutral" = c(same = 1, diff = 1)) |>
+    imap(\(x, n) {
+        wt_mat <- rbind(c(x[["same"]], x[["diff"]]),
+                        c(x[["diff"]], x[["same"]]))
+        t_sim_df <- target_type_sims(xs+1L, ys+1L,
+                                    wt_mat,
+                                    n_samples = rep(round(xs*ys * 0.4), 2)) |>
+            getElement(1) |>
+            mutate(type = factor(type, levels = c("1", "2", "", "1_2"),
+                                 labels = c("virus", "pseudo", "none", "both")))
+        t_sim_df |>
+            ggplot(aes(x, y, color = type)) +
+            geom_rect(aes(xmin = 0, xmax = xs+1L, ymin = 0, ymax = ys+1),
+                      fill = NA, color = "black", linewidth = 0.75) +
+            geom_point(size = 0.5) +
+            scale_color_manual(NULL, values = type_pal) +
+            coord_equal(clip = "off", expand = FALSE) +
+            guides(color = guide_legend(override.aes = list(size = 3))) +
+            ggtitle(n) +
+            theme(axis.line = element_blank(),
+                  axis.title = element_blank(),
+                  axis.text = element_blank(),
+                  axis.ticks = element_blank(),
+                  plot.title = element_text(margin = margin(0,0,0,b=12)))
+    }) |>
+    c(list(nrow = 2, guides = "collect")) |>
+    do.call(what = wrap_plots)
+
+
+
+
+
+
+
+# =============================================================================*
+# =============================================================================*
+# Simulations ----
+# =============================================================================*
+# =============================================================================*
+
+
+#' Variables to vary:
+#'
+#' 1. density of each plant type
+#' 2. plant type landscape, one of the following:
+#'     a. different types repel: same = 1, diff < 1
+#'     b. different types attract: same = 1, diff > 1
+#'     c. same types attract: same > 1 diff = 1
+#'     d. same attract, diff. repel: same > 1, diff < 1
+#'     e. neutral: same = 1, diff = 1
+#' 3. `alpha`: effect of virus infection on alate alighting)
+#' 4. `beta`: effect of *Pseudomonas* infection on alate alighting)
+#' 5. `epsilon`: effect of virus infection on alate acceptance)
+#'
+
+
+
 
 
 
