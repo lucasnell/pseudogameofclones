@@ -490,13 +490,11 @@ DataFrame create_output(const std::vector<OneAlate>& alates,
 //'     Note that all locations from 1 to the max in each dimension
 //'     must be represented by a plant.
 //' @param alpha Effect of virus infection on alate alighting.
-//'     Values `> 1` cause alates to be attracted to virus-infected plants,
-//'     while values `< 1` cause them to be repelled by virus-infected plants.
-//'     Values must be `> 0`.
+//'     Values `> 0` cause alates to be attracted to virus-infected plants,
+//'     while values `< 0` cause them to be repelled by virus-infected plants.
 //' @param beta Effect of *Pseudomonas* infection on alate alighting.
-//'     Values `> 1` cause alates to be attracted to *Pseudomonas*-infected plants,
-//'     while values `< 1` cause them to be repelled by *Pseudomonas*-infected plants.
-//'     Values must be `> 0`.
+//'     Values `> 0` cause alates to be attracted to *Pseudomonas*-infected plants,
+//'     while values `< 0` cause them to be repelled by *Pseudomonas*-infected plants.
 //' @param epsilon Effect of virus infection on alate acceptance.
 //'     Values `> 1` cause alates to be more likely to stay and feed
 //'     (indefinitely) on virus-infected plants,

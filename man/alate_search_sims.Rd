@@ -37,14 +37,12 @@ Note that all locations from 1 to the max in each dimension
 must be represented by a plant.}
 
 \item{alpha}{Effect of virus infection on alate alighting.
-Values \verb{> 1} cause alates to be attracted to virus-infected plants,
-while values \verb{< 1} cause them to be repelled by virus-infected plants.
-Values must be \verb{> 0}.}
+Values \verb{> 0} cause alates to be attracted to virus-infected plants,
+while values \verb{< 0} cause them to be repelled by virus-infected plants.}
 
 \item{beta}{Effect of \emph{Pseudomonas} infection on alate alighting.
-Values \verb{> 1} cause alates to be attracted to \emph{Pseudomonas}-infected plants,
-while values \verb{< 1} cause them to be repelled by \emph{Pseudomonas}-infected plants.
-Values must be \verb{> 0}.}
+Values \verb{> 0} cause alates to be attracted to \emph{Pseudomonas}-infected plants,
+while values \verb{< 0} cause them to be repelled by \emph{Pseudomonas}-infected plants.}
 
 \item{epsilon}{Effect of virus infection on alate acceptance.
 Values \verb{> 1} cause alates to be more likely to stay and feed
