@@ -15,14 +15,7 @@ library(ggtext)
 # number of threads:
 .n_threads <- max(1L, parallel::detectCores() - 2L)
 
-
-if (interactive()) {
-    setHook(packageEvent("grDevices", "onLoad"),
-            function(...) grDevices::quartz.options(width = 4, height = 4,
-                                                    pointsize = 10))
-    options("device" = "quartz")
-    grDevices::graphics.off()
-}
+if (file.exists("_testing/_preamble.R")) source("_testing/_preamble.R")
 
 
 

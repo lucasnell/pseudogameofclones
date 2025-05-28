@@ -1,5 +1,6 @@
 ^pseudogameofclones\.Rproj$
 ^\.Rproj\.user$
+^\.Rprofile$
 ^\.travis\.yml$
 ^data-raw$
 ^_pkgdown\.yml$

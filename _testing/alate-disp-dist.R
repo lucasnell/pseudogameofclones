@@ -2,16 +2,9 @@ library(tidyverse)
 library(pseudogameofclones)
 library(viridisLite)
 library(gganimate)
+library(patchwork)
 
-
-if (interactive()) {
-    setHook(packageEvent("grDevices", "onLoad"),
-            function(...) grDevices::quartz.options(width = 4, height = 4,
-                                                    pointsize = 10))
-    options("device" = "quartz")
-    grDevices::graphics.off()
-}
-
+if (file.exists("_testing/_preamble.R")) source("_testing/_preamble.R")
 
 
 # color palette for target types:
@@ -19,6 +12,8 @@ type_pal <- c(viridis(3, begin = 0.1, end = 0.9), "gray80")[c(2,1,4,3)] |>
     set_names(c("virus", "pseudo", "none", "both"))
 
 xs <- ys <- 134L  # approximates a hectare with 0.75 m plant spacing
+
+
 
 #' Below converts the `type` column to a form usable in `alate_search_sims`,
 #' where it's required that there's only one type per location.
