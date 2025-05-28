@@ -35,20 +35,15 @@ using namespace Rcpp;
 //' grid of integers, where the placement of one target can affect subsequent
 //' placement of other targets.
 //' Target locations are drawn from all combinations of `1` to
-//' `x_size-1` and `1` to `y_size-1`.
-//' I'm subtracting 1 because the landscape in `searcher_sims` is defined by
-//' the bounds `c(0, x_size)` and `c(0, y_size)`, so this subtraction
-//' keeps a gap of 1 between the most extreme locations and the bounds
-//' of the landscape.
-//' This prevents targets from being located on the bounds.
+//' `x_size` and `1` to `y_size`.
 //'
 //'
 //' @param x_size Single integer indicating x dimension of search area.
-//'     Locations will be drawn from `1` to `x_size-1`.
-//'     See description above for why.
+//'     Locations will be drawn from `1` to `x_size`.
+//'     Must be at least `2`.
 //' @param y_size Single integer indicating y dimension of search area.
-//'     Locations will be drawn from `1` to `y_size-1`.
-//'     See description above for why.
+//'     Locations will be drawn from `1` to `y_size`.
+//'     Must be at least `2`.
 //' @param wt_mat Square numeric matrix indicating how sample weighting on
 //'     neighboring locations is affected by a target of each type being
 //'     placed in a particular spot.
@@ -94,8 +89,8 @@ using namespace Rcpp;
 //' @export
 //'
 //[[Rcpp::export]]
-List target_type_sims(int x_size,
-                      int y_size,
+List target_type_sims(const int& x_size,
+                      const int& y_size,
                       const arma::mat& wt_mat,
                       const arma::ivec& n_samples,
                       const uint32& n_lands = 1,
@@ -116,15 +111,11 @@ List target_type_sims(int x_size,
     if (n_lands >= 1e6) stop("n_lands must be < 1e6");
     thread_check(n_threads); // Check that # threads isn't too high
 
-    // I'm reducing these by 1 bc I want to sample from 1 to floor(x_size)
-    // and floor(y_size). See description in docs above for why.
-    x_size--;
-    y_size--;
 
     if (arma::any(n_samples > x_size * y_size))
-        stop("n_samples cannot contain values > (x_size-1) * (y_size-1)");
+        stop("n_samples cannot contain values > x_size * y_size");
     if (!allow_overlap && arma::accu(n_samples) > (x_size * y_size)) {
-        stop("sum(n_samples) cannot be > (x_size-1) * (y_size-1) when allow_overlap = FALSE");
+        stop("sum(n_samples) cannot be > x_size * y_size when allow_overlap = FALSE");
     }
 
 

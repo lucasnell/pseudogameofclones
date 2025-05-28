@@ -98,20 +98,15 @@ alate_search_sims <- function(max_t, plant_xy, plant_types, alpha, beta, epsilon
 #' grid of integers, where the placement of one target can affect subsequent
 #' placement of other targets.
 #' Target locations are drawn from all combinations of `1` to
-#' `x_size-1` and `1` to `y_size-1`.
-#' I'm subtracting 1 because the landscape in `searcher_sims` is defined by
-#' the bounds `c(0, x_size)` and `c(0, y_size)`, so this subtraction
-#' keeps a gap of 1 between the most extreme locations and the bounds
-#' of the landscape.
-#' This prevents targets from being located on the bounds.
+#' `x_size` and `1` to `y_size`.
 #'
 #'
 #' @param x_size Single integer indicating x dimension of search area.
-#'     Locations will be drawn from `1` to `x_size-1`.
-#'     See description above for why.
+#'     Locations will be drawn from `1` to `x_size`.
+#'     Must be at least `2`.
 #' @param y_size Single integer indicating y dimension of search area.
-#'     Locations will be drawn from `1` to `y_size-1`.
-#'     See description above for why.
+#'     Locations will be drawn from `1` to `y_size`.
+#'     Must be at least `2`.
 #' @param wt_mat Square numeric matrix indicating how sample weighting on
 #'     neighboring locations is affected by a target of each type being
 #'     placed in a particular spot.

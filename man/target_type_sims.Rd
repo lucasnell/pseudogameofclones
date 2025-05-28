@@ -9,21 +9,21 @@ target_type_sims(
   y_size,
   wt_mat,
   n_samples,
+  n_lands = 1L,
   allow_overlap = TRUE,
   fill_all = TRUE,
-  n_lands = 1L,
   show_progress = FALSE,
   n_threads = 1L
 )
 }
 \arguments{
 \item{x_size}{Single integer indicating x dimension of search area.
-Locations will be drawn from \code{1} to \code{x_size-1}.
-See description above for why.}
+Locations will be drawn from \code{1} to \code{x_size}.
+Must be at least \code{2}.}
 
 \item{y_size}{Single integer indicating y dimension of search area.
-Locations will be drawn from \code{1} to \code{y_size-1}.
-See description above for why.}
+Locations will be drawn from \code{1} to \code{y_size}.
+Must be at least \code{2}.}
 
 \item{wt_mat}{Square numeric matrix indicating how sample weighting on
 neighboring locations is affected by a target of each type being
@@ -45,6 +45,12 @@ number of target types.}
 produce per target type. The length should equal the number of
 target types, and all values should be \verb{>=1}.}
 
+\item{n_lands}{Single integer indicating the number of independent
+landscapes to simulate. Each landscape will have a number of samples
+per type according to \code{n_samples}.
+Must be \verb{> 0} and \verb{< 1e6}.
+Defaults to \code{1}.}
+
 \item{allow_overlap}{Single logical indicating whether to allow
 targets to be more than one type.
 An example of a target being multiple types would be a plant that
@@ -55,12 +61,6 @@ Defaults to \code{TRUE}.}
 points in the landscape. If \code{TRUE}, then locations where no targets
 were simulated will be assigned to a target type \code{length(n_samples)+1}.
 Defaults to \code{TRUE}.}
-
-\item{n_lands}{Single integer indicating the number of independent
-landscapes to simulate. Each landscape will have a number of samples
-per type according to \code{n_samples}.
-Must be \verb{> 0} and \verb{< 1e6}.
-Defaults to \code{1}.}
 
 \item{show_progress}{Single logical for whether to show progress bar.
 Defaults to \code{FALSE}.}
@@ -78,10 +78,5 @@ Simulate locations of targets of different types along an evenly spaced
 grid of integers, where the placement of one target can affect subsequent
 placement of other targets.
 Target locations are drawn from all combinations of \code{1} to
-\code{x_size-1} and \code{1} to \code{y_size-1}.
-I'm subtracting 1 because the landscape in \code{searcher_sims} is defined by
-the bounds \code{c(0, x_size)} and \code{c(0, y_size)}, so this subtraction
-keeps a gap of 1 between the most extreme locations and the bounds
-of the landscape.
-This prevents targets from being located on the bounds.
+\code{x_size} and \code{1} to \code{y_size}.
 }

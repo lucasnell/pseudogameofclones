@@ -38,13 +38,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // target_type_sims
-List target_type_sims(int x_size, int y_size, const arma::mat& wt_mat, const arma::ivec& n_samples, const uint32& n_lands, const bool& allow_overlap, const bool& fill_all, const bool& show_progress, uint32 n_threads);
+List target_type_sims(const int& x_size, const int& y_size, const arma::mat& wt_mat, const arma::ivec& n_samples, const uint32& n_lands, const bool& allow_overlap, const bool& fill_all, const bool& show_progress, uint32 n_threads);
 RcppExport SEXP _pseudogameofclones_target_type_sims(SEXP x_sizeSEXP, SEXP y_sizeSEXP, SEXP wt_matSEXP, SEXP n_samplesSEXP, SEXP n_landsSEXP, SEXP allow_overlapSEXP, SEXP fill_allSEXP, SEXP show_progressSEXP, SEXP n_threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type x_size(x_sizeSEXP);
-    Rcpp::traits::input_parameter< int >::type y_size(y_sizeSEXP);
+    Rcpp::traits::input_parameter< const int& >::type x_size(x_sizeSEXP);
+    Rcpp::traits::input_parameter< const int& >::type y_size(y_sizeSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type wt_mat(wt_matSEXP);
     Rcpp::traits::input_parameter< const arma::ivec& >::type n_samples(n_samplesSEXP);
     Rcpp::traits::input_parameter< const uint32& >::type n_lands(n_landsSEXP);
