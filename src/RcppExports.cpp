@@ -13,6 +13,25 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// alate_infect_sims
+arma::mat alate_infect_sims(const int& x_size, const int& y_size, const double& delta_a, const double& delta_p, const std::vector<int>& land, const std::vector<int>& alate, const std::vector<bool>& infected, const std::vector<int>& x, const std::vector<int>& y);
+RcppExport SEXP _pseudogameofclones_alate_infect_sims(SEXP x_sizeSEXP, SEXP y_sizeSEXP, SEXP delta_aSEXP, SEXP delta_pSEXP, SEXP landSEXP, SEXP alateSEXP, SEXP infectedSEXP, SEXP xSEXP, SEXP ySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const int& >::type x_size(x_sizeSEXP);
+    Rcpp::traits::input_parameter< const int& >::type y_size(y_sizeSEXP);
+    Rcpp::traits::input_parameter< const double& >::type delta_a(delta_aSEXP);
+    Rcpp::traits::input_parameter< const double& >::type delta_p(delta_pSEXP);
+    Rcpp::traits::input_parameter< const std::vector<int>& >::type land(landSEXP);
+    Rcpp::traits::input_parameter< const std::vector<int>& >::type alate(alateSEXP);
+    Rcpp::traits::input_parameter< const std::vector<bool>& >::type infected(infectedSEXP);
+    Rcpp::traits::input_parameter< const std::vector<int>& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const std::vector<int>& >::type y(ySEXP);
+    rcpp_result_gen = Rcpp::wrap(alate_infect_sims(x_size, y_size, delta_a, delta_p, land, alate, infected, x, y));
+    return rcpp_result_gen;
+END_RCPP
+}
 // alate_search_sims
 DataFrame alate_search_sims(const uint32& max_t, const arma::imat& plant_xy, const arma::ivec& plant_types, const double& alpha, const double& beta, const double& epsilon, const double& w, const double& radius, Nullable<IntegerVector> xy0, const bool& randomize_xy0, const uint32& n_alates, const std::string& summarize, const bool& show_progress, uint32 n_threads);
 RcppExport SEXP _pseudogameofclones_alate_search_sims(SEXP max_tSEXP, SEXP plant_xySEXP, SEXP plant_typesSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP epsilonSEXP, SEXP wSEXP, SEXP radiusSEXP, SEXP xy0SEXP, SEXP randomize_xy0SEXP, SEXP n_alatesSEXP, SEXP summarizeSEXP, SEXP show_progressSEXP, SEXP n_threadsSEXP) {
@@ -315,6 +334,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_pseudogameofclones_alate_infect_sims", (DL_FUNC) &_pseudogameofclones_alate_infect_sims, 9},
     {"_pseudogameofclones_alate_search_sims", (DL_FUNC) &_pseudogameofclones_alate_search_sims, 14},
     {"_pseudogameofclones_target_type_sims", (DL_FUNC) &_pseudogameofclones_target_type_sims, 9},
     {"_pseudogameofclones_searcher_sims", (DL_FUNC) &_pseudogameofclones_searcher_sims, 17},

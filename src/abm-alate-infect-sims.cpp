@@ -1,28 +1,22 @@
-
-// [[Rcpp::depends(dqrng, BH, RcppArmadillo)]]
 #include <RcppArmadillo.h>
-#include <pcg_random.hpp>
 #include <vector>
+#include <math.h>
 #include <algorithm>
+#include <iterator>
+#include <pcg/pcg_random.hpp>   // pcg prng
+
+#include "pseudogameofclones_types.hpp"  // integer types
+#include "pcg.hpp"                       // runif_01, seed_rng functions
 
 using namespace Rcpp;
 
-namespace pcg {
-    const double max = static_cast<double>(pcg32::max());
-    const long double max64 = static_cast<long double>(pcg64::max());
-}
-
-// uniform in range (0,1)
-inline double runif_01(pcg32& eng) {
-    return (static_cast<double>(eng()) + 1) / (pcg::max + 2);
-}
-
-typedef uint_fast32_t uint32;
 
 /*
  Convert from 2D (x and y) to 1D.
  It assumes that x and y coordinates are sorted first by y coordinates, then
  by x coordinates.
+ (^ This doesn't really matter, as long as I'm consistent, which I am here
+    since I'm only using this function.)
  It also assumes 0-based indices.
  */
 uint32 to_1d(const int& x, const int& y, const int& x_size) {
@@ -31,58 +25,40 @@ uint32 to_1d(const int& x, const int& y, const int& x_size) {
 }
 
 
-//'
-//' Proportion of alates and plants that are inoculated, for a given landscape.
-//'
-//' ASSUMPTIONS OF THIS FUNCTION:
-//'
-//' 1) Vectors `land`, `alate`, `to`, `x`, and `y` are all sorted first by
-//'    `land`, then by `alate`, then by time (not an argument).
-//'
-//' 2) For `to`, 1 = just virus, 2 = just Pseudomonas, 3 = none, and 4 = both.
-//'    Thus, 1 and 4 are virus-infected, and 2 and 3 are not.
-//'
-//' 3) On the timeline of these simulations, even if an alate inoculates
-//'    a plant with a virus, the virus doesn't have enough time to replicate
-//'    inside the plant to cause a subsequent alate to get infected.
-//'
-//' 4) All landscapes have the same number of alates and landscape dimensions
-//'    (`x_size` and `y_size`).
-//'
-//'
-//[[Rcpp::export]]
-arma::mat inoc_sims(const int& x_size,
+void check_ais_args(uint32& n_lands,
+                    uint32& n_alates,
+                    const int& x_size,
                     const int& y_size,
                     const double& delta_a,
                     const double& delta_p,
                     const std::vector<int>& land,
                     const std::vector<int>& alate,
-                    const std::vector<int>& to,
+                    const std::vector<bool>& infected,
                     const std::vector<int>& x,
-                    const std::vector<int>& y,
-                    const std::vector<double>& rnds) {
-    //                           const uint32& seed) {
+                    const std::vector<int>& y) {
+
+    if (x_size < 2 || x_size > 1e9) stop("x_size < 2 || x_size > 1e9");
+    if (y_size < 2 || y_size > 1e9) stop("y_size < 2 || y_size > 1e9");
+    if (delta_a < 0 || delta_a > 1) stop("delta_a < 0 || delta_a > 1");
+    if (delta_p < 0 || delta_p > 1) stop("delta_p < 0 || delta_p > 1");
 
     if (land.size() == 0) stop("land.size() == 0");
     if (land.size() != alate.size()) stop("land.size() != alate.size()");
-    if (land.size() != to.size()) stop("land.size() != to.size()");
+    if (land.size() != infected.size()) stop("land.size() != infected.size()");
     if (land.size() != x.size()) stop("land.size() != x.size()");
     if (land.size() != y.size()) stop("land.size() != y.size()");
 
     uint32 n = land.size();
 
-    std::vector<double>::const_iterator u = rnds.begin();
-    // pcg32 rng(seed);
-
     // Focal landscape and alate:
     int this_land = land[0];
     int this_alate = alate[0];
-    if (this_land != 1) stop("land should be sorted from 1 to max(land)");
-    if (this_alate != 1) stop("alate should be sorted from 1 to max(alates)");
+    if (this_land != 1) stop("land should start with 1");
+    if (this_alate != 1) stop("alate should start with 1");
     // Go through once to get size of output and test that land and alate
     // range from 1 to their max and all integers in between.
-    uint32 n_lands = 1;
-    uint32 n_alates = 1;
+    n_lands = 1;
+    n_alates = 1;
     bool new_land;
     for (uint32 i = 0; i < n; i++) {
         new_land = land[i] != this_land;
@@ -105,12 +81,75 @@ arma::mat inoc_sims(const int& x_size,
             } else if (this_alate > n_alates)
                 stop("alate should be sorted from 1 to n_alates");
         }
-        // Also checking `to`, `x`, and `y` for valid values:
-        if (to[i] < 1 || to[i] > 4) stop("to contains item(s) outside 1:4");
+        // Also checking `x` and `y` for valid values:
         if (x[i] < 1 || x[i] > x_size) stop("x contains item(s) outside 1:x_size");
         if (y[i] < 1 || y[i] > y_size) stop("y contains item(s) outside 1:y_size");
     }
 
+
+    return;
+
+
+}
+
+
+//' Proportion of alates and plants that are inoculated, for a given landscape.
+//'
+//' ASSUMPTIONS OF THIS FUNCTION:
+//'
+//' 1) Vectors `land`, `alate`, `infected`, `x`, and `y` are all sorted first by
+//'    `land`, then by `alate`, then by time (not an argument).
+//'
+//' 2) On the timeline of these simulations, even if an alate inoculates
+//'    a plant with a virus, the virus doesn't have enough time to replicate
+//'    inside the plant to cause a subsequent alate to get infected.
+//'
+//' 3) All landscapes have the same number of alates and landscape dimensions
+//'    (`x_size` and `y_size`).
+//'
+//'
+//' @param x_size Single integer indicating x dimension of landscape.
+//'     Locations must be between `1` and `x_size`.
+//' @param y_size Single integer indicating y dimension of landscape.
+//'     Locations must be between `1` and `y_size`.
+//' @param delta_a Single numeric indicating the probability that an
+//'     uninoculated alate is loaded with a virus if it interacts with an
+//'     inoculated plant.
+//' @param delta_p Single numeric indicating the probability that an
+//'     uninoculated plant is loaded with a virus if it interacts with an
+//'     inoculated alate.
+//' @param land Integer vector indicating the focal landscape.
+//' @param alate Integer vector indicating the focal alate.
+//' @param infected Logical vector indicating whether focal plant is
+//'     infected with virus.
+//' @param x Integer vector indicating location of the focal plant.
+//'     All values must be between `1` and `x_size`.
+//' @param y Integer vector indicating location of the focal plant.
+//'     All values must be between `1` and `y_size`.
+//'
+//' @export
+//'
+//[[Rcpp::export]]
+arma::mat alate_infect_sims(const int& x_size,
+                            const int& y_size,
+                            const double& delta_a,
+                            const double& delta_p,
+                            const std::vector<int>& land,
+                            const std::vector<int>& alate,
+                            const std::vector<bool>& infected,
+                            const std::vector<int>& x,
+                            const std::vector<int>& y) {
+
+    uint32 n_lands, n_alates;
+
+    // Check args and set `n_lands` and `n_alates`:
+    check_ais_args(n_lands, n_alates, x_size, y_size, delta_a, delta_p,
+                   land, alate, infected, x, y);
+
+    uint32 n = land.size();
+
+    pcg32 rng;
+    seed_pcg(rng);
 
     uint32 n_plants = x_size * y_size;
 
@@ -130,11 +169,11 @@ arma::mat inoc_sims(const int& x_size,
     bool plant_inf = false;
     // index for which plant the x and y refers to:
     uint32 k;
-    // Reset focal landscape and alate:
-    this_land = land[0];
-    this_alate = alate[0];
-
-
+    // Focal landscape and alate:
+    int this_land = land[0];
+    int this_alate = alate[0];
+    // ~ U(0,1) for inoculation sampling:
+    double u;
 
     for (uint32 i = 0; i < n; i++) {
 
@@ -155,27 +194,25 @@ arma::mat inoc_sims(const int& x_size,
          We assume that the virus needs more time than this to replicate
          inside the plant to infect alates.
          */
-        plant_inf = (to[i] == 1 || to[i] == 4);
+        plant_inf = infected[i];
 
         if (!alate_inf && plant_inf) {
             // Uninoculated alate gets inoculated:
-            if (*u < delta_a) {
+            u = runif_01(rng);
+            if (u < delta_a) {
                 alate_inf = true;
                 inocs(this_land-1, 0) += 1;
             }
-            u++;
-            if (u == rnds.end()) stop("u == rnds.end()");
         } else if (alate_inf && !plant_inf) {
             k = to_1d(x[i]-1, y[i]-1, x_size);
             if (!plant_inocs[k]) {
                 // Uninoculated plant gets inoculated:
-                if (*u < delta_p) {
+                u = runif_01(rng);
+                if (u < delta_p) {
                     plant_inf = true;
                     plant_inocs[k] = true;
                     inocs(this_land-1, 1) += 1;
                 }
-                u++;
-                if (u == rnds.end()) stop("u == rnds.end()");
             }
         }
     }
