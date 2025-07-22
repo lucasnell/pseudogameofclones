@@ -53,14 +53,14 @@ public:
 
     // Convert from 1D to 2D:
     void to_2d(uint32& x, uint32& y, const uint32& k) const {
-        x = k - y_size * (k / y_size);
-        y = k / y_size;
+        x = k - x_size * (k / x_size);
+        y = k / x_size;
         return;
     }
     // Overloaded for signed ints (for use with Rcpp::IntegerVector)
     void to_2d(int& x, int& y, const uint32& k) const {
-        x = k - y_size * (k / y_size);
-        y = k / y_size;
+        x = k - x_size * (k / x_size);
+        y = k / x_size;
         return;
     }
     // Convert from 2D to 1D:
@@ -76,8 +76,8 @@ public:
      */
     void get_neighbors(std::vector<uint32>& indices,
                        const uint32& k) {
-        uint32 x0 = k - y_size * (k / y_size);
-        uint32 y0 = k / y_size;
+        uint32 x0, y0;
+        to_2d(x0, y0, k);
         indices.clear();
         neigh_x.clear();
         neigh_y.clear();
